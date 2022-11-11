@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Platform\Easy.Platform\Easy.Platform.csproj" />
+    <ProjectReference Include="..\PlatformExampleApp.TextSnippet.Application\PlatformExampleApp.TextSnippet.Application.csproj" />
+  </ItemGroup>
+
+</Project>

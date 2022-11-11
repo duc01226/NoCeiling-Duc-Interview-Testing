@@ -1,0 +1,222 @@
+version: "3.9"
+
+# References: https://github.com/diemol/selenium-issues/blob/master/docker-selenium/issue-1463/docker-compose.yml
+# https://github.com/SeleniumHQ/docker-selenium/issues/1463
+
+services:
+  sql-data:
+    environment:
+      SA_PASSWORD: 123456Abc
+      ACCEPT_EULA: "Y"
+      MSSQL_AGENT_ENABLED: "True"
+    ports:
+      - "14330:1433"
+    volumes:
+      - Easy.Platform-sqldata:/var/opt/mssql
+
+  mongo-data:
+    ports:
+      - "27017:27017"
+    volumes:
+      - Easy.Platform-mongodata-db:/data/db
+      - Easy.Platform-mongodata-configdb:/data/configdb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=rootPassXXX
+      - MONGO_REPLICA_SET_NAME=rs0
+      #https://stackoverflow.com/questions/42190267/replica-set-mongo-docker-compose
+      #https://github.com/Hangfire-Mongo/Hangfire.Mongo/issues/300 Fix for local hangfire mongo
+    healthcheck:
+      test: test $$(echo "rs.initiate({_id:'rs0',members:[{_id:0,host:\"mongo-data:27017\"}]}).ok || rs.status().ok" | mongo -u $${MONGO_INITDB_ROOT_USERNAME} -p $${MONGO_INITDB_ROOT_PASSWORD} --quiet) -eq 1
+      interval: 5s
+      retries: 10 #This property specifies the number of consecutive health check failures required to declare the container as unhealthy.
+      start_period: 30s #provides initialization time for containers that need time to bootstrap
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27017"]
+    mem_limit: 2g
+
+  rabbitmq:
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    volumes:
+      - Easy.Platform-rabbitmq-volume:/var/lib/rabbitmq
+
+  redis-cache:
+    ports:
+      - "6379:6379"
+    volumes:
+      - Easy.Platform-redis-cache-data:/data
+
+  postgres-sql:
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - Easy.Platform-postgres-sql-data:/var/lib/postgresql/data
+      - Easy.Platform-postgres-sql-pgdata:/var/lib/postgresql/pgdata
+    mem_limit: 500m
+
+  text-snippet-api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development.Docker
+      - ASPNETCORE_URLS=http://0.0.0.0:80
+      - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection:-Server=sql-data,1433;Database=TextSnippedDb;User Id=sa;Password=123456Abc}
+      - RedisCacheOptions__Connection=${RedisCacheOptions__Connection:-redis-cache:6379,ConnectTimeout=5000,abortConnect=false}
+      - MongoDB__ConnectionString=${MongoDB__ConnectionString:-mongodb://root:rootPassXXX@mongo-data:27017?authSource=admin}
+      - UseDbType=${UseDbType:-Postgres}
+      - RabbitMqOptions__HostNames=rabbitmq
+    ports:
+      - "5001:80"
+    healthcheck:
+      test: curl --fail http://0.0.0.0/swagger/index.html || exit 1
+      interval: 5s
+      timeout: 10s #This property specifies the number of seconds Docker awaits for your health check command to return an exit code before declaring it as failed.
+      retries: 10 #This property specifies the number of consecutive health check failures required to declare the container as unhealthy.
+      start_period: 10s #provides initialization time for containers that need time to bootstrap
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "localhost:host-gateway"
+
+  text-snippet-webspa:
+    build:
+      args:
+        configuration: "docker-dev"
+    environment:
+      - textSnippetApiHost=${textSnippetApiHost:-http://localhost:5001}
+    ports:
+      - "4001:80"
+
+  chrome1:
+    image: selenium/node-chrome:4.4.0-20220831
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      # - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_HOST=localhost
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_PORT=5500
+      - VNC_PORT=5900
+      - DISPLAY=:1.0
+      - DISPLAY_NUM=1
+      - SCREEN_WIDTH=1280
+      - SCREEN_HEIGHT=720
+    network_mode: "host"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "localhost:host-gateway"
+    # command: bash -c "sudo chmod 777 /etc/hosts && sudo sed 's/127.0.0.1\s\{1,\}localhost/#127.0.0.1       localhost/g' /etc/hosts > /tmp/hosts-new && sudo cp /tmp/hosts-new /etc/hosts && sudo cat /etc/hosts && /opt/bin/entry_point.sh"
+  chrome2:
+    image: selenium/node-chrome:4.4.0-20220831
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      # - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_HOST=localhost
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_PORT=5501
+      - VNC_PORT=5901
+      - DISPLAY=:2.0
+      - DISPLAY_NUM=2
+      - SCREEN_WIDTH=1280
+      - SCREEN_HEIGHT=720
+    network_mode: "host"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "localhost:host-gateway"
+    # command: bash -c "sudo chmod 777 /etc/hosts && sudo sed 's/127.0.0.1\s\{1,\}localhost/#127.0.0.1       localhost/g' /etc/hosts > /tmp/hosts-new && sudo cp /tmp/hosts-new /etc/hosts && sudo cat /etc/hosts && /opt/bin/entry_point.sh"
+
+  edge1:
+    image: selenium/node-edge:4.4.0-20220831
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      # - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_HOST=localhost
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_PORT=5520
+      - VNC_PORT=5920
+      - DISPLAY=:21.0
+      - DISPLAY_NUM=21
+      - SCREEN_WIDTH=1280
+      - SCREEN_HEIGHT=720
+    network_mode: "host"
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
+    #   - "localhost:host-gateway"
+    # command: bash -c "sudo chmod 777 /etc/hosts && sudo sed 's/127.0.0.1\s\{1,\}localhost/#127.0.0.1       localhost/g' /etc/hosts > /tmp/hosts-new && sudo cp /tmp/hosts-new /etc/hosts && sudo cat /etc/hosts && /opt/bin/entry_point.sh"
+
+  firefox1:
+    image: selenium/node-firefox:4.4.0-20220831
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      # - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_HOST=localhost
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_PORT=5540
+      - VNC_PORT=5940
+      - DISPLAY=:41.0
+      - DISPLAY_NUM=41
+      - SCREEN_WIDTH=1280
+      - SCREEN_HEIGHT=720
+    network_mode: "host"
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
+    #   - "localhost:host-gateway"
+    # command: bash -c "sudo chmod 777 /etc/hosts && sudo sed 's/127.0.0.1\s\{1,\}localhost/#127.0.0.1       localhost/g' /etc/hosts > /tmp/hosts-new && sudo cp /tmp/hosts-new /etc/hosts && sudo cat /etc/hosts && /opt/bin/entry_point.sh"
+
+  selenium-hub:
+    image: selenium/hub:4.4.0-20220831
+    container_name: selenium-hub
+    # network_mode: "host"
+    ports:
+      - "4442:4442"
+      - "4443:4443"
+      - "4444:4444"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "localhost:host-gateway"
+    # command: bash -c "sudo chmod 777 /etc/hosts && sudo sed 's/127.0.0.1\s\{1,\}localhost/#127.0.0.1       localhost/g' /etc/hosts > /tmp/hosts-new && sudo cp /tmp/hosts-new /etc/hosts && sudo cat /etc/hosts && /opt/bin/entry_point.sh"
+
+  text-snippet-automation-test:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development.Docker}
+      - UseDbType=${BRAVOSUITE_TEXTSNIPPET_USEDBTYPE:-MongoDb}
+      - AppNameToOrigin__TextSnippetApp=${AppNameToOrigin__TextSnippetApp:-http://localhost:4001}
+      - RemoteWebDriverUrl=${RemoteWebDriverUrl:-http://localhost:4444/wd/hub}
+      - WebDriverType=${WebDriverType:-Firefox}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "localhost:host-gateway"
+    # command: bash -c "echo 'Sleep 60s waiting for other app started to run automation test' && sleep 60s && /opt/bin/entry_point.sh"
+
+volumes:
+  Easy.Platform-sqldata:
+    external: false
+  Easy.Platform-mongodata-db:
+    external: false
+  Easy.Platform-mongodata-configdb:
+    external: false
+  Easy.Platform-rabbitmq-volume:
+    external: false
+  Easy.Platform-redis-cache-data:
+    external: false
+  Easy.Platform-postgres-sql-data:
+    external: false
+  Easy.Platform-postgres-sql-pgdata:
+    external: false
+
+networks:
+  default:
+    name: platform-example-app-network
+    external: true

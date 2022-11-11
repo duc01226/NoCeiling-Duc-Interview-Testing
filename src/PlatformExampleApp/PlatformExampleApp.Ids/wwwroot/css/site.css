@@ -1,0 +1,32 @@
+﻿.body-container {
+  margin-top: 60px;
+  padding-bottom: 40px;
+}
+
+.welcome-page li {
+  list-style: none;
+  padding: 4px;
+}
+
+.logged-out-page iframe {
+  display: none;
+  height: 0;
+  width: 0;
+}
+
+.grants-page .card {
+  border-bottom: 1px solid lightgray;
+  margin-top: 20px;
+}
+
+.grants-page .card .card-title {
+  font-size: 120%;
+  font-weight: bold;
+}
+
+.grants-page .card .card-title img {
+  height: 100px;
+  width: 100px;
+}
+
+.grants-page .card label { font-weight: bold; }

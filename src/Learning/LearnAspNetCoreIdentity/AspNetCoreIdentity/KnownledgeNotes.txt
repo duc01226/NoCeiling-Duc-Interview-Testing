@@ -1,0 +1,25 @@
+4 Essentials Parts:
+	- UI: Identity.UI
+	- Functionalities: Identity
+	- Data Store: Identity.EntityFrameworkCore
+	- Actual Database (Ex: SQL Server) : EntityFrameworkCore.Design; EntityFrameworkCore.Tools
+
+In AspnetCoreIdentity theres some main services:
+	- SigninManager: Help to verify credentials and generating security context and does Authentication
+		- For Authorization, we still need to create our own custom policy and IAuthorizationHandler if needed. 
+		By default It's handled by default generic AuthorizationHandler for basic by Role
+	- UserManager: help us to get all user information in the database
+
+HOW 2FA Through Email WORKS:
+
+	- 1 User send first factor authentication is username/password to server. Server audit success then create a code
+	- 2 The code will be saved into identity cookie authentication and send back to the browser. Also send the code to the email
+	- 3 User will check the code in email and send it to the server. Server will compare it with the saved code in identity cookie auth
+
+HOW AUTHENTICATOR APP WORKS AS MFA (Multi Factor Authentication)
+	- 1 Login in to the app is the first factor
+	- 2 Configure the app to support MFA, then it will generate a security key for a specific user and save it
+	- 3 Enter the key into your authenticator app on the mobile device, it will have a copy of the security key (enter manually or by QR code)
+	- 4 The mobile app will take the current universal time period (every 30s calculated from the 0 start of universal time, just like a clock), so both side have the same universal time, take hasing algorithm with the key to generate a hash value (usually a 6 digit numbers)
+	- 5 The hash value, called code will be send to the application. The application use the same saved security key + current universal time period (every 30s calculated from the 0 start of universal time, just like a clock) to generate the second hash value
+	to compare two code must be equal.

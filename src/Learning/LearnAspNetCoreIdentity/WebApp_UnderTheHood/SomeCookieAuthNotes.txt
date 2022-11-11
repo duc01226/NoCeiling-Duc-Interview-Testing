@@ -1,0 +1,3 @@
+Cookie is only work for same domain, so that for many applications with different domains or mobile app, this will not work.
+
+If web app and web api is in a same domain, cookie authentication could work.

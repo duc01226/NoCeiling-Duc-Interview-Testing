@@ -1,0 +1,80 @@
+version: "3.9"
+
+services:
+  sql-data:
+    image: ${REGISTRY:-duc01226}/easy-platform-example-app-fts-sql-data:${PLATFORM:-linux}-${TAG:-latest}
+    build:
+      context: .
+      dockerfile: fts-sqldata.Dockerfile
+
+  mongo-data:
+    image: mongo:4.2
+
+  rabbitmq:
+    image: rabbitmq:3.9.1-management
+
+  redis-cache:
+    image: redis:6.2.5
+
+  postgres-sql:
+    image: postgres:14.5
+
+  text-snippet-api:
+    image: ${REGISTRY:-duc01226}/easy-platform-example-app-text-snippet-api:${PLATFORM:-linux}-${TAG:-latest}
+    build:
+      context: .
+      dockerfile: PlatformExampleApp/PlatformExampleApp.TextSnippet.Api/Dockerfile
+    depends_on:
+      - sql-data
+      - mongo-data
+      - postgres-sql
+      - rabbitmq
+      - redis-cache
+
+  text-snippet-webspa:
+    image: ${REGISTRY:-duc01226}/easy-platform-example-app-text-snippet-webspa:${PLATFORM:-linux}-${TAG:-latest}
+    build:
+      context: PlatformExampleAppWeb
+      args:
+        configuration: "production"
+      dockerfile: apps/text-snippet/Dockerfile
+
+  chrome1:
+    image: selenium/node-chrome:4.4.0-20220831
+  chrome2:
+    image: selenium/node-chrome:4.4.0-20220831
+
+  edge:
+    image: selenium/node-edge:4.4.0-20220831
+
+  firefox:
+    image: selenium/node-firefox:4.4.0-20220831
+
+  selenium-hub:
+    image: selenium/hub:4.4.0-20220831
+
+  text-snippet-automation-test:
+    image: ${REGISTRY:-duc01226}/easy-platform-example-app-text-snippet-automation-test:${PLATFORM:-linux}-${TAG:-latest}
+    build:
+      context: .
+      dockerfile: PlatformExampleApp/PlatformExampleApp.Test/Dockerfile
+    depends_on:
+      text-snippet-api:
+        condition: service_healthy
+      text-snippet-webspa:
+        condition: service_started
+      selenium-hub:
+        condition: service_started
+      chrome1:
+        condition: service_started
+      chrome2:
+        condition: service_started
+      firefox:
+        condition: service_started
+      edge:
+        condition: service_started
+
+networks:
+  default:
+    name: platform-example-app-network
+    external: true

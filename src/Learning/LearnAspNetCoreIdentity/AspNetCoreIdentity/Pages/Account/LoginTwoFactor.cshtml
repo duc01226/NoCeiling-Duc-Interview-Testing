@@ -1,0 +1,45 @@
+﻿@page
+@model LoginTwoFactorModel
+@{
+}
+
+<h3>Two Factor Authentication</h3>
+@if (!string.IsNullOrEmpty(Model.Vm.FallbackSendEmailDisplaySecurityCode))
+{
+    <div class="alert alert-success" role="alert">
+        Can't not send to your email.So Your security code is: @Model.Vm.FallbackSendEmailDisplaySecurityCode
+    </div>
+}
+else
+{
+    <div class="alert alert-success" role="alert">
+        Your security code has been sent to your email.
+    </div>
+}
+
+<p>
+    <h3>Please enter the Code</h3>
+</p>
+
+<div class="container border" style="padding: 20px">
+    <form method="post">
+        <div class="text-danger" asp-validation-summary="All"></div>
+        <div class="form-group row">
+            <div class="col-2">
+                <label asp-for="Vm.VerifyForm.MfaToken"></label>
+            </div>
+            <div class="col-5">
+                <input type="text" asp-for="Vm.VerifyForm.MfaToken" class="form-control"/>
+            </div>
+            <span class="text-danger" asp-validation-for="Vm.VerifyForm.MfaToken"></span>
+        </div>
+        <div class="form-group row">
+            <div class="col-2">
+                <input type="submit" class="btn btn-primary" value="Verify"/>
+            </div>
+            <div class="col">
+                <input type="hidden" asp-for="Vm.VerifyForm.RememberMe"/>
+            </div>
+        </div>
+    </form>
+</div>

@@ -1,0 +1,338 @@
+{
+  "version": 1,
+  "projects": {
+    "apps-text-snippet-domain": {
+      "projectType": "library",
+      "root": "libs/apps-domains/text-snippet-domain",
+      "sourceRoot": "libs/apps-domains/text-snippet-domain/src",
+      "prefix": "text-snippet-domain",
+      "architect": {
+        "test": {
+          "builder": "@nrwl/jest:jest",
+          "outputs": ["coverage/libs/apps-domains/text-snippet-domain"],
+          "options": {
+            "jestConfig": "libs/apps-domains/text-snippet-domain/jest.config.js",
+            "passWithNoTests": true
+          }
+        },
+        "lint": {
+          "builder": "@nrwl/linter:eslint",
+          "options": {
+            "lintFilePatterns": [
+              "libs/apps-domains/text-snippet-domain/src/**/*.ts",
+              "libs/apps-domains/text-snippet-domain/src/**/*.html"
+            ]
+          }
+        }
+      }
+    },
+    "platform-core": {
+      "projectType": "library",
+      "root": "libs/platform-core",
+      "sourceRoot": "libs/platform-core/src",
+      "prefix": "platform-example-web",
+      "architect": {
+        "test": {
+          "builder": "@nrwl/jest:jest",
+          "outputs": ["coverage/libs/platform-core"],
+          "options": {
+            "jestConfig": "libs/platform-core/jest.config.js",
+            "passWithNoTests": true
+          }
+        },
+        "lint": {
+          "builder": "@nrwl/linter:eslint",
+          "options": {
+            "lintFilePatterns": ["libs/platform-core/src/**/*.ts", "libs/platform-core/src/**/*.html"]
+          }
+        }
+      }
+    },
+    "other-micro-app": {
+      "projectType": "application",
+      "root": "apps/other-micro-app",
+      "sourceRoot": "apps/other-micro-app/src",
+      "prefix": "platform-example-web",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:browser",
+          "outputs": ["{options.outputPath}"],
+          "options": {
+            "outputPath": "dist/apps/other-micro-app",
+            "index": "apps/other-micro-app/src/index.html",
+            "main": "apps/other-micro-app/src/main.ts",
+            "polyfills": "apps/other-micro-app/src/polyfills.ts",
+            "tsConfig": "apps/other-micro-app/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": ["apps/other-micro-app/src/favicon.ico", "apps/other-micro-app/src/assets"],
+            "styles": ["apps/other-micro-app/src/styles.scss"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "1mb",
+                  "maximumError": "2mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2kb",
+                  "maximumError": "4kb"
+                }
+              ],
+              "fileReplacements": [
+                {
+                  "replace": "apps/other-micro-app/src/environments/environment.ts",
+                  "with": "apps/other-micro-app/src/environments/environment.prod.ts"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": {
+              "browserTarget": "other-micro-app:build:production"
+            },
+            "development": {
+              "browserTarget": "other-micro-app:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "builder": "@angular-devkit/build-angular:extract-i18n",
+          "options": {
+            "browserTarget": "other-micro-app:build"
+          }
+        },
+        "lint": {
+          "builder": "@nrwl/linter:eslint",
+          "options": {
+            "lintFilePatterns": ["apps/other-micro-app/src/**/*.ts", "apps/other-micro-app/src/**/*.html"]
+          }
+        },
+        "test": {
+          "builder": "@nrwl/jest:jest",
+          "outputs": ["coverage/apps/other-micro-app"],
+          "options": {
+            "jestConfig": "apps/other-micro-app/jest.config.js",
+            "passWithNoTests": true
+          }
+        }
+      }
+    },
+    "other-micro-app-e2e": {
+      "root": "apps/other-micro-app-e2e",
+      "sourceRoot": "apps/other-micro-app-e2e/src",
+      "projectType": "application",
+      "architect": {
+        "e2e": {
+          "builder": "@nrwl/cypress:cypress",
+          "options": {
+            "cypressConfig": "apps/other-micro-app-e2e/cypress.json",
+            "tsConfig": "apps/other-micro-app-e2e/tsconfig.e2e.json",
+            "devServerTarget": "other-micro-app:serve:development"
+          },
+          "configurations": {
+            "production": {
+              "devServerTarget": "other-micro-app:serve:production"
+            }
+          }
+        },
+        "lint": {
+          "builder": "@nrwl/linter:eslint",
+          "options": {
+            "lintFilePatterns": ["apps/other-micro-app-e2e/**/*.{js,ts}"]
+          }
+        }
+      }
+    },
+    "text-snippet": {
+      "projectType": "application",
+      "root": "apps/text-snippet",
+      "sourceRoot": "apps/text-snippet/src",
+      "prefix": "platform-example-web",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:browser",
+          "outputs": ["{options.outputPath}"],
+          "options": {
+            "outputPath": "dist/apps/text-snippet",
+            "index": "apps/text-snippet/src/index.html",
+            "main": "apps/text-snippet/src/main.ts",
+            "polyfills": "apps/text-snippet/src/polyfills.ts",
+            "tsConfig": "apps/text-snippet/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": ["apps/text-snippet/src/favicon.ico", "apps/text-snippet/src/assets"],
+            "styles": [
+              "apps/text-snippet/src/styles.scss",
+              {
+                "input": "apps/text-snippet/src/styles/themes/default-theme.scss",
+                "bundleName": "default-theme",
+                "inject": false
+              },
+              {
+                "input": "apps/text-snippet/src/styles/themes/deeppurple-amber-theme.scss",
+                "bundleName": "deeppurple-amber-theme",
+                "inject": false
+              }
+            ],
+            "stylePreprocessorOptions": {
+              "includePaths": ["apps/text-snippet/src/styles", "libs/platform-core/src/styles"]
+            },
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "1mb",
+                  "maximumError": "2mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "2kb",
+                  "maximumError": "4kb"
+                }
+              ],
+              "fileReplacements": [
+                {
+                  "replace": "apps/text-snippet/src/environments/environment.ts",
+                  "with": "apps/text-snippet/src/environments/environment.prod.ts"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true
+            },
+            "docker-dev": {
+              "buildOptimizer": false,
+              "optimization": false,
+              "vendorChunk": true,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true,
+              "fileReplacements": [
+                {
+                  "replace": "apps/text-snippet/src/environments/environment.ts",
+                  "with": "apps/text-snippet/src/environments/environment.docker-dev.ts"
+                }
+              ]
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": {
+              "browserTarget": "text-snippet:build:production"
+            },
+            "development": {
+              "browserTarget": "text-snippet:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "builder": "@angular-devkit/build-angular:extract-i18n",
+          "options": {
+            "browserTarget": "text-snippet:build"
+          }
+        },
+        "lint": {
+          "builder": "@nrwl/linter:eslint",
+          "options": {
+            "lintFilePatterns": ["apps/text-snippet/src/**/*.ts", "apps/text-snippet/src/**/*.html"]
+          }
+        },
+        "test": {
+          "builder": "@nrwl/jest:jest",
+          "outputs": ["coverage/apps/text-snippet"],
+          "options": {
+            "jestConfig": "apps/text-snippet/jest.config.js",
+            "passWithNoTests": true
+          }
+        }
+      }
+    },
+    "text-snippet-e2e": {
+      "root": "apps/text-snippet-e2e",
+      "sourceRoot": "apps/text-snippet-e2e/src",
+      "projectType": "application",
+      "architect": {
+        "e2e": {
+          "builder": "@nrwl/cypress:cypress",
+          "options": {
+            "cypressConfig": "apps/text-snippet-e2e/cypress.json",
+            "tsConfig": "apps/text-snippet-e2e/tsconfig.e2e.json",
+            "devServerTarget": "text-snippet:serve:development"
+          },
+          "configurations": {
+            "production": {
+              "devServerTarget": "text-snippet:serve:production"
+            }
+          }
+        },
+        "lint": {
+          "builder": "@nrwl/linter:eslint",
+          "options": {
+            "lintFilePatterns": ["apps/text-snippet-e2e/**/*.{js,ts}"]
+          }
+        }
+      }
+    }
+  },
+  "cli": {
+    "defaultCollection": "@nrwl/angular"
+  },
+  "schematics": {
+    "@nrwl/angular": {
+      "application": {
+        "linter": "eslint"
+      },
+      "library": {
+        "linter": "eslint"
+      },
+      "storybook-configuration": {
+        "linter": "eslint"
+      }
+    },
+    "@nrwl/angular:application": {
+      "style": "scss",
+      "linter": "eslint",
+      "unitTestRunner": "jest",
+      "e2eTestRunner": "cypress"
+    },
+    "@nrwl/angular:library": {
+      "style": "scss",
+      "linter": "eslint",
+      "unitTestRunner": "jest"
+    },
+    "@nrwl/angular:component": {
+      "style": "scss"
+    }
+  },
+  "defaultProject": "text-snippet"
+}

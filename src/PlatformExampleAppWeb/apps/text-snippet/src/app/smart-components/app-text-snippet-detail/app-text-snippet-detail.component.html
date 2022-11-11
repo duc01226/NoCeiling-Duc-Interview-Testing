@@ -1,0 +1,55 @@
+<form class="text-snippet-detail__main-form" *ngIf="vm.toSaveTextSnippet">
+  <mat-error
+    class="text-snippet-detail__error"
+    *ngIf="vm.saveTextSnippetError && vm.saveTextSnippetError.isApplicationError()"
+    >{{ vm.saveTextSnippetError.message }}</mat-error
+  >
+  <h2>{{ vm.isCreateNew() ? 'Create New' : 'Update Selected Item' }}</h2>
+  <mat-form-field class="text-snippet-detail__snippet-text-form-field" appearance="fill">
+    <mat-label>Snippet Text</mat-label>
+    <input
+      matInput
+      placeholder="Snippet text here"
+      name="snippetText"
+      [(ngModel)]="vm.toSaveTextSnippetSnippetText"
+      [ngModelOptions]="{ updateOn: 'blur' }"
+    />
+  </mat-form-field>
+
+  <mat-form-field class="text-snippet-detail__full-text-form-field" appearance="fill">
+    <mat-label>Full Text</mat-label>
+    <textarea
+      matInput
+      placeholder="Full text here"
+      name="fullText"
+      [(ngModel)]="vm.toSaveTextSnippetFullText"
+      [ngModelOptions]="{ updateOn: 'blur' }"
+    ></textarea>
+  </mat-form-field>
+
+  <div class="text-snippet-detail__btn-container">
+    <button
+      mat-flat-button
+      color="primary"
+      class="text-snippet-detail__main-form-submit-btn"
+      (click)="onSaveSelectedTextSnippetItem()"
+      [disabled]="vm.savingTextSnippet || (vm.toSaveTextSnippetId != null && !vm.hasSelectedSnippetItemChanged)"
+    >
+      {{ vm.isCreateNew() ? 'Create' : 'Update' }}
+    </button>
+    <button
+      mat-stroked-button
+      class="text-snippet-detail__main-form-reset-btn"
+      (click)="vm.resetSelectedSnippetItem()"
+      [disabled]="vm.savingTextSnippet || !vm.hasSelectedSnippetItemChanged"
+    >
+      Reset
+    </button>
+  </div>
+</form>
+<div class="platform-mat-spinner -with-backdrop" *ngIf="vm.toSaveTextSnippet == null && vm.loadingTextSnippet">
+  <mat-spinner></mat-spinner>
+</div>
+<div class="platform-mat-spinner -with-backdrop" *ngIf="vm.savingTextSnippet">
+  <mat-spinner></mat-spinner>
+</div>

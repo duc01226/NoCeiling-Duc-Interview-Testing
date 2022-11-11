@@ -1,0 +1,95 @@
+{
+  "root": true,
+  "ignorePatterns": ["**/*"],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@nrwl/nx", "@typescript-eslint"],
+  "overrides": [
+    {
+      "files": ["*.ts", "*.tsx", "*.js", "*.jsx"],
+      "rules": {
+        "@nrwl/nx/enforce-module-boundaries": [
+          "error",
+          {
+            "enforceBuildableLibDependency": true,
+            "allow": [],
+            "depConstraints": [
+              {
+                "sourceTag": "*",
+                "onlyDependOnLibsWithTags": ["*"]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["*.ts", "*.tsx"],
+      "extends": [
+        "plugin:@typescript-eslint/recommended-requiring-type-checking",
+        "plugin:@nrwl/nx/typescript",
+        "airbnb-typescript"
+      ],
+      "parserOptions": {
+        "project": ["tsconfig.*?.json"]
+      },
+      "rules": {
+        "quotes": "off",
+        "@typescript-eslint/quotes": "off",
+        "@typescript-eslint/comma-dangle": "off",
+        "spaced-comment": "off",
+        "max-len": ["error", { "comments": 150, "code": 150 }],
+        "import/prefer-default-export": "off",
+        "import/no-extraneous-dependencies": "off",
+        "no-console": "off",
+        "max-classes-per-file": "off",
+        "linebreak-style": "off",
+        "no-use-before-define": "off",
+        "@typescript-eslint/no-use-before-define": "off",
+        "@typescript-eslint/no-inferrable-types": "off",
+        "@typescript-eslint/lines-between-class-members": "off",
+        "@typescript-eslint/explicit-member-accessibility": "error",
+        "@typescript-eslint/keyword-spacing": "off",
+        "object-curly-newline": "off",
+        "eqeqeq": "off",
+        "arrow-parens": "off",
+        "class-methods-use-this": "off",
+        "@typescript-eslint/ban-types": "off",
+        "@typescript-eslint/no-unsafe-member-access": "off",
+        "operator-linebreak": "off",
+        "no-continue": "off",
+        "no-nested-ternary": "off",
+        "indent": "off",
+        "@typescript-eslint/indent": "off",
+        "implicit-arrow-linebreak": "off",
+        "prefer-const": "off",
+        "@typescript-eslint/no-empty-interface": "off",
+        "no-prototype-builtins": "off",
+        "@typescript-eslint/no-loop-func": "off",
+        "no-param-reassign": "off",
+        "nonblock-statement-body-position": "off",
+        "curly": "off",
+        "no-underscore-dangle": "off",
+        "@typescript-eslint/no-useless-constructor": "off",
+        "no-unused-vars": "off",
+        "@typescript-eslint/no-unused-vars": "warn",
+        "no-empty-function": "off",
+        "@typescript-eslint/no-empty-function": ["off"],
+        "prefer-destructuring": "off",
+        "arrow-body-style": "off",
+        "function-paren-newline": "off"
+      }
+    },
+    {
+      "files": ["*.js", "*.jsx"],
+      "extends": ["plugin:@nrwl/nx/javascript"],
+      "rules": {}
+    },
+    {
+      "files": ["*.html"],
+      "extends": ["plugin:@nrwl/nx/angular-template"],
+      "rules": {
+        "@angular-eslint/template/eqeqeq": "off"
+      }
+    }
+  ]
+}

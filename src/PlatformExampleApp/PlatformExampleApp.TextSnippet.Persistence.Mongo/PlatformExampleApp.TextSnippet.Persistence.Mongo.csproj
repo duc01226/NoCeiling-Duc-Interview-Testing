@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Platform\Easy.Platform.MongoDB\Easy.Platform.MongoDB.csproj" />
+    <ProjectReference Include="..\..\Platform\Easy.Platform\Easy.Platform.csproj" />
+    <ProjectReference Include="..\PlatformExampleApp.TextSnippet.Domain\PlatformExampleApp.TextSnippet.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

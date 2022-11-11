@@ -1,0 +1,25 @@
+@use "sass:math";
+
+$app-root-font-size: 16px;
+
+@function calculateRem($size) {
+  @return math.div($size, $app-root-font-size) * 1rem;
+}
+
+// Break-points
+$platform-media-breakpoint-xs: calculateRem(599px);
+$platform-media-breakpoint-gt-xs: calculateRem(600px);
+$platform-media-breakpoint-sm: calculateRem(959px);
+$platform-media-breakpoint-gt-sm: calculateRem(960px);
+$platform-media-breakpoint-md: calculateRem(1279px);
+$platform-media-breakpoint-gt-md: calculateRem(1280px);
+$platform-media-breakpoint-lg: calculateRem(1919px);
+$platform-media-breakpoint-gt-lg: calculateRem(1920px);
+$platform-media-breakpoint-xl: calculateRem(5000px);
+
+// z-index
+$platform-z-index-level-1: 100;
+$platform-z-index-level-2: 200;
+$platform-z-index-level-3: 300;
+$platform-z-index-level-4: 400;
+$platform-z-index-level-max: 99999;

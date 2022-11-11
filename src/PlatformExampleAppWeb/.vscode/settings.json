@@ -1,0 +1,9 @@
+{
+  "html.format.wrapLineLength": 120,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "prettier.printWidth": 120,
+  "prettier.singleQuote": true,
+  "typescriptHero.imports.organizeOnSave": true,
+  "cSpell.words": ["Appender", "Buildable", "dtos", "linebreak", "nonblock", "nrwl", "paren", "parens"]
+}

@@ -1,0 +1,8 @@
+JWT include 3 parts: Header, Payload, Signature
+
+Signature = base64UrlEncode(header) + base64UrlEncode(payload) + [a token generate server secret key string] => encrypt.
+
+How to verify: Jwt token => generate Signature from the header + payload => compare the generated signature with the signature part in token. This must be matched
+JWT is a self-validate token, which mean it can be validated it-self by signature (with the secret)
+
+JWT token is used for authentication because Web Api usually is used cross domain, which can not use cookie.
