@@ -22,7 +22,7 @@ public class PlatformCachingModule : PlatformInfrastructureModule
         IServiceCollection serviceCollection,
         PlatformModule newOtherRegisterModule)
     {
-        if (!newOtherRegisterModule.GetType().IsAssignableTo(typeof(PlatformInfrastructureModule)))
+        if (newOtherRegisterModule is not PlatformInfrastructureModule)
             RegisterCacheItemsByScanAssemblies(serviceCollection, newOtherRegisterModule.Assembly);
     }
 
@@ -66,7 +66,7 @@ public class PlatformCachingModule : PlatformInfrastructureModule
             assemblies: Util.ListBuilder.New(Assembly)
                 .Concat(
                     ServiceProvider.GetServices<PlatformModule>()
-                        .Where(p => !p.GetType().IsAssignableTo(typeof(PlatformInfrastructureModule)))
+                        .Where(p => p is not PlatformInfrastructureModule)
                         .Select(p => p.GetType().Assembly))
                 .Distinct()
                 .ToArray());

@@ -15,7 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Easy.Platform.EfCore;
 
 /// <summary>
-/// <inheritdoc cref="PlatformPersistenceModule{TDbContext}"/>
+///     <inheritdoc cref="PlatformPersistenceModule{TDbContext}" />
 /// </summary>
 public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPersistenceModule<TDbContext>
     where TDbContext : PlatformEfCoreDbContext<TDbContext>
@@ -37,13 +37,13 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
     }
 
     /// <summary>
-    /// Return a action for <see cref="DbContextOptionsBuilder"/> to AddDbContext. <br/>
+    /// Return a action for <see cref="DbContextOptionsBuilder" /> to AddDbContext. <br />
     /// Example: return options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
     /// </summary>
     protected abstract Action<DbContextOptionsBuilder> DbContextOptionsBuilderActionProvider(IServiceProvider serviceProvider);
 
     /// <summary>
-    /// Default return <see cref="LikeOperationEfCorePlatformFullTextSearchPersistenceService"/>
+    /// Default return <see cref="LikeOperationEfCorePlatformFullTextSearchPersistenceService" />
     /// Override the default instance with new class to NOT USE DEFAULT LIKE OPERATION FOR BETTER PERFORMANCE
     /// </summary>
     /// <param name="serviceProvider"></param>
@@ -64,8 +64,7 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
         if (serviceCollection.All(p => p.ServiceType != typeof(IPlatformInboxBusMessageRepository)))
             serviceCollection.Register(
                 typeof(IPlatformInboxBusMessageRepository),
-                typeof(PlatformDefaultEfCoreInboxBusMessageRepository<TDbContext>),
-                ServiceLifeTime.Transient);
+                typeof(PlatformDefaultEfCoreInboxBusMessageRepository<TDbContext>));
     }
 
     protected override void RegisterOutboxEventBusMessageRepository(IServiceCollection serviceCollection)
@@ -89,21 +88,21 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
 
     private void RegisterEfCoreUow(IServiceCollection serviceCollection)
     {
-        serviceCollection.RegisterAllFromType<IPlatformEfCoreUnitOfWork<TDbContext>>(
+        serviceCollection.RegisterAllFromType<IPlatformEfCorePersistenceUnitOfWork<TDbContext>>(
             Assembly,
             ServiceLifeTime.Transient,
             replaceIfExist: true,
             DependencyInjectionExtension.ReplaceServiceStrategy.ByService);
         // Register default PlatformMongoDbUnitOfWork if not any implementation in the concrete inherit persistence module
-        if (serviceCollection.NotExist(p => p.ServiceType == typeof(IPlatformEfCoreUnitOfWork<TDbContext>)))
-            serviceCollection.RegisterAllForImplementation<PlatformEfCoreUnitOfWork<TDbContext>>();
+        if (serviceCollection.NotExist(p => p.ServiceType == typeof(IPlatformEfCorePersistenceUnitOfWork<TDbContext>)))
+            serviceCollection.RegisterAllForImplementation<PlatformEfCorePersistenceUnitOfWork<TDbContext>>();
 
         serviceCollection.RegisterAllFromType<IUnitOfWork>(Assembly);
         // Register default PlatformEfCoreUnitOfWork for IUnitOfWork if not existing register for IUnitOfWork
         if (serviceCollection.NotExist(
             p => p.ServiceType == typeof(IUnitOfWork) &&
-                 p.ImplementationType?.IsAssignableTo(typeof(IPlatformEfCoreUnitOfWork<TDbContext>)) == true))
-            serviceCollection.Register<IUnitOfWork, PlatformEfCoreUnitOfWork<TDbContext>>();
+                 p.ImplementationType?.IsAssignableTo(typeof(IPlatformEfCorePersistenceUnitOfWork<TDbContext>)) == true))
+            serviceCollection.Register<IUnitOfWork, PlatformEfCorePersistenceUnitOfWork<TDbContext>>();
     }
 
     private DbContextOptions<TDbContext> CreateDbContextOptions(

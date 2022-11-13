@@ -7,6 +7,6 @@ public class PlatformMongoOptions
 }
 
 public class PlatformMongoOptions<TDbContext> : PlatformMongoOptions
-    where TDbContext : class, IPlatformMongoDbContext<TDbContext>
+    where TDbContext : PlatformMongoDbContext<TDbContext>
 {
 }

@@ -154,7 +154,9 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             async () =>
             {
                 var cacheProvider = serviceScope.ServiceProvider.GetService<IPlatformCacheRepositoryProvider>();
+
                 var distributedCacheRepository = cacheProvider?.TryGet(PlatformCacheRepositoryType.Distributed);
+
                 if (distributedCacheRepository != null)
                     await distributedCacheRepository.RemoveAsync(
                         p => options.AutoClearContexts.Contains(p.Context));
@@ -196,7 +198,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
     public async Task ExecuteDependencyApplicationModuleSeedData()
     {
         await ExecuteDependencyApplicationModuleSeedData(
-            moduleTypeDependencies: GetModuleTypeDependencies().Select(moduleTypeProvider => moduleTypeProvider(Configuration)).ToList(),
+            moduleTypeDependencies: ModuleTypeDependencies().Select(moduleTypeProvider => moduleTypeProvider(Configuration)).ToList(),
             ServiceProvider);
     }
 
@@ -235,7 +237,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
     protected override async Task InternalInit(IServiceScope serviceScope)
     {
         await IPlatformPersistenceModule.ExecuteDependencyPersistenceModuleMigrateApplicationData(
-            moduleTypeDependencies: GetModuleTypeDependencies().Select(moduleTypeProvider => moduleTypeProvider(Configuration)).ToList(),
+            moduleTypeDependencies: ModuleTypeDependencies().Select(moduleTypeProvider => moduleTypeProvider(Configuration)).ToList(),
             ServiceProvider);
 
         if (IsRootModule && AutoSeedApplicationDataOnInit)

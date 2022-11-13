@@ -10,6 +10,15 @@ namespace Easy.Platform.Domain.UnitOfWork;
 public interface IUnitOfWorkManager : IDisposable
 {
     /// <summary>
+    /// A single separated global uow in current scoped is used by repository for read data using query, usually when need to return data
+    /// as enumerable to help download data like streaming data (not load all big data into ram) <br />
+    /// or any other purpose that just want to using query directly without think about uow of the query. <br />
+    /// This uow is auto created once per scope when access it. <br />
+    /// This won't affect the normal current uow queue list when Begin a new uow.
+    /// </summary>
+    public IUnitOfWork GlobalUow { get; }
+
+    /// <summary>
     /// Just create and return a new instance of uow without manage it
     /// </summary>
     public IUnitOfWork CreateNewUow();
@@ -27,6 +36,12 @@ public interface IUnitOfWorkManager : IDisposable
     public IUnitOfWork CurrentActiveUow();
 
     /// <summary>
+    /// Gets currently latest active unit of work of type <see cref="TUnitOfWork" />.
+    /// <exception cref="Exception">Throw exception if there is not active unit of work.</exception>
+    /// </summary>
+    public TUnitOfWork CurrentActiveUowOfType<TUnitOfWork>() where TUnitOfWork : class, IUnitOfWork;
+
+    /// <summary>
     /// Gets currently latest active unit of work. Return null if no active uow
     /// </summary>
     [return: MaybeNull]
@@ -35,7 +50,7 @@ public interface IUnitOfWorkManager : IDisposable
     /// <summary>
     /// Check that is there any currently latest active unit of work
     /// </summary>
-    public bool HasCurrentActive();
+    public bool HasCurrentActiveUow();
 
     /// <summary>
     /// Begin a new last registered unit of work.
@@ -46,34 +61,19 @@ public interface IUnitOfWorkManager : IDisposable
     /// current active uow if possible. Default is true.
     /// </param>
     public IUnitOfWork Begin(bool suppressCurrentUow = true);
-
-    /// <summary>
-    /// Gets last begun inner unit of work of type <see cref="TUnitOfWork" /> (or null if not exists).
-    /// </summary>
-    [return: MaybeNull]
-    public TUnitOfWork CurrentUowInner<TUnitOfWork>() where TUnitOfWork : class, IUnitOfWork;
-
-    /// <summary>
-    /// Gets currently latest active inner unit of work of type <see cref="TUnitOfWork" />.
-    /// <exception cref="Exception">Throw exception if there is not active unit of work.</exception>
-    /// </summary>
-    public TUnitOfWork CurrentInnerActiveUow<TUnitOfWork>() where TUnitOfWork : class, IUnitOfWork;
-
-    public IUnitOfWork CurrentReadonlyDataEnumerableUow();
 }
 
 public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
 {
     protected readonly List<IUnitOfWork> CurrentUnitOfWorks = new();
 
-    private IUnitOfWork currentReadonlyDataEnumerableUow;
-    private bool isDisposed;
+    private IUnitOfWork globalUow;
 
     public abstract IUnitOfWork CreateNewUow();
 
     public virtual IUnitOfWork CurrentUow()
     {
-        RemoveAllLastInactiveUow();
+        RemoveAllInactiveUow();
 
         return CurrentUnitOfWorks.LastOrDefault();
     }
@@ -82,8 +82,11 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
     {
         return CurrentUow()
             .Ensure(
-                must: currentUow => currentUow?.IsActive() == true,
-                "Current active unit of work is missing.");
+                must: currentUow => currentUow != null,
+                "There's no current any uow has been begun.")
+            .Ensure(
+                must: currentUow => currentUow.IsActive(),
+                "Current unit of work has been completed or disposed.");
     }
 
     public IUnitOfWork TryGetCurrentActiveUow()
@@ -93,37 +96,32 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
             : null;
     }
 
-    public bool HasCurrentActive()
+    public bool HasCurrentActiveUow()
     {
         return CurrentUow()?.IsActive() == true;
     }
 
     public virtual IUnitOfWork Begin(bool suppressCurrentUow = true)
     {
-        RemoveAllLastInactiveUow();
+        RemoveAllInactiveUow();
 
         if (suppressCurrentUow || CurrentUnitOfWorks.IsEmpty()) CurrentUnitOfWorks.Add(CreateNewUow());
 
         return CurrentUow();
     }
 
-    public TUnitOfWork CurrentUowInner<TUnitOfWork>() where TUnitOfWork : class, IUnitOfWork
+    public TUnitOfWork CurrentActiveUowOfType<TUnitOfWork>() where TUnitOfWork : class, IUnitOfWork
     {
-        return CurrentUow()?.CurrentInner<TUnitOfWork>();
-    }
-
-    public TUnitOfWork CurrentInnerActiveUow<TUnitOfWork>() where TUnitOfWork : class, IUnitOfWork
-    {
-        return CurrentUowInner<TUnitOfWork>()
+        return CurrentUow().UowOfType<TUnitOfWork>()
             .Ensure(
-                must: currentInnerUow => currentInnerUow?.IsActive() == true,
-                $"Current active inner unit of work of type {typeof(TUnitOfWork).FullName} is missing. Should use {nameof(IUnitOfWorkManager)} to Begin a new UOW.");
+                must: currentUow => currentUow != null,
+                $"There's no current any uow of type {typeof(TUnitOfWork).FullName} has been begun.")
+            .Ensure(
+                must: currentUow => currentUow.IsActive(),
+                $"Current unit of work of type {typeof(TUnitOfWork).FullName} has been completed or disposed.");
     }
 
-    public IUnitOfWork CurrentReadonlyDataEnumerableUow()
-    {
-        return currentReadonlyDataEnumerableUow ??= CreateNewUow();
-    }
+    public IUnitOfWork GlobalUow => globalUow ??= CreateNewUow();
 
     public void Dispose()
     {
@@ -133,21 +131,16 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
 
     protected virtual void Dispose(bool disposing)
     {
-        if (isDisposed)
-            return;
-
         if (disposing)
         {
             // free managed resources
             CurrentUnitOfWorks.ForEach(currentUnitOfWork => currentUnitOfWork.Dispose());
             CurrentUnitOfWorks.Clear();
-            currentReadonlyDataEnumerableUow?.Dispose();
+            globalUow?.Dispose();
         }
-
-        isDisposed = true;
     }
 
-    protected List<IUnitOfWork> RemoveAllLastInactiveUow()
+    protected List<IUnitOfWork> RemoveAllInactiveUow()
     {
         CurrentUnitOfWorks.RemoveWhere(p => !p.IsActive(), out _);
 

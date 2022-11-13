@@ -45,7 +45,7 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
 
         ManuallySetValueItemsDic.Upsert(contextKey, value);
 
-        if (CurrentHttpContext() != null) CurrentHttpContext().Items.Upsert(contextKey, value);
+        CurrentHttpContext()?.Items.Upsert(contextKey, value);
     }
 
     public List<string> GetAllKeys()
@@ -154,8 +154,8 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
     }
 
     /// <summary>
-    /// Return True if found value and out the value of type <see cref="T"/>.
-    /// Return false if value is not found and out default of type <see cref="T"/>.
+    /// Return True if found value and out the value of type <see cref="T" />.
+    /// Return false if value is not found and out default of type <see cref="T" />.
     /// </summary>
     private bool TryGetValueFromUserClaims<T>(ClaimsPrincipal userClaims, string contextKey, out T foundValue)
     {

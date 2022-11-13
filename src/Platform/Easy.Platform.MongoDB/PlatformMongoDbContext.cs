@@ -1,34 +1,24 @@
 using System.Data.Common;
+using System.Linq.Expressions;
 using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common;
+using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
+using Easy.Platform.Domain.Events;
+using Easy.Platform.Domain.Exceptions;
+using Easy.Platform.MongoDB.Extensions;
 using Easy.Platform.MongoDB.Migration;
 using Easy.Platform.Persistence.DataMigration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Linq;
 
 namespace Easy.Platform.MongoDB;
 
-public interface IPlatformMongoDbContext<TDbContext> : IPlatformDbContext
-    where TDbContext : IPlatformMongoDbContext<TDbContext>
-{
-    IMongoCollection<PlatformMongoMigrationHistory> MigrationHistoryCollection { get; }
-    string DataMigrationHistoryCollectionName { get; }
-
-    Task EnsureIndexesAsync(bool recreate = false);
-    string GenerateId();
-    Task Migrate();
-    string GetCollectionName<TEntity>();
-    IMongoCollection<TEntity> GetCollection<TEntity>();
-    IQueryable<T> GetQueryable<T>(string dataSourceName);
-}
-
-public abstract class PlatformMongoDbContext<TDbContext> : IPlatformMongoDbContext<TDbContext>
+public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     where TDbContext : PlatformMongoDbContext<TDbContext>
 {
     public const string EnsureIndexesMigrationName = "EnsureIndexesAsync";
@@ -39,26 +29,21 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformMongoDbConte
 
     public readonly IMongoDatabase Database;
 
+    protected readonly IPlatformCqrs Cqrs;
     protected readonly Lazy<Dictionary<Type, string>> EntityTypeToCollectionNameDictionary;
-
-    private readonly ILogger logger;
+    protected readonly ILogger Logger;
 
     public PlatformMongoDbContext(
         IOptions<PlatformMongoOptions<TDbContext>> options,
         IPlatformMongoClient<TDbContext> client,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        IPlatformCqrs cqrs)
     {
+        Cqrs = cqrs;
         Database = client.MongoClient.GetDatabase(options.Value.Database);
-        EntityTypeToCollectionNameDictionary = new Lazy<Dictionary<Type, string>>(
-            () =>
-            {
-                var entityTypeToCollectionNameMaps = EntityTypeToCollectionNameMaps();
-                return entityTypeToCollectionNameMaps != null ? new Dictionary<Type, string>(entityTypeToCollectionNameMaps) : null;
-            });
-        logger = loggerFactory.CreateLogger(GetType());
+        EntityTypeToCollectionNameDictionary = new Lazy<Dictionary<Type, string>>(BuildEntityTypeToCollectionNameDictionary);
+        Logger = loggerFactory.CreateLogger(GetType());
     }
-
-    public bool Disposed { get; private set; }
 
     public IMongoCollection<PlatformInboxBusMessage> InboxBusMessageCollection =>
         Database.GetCollection<PlatformInboxBusMessage>(GetCollectionName<PlatformInboxBusMessage>());
@@ -74,27 +59,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformMongoDbConte
     public IMongoCollection<PlatformMongoMigrationHistory> MigrationHistoryCollection =>
         Database.GetCollection<PlatformMongoMigrationHistory>(DataMigrationHistoryCollectionName);
 
-    public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryCollection.AsQueryable();
     public virtual string DataMigrationHistoryCollectionName => "MigrationHistory";
 
-    public virtual async Task EnsureIndexesAsync(bool recreate = false)
-    {
-        await EnsureMigrationHistoryCollectionIndexesAsync(recreate);
-        await EnsureApplicationDataMigrationHistoryCollectionIndexesAsync(recreate);
-        await EnsureInboxBusMessageCollectionIndexesAsync(recreate);
-        await EnsureOutboxBusMessageCollectionIndexesAsync(recreate);
-
-        if (recreate || !IsEnsureIndexesExecuted())
-            await InternalEnsureIndexesAsync(!IsEnsureIndexesExecuted() || recreate);
-
-        if (!IsEnsureIndexesExecuted())
-            await SaveIndexesExecutedMigrationHistory();
-    }
-
-    public string GenerateId()
-    {
-        return new BsonObjectId(ObjectId.GenerateNewId()).ToString();
-    }
+    public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery =>
+        ApplicationDataMigrationHistoryCollection.AsQueryable();
 
     public virtual async Task Initialize(IServiceProvider serviceProvider)
     {
@@ -104,61 +72,237 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformMongoDbConte
 
         async Task InsertDbInitializedApplicationDataMigrationHistory()
         {
-            if (!await ApplicationDataMigrationHistoryCollection.AsQueryable()
-                .AnyAsync(p => p.Name == DbInitializedApplicationDataMigrationHistoryName))
+            if (!await ApplicationDataMigrationHistoryCollection.AsQueryable().AnyAsync(p => p.Name == DbInitializedApplicationDataMigrationHistoryName))
                 await ApplicationDataMigrationHistoryCollection.InsertOneAsync(
                     new PlatformDataMigrationHistory(DbInitializedApplicationDataMigrationHistoryName));
         }
     }
 
+    public Task<List<TSource>> ToListAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    {
+        return source.ToListAsync(cancellationToken);
+    }
+
+    public Task<TSource> FirstAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    {
+        return source.FirstAsync(cancellationToken);
+    }
+
+    public Task<TResult> FirstOrDefaultAsync<TEntity, TResult>(Func<IQueryable<TEntity>, IQueryable<TResult>> queryBuilder, CancellationToken cancellationToken = default)
+        where TEntity : class, IEntity
+    {
+        return queryBuilder(GetQuery<TEntity>()).FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public Task<int> CountAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
+    {
+        return query.CountAsync(cancellationToken);
+    }
+
+    public Task<bool> AnyAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
+    {
+        return query.AnyAsync(cancellationToken);
+    }
+
     public async Task<List<T>> GetAllAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
     {
-        if (query is IMongoQueryable<T> mongoQueryable)
-            return await mongoQueryable.ToListAsync(cancellationToken);
-        return query.ToList();
+        return await query.ToListAsync(cancellationToken);
     }
 
     public async Task<T> FirstOrDefaultAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
     {
-        if (query is IMongoQueryable<T> mongoQueryable)
-            return await mongoQueryable.FirstOrDefaultAsync(cancellationToken);
-        return query.FirstOrDefault();
+        return await query.FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task Migrate()
+    public Task<List<TResult>> GetAllAsync<TEntity, TResult>(Func<IQueryable<TEntity>, IQueryable<TResult>> queryBuilder, CancellationToken cancellationToken = default)
+        where TEntity : class, IEntity
     {
-        await EnsureIndexesAsync();
-        EnsureAllMigrationExecutorsHasUniqueName();
-        await GetCanExecuteMigrationExecutors()
-            .ForEachAsync(
-                async migrationExecutor =>
-                {
-                    await migrationExecutor.Execute((TDbContext)this);
-                    await MigrationHistoryCollection.InsertOneAsync(new PlatformMongoMigrationHistory(migrationExecutor.Name));
-                    await SaveChangesAsync();
-                });
+        return queryBuilder(GetQuery<TEntity>()).ToListAsync(cancellationToken);
     }
 
-    public string GetCollectionName<TEntity>()
+    public async Task<List<TEntity>> CreateManyAsync<TEntity, TPrimaryKey>(
+        List<TEntity> entities,
+        bool dismissSendEvent = false,
+        CancellationToken cancellationToken = default)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        if (TryGetCollectionName<TEntity>(out var collectionName))
-            return collectionName;
+        if (entities.Any())
+        {
+            await this.As<IPlatformDbContext>().EnsureEntitiesValid<TEntity, TPrimaryKey>(entities, cancellationToken);
 
-        if (TryGetPlatformEntityCollectionName<TEntity>() != null)
-            return TryGetPlatformEntityCollectionName<TEntity>();
+            await GetTable<TEntity>().InsertManyAsync(entities, null, cancellationToken);
 
-        throw new Exception(
-            $"Missing collection name mapping item for entity {typeof(TEntity).Name}. Please define it in return of {nameof(EntityTypeToCollectionNameMaps)} method.");
+            if (!dismissSendEvent)
+                await Cqrs.SendEntityEvents(entities, PlatformCqrsEntityEventCrudAction.Created, cancellationToken);
+        }
+
+        return entities;
     }
 
-    public IMongoCollection<TEntity> GetCollection<TEntity>()
+    public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return Database.GetCollection<TEntity>(GetCollectionName<TEntity>());
+        await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
+
+        if (entity is IRowVersionEntity rowVersionEntity)
+        {
+            var currentInMemoryConcurrencyUpdateToken = rowVersionEntity.ConcurrencyUpdateToken;
+            var newUpdateConcurrencyUpdateToken = Guid.NewGuid();
+
+            rowVersionEntity.ConcurrencyUpdateToken = newUpdateConcurrencyUpdateToken;
+
+            var result = await GetTable<TEntity>().ReplaceOneAsync(
+                p => p.Id.Equals(entity.Id) &&
+                     (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
+                      ((IRowVersionEntity)p).ConcurrencyUpdateToken == Guid.Empty ||
+                      ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken),
+                entity,
+                new ReplaceOptions { IsUpsert = false },
+                cancellationToken);
+
+            if (result.MatchedCount <= 0)
+            {
+                if (await GetTable<TEntity>().AsQueryable().AnyAsync(p => p.Id.Equals(entity.Id), cancellationToken))
+                    throw new PlatformDomainRowVersionConflictException(
+                        $"Update {typeof(TEntity).Name} with Id:{entity.Id} has conflicted version.");
+                throw new PlatformDomainEntityNotFoundException<TEntity>(entity.Id.ToString());
+            }
+        }
+        else
+        {
+            var result = await GetTable<TEntity>().ReplaceOneAsync(
+                p => p.Id.Equals(entity.Id),
+                entity,
+                new ReplaceOptions { IsUpsert = false },
+                cancellationToken);
+
+            if (result.MatchedCount <= 0)
+                throw new PlatformDomainEntityNotFoundException<TEntity>(entity.Id.ToString());
+        }
+
+        if (!dismissSendEvent)
+            await Cqrs.SendEntityEvent(entity, PlatformCqrsEntityEventCrudAction.Updated, cancellationToken);
+
+        return entity;
     }
 
-    public IQueryable<T> GetQueryable<T>(string dataSourceName)
+    public async Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
+        List<TEntity> entities,
+        bool dismissSendEvent = false,
+        CancellationToken cancellationToken = default)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return Database.GetCollection<T>(dataSourceName).AsQueryable();
+        await entities.ForEachAsync(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
+
+        return entities;
+    }
+
+    public async Task DeleteAsync<TEntity, TPrimaryKey>(TPrimaryKey entityId, bool dismissSendEvent, CancellationToken cancellationToken)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        var entity = GetQuery<TEntity>().FirstOrDefault(p => p.Id.Equals(entityId));
+
+        if (entity != null) await DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken);
+    }
+
+    public async Task DeleteAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        var result = await GetTable<TEntity>().DeleteOneAsync(p => p.Id.Equals(entity.Id), null, cancellationToken);
+
+        if (result.DeletedCount > 0 && !dismissSendEvent)
+            await Cqrs.SendEntityEvent(entity, PlatformCqrsEntityEventCrudAction.Deleted, cancellationToken);
+    }
+
+    public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
+        List<TPrimaryKey> entityIds,
+        bool dismissSendEvent = false,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        var entities = await GetQuery<TEntity>().Where(p => entityIds.Contains(p.Id)).ToListAsync(cancellationToken);
+
+        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, cancellationToken);
+    }
+
+    public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
+        List<TEntity> entities,
+        bool dismissSendEvent = false,
+        CancellationToken cancellationToken = default)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        var ids = entities.Select(p => p.Id).ToList();
+        await GetTable<TEntity>().DeleteManyAsync(p => ids.Contains(p.Id), cancellationToken);
+
+        if (!dismissSendEvent)
+            await Cqrs.SendEntityEvents(entities, PlatformCqrsEntityEventCrudAction.Deleted, cancellationToken);
+
+        return entities;
+    }
+
+    public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
+        Expression<Func<TEntity, bool>> predicate,
+        bool dismissSendEvent = false,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        var entities = await GetQuery<TEntity>().Where(predicate).ToListAsync(cancellationToken);
+
+        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, cancellationToken);
+    }
+
+    public async Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        return await CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, upsert: false, cancellationToken);
+    }
+
+    public async Task<TEntity> CreateOrUpdateAsync<TEntity, TPrimaryKey>(
+        TEntity entity,
+        Expression<Func<TEntity, bool>> customCheckExistingPredicate = null,
+        bool dismissSendEvent = false,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        var existingEntity = await GetQuery<TEntity>()
+            .When(_ => customCheckExistingPredicate != null, _ => _.Where(customCheckExistingPredicate!))
+            .Else(_ => _.Where(p => p.Id.Equals(entity.Id)))
+            .Execute()
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (existingEntity != null)
+        {
+            entity.Id = existingEntity.Id;
+
+            if (entity is IRowVersionEntity rowVersionEntity &&
+                existingEntity is IRowVersionEntity existingRowVersionEntity)
+                rowVersionEntity.ConcurrencyUpdateToken = existingRowVersionEntity.ConcurrencyUpdateToken;
+
+            return await UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken);
+        }
+
+        return await CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, upsert: true, cancellationToken);
+    }
+
+    public async Task<List<TEntity>> CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
+        List<TEntity> entities,
+        Expression<Func<TEntity, bool>> customCheckExistingPredicate = null,
+        bool dismissSendEvent = false,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        var entityIds = entities.Select(p => p.Id);
+
+        var existingEntityIds = await GetTable<TEntity>().AsQueryable()
+            .Where(p => entityIds.Contains(p.Id))
+            .Select(p => p.Id)
+            .Distinct()
+            .ToListAsync(cancellationToken)
+            .Then(_ => _.ToHashSet());
+
+        var toCreateEntities = entities.Where(p => !existingEntityIds.Contains(p.Id)).ToList();
+        var toUpdateEntities = entities.Where(p => existingEntityIds.Contains(p.Id)).ToList();
+
+        await CreateManyAsync<TEntity, TPrimaryKey>(toCreateEntities, dismissSendEvent, cancellationToken);
+        await UpdateManyAsync<TEntity, TPrimaryKey>(toUpdateEntities, dismissSendEvent, cancellationToken);
+
+        return entities;
     }
 
     public Task SaveChangesAsync()
@@ -181,7 +325,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformMongoDbConte
             .ForEachAsync(
                 async migrationExecution =>
                 {
-                    logger.LogInformation($"Migration {migrationExecution.Name} started.");
+                    Logger.LogInformation($"Migration {migrationExecution.Name} started.");
 
                     try
                     {
@@ -204,7 +348,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformMongoDbConte
                     catch (DbException ex)
                     {
                         if (PlatformEnvironment.IsDevelopment)
-                            logger.LogWarning(
+                            Logger.LogWarning(
                                 ex,
                                 "MigrateApplicationDataAsync has errors. For dev environment it may happens if migrate cross db, when other service db is not initiated. Usually for dev environment migrate cross service db when run system in the first-time could be ignored." +
                                 Environment.NewLine +
@@ -216,7 +360,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformMongoDbConte
                         else throw;
                     }
 
-                    logger.LogInformation($"Migration {migrationExecution.Name} finished.");
+                    Logger.LogInformation($"Migration {migrationExecution.Name} finished.");
                 });
     }
 
@@ -227,21 +371,72 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformMongoDbConte
 
     public void Dispose()
     {
-        if (Disposed)
-            return;
-
         Dispose(true);
         GC.SuppressFinalize(this);
+    }
 
-        Disposed = true;
+    public virtual async Task EnsureIndexesAsync(bool recreate = false)
+    {
+        await EnsureMigrationHistoryCollectionIndexesAsync(recreate);
+        await EnsureApplicationDataMigrationHistoryCollectionIndexesAsync(recreate);
+        await EnsureInboxBusMessageCollectionIndexesAsync(recreate);
+        await EnsureOutboxBusMessageCollectionIndexesAsync(recreate);
+
+        if (recreate || !IsEnsureIndexesMigrationExecuted())
+            await InternalEnsureIndexesAsync(!IsEnsureIndexesMigrationExecuted() || recreate);
+
+        if (!IsEnsureIndexesMigrationExecuted())
+            await MigrationHistoryCollection.InsertOneAsync(
+                new PlatformMongoMigrationHistory(EnsureIndexesMigrationName));
+    }
+
+    public string GenerateId()
+    {
+        return new BsonObjectId(ObjectId.GenerateNewId()).ToString();
+    }
+
+    public async Task Migrate()
+    {
+        await EnsureIndexesAsync();
+        EnsureAllMigrationExecutorsHasUniqueName();
+        await NotExecutedMigrationExecutors()
+            .ForEachAsync(
+                async migrationExecutor =>
+                {
+                    await migrationExecutor.Execute((TDbContext)this);
+                    await MigrationHistoryCollection.InsertOneAsync(new PlatformMongoMigrationHistory(migrationExecutor.Name));
+                    await SaveChangesAsync();
+                });
+    }
+
+    public string GetCollectionName<TEntity>()
+    {
+        if (TryGetCollectionName<TEntity>(out var collectionName))
+            return collectionName;
+
+        if (GetPlatformEntityCollectionName<TEntity>() != null)
+            return GetPlatformEntityCollectionName<TEntity>();
+
+        throw new Exception(
+            $"Missing collection name mapping item for entity {typeof(TEntity).Name}. Please define it in return of {nameof(EntityTypeToCollectionNameMaps)} method.");
+    }
+
+    public IMongoCollection<TEntity> GetCollection<TEntity>()
+    {
+        return Database.GetCollection<TEntity>(GetCollectionName<TEntity>());
+    }
+
+    public IMongoCollection<TEntity> GetTable<TEntity>() where TEntity : class, IEntity, new()
+    {
+        return GetCollection<TEntity>();
     }
 
     public virtual async Task EnsureMigrationHistoryCollectionIndexesAsync(bool recreate = false)
     {
-        if (recreate || !IsEnsureIndexesExecuted())
+        if (recreate || !IsEnsureIndexesMigrationExecuted())
             await MigrationHistoryCollection.Indexes.DropAllAsync();
 
-        if (recreate || !IsEnsureIndexesExecuted())
+        if (recreate || !IsEnsureIndexesMigrationExecuted())
             await MigrationHistoryCollection.Indexes.CreateManyAsync(
                 new List<CreateIndexModel<PlatformMongoMigrationHistory>>
                 {
@@ -256,10 +451,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformMongoDbConte
 
     public virtual async Task EnsureApplicationDataMigrationHistoryCollectionIndexesAsync(bool recreate = false)
     {
-        if (recreate || !IsEnsureIndexesExecuted())
+        if (recreate || !IsEnsureIndexesMigrationExecuted())
             await ApplicationDataMigrationHistoryCollection.Indexes.DropAllAsync();
 
-        if (recreate || !IsEnsureIndexesExecuted())
+        if (recreate || !IsEnsureIndexesMigrationExecuted())
             await ApplicationDataMigrationHistoryCollection.Indexes.CreateManyAsync(
                 new List<CreateIndexModel<PlatformDataMigrationHistory>>
                 {
@@ -274,10 +469,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformMongoDbConte
 
     public virtual async Task EnsureInboxBusMessageCollectionIndexesAsync(bool recreate = false)
     {
-        if (recreate || !IsEnsureIndexesExecuted())
+        if (recreate || !IsEnsureIndexesMigrationExecuted())
             await InboxBusMessageCollection.Indexes.DropAllAsync();
 
-        if (recreate || !IsEnsureIndexesExecuted())
+        if (recreate || !IsEnsureIndexesMigrationExecuted())
             await InboxBusMessageCollection.Indexes.CreateManyAsync(
                 new List<CreateIndexModel<PlatformInboxBusMessage>>
                 {
@@ -298,10 +493,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformMongoDbConte
 
     public virtual async Task EnsureOutboxBusMessageCollectionIndexesAsync(bool recreate = false)
     {
-        if (recreate || !IsEnsureIndexesExecuted())
+        if (recreate || !IsEnsureIndexesMigrationExecuted())
             await OutboxBusMessageCollection.Indexes.DropAllAsync();
 
-        if (recreate || !IsEnsureIndexesExecuted())
+        if (recreate || !IsEnsureIndexesMigrationExecuted())
             await OutboxBusMessageCollection.Indexes.CreateManyAsync(
                 new List<CreateIndexModel<PlatformOutboxBusMessage>>
                 {
@@ -322,32 +517,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformMongoDbConte
 
     public abstract Task InternalEnsureIndexesAsync(bool recreate = false);
 
-    private static string TryGetPlatformEntityCollectionName<TEntity>()
-    {
-        if (typeof(TEntity).IsAssignableTo(typeof(PlatformInboxBusMessage)))
-            return PlatformInboxBusMessageCollectionName;
-
-        if (typeof(TEntity).IsAssignableTo(typeof(PlatformOutboxBusMessage)))
-            return PlatformOutboxBusMessageCollectionName;
-
-        if (typeof(TEntity).IsAssignableTo(typeof(PlatformMongoMigrationHistory)))
-            return PlatformDataMigrationHistoryCollectionName;
-
-        return null;
-    }
-
     /// <summary>
     /// This is used for <see cref="TryGetCollectionName{TEntity}" /> to return the collection name for TEntity
     /// </summary>
     public virtual List<KeyValuePair<Type, string>> EntityTypeToCollectionNameMaps() { return null; }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            // Dispose managed state (managed objects).
-        }
-    }
 
     /// <summary>
     /// TryGetCollectionName for <see cref="GetCollectionName{TEntity}" /> to return the entity collection.
@@ -355,18 +528,47 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformMongoDbConte
     /// </summary>
     protected virtual bool TryGetCollectionName<TEntity>(out string collectionName)
     {
-        if (EntityTypeToCollectionNameDictionary.Value == null || !EntityTypeToCollectionNameDictionary.Value.ContainsKey(typeof(TEntity)))
+        if (EntityTypeToCollectionNameDictionary.Value == null ||
+            !EntityTypeToCollectionNameDictionary.Value.ContainsKey(typeof(TEntity)))
         {
-            collectionName = TryGetPlatformEntityCollectionName<TEntity>() ?? typeof(TEntity).Name;
+            collectionName = GetPlatformEntityCollectionName<TEntity>() ?? typeof(TEntity).Name;
             return true;
         }
 
         return EntityTypeToCollectionNameDictionary.Value.TryGetValue(typeof(TEntity), out collectionName);
     }
 
-    protected bool IsEnsureIndexesExecuted()
+    protected bool IsEnsureIndexesMigrationExecuted()
     {
         return MigrationHistoryCollection.AsQueryable().Any(p => p.Name == EnsureIndexesMigrationName);
+    }
+
+    protected async Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(
+        TEntity entity,
+        bool dismissSendEvent,
+        bool upsert = false,
+        CancellationToken cancellationToken = default)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
+
+        if (upsert == false)
+            await GetTable<TEntity>().InsertOneAsync(entity, null, cancellationToken);
+        else
+            await GetTable<TEntity>().ReplaceOneAsync(
+                p => p.Id.Equals(entity.Id),
+                entity,
+                new ReplaceOptions { IsUpsert = true },
+                cancellationToken);
+
+        if (!dismissSendEvent)
+            await Cqrs.SendEntityEvent(entity, PlatformCqrsEntityEventCrudAction.Created, cancellationToken);
+
+        return entity;
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
     }
 
     private List<PlatformMongoMigrationExecutor<TDbContext>> ScanAllMigrationExecutors()
@@ -393,22 +595,34 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformMongoDbConte
         }
     }
 
-    private List<PlatformMongoMigrationExecutor<TDbContext>> GetCanExecuteMigrationExecutors()
+    private List<PlatformMongoMigrationExecutor<TDbContext>> NotExecutedMigrationExecutors()
     {
         var executedMigrationNames = MigrationHistoryCollection.AsQueryable().Select(p => p.Name).ToHashSet();
 
-        var notExecutedMigrations = ScanAllMigrationExecutors()
+        return ScanAllMigrationExecutors()
             .Where(p => !p.IsExpired())
             .OrderBy(x => x.GetOrderByValue())
             .ToList()
             .FindAll(me => !executedMigrationNames.Contains(me.Name));
-
-        return notExecutedMigrations;
     }
 
-    private async Task SaveIndexesExecutedMigrationHistory()
+    private Dictionary<Type, string> BuildEntityTypeToCollectionNameDictionary()
     {
-        await MigrationHistoryCollection.InsertOneAsync(
-            new PlatformMongoMigrationHistory(EnsureIndexesMigrationName));
+        var entityTypeToCollectionNameMaps = EntityTypeToCollectionNameMaps();
+        return entityTypeToCollectionNameMaps != null ? new Dictionary<Type, string>(entityTypeToCollectionNameMaps) : null;
+    }
+
+    private static string GetPlatformEntityCollectionName<TEntity>()
+    {
+        if (typeof(TEntity).IsAssignableTo(typeof(PlatformInboxBusMessage)))
+            return PlatformInboxBusMessageCollectionName;
+
+        if (typeof(TEntity).IsAssignableTo(typeof(PlatformOutboxBusMessage)))
+            return PlatformOutboxBusMessageCollectionName;
+
+        if (typeof(TEntity).IsAssignableTo(typeof(PlatformMongoMigrationHistory)))
+            return PlatformDataMigrationHistoryCollectionName;
+
+        return null;
     }
 }

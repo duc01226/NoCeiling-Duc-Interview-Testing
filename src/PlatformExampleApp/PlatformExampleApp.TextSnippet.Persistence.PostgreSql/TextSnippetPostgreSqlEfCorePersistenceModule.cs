@@ -3,6 +3,7 @@ using Easy.Platform.EfCore;
 using Easy.Platform.EfCore.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using PlatformExampleApp.TextSnippet.Persistence.PostgreSql;
 
 namespace PlatformExampleApp.TextSnippet.Persistence;
 

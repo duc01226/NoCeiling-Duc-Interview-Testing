@@ -22,7 +22,7 @@ public static class ObjectToWhenCaseExtension
         Func<TSource, bool> @case,
         Func<TSource, Task<TTarget>> then)
     {
-        return new WhenCase<TSource, TTarget>(source, @case, _ => then(_));
+        return new WhenCase<TSource, TTarget>(source, @case, then);
     }
 
     public static WhenCase<TSource, TTarget> When<TSource, TTarget>(

@@ -4,12 +4,12 @@ namespace Easy.Platform.Common.DeprecatedFPLibrary;
 
 public class Option
 {
-    public struct None
+    public readonly struct None
     {
         public static readonly None Default = new None();
     }
 
-    public struct Some<T>
+    public readonly struct Some<T>
     {
         internal T Value { get; }
 

@@ -1,4 +1,3 @@
-using System.Threading;
 using Easy.Platform.AspNetCore.Controllers;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Utils;
@@ -7,8 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using PlatformExampleApp.TextSnippet.Application.Caching;
 using PlatformExampleApp.TextSnippet.Application.EntityDtos;
+using PlatformExampleApp.TextSnippet.Application.Persistence;
 using PlatformExampleApp.TextSnippet.Application.UseCaseCommands;
 using PlatformExampleApp.TextSnippet.Application.UseCaseQueries;
+using PlatformExampleApp.TextSnippet.Domain.Entities;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -18,11 +19,15 @@ namespace PlatformExampleApp.TextSnippet.Api.Controllers;
 [ApiController]
 public class TextSnippetController : PlatformBaseController
 {
+    private readonly ITextSnippetDbContext textSnippetDbContext;
+
     public TextSnippetController(
         IPlatformCqrs cqrs,
         IPlatformCacheRepositoryProvider cacheRepositoryProvider,
-        IConfiguration configuration) : base(cqrs, cacheRepositoryProvider, configuration)
+        IConfiguration configuration,
+        ITextSnippetDbContext textSnippetDbContext) : base(cqrs, cacheRepositoryProvider, configuration)
     {
+        this.textSnippetDbContext = textSnippetDbContext;
     }
 
     // GET: api/<TextSnippetController>
@@ -116,10 +121,24 @@ public class TextSnippetController : PlatformBaseController
         return await Cqrs.SendQuery(new TestGetAllDataAsStreamQuery());
     }
 
-    private static void RandomThrowToTestHandleInternalException()
+    [HttpPost]
+    [Route("testSaveUsingDirectDbContext")]
+    public async Task<SaveSnippetTextCommandResult> TestSaveUsingDirectDbContext([FromBody] SaveSnippetTextCommand request)
+    {
+        var savedEntity = await textSnippetDbContext.CreateOrUpdateAsync<TextSnippetEntity, Guid>(request.Data.MapToEntity());
+
+        await textSnippetDbContext.SaveChangesAsync();
+
+        return new SaveSnippetTextCommandResult
+        {
+            SavedData = new TextSnippetEntityDto(savedEntity)
+        };
+    }
+
+    private static void RandomThrowToTestHandleInternalException(int percentChance = 5)
     {
         Util.Random.DoByChance(
-            percentChance: 5,
+            percentChance,
             () => throw new Exception("Random Test Throw Exception"));
     }
 }

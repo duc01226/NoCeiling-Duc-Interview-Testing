@@ -201,26 +201,6 @@ public static class ListExtension
     }
 
     /// <summary>
-    /// <inheritdoc cref="ForEachAsync{T}(IEnumerable{T},Func{T,int,Task})" />
-    /// Create this extension because list already have ForEach method, need to set the name ForEachAsync (with async prefix)
-    /// to ensure compiler understand not to use ForEach method in the List type
-    /// </summary>
-    public static async Task ForEachAsync<T>(this List<T> items, Func<T, Task> action)
-    {
-        await items.ForEachAsync((item, index) => action(item));
-    }
-
-    /// <summary>
-    /// <inheritdoc cref="ForEachAsync{T}(IEnumerable{T},Func{T,int,Task})" />
-    /// Create this extension because list already have ForEach method, need to set the name ForEachAsync (with async prefix)
-    /// to ensure compiler understand not to use ForEach method in the List type
-    /// </summary>
-    public static async Task ForEachAsync<T, TActionResult>(this List<T> items, Func<T, Task<TActionResult>> action)
-    {
-        await items.ForEachAsync((item, index) => action(item));
-    }
-
-    /// <summary>
     /// Example: var listB = await list.SelectAsync((item, itemIndex) => get B async)
     /// </summary>
     public static async Task<List<TActionResult>> SelectAsync<T, TActionResult>(

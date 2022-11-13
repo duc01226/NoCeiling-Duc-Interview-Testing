@@ -3,6 +3,7 @@ using Easy.Platform.Infrastructures.Caching;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Easy.Platform.RedisCache;
@@ -24,8 +25,9 @@ public abstract class PlatformRedisCacheModule : PlatformCachingModule
     {
         return new PlatformRedisDistributedCacheRepository(
             serviceProvider,
-            serviceProvider.GetService<IOptions<RedisCacheOptions>>(),
-            serviceProvider.GetService<IPlatformApplicationSettingContext>());
+            serviceProvider.GetRequiredService<IOptions<RedisCacheOptions>>(),
+            serviceProvider.GetRequiredService<IPlatformApplicationSettingContext>(),
+            serviceProvider.GetRequiredService<ILoggerFactory>());
     }
 
     protected override void InternalRegister(IServiceCollection serviceCollection)

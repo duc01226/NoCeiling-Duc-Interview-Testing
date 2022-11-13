@@ -42,7 +42,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
     {
         if (outboxBusMessageRepository != null)
         {
-            var needToStartNewUow = !unitOfWorkManager.HasCurrentActive() || outboxConfig.StandaloneUowForOutbox;
+            var needToStartNewUow = !unitOfWorkManager.HasCurrentActiveUow() || outboxConfig.StandaloneUowForOutbox;
 
             var currentUow = needToStartNewUow
                 ? unitOfWorkManager.Begin()

@@ -29,21 +29,21 @@ public sealed class PlatformRabbitMqProcessInitializerService
 
     private readonly IPlatformApplicationSettingContext applicationSettingContext;
     private readonly object checkToRestartProcessRunningLock = new();
+    private CancellationToken currentCancellationToken;
+
+    private bool declareRabbitMqConfigurationFinished;
     private readonly IPlatformRabbitMqExchangeProvider exchangeProvider;
     private readonly HashSet<string> forceDeleteQueueBeforeDeclareQueues = new();
+    private bool isCheckToRestartProcessIntervalRunning;
     private readonly IPlatformMessageBusScanner messageBusScanner;
     private readonly PlatformRabbitMqChannelPool mqChannelPool;
     private readonly PlatformRabbitMqOptions options;
+    private bool processStarted;
     private readonly ConcurrentDictionary<string, List<Type>> routingKeyToCanProcessConsumerTypesCacheMap = new();
     private readonly IServiceProvider serviceProvider;
     private readonly object startProcessLock = new();
     private readonly object stopProcessLock = new();
     private readonly ConcurrentDictionary<string, object> waitingAckMessages = new();
-    private CancellationToken currentCancellationToken;
-
-    private bool declareRabbitMqConfigurationFinished;
-    private bool isCheckToRestartProcessIntervalRunning;
-    private bool processStarted;
 
     public PlatformRabbitMqProcessInitializerService(
         IPlatformApplicationSettingContext applicationSettingContext,
@@ -193,7 +193,8 @@ public sealed class PlatformRabbitMqProcessInitializerService
                 return false;
             },
             retryAttempt => TimeSpan.Zero,
-            retryCount: messageBusScanner.ScanAllDefinedBusMessageAndConsumerBindingRoutingKeys().Count * 3); // Count * 3 to ensure retry declare queue works for all queues
+            retryCount: messageBusScanner.ScanAllDefinedMessageAndConsumerBindingRoutingKeys().Count *
+                        3); // Count * 3 to ensure retry declare queue works for all queues
     }
 
     private void StartConsumers()
@@ -210,7 +211,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
             applicationRabbitConsumer.Received += OnMessageReceived;
 
             // Binding all defined event bus consumer to RabbitMQ Basic Consumer
-            messageBusScanner.ScanAllDefinedBusMessageAndConsumerBindingRoutingKeys()
+            messageBusScanner.ScanAllDefinedMessageAndConsumerBindingRoutingKeys()
                 .Select(GetConsumerQueueName)
                 .ToList()
                 .ForEach(
@@ -353,7 +354,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
 
     private List<Type> GetCanProcessConsumerTypes(string messageRoutingKey)
     {
-        return messageBusScanner.ScanAllDefinedMessageBusConsumerTypes()
+        return messageBusScanner.ScanAllDefinedConsumerTypes()
             .Where(
                 messageBusConsumerType =>
                 {
@@ -410,7 +411,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
                         CurrentChannel.BasicNack(rabbitMqMessage.DeliveryTag, multiple: true, requeue: true);
 
                         Logger.LogInformation(
-                            message: $"RabbitMQ requeued message for the routing key: {rabbitMqMessage.RoutingKey}.{Environment.NewLine}" +
+                            message: $"RabbitMQ retry queue message for the routing key: {rabbitMqMessage.RoutingKey}.{Environment.NewLine}" +
                                      "Message: {BusMessage}",
                             busMessage.AsJson());
                     },
@@ -418,13 +419,14 @@ public sealed class PlatformRabbitMqProcessInitializerService
                     options.ProcessRequeueMessageRetryCount,
                     finalEx => Logger.LogError(
                         finalEx,
-                        message: $"RabbitMQ requeued failed message for the routing key: {rabbitMqMessage.RoutingKey}.{Environment.NewLine}" +
+                        message: $"RabbitMQ retry queue failed message for the routing key: {rabbitMqMessage.RoutingKey}.{Environment.NewLine}" +
                                  "Message: {BusMessage}",
                         busMessage.AsJson()));
 
                 return Task.CompletedTask;
             },
-            PlatformApplicationGlobal.RootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType()));
+            PlatformApplicationGlobal.RootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType()),
+            cancellationToken: currentCancellationToken);
 
         return true;
     }
@@ -454,7 +456,8 @@ public sealed class PlatformRabbitMqProcessInitializerService
                 args.RoutingKey,
                 options.IsLogConsumerProcessTime,
                 options.LogErrorSlowProcessWarningTimeMilliseconds,
-                Logger);
+                Logger,
+                currentCancellationToken);
     }
 
     private IModel InitRabbitMqChannel()
@@ -482,7 +485,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
     private void DeclareRabbitMqExchangesAndQueuesConfiguration()
     {
         // Get exchange routing key for all consumers in source code
-        var allDefinedMessageBusConsumerPatternRoutingKeys = messageBusScanner.ScanAllDefinedBusMessageAndConsumerBindingRoutingKeys();
+        var allDefinedMessageBusConsumerPatternRoutingKeys = messageBusScanner.ScanAllDefinedMessageAndConsumerBindingRoutingKeys();
 
         // Declare all exchanges
         DeclareExchangesForRoutingKeys(allDefinedMessageBusConsumerPatternRoutingKeys);

@@ -4,15 +4,15 @@ namespace Easy.Platform.Domain.UnitOfWork;
 
 public interface IUnitOfWork : IDisposable
 {
-    public bool Completed { get; }
-
-    public bool Disposed { get; }
-
+    /// <summary>
+    /// By default a uow usually present a db context, then the InnerUnitOfWorks is empty. <br />
+    /// Some application could use multiple db in one service, which then the current uow could be a aggregation uow of multiple db context uow. <br />
+    /// Then the InnerUnitOfWorks will hold list of all uow present all db context
+    /// </summary>
     public List<IUnitOfWork> InnerUnitOfWorks { get; }
+
     public event EventHandler OnCompleted;
     public event EventHandler<UnitOfWorkFailedArgs> OnFailed;
-
-    public TInnerUow FindFirstInnerUowOfType<TInnerUow>() where TInnerUow : class, IUnitOfWork;
 
     /// <summary>
     /// Completes this unit of work.
@@ -33,9 +33,14 @@ public interface IUnitOfWork : IDisposable
     /// </summary>
     public bool IsNoTransactionUow();
 
-    public TUnitOfWork CurrentInner<TUnitOfWork>() where TUnitOfWork : IUnitOfWork
+    /// <summary>
+    /// Get itself or inner uow which is TUnitOfWork.
+    /// </summary>
+    public TUnitOfWork UowOfType<TUnitOfWork>() where TUnitOfWork : class, IUnitOfWork
     {
-        return (TUnitOfWork)InnerUnitOfWorks.LastOrDefault(p => p.GetType().IsAssignableTo(typeof(TUnitOfWork)));
+        return this is TUnitOfWork
+            ? this.As<TUnitOfWork>()
+            : InnerUnitOfWorks.FirstUowOfType<TUnitOfWork>();
     }
 }
 
@@ -51,17 +56,11 @@ public class UnitOfWorkFailedArgs
 
 public abstract class PlatformUnitOfWork : IUnitOfWork
 {
-    public event EventHandler OnCompleted;
-    public event EventHandler<UnitOfWorkFailedArgs> OnFailed;
-
     public bool Completed { get; protected set; }
     public bool Disposed { get; protected set; }
+    public event EventHandler OnCompleted;
+    public event EventHandler<UnitOfWorkFailedArgs> OnFailed;
     public List<IUnitOfWork> InnerUnitOfWorks { get; protected set; } = new();
-
-    public TInnerUow FindFirstInnerUowOfType<TInnerUow>() where TInnerUow : class, IUnitOfWork
-    {
-        return InnerUnitOfWorks.FindFirstInnerUowOfType<TInnerUow>();
-    }
 
     public virtual async Task CompleteAsync(CancellationToken cancellationToken = default)
     {
@@ -71,9 +70,12 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
         try
         {
             await InnerUnitOfWorks.Where(p => p.IsActive()).Select(p => p.CompleteAsync(cancellationToken)).WhenAll();
+
             await SaveChangesAsync(cancellationToken);
-            Completed = true;
+
             InvokeOnCompleted(this, EventArgs.Empty);
+
+            Completed = true;
         }
         catch (Exception e)
         {
@@ -122,27 +124,5 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
     protected void InvokeOnFailed(object sender, UnitOfWorkFailedArgs e)
     {
         OnFailed?.Invoke(sender, e);
-    }
-}
-
-public abstract class PlatformUnitOfWork<TDbContext> : PlatformUnitOfWork where TDbContext : IDisposable
-{
-    public PlatformUnitOfWork(TDbContext dbContext)
-    {
-        DbContext = dbContext;
-    }
-
-    public TDbContext DbContext { get; }
-
-    // Protected implementation of Dispose pattern.
-    protected override void Dispose(bool disposing)
-    {
-        base.Dispose(disposing);
-
-        if (disposing)
-            // Dispose managed state (managed objects).
-            DbContext?.Dispose();
-
-        Disposed = true;
     }
 }

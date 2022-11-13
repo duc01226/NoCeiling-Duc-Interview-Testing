@@ -18,10 +18,10 @@ using MongoDB.Bson.Serialization;
 namespace Easy.Platform.MongoDB;
 
 /// <summary>
-/// <inheritdoc cref="PlatformPersistenceModule{TDbContext}"/>
+///     <inheritdoc cref="PlatformPersistenceModule{TDbContext}" />
 /// </summary>
 public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContext, TMongoOptions> : PlatformPersistenceModule<TDbContext>
-    where TDbContext : class, IPlatformMongoDbContext<TDbContext>
+    where TDbContext : PlatformMongoDbContext<TDbContext>
     where TClientContext : class, IPlatformMongoClient<TDbContext>
     where TMongoOptions : PlatformMongoOptions<TDbContext>
 {
@@ -53,7 +53,7 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
         serviceCollection.RegisterAllForImplementation<TClientContext>(ServiceLifeTime.Singleton);
         serviceCollection.Register<IPlatformMongoClient<TDbContext>, TClientContext>(ServiceLifeTime.Singleton);
 
-        serviceCollection.Register<IPlatformMongoDbContext<TDbContext>, TDbContext>();
+        serviceCollection.Register<PlatformMongoDbContext<TDbContext>, TDbContext>();
 
         RegisterMongoDbUow(serviceCollection);
 
@@ -159,27 +159,27 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
 
     private void RegisterMongoDbUow(IServiceCollection serviceCollection)
     {
-        serviceCollection.RegisterAllFromType<IPlatformMongoDbUnitOfWork<TDbContext>>(
+        serviceCollection.RegisterAllFromType<IPlatformMongoDbPersistenceUnitOfWork<TDbContext>>(
             Assembly,
             ServiceLifeTime.Transient,
             replaceIfExist: true,
             DependencyInjectionExtension.ReplaceServiceStrategy.ByService);
         // Register default PlatformMongoDbUnitOfWork if not exist implementation in the concrete inherit persistence module
-        if (serviceCollection.NotExist(p => p.ServiceType == typeof(IPlatformMongoDbUnitOfWork<TDbContext>)))
-            serviceCollection.RegisterAllForImplementation<PlatformMongoDbUnitOfWork<TDbContext>>();
+        if (serviceCollection.NotExist(p => p.ServiceType == typeof(IPlatformMongoDbPersistenceUnitOfWork<TDbContext>)))
+            serviceCollection.RegisterAllForImplementation<PlatformMongoDbPersistenceUnitOfWork<TDbContext>>();
 
         serviceCollection.RegisterAllFromType<IUnitOfWork>(Assembly);
         // Register default PlatformMongoDbUnitOfWork for IUnitOfWork if not existing register for IUnitOfWork
         if (serviceCollection.NotExist(
             p => p.ServiceType == typeof(IUnitOfWork) &&
-                 p.ImplementationType?.IsAssignableTo(typeof(IPlatformMongoDbUnitOfWork<TDbContext>)) == true))
-            serviceCollection.Register<IUnitOfWork, PlatformMongoDbUnitOfWork<TDbContext>>();
+                 p.ImplementationType?.IsAssignableTo(typeof(IPlatformMongoDbPersistenceUnitOfWork<TDbContext>)) == true))
+            serviceCollection.Register<IUnitOfWork, PlatformMongoDbPersistenceUnitOfWork<TDbContext>>();
     }
 }
 
 public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContext>
     : PlatformMongoDbPersistenceModule<TDbContext, TClientContext, PlatformMongoOptions<TDbContext>>
-    where TDbContext : class, IPlatformMongoDbContext<TDbContext>
+    where TDbContext : PlatformMongoDbContext<TDbContext>
     where TClientContext : class, IPlatformMongoClient<TDbContext>
 {
     protected PlatformMongoDbPersistenceModule(
@@ -191,7 +191,7 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
 
 public abstract class PlatformMongoDbPersistenceModule<TDbContext>
     : PlatformMongoDbPersistenceModule<TDbContext, PlatformMongoClient<TDbContext>>
-    where TDbContext : class, IPlatformMongoDbContext<TDbContext>
+    where TDbContext : PlatformMongoDbContext<TDbContext>
 {
     protected PlatformMongoDbPersistenceModule(
         IServiceProvider serviceProvider,

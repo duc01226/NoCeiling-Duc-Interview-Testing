@@ -6,7 +6,7 @@ namespace Easy.Platform.Infrastructures.Caching;
 /// <summary>
 /// Represent the structured cache key. The string formatted value is "{Context}.{Collection}.{RequestKey}";
 /// </summary>
-public class PlatformCacheKey : IEqualityComparer<PlatformCacheKey>
+public readonly struct PlatformCacheKey
 {
     public const string DefaultContext = "UnknowContext";
     public const string DefaultCollection = "All";
@@ -64,10 +64,6 @@ public class PlatformCacheKey : IEqualityComparer<PlatformCacheKey>
 
     public bool Equals(PlatformCacheKey x, PlatformCacheKey y)
     {
-        if (ReferenceEquals(x, y))
-            return true;
-        if (x is null || y is null)
-            return false;
         if (x.GetType() != y.GetType())
             return false;
         return x.ToString() == y.ToString();
@@ -76,6 +72,11 @@ public class PlatformCacheKey : IEqualityComparer<PlatformCacheKey>
     public int GetHashCode(PlatformCacheKey obj)
     {
         return HashCode.Combine(obj.Context, obj.Collection, obj.RequestKey);
+    }
+
+    public bool Equals(PlatformCacheKey other)
+    {
+        return ToString() == other.ToString();
     }
 
     public static string AutoFixKeyPartValue(string keyPartValue)

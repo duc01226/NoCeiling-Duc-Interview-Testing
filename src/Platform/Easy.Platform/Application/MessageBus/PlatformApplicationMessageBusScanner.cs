@@ -10,16 +10,16 @@ public class PlatformApplicationMessageBusScanner : PlatformMessageBusScanner
     {
     }
 
-    public override List<string> ScanAllDefinedBusMessageAndConsumerBindingRoutingKeys()
+    public override List<string> ScanAllDefinedMessageAndConsumerBindingRoutingKeys()
     {
-        return base.ScanAllDefinedBusMessageAndConsumerBindingRoutingKeys()
+        return base.ScanAllDefinedMessageAndConsumerBindingRoutingKeys()
             .Concat(AllDefaultBindingRoutingKeyForCqrsEventBusMessageProducers().Select(p => p.ToString()))
             .ToList();
     }
 
     public List<PlatformBusMessageRoutingKey> AllDefaultBindingRoutingKeyForCqrsEventBusMessageProducers()
     {
-        return GetScanAssemblies()
+        return ScanAssemblies()
             .SelectMany(p => p.GetTypes())
             .Where(p => p.IsClass && !p.IsAbstract)
             .Select(p => p.FindMatchedGenericType(typeof(PlatformCqrsEventBusMessageProducer<,>)))

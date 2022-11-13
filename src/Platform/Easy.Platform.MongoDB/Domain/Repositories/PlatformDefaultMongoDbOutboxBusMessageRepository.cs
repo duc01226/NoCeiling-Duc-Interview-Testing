@@ -5,10 +5,13 @@ using Easy.Platform.Domain.UnitOfWork;
 namespace Easy.Platform.MongoDB.Domain.Repositories;
 
 public class PlatformDefaultMongoDbOutboxBusMessageRepository<TDbContext>
-    : PlatformDefaultMongoDbRootRepository<PlatformOutboxBusMessage, string, TDbContext>, IPlatformOutboxBusMessageRepository
-    where TDbContext : IPlatformMongoDbContext<TDbContext>
+    : PlatformMongoDbRootRepository<PlatformOutboxBusMessage, string, TDbContext>, IPlatformOutboxBusMessageRepository
+    where TDbContext : PlatformMongoDbContext<TDbContext>
 {
-    public PlatformDefaultMongoDbOutboxBusMessageRepository(IUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(unitOfWorkManager, cqrs, serviceProvider)
+    public PlatformDefaultMongoDbOutboxBusMessageRepository(IUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
+        unitOfWorkManager,
+        cqrs,
+        serviceProvider)
     {
     }
 }

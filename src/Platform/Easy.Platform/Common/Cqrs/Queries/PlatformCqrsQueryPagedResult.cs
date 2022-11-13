@@ -11,19 +11,11 @@ public abstract class PlatformCqrsQueryPagedResult<TItem> : IPlatformPagedResult
         Items = items;
         TotalCount = totalCount;
         PageSize = pageSize;
-        TotalPages = pageSize != null ? (int)Math.Ceiling((double)(totalCount / pageSize)) : null;
+        if (pageSize != null) TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
     }
-
-    public PlatformCqrsQueryPagedResult(int totalCount, int? pageSize)
-    {
-        TotalCount = totalCount;
-        PageSize = pageSize;
-        TotalPages = pageSize != null ? (int)Math.Ceiling((double)(totalCount / pageSize)) : null;
-    }
-
-    public int? TotalPages { get; }
 
     public List<TItem> Items { get; set; }
     public long TotalCount { get; set; }
     public int? PageSize { get; set; }
+    public int? TotalPages { get; }
 }

@@ -168,7 +168,7 @@ public static class PlatformInboxMessageBusConsumerHelper
             {
                 using (var uow = uowManager.Begin())
                 {
-                    var existingInboxMessage = await inboxBusMessageRepo.GetByIdAsync(existingInboxMessageId);
+                    var existingInboxMessage = await inboxBusMessageRepo.GetByIdAsync(existingInboxMessageId, cancellationToken);
                     existingInboxMessage.LastConsumeDate = DateTime.UtcNow;
                     existingInboxMessage.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Processed;
 
@@ -191,7 +191,7 @@ public static class PlatformInboxMessageBusConsumerHelper
             {
                 using (var uow = uowManager.Begin())
                 {
-                    var existingInboxMessage = await inboxBusMessageRepo.GetByIdAsync(existingInboxMessageId);
+                    var existingInboxMessage = await inboxBusMessageRepo.GetByIdAsync(existingInboxMessageId, cancellationToken);
 
                     existingInboxMessage.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Failed;
                     existingInboxMessage.LastConsumeDate = DateTime.UtcNow;

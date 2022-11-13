@@ -15,6 +15,7 @@ public class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, Guid>
         SnippetText = entity.SnippetText;
         FullText = entity.FullText;
         Address = entity.Address != null ? ExampleAddressValueObjectDto.Create(entity.Address) : null;
+        CreatedDate = entity.CreatedDate;
     }
 
     public Guid? Id { get; set; }
@@ -24,6 +25,8 @@ public class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, Guid>
     public string FullText { get; set; }
 
     public ExampleAddressValueObjectDto Address { get; set; }
+
+    public DateTime? CreatedDate { get; set; }
 
     /// <summary>
     /// Demo some common useful value object like Address

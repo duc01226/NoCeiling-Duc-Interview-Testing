@@ -1,15 +1,15 @@
 using System.Linq.Expressions;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.Validations;
 using Easy.Platform.Domain.Entities;
-using Easy.Platform.Domain.Exceptions;
+using Easy.Platform.Domain.Exceptions.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 
 namespace Easy.Platform.Domain.Repositories;
 
-public abstract class PlatformRepository<TEntity, TPrimaryKey> : IPlatformQueryableRepository<TEntity, TPrimaryKey>
+public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatformQueryableRepository<TEntity, TPrimaryKey>
     where TEntity : class, IEntity<TPrimaryKey>, new()
+    where TUow : class, IUnitOfWork
 {
     public PlatformRepository(IUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider)
     {
@@ -25,7 +25,10 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey> : IPlatformQuerya
     /// <summary>
     /// Return current active uow. May throw exception if not existing one.
     /// </summary>
-    public abstract IUnitOfWork CurrentActiveUow();
+    public IUnitOfWork CurrentActiveUow()
+    {
+        return UnitOfWorkManager.CurrentActiveUow().UowOfType<TUow>();
+    }
 
     public abstract Task<TEntity> GetByIdAsync(TPrimaryKey id, CancellationToken cancellationToken = default);
 
@@ -123,6 +126,22 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey> : IPlatformQuerya
 
     public abstract Task<int> CountAsync(IQueryable<TEntity> query, CancellationToken cancellationToken = default);
 
+    public abstract Task<int> CountAsync<TQueryItemResult>(
+        Func<IQueryable<TEntity>, IQueryable<TQueryItemResult>> queryBuilder,
+        CancellationToken cancellationToken = default);
+
+    public IQueryable<TEntity> GetGlobalUowQuery()
+    {
+        return GetQuery(GlobalUow());
+    }
+
+    public IQueryable<TEntity> GetQuery()
+    {
+        return GetQuery(CurrentActiveUow());
+    }
+
+    public abstract IQueryable<TEntity> GetQuery(IUnitOfWork uow);
+
     public Func<IQueryable<TEntity>, IQueryable<TResult>> GetQueryBuilder<TResult>(Func<IQueryable<TEntity>, IQueryable<TResult>> builderFn)
     {
         return builderFn;
@@ -138,32 +157,10 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey> : IPlatformQuerya
         return query => query.Where(queryExpression);
     }
 
-    public abstract Task<int> CountAsync<TQueryItemResult>(
-        Func<IQueryable<TEntity>, IQueryable<TQueryItemResult>> queryBuilder,
-        CancellationToken cancellationToken = default);
-
-    public IEnumerable<TEntity> GetReadonlyDataEnumerable()
+    public TUow GlobalUow()
     {
-        return GetReadonlyQuery(CurrentReadonlyDataEnumerableUow()).AsEnumerable();
+        return UnitOfWorkManager.GlobalUow.UowOfType<TUow>();
     }
-
-    public IEnumerable<TSelector> GetReadonlyDataEnumerable<TSelector>(Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder)
-    {
-        return GetReadonlyQuery(CurrentReadonlyDataEnumerableUow()).Pipe(queryBuilder).AsEnumerable();
-    }
-
-    public IEnumerable<TSelector> GetReadonlyDataEnumerable<TSelector>(Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder)
-    {
-        return GetReadonlyQuery(CurrentReadonlyDataEnumerableUow())
-            .Pipe(query => queryBuilder(CurrentReadonlyDataEnumerableUow(), query))
-            .AsEnumerable();
-    }
-
-    public abstract IQueryable<TEntity> GetQuery(IUnitOfWork uow);
-
-    public abstract IUnitOfWork CurrentReadonlyDataEnumerableUow();
-
-    public abstract IQueryable<TEntity> GetReadonlyQuery(IUnitOfWork uow);
 
     public abstract Task<TEntity> CreateAsync(
         TEntity entity,
@@ -309,93 +306,11 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey> : IPlatformQuerya
 
     protected async Task EnsureEntityValid(TEntity entity, CancellationToken cancellationToken)
     {
-        if (entity is IValidatableEntity<TEntity, TPrimaryKey> validatableEntity)
-        {
-            validatableEntity.Validate().EnsureValid();
-
-            await EnsureValid(
-                validatableEntity.CheckUniquenessValidator()
-                    ?.Validate(predicate => AnyAsync(predicate, cancellationToken)));
-        }
+        await entity.EnsureEntityValid<TEntity, TPrimaryKey>(AnyAsync, cancellationToken);
     }
 
     protected async Task EnsureEntitiesValid(List<TEntity> entities, CancellationToken cancellationToken)
     {
-        EnsureValid(entities);
-        await EnsureEntitiesUniqueness(entities, cancellationToken);
-    }
-
-    protected void EnsureValid(List<TEntity> entities)
-    {
-        entities.ForEach(
-            entity =>
-            {
-                if (entity is IValidatableEntity<TEntity, TPrimaryKey> validatableEntity)
-                    EnsureValid(validatableEntity.Validate());
-            });
-    }
-
-    protected void EnsureValid(PlatformValidationResult validationResult)
-    {
-        if (validationResult != null && !validationResult.IsValid)
-            throw new PlatformDomainValidationException(validationResult);
-    }
-
-    protected void EnsureValid(List<Func<PlatformValidationResult>> validationResultFns)
-    {
-        validationResultFns.ForEach(
-            validationResultFn =>
-            {
-                var validationResult = validationResultFn();
-                if (validationResult?.IsValid == false)
-                    throw new PlatformDomainValidationException(validationResult);
-            });
-    }
-
-    protected async Task EnsureValid(Task<PlatformValidationResult> validationResultTask)
-    {
-        if (validationResultTask == null)
-            return;
-
-        var validationResult = await validationResultTask;
-        if (validationResult?.IsValid == false)
-            throw new PlatformDomainValidationException(validationResult);
-    }
-
-    protected async Task EnsureValid(List<Func<Task<PlatformValidationResult>>> validationResultAsyncFns)
-    {
-        await validationResultAsyncFns.ForEachAsync(
-            async validationResultAsyncFn =>
-            {
-                var validationResult = await validationResultAsyncFn();
-                if (validationResult?.IsValid == false)
-                    throw new PlatformDomainValidationException(validationResult);
-            });
-    }
-
-    protected async Task EnsureEntitiesUniqueness(List<TEntity> entities, CancellationToken cancellationToken)
-    {
-        // Validate each IValidatableEntity with CheckUniquenessValidator != null must be unique in the existing in database items
-        // and also in the list items itself
-        var entitiesValidateUniquenessFns = entities
-            .Where(
-                entity => entity is IValidatableEntity<TEntity, TPrimaryKey> validatableEntity &&
-                          validatableEntity.CheckUniquenessValidator() != null)
-            .Select(p => (IValidatableEntity<TEntity, TPrimaryKey>)p)
-            .Select<IValidatableEntity<TEntity, TPrimaryKey>, Func<Task<PlatformValidationResult>>>(
-                entity =>
-                    () => entity.CheckUniquenessValidator()
-                        .Validate(
-                            checkAnyDuplicatedItemAsyncFunction: async findOtherDuplicatedItemPredicate =>
-                                entities.Any(findOtherDuplicatedItemPredicate.Compile()) ||
-                                await AnyAsync(findOtherDuplicatedItemPredicate, cancellationToken)))
-            .ToList();
-        await EnsureValid(entitiesValidateUniquenessFns);
-    }
-
-    protected TUow FindDbContextUow<TUow>(IUnitOfWork uow) where TUow : class, IUnitOfWork
-    {
-        return uow?.As<TUow>() ??
-               uow?.CurrentInner<TUow>();
+        await entities.EnsureEntitiesValid<TEntity, TPrimaryKey>(AnyAsync, cancellationToken);
     }
 }

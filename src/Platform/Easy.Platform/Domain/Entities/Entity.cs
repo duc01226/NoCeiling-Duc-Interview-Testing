@@ -58,7 +58,7 @@ public interface IValidatableEntity<TEntity, TPrimaryKey> : IValidatableEntity<T
     /// Default return null. Default check unique is by Id. </br>
     /// If return not null, this will be used instead to check the entity is unique to create or update
     /// </summary>
-    public PlatformCheckUniquenessValidator<TEntity> CheckUniquenessValidator();
+    public PlatformCheckUniqueValidator<TEntity> CheckUniqueValidator();
 }
 
 public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity, TPrimaryKey>, ISupportDomainEventsEntity
@@ -71,9 +71,9 @@ public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity,
         return DomainEvents;
     }
 
-    public virtual TPrimaryKey Id { get; set; }
+    public TPrimaryKey Id { get; set; }
 
-    public virtual PlatformCheckUniquenessValidator<TEntity> CheckUniquenessValidator()
+    public virtual PlatformCheckUniqueValidator<TEntity> CheckUniqueValidator()
     {
         return null;
     }
@@ -96,7 +96,7 @@ public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity,
     }
 
     /// <summary>
-    /// To get the entity validator. <br/>
+    /// To get the entity validator. <br />
     /// This will help us to centralize and reuse domain validation logic. Ensure any request which update/create domain entity
     /// use the same entity validation logic (Single Responsibility, Don't Repeat YourSelf).
     /// </summary>

@@ -1,19 +1,19 @@
 using Easy.Platform.Domain.Exceptions;
 using Easy.Platform.Domain.UnitOfWork;
+using Easy.Platform.Persistence.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace Easy.Platform.EfCore.Domain.UnitOfWork;
 
-public interface IPlatformEfCoreUnitOfWork<out TDbContext> : IUnitOfWork
+public interface IPlatformEfCorePersistenceUnitOfWork<out TDbContext> : IPlatformPersistenceUnitOfWork<TDbContext>
     where TDbContext : PlatformEfCoreDbContext<TDbContext>
 {
-    public TDbContext DbContext { get; }
 }
 
-public class PlatformEfCoreUnitOfWork<TDbContext>
-    : PlatformUnitOfWork<TDbContext>, IPlatformEfCoreUnitOfWork<TDbContext> where TDbContext : PlatformEfCoreDbContext<TDbContext>
+public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
+    : PlatformPersistenceUnitOfWork<TDbContext>, IPlatformEfCorePersistenceUnitOfWork<TDbContext> where TDbContext : PlatformEfCoreDbContext<TDbContext>
 {
-    public PlatformEfCoreUnitOfWork(TDbContext dbContext) : base(dbContext)
+    public PlatformEfCorePersistenceUnitOfWork(TDbContext dbContext) : base(dbContext)
     {
     }
 

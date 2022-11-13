@@ -53,9 +53,9 @@ public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid
 
     public Guid? ConcurrencyUpdateToken { get; set; }
 
-    public override PlatformCheckUniquenessValidator<TextSnippetEntity> CheckUniquenessValidator()
+    public override PlatformCheckUniqueValidator<TextSnippetEntity> CheckUniqueValidator()
     {
-        return new PlatformCheckUniquenessValidator<TextSnippetEntity>(
+        return new PlatformCheckUniqueValidator<TextSnippetEntity>(
             targetItem: this,
             findOtherDuplicatedItemExpr: otherItem =>
                 !otherItem.Id.Equals(Id) && otherItem.SnippetText == SnippetText,

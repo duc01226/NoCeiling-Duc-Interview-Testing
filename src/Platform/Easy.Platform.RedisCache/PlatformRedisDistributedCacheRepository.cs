@@ -1,33 +1,28 @@
+using System.Collections.Concurrent;
 using System.Linq;
 using Easy.Platform.Application.Context;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Infrastructures.Caching;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Easy.Platform.RedisCache;
 
-public class PlatformRedisDistributedCacheRepository
-    : PlatformCacheRepository, IPlatformDistributedCacheRepository
+public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, IPlatformDistributedCacheRepository
 {
-    public static readonly string CachedKeysCollectionName = "___PlatformRedisDistributedCacheKeys___";
-
     private readonly IPlatformApplicationSettingContext applicationSettingContext;
-
-    protected readonly ILogger<PlatformRedisDistributedCacheRepository> Logger;
-    private readonly Lazy<Microsoft.Extensions.Caching.StackExchangeRedis.RedisCache> redisCache;
     private bool disposed;
+    private readonly Lazy<Microsoft.Extensions.Caching.StackExchangeRedis.RedisCache> redisCache;
 
     public PlatformRedisDistributedCacheRepository(
         IServiceProvider serviceProvider,
         IOptions<RedisCacheOptions> optionsAccessor,
-        IPlatformApplicationSettingContext applicationSettingContext) : base(serviceProvider)
+        IPlatformApplicationSettingContext applicationSettingContext,
+        ILoggerFactory loggerFactory) : base(serviceProvider, loggerFactory)
     {
         this.applicationSettingContext = applicationSettingContext;
-        Logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<PlatformRedisDistributedCacheRepository>();
         redisCache = new Lazy<Microsoft.Extensions.Caching.StackExchangeRedis.RedisCache>(
             () => new Microsoft.Extensions.Caching.StackExchangeRedis.RedisCache(optionsAccessor));
     }
@@ -79,16 +74,16 @@ public class PlatformRedisDistributedCacheRepository
     {
         await redisCache.Value.RemoveAsync(cacheKey, token);
 
-        await UpdateGlobalCachedKeys(p => p.Remove(cacheKey, out _));
+        await UpdateGlobalCachedKeys(p => p.TryRemove(cacheKey, out var _));
     }
 
     public override async Task RemoveAsync(
         Func<PlatformCacheKey, bool> cacheKeyPredicate,
         CancellationToken token = default)
     {
-        var globalCachedKeys = await GetGlobalCachedKeysAsync();
+        var allCachedKeys = GlobalAllRequestCachedKeys.Value;
 
-        var globalMatchedKeys = globalCachedKeys.Select(p => p.Key).Where(cacheKeyPredicate).ToList();
+        var globalMatchedKeys = allCachedKeys.Select(p => p.Key).Where(cacheKeyPredicate).ToList();
 
         if (globalMatchedKeys.Any())
         {
@@ -98,11 +93,18 @@ public class PlatformRedisDistributedCacheRepository
                 matchedKey =>
                 {
                     redisCache.Value.Remove(matchedKey);
-                    globalCachedKeys.Remove(matchedKey, out _);
+                    allCachedKeys.TryRemove(matchedKey, out var _);
                 });
 
-            await SetGlobalCachedKeysAsync(globalCachedKeys);
+            await SetGlobalCachedKeysAsync(allCachedKeys);
         }
+    }
+
+    public override PlatformCacheKey GetGlobalAllRequestCachedKeysCacheKey()
+    {
+        return new PlatformCacheKey(
+            context: applicationSettingContext.ApplicationName,
+            collection: CachedKeysCollectionName);
     }
 
     protected virtual void Dispose(bool disposing)
@@ -117,13 +119,11 @@ public class PlatformRedisDistributedCacheRepository
         disposed = true;
     }
 
-    protected async Task UpdateGlobalCachedKeys(Action<IDictionary<PlatformCacheKey, object>> updateCachedKeysAction)
+    protected async Task UpdateGlobalCachedKeys(Action<ConcurrentDictionary<PlatformCacheKey, object>> updateCachedKeysAction)
     {
-        var globalCachedKeys = await GetGlobalCachedKeysAsync();
-
-        await globalCachedKeys
+        await GlobalAllRequestCachedKeys.Value
             .With(updateCachedKeysAction)
-            .Pipe(updatedGlobalCachedKeys => SetGlobalCachedKeysAsync(updatedGlobalCachedKeys));
+            .Pipe(SetGlobalCachedKeysAsync);
     }
 
     private async Task SetToRedisCacheAsync<T>(
@@ -151,27 +151,10 @@ public class PlatformRedisDistributedCacheRepository
         }
     }
 
-    private async Task<Dictionary<PlatformCacheKey, object>> GetGlobalCachedKeysAsync()
+    private async Task SetGlobalCachedKeysAsync(ConcurrentDictionary<PlatformCacheKey, object> globalCachedKeys)
     {
-        var cachedKeysList =
-            await GetAsync<List<string>>(BuildGlobalCachedKeysDataCacheKey()) ?? new List<string>();
-
-        return cachedKeysList.ToDictionary(
-            fullCacheKeyString => (PlatformCacheKey)fullCacheKeyString,
-            p => (object)p);
-    }
-
-    private PlatformCacheKey BuildGlobalCachedKeysDataCacheKey()
-    {
-        return new PlatformCacheKey(
-            context: applicationSettingContext.ApplicationName,
-            collection: CachedKeysCollectionName);
-    }
-
-    private async Task SetGlobalCachedKeysAsync(IDictionary<PlatformCacheKey, object> value)
-    {
-        var cacheKey = BuildGlobalCachedKeysDataCacheKey();
-        var cacheValue = value.Keys.Select(p => p.ToString()).ToList();
+        var cacheKey = GetGlobalAllRequestCachedKeysCacheKey();
+        var cacheValue = globalCachedKeys.Select(p => p.Key).ToList();
 
         await SetToRedisCacheAsync(
             cacheKey,

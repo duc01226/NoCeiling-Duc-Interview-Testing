@@ -9,7 +9,7 @@ public interface IPlatformMongoClient
 }
 
 public interface IPlatformMongoClient<TDbContext> : IPlatformMongoClient
-    where TDbContext : class, IPlatformMongoDbContext<TDbContext>
+    where TDbContext : PlatformMongoDbContext<TDbContext>
 {
 }
 
@@ -24,7 +24,7 @@ public class PlatformMongoClient : IPlatformMongoClient
 }
 
 public class PlatformMongoClient<TDbContext>
-    : PlatformMongoClient, IPlatformMongoClient<TDbContext> where TDbContext : class, IPlatformMongoDbContext<TDbContext>
+    : PlatformMongoClient, IPlatformMongoClient<TDbContext> where TDbContext : PlatformMongoDbContext<TDbContext>
 {
     public PlatformMongoClient(IOptions<PlatformMongoOptions<TDbContext>> options) : base(options)
     {

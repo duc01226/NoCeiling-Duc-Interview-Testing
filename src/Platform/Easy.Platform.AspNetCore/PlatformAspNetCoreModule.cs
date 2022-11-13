@@ -41,7 +41,7 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
     protected override async Task InternalInit(IServiceScope serviceScope)
     {
         await IPlatformPersistenceModule.ExecuteDependencyPersistenceModuleMigrateApplicationData(
-            moduleTypeDependencies: GetModuleTypeDependencies().Select(moduleTypeProvider => moduleTypeProvider(Configuration)).ToList(),
+            moduleTypeDependencies: ModuleTypeDependencies().Select(moduleTypeProvider => moduleTypeProvider(Configuration)).ToList(),
             ServiceProvider);
 
         if (IsRootModule && AutoSeedApplicationDataOnInit) await ExecuteDependencyApplicationModuleSeedData();
@@ -50,7 +50,7 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
     public async Task ExecuteDependencyApplicationModuleSeedData()
     {
         await PlatformApplicationModule.ExecuteDependencyApplicationModuleSeedData(
-            moduleTypeDependencies: GetModuleTypeDependencies().Select(moduleTypeProvider => moduleTypeProvider(Configuration)).ToList(),
+            moduleTypeDependencies: ModuleTypeDependencies().Select(moduleTypeProvider => moduleTypeProvider(Configuration)).ToList(),
             ServiceProvider);
     }
 
@@ -124,8 +124,7 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
     {
         serviceCollection.Register(
             typeof(IPlatformApplicationUserContextKeyToClaimTypeMapper),
-            UserContextKeyToClaimTypeMapperType(),
-            ServiceLifeTime.Transient);
+            UserContextKeyToClaimTypeMapperType());
     }
 }
 

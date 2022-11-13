@@ -196,7 +196,7 @@ public abstract class PlatformModule : IPlatformModule
     /// Example code : return new { config => typeof(XXXPlatformApplicationModule), config =>
     /// typeof(XXXPlatformPersistenceModule) };
     /// </summary>
-    protected virtual List<Func<IConfiguration, Type>> GetModuleTypeDependencies()
+    protected virtual List<Func<IConfiguration, Type>> ModuleTypeDependencies()
     {
         return new List<Func<IConfiguration, Type>>();
     }
@@ -212,7 +212,7 @@ public abstract class PlatformModule : IPlatformModule
 
     protected void InitAllModuleDependencies()
     {
-        GetModuleTypeDependencies()
+        ModuleTypeDependencies()
             .Select(
                 moduleTypeProvider =>
                 {
@@ -259,7 +259,7 @@ public abstract class PlatformModule : IPlatformModule
 
     private void RegisterAllModuleDependencies(IServiceCollection serviceCollection)
     {
-        GetModuleTypeDependencies()
+        ModuleTypeDependencies()
             .Select(moduleTypeProvider => moduleTypeProvider(Configuration))
             .ForEach(moduleType => serviceCollection.RegisterModule(moduleType));
     }

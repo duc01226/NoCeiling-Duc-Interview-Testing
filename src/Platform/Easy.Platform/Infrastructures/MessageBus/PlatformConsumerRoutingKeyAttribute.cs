@@ -3,20 +3,28 @@ using Easy.Platform.Common.Validations;
 namespace Easy.Platform.Infrastructures.MessageBus;
 
 /// <summary>
-/// Define message routing key for <inheritdoc cref="IPlatformMessageBusConsumer"/>.
-/// If not defined, consumer will bind to default free format message routing key from <inheritdoc cref="PlatformBuildDefaultRoutingKeyHelper"/>
+/// Define message routing key for <inheritdoc cref="IPlatformMessageBusConsumer" />.
+/// If not defined, consumer will bind to default free format message routing key from <inheritdoc cref="PlatformBuildDefaultRoutingKeyHelper" />
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public class PlatformConsumerRoutingKeyAttribute : Attribute
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="PlatformConsumerRoutingKeyAttribute"/> class.
-    /// Pattern value support <see cref="MatchAllPatternValue"/> to match startWith (*XXX), endWith (XXX*) and contains (*XXX*)
+    /// Initializes a new instance of the <see cref="PlatformConsumerRoutingKeyAttribute" /> class.
+    /// Pattern value support <see cref="MatchAllPatternValue" /> to match startWith (*XXX), endWith (XXX*) and contains (*XXX*)
     /// </summary>
-    /// <param name="messageGroup"><see cref="PlatformBusMessageRoutingKey.MessageGroup"/></param>
-    /// <param name="producerContext"><see cref="PlatformBusMessageRoutingKey.ProducerContext"/></param>
-    /// <param name="messageType"><see cref="PlatformBusMessageRoutingKey.MessageType"/></param>
-    /// <param name="messageAction"><see cref="PlatformBusMessageRoutingKey.MessageAction"/></param>
+    /// <param name="messageGroup">
+    ///     <see cref="PlatformBusMessageRoutingKey.MessageGroup" />
+    /// </param>
+    /// <param name="producerContext">
+    ///     <see cref="PlatformBusMessageRoutingKey.ProducerContext" />
+    /// </param>
+    /// <param name="messageType">
+    ///     <see cref="PlatformBusMessageRoutingKey.MessageType" />
+    /// </param>
+    /// <param name="messageAction">
+    ///     <see cref="PlatformBusMessageRoutingKey.MessageAction" />
+    /// </param>
     public PlatformConsumerRoutingKeyAttribute(
         string messageGroup,
         string producerContext = PlatformBusMessageRoutingKey.MatchAllSingleGroupLevelChar,
@@ -32,7 +40,7 @@ public class PlatformConsumerRoutingKeyAttribute : Attribute
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PlatformConsumerRoutingKeyAttribute"/> class.
+    /// Initializes a new instance of the <see cref="PlatformConsumerRoutingKeyAttribute" /> class.
     /// Input combined ket pattern. Example: "AA.BB.CC", "AA.*.CC.*", ...
     /// </summary>
     /// <param name="combinedKeyPattern">Combined key pattern string represent for {messageGroup}.{producerContext}.{messageType}.{messageAction}</param>
@@ -57,22 +65,22 @@ public class PlatformConsumerRoutingKeyAttribute : Attribute
     }
 
     /// <summary>
-    /// <see cref="PlatformBusMessageRoutingKey.MessageGroup"/>
+    ///     <see cref="PlatformBusMessageRoutingKey.MessageGroup" />
     /// </summary>
     public string MessageGroup { get; }
 
     /// <summary>
-    /// <see cref="PlatformBusMessageRoutingKey.ProducerContext"/>
+    ///     <see cref="PlatformBusMessageRoutingKey.ProducerContext" />
     /// </summary>
     public string ProducerContext { get; }
 
     /// <summary>
-    /// <see cref="PlatformBusMessageRoutingKey.MessageType"/>
+    ///     <see cref="PlatformBusMessageRoutingKey.MessageType" />
     /// </summary>
     public string MessageType { get; }
 
     /// <summary>
-    /// <see cref="PlatformBusMessageRoutingKey.MessageAction"/>
+    ///     <see cref="PlatformBusMessageRoutingKey.MessageAction" />
     /// </summary>
     public string MessageAction { get; }
 
@@ -115,11 +123,11 @@ public class PlatformConsumerRoutingKeyAttribute : Attribute
         return patternRoutingKey;
     }
 
-    public string GetConsumerBindingRoutingKey()
+    public string ConsumerBindingRoutingKey()
     {
-        if (!string.IsNullOrEmpty(CustomRoutingKey))
-            return PlatformBusMessageRoutingKey.BuildCombinedStringKey(MessageGroup, CustomRoutingKey);
-        return PlatformBusMessageRoutingKey.BuildCombinedStringKey(MessageGroup, ProducerContext, MessageType);
+        return !string.IsNullOrEmpty(CustomRoutingKey)
+            ? PlatformBusMessageRoutingKey.BuildCombinedStringKey(MessageGroup, CustomRoutingKey)
+            : PlatformBusMessageRoutingKey.BuildCombinedStringKey(MessageGroup, ProducerContext, MessageType);
     }
 
     private void EnsureValid(Func<PlatformValidationResult, Exception> exceptionProvider = null)

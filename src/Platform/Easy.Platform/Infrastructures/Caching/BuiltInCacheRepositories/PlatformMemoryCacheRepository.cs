@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
 using Microsoft.Extensions.Caching.Distributed;
@@ -10,12 +9,11 @@ namespace Easy.Platform.Infrastructures.Caching.BuiltInCacheRepositories;
 
 public class PlatformMemoryCacheRepository : PlatformCacheRepository, IPlatformMemoryCacheRepository
 {
-    private readonly ConcurrentDictionary<PlatformCacheKey, object> cachedKeys = new();
-
     private readonly MemoryDistributedCache memoryDistributedCache;
 
-    public PlatformMemoryCacheRepository(ILoggerFactory loggerFactory, IServiceProvider serviceProvider) : base(
-        serviceProvider)
+    public PlatformMemoryCacheRepository(
+        ILoggerFactory loggerFactory,
+        IServiceProvider serviceProvider) : base(serviceProvider, loggerFactory)
     {
         memoryDistributedCache = new MemoryDistributedCache(
             new OptionsWrapper<MemoryDistributedCacheOptions>(new MemoryDistributedCacheOptions()),
@@ -41,7 +39,7 @@ public class PlatformMemoryCacheRepository : PlatformCacheRepository, IPlatformM
             PlatformJsonSerializer.SerializeToUtf8Bytes(value),
             MapToDistributedCacheEntryOptions(cacheOptions));
 
-        cachedKeys.TryAdd(cacheKey, null);
+        GlobalAllRequestCachedKeys.Value.TryAdd(cacheKey, null);
     }
 
     public override async Task SetAsync<T>(
@@ -56,23 +54,28 @@ public class PlatformMemoryCacheRepository : PlatformCacheRepository, IPlatformM
             MapToDistributedCacheEntryOptions(cacheOptions ?? GetDefaultCacheEntryOptions()),
             token);
 
-        cachedKeys.TryAdd(cacheKey, null);
+        GlobalAllRequestCachedKeys.Value.TryAdd(cacheKey, null);
     }
 
     public override async Task RemoveAsync(PlatformCacheKey cacheKey, CancellationToken token = default)
     {
         await memoryDistributedCache.RemoveAsync(cacheKey, token);
 
-        cachedKeys.Remove(cacheKey, out _);
+        GlobalAllRequestCachedKeys.Value.Remove(cacheKey, out _);
     }
 
     public override async Task RemoveAsync(Func<PlatformCacheKey, bool> cacheKeyPredicate, CancellationToken token = default)
     {
-        var toDeleteKeys = cachedKeys.Where(p => cacheKeyPredicate(p.Key)).Select(p => p.Key).ToList();
+        var toDeleteKeys = GlobalAllRequestCachedKeys.Value.Where(p => cacheKeyPredicate(p.Key)).Select(p => p.Key).ToList();
 
         await toDeleteKeys.ForEachAsync(cacheKey => memoryDistributedCache.RemoveAsync(cacheKey, token));
 
-        toDeleteKeys.ForEach(cacheKey => cachedKeys.Remove(cacheKey, out _));
+        toDeleteKeys.ForEach(cacheKey => GlobalAllRequestCachedKeys.Value.Remove(cacheKey, out _));
+    }
+
+    public override PlatformCacheKey GetGlobalAllRequestCachedKeysCacheKey()
+    {
+        return new PlatformCacheKey(collection: CachedKeysCollectionName);
     }
 
     private DistributedCacheEntryOptions MapToDistributedCacheEntryOptions(PlatformCacheEntryOptions options)

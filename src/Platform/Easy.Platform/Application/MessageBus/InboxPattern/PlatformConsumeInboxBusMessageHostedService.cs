@@ -31,7 +31,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         this.applicationSettingContext = applicationSettingContext;
         this.inboxConfig = inboxConfig;
         ConsumerByNameToTypeDic = messageBusScanner
-            .ScanAllDefinedMessageBusConsumerTypes()
+            .ScanAllDefinedConsumerTypes()
             .ToDictionary(PlatformInboxMessageBusConsumerHelper.GetConsumerByValue);
     }
 

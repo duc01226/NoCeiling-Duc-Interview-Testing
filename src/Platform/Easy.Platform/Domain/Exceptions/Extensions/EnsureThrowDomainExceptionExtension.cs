@@ -1,5 +1,7 @@
+using System.Linq.Expressions;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Validations;
+using Easy.Platform.Domain.Entities;
 
 namespace Easy.Platform.Domain.Exceptions.Extensions;
 
@@ -41,5 +43,111 @@ public static class EnsureThrowDomainExceptionExtension
     {
         var value = await valueTask;
         return must(value) ? value : throw new PlatformDomainValidationException(errorMsg);
+    }
+
+    public static void EnsureDomainValidationValid(this PlatformValidationResult validationResult)
+    {
+        if (validationResult is { IsValid: false })
+            throw new PlatformDomainValidationException(validationResult);
+    }
+
+    public static void EnsureDomainValidationValid(this List<Func<PlatformValidationResult>> validationResultFns)
+    {
+        validationResultFns.ForEach(
+            validationResultFn =>
+            {
+                var validationResult = validationResultFn();
+                if (validationResult?.IsValid == false)
+                    throw new PlatformDomainValidationException(validationResult);
+            });
+    }
+
+    public static async Task EnsureDomainValidationValid(this Task<PlatformValidationResult> validationResultTask)
+    {
+        if (validationResultTask != null)
+        {
+            var validationResult = await validationResultTask;
+
+            if (validationResult?.IsValid == false)
+                throw new PlatformDomainValidationException(validationResult);
+        }
+    }
+
+    public static async Task EnsureDomainValidationValid(this List<Func<Task<PlatformValidationResult>>> validateActions)
+    {
+        await validateActions.ForEachAsync(
+            async validateAction =>
+            {
+                var validationResult = await validateAction();
+
+                if (validationResult?.IsValid == false)
+                    throw new PlatformDomainValidationException(validationResult);
+            });
+    }
+
+    public static async Task EnsureEntityValid<TEntity, TPrimaryKey>(
+        this TEntity entity,
+        Func<Expression<Func<TEntity, bool>>, CancellationToken, Task<bool>> anyAsyncFunc,
+        CancellationToken cancellationToken) where TEntity : IEntity<TPrimaryKey>
+    {
+        if (entity is IValidatableEntity<TEntity, TPrimaryKey> validatableEntity)
+        {
+            validatableEntity.Validate().EnsureValid();
+
+            await EnsureEntityUnique(validatableEntity, anyAsyncFunc, cancellationToken);
+        }
+    }
+
+    private static async Task EnsureEntityUnique<TEntity, TPrimaryKey>(
+        IValidatableEntity<TEntity, TPrimaryKey> validatableEntity,
+        Func<Expression<Func<TEntity, bool>>, CancellationToken, Task<bool>> anyAsyncFunc,
+        CancellationToken cancellationToken)
+        where TEntity : IEntity<TPrimaryKey>
+    {
+        var entityCheckUniquenessValidator = validatableEntity.CheckUniqueValidator();
+
+        if (entityCheckUniquenessValidator != null)
+            await entityCheckUniquenessValidator.Validate(predicate => anyAsyncFunc(predicate, cancellationToken)).EnsureDomainValidationValid();
+    }
+
+    public static async Task EnsureEntitiesValid<TEntity, TPrimaryKey>(
+        this List<TEntity> entities,
+        Func<Expression<Func<TEntity, bool>>, CancellationToken, Task<bool>> anyAsyncFunc,
+        CancellationToken cancellationToken) where TEntity : IEntity<TPrimaryKey>
+    {
+        EnsureEntitiesValid<TEntity, TPrimaryKey>(entities);
+
+        await EnsureEntitiesUnique<TEntity, TPrimaryKey>(entities, anyAsyncFunc, cancellationToken);
+    }
+
+    public static async Task EnsureEntitiesUnique<TEntity, TPrimaryKey>(
+        this List<TEntity> entities,
+        Func<Expression<Func<TEntity, bool>>, CancellationToken, Task<bool>> anyAsyncFunc,
+        CancellationToken cancellationToken) where TEntity : IEntity<TPrimaryKey>
+    {
+        // Validate each IValidatableEntity with CheckUniquenessValidator != null must be unique in the existing in database items
+        // and also in the list items itself
+        var validateEntityUniqueActions = entities
+            .OfType<IValidatableEntity<TEntity, TPrimaryKey>>()
+            .Where(entity => entity.CheckUniqueValidator() != null)
+            .Select<IValidatableEntity<TEntity, TPrimaryKey>, Func<Task<PlatformValidationResult>>>(
+                entity =>
+                    () => entity.CheckUniqueValidator().Validate(
+                        checkAnyDuplicatedItemAsyncFunction: async findOtherDuplicatedItemPredicate =>
+                            entities.Any(findOtherDuplicatedItemPredicate.Compile()) ||
+                            await anyAsyncFunc(findOtherDuplicatedItemPredicate, cancellationToken)))
+            .ToList();
+
+        await validateEntityUniqueActions.EnsureDomainValidationValid();
+    }
+
+    public static void EnsureEntitiesValid<TEntity, TPrimaryKey>(this List<TEntity> entities) where TEntity : IEntity<TPrimaryKey>
+    {
+        entities.ForEach(
+            entity =>
+            {
+                if (entity is IValidatableEntity<TEntity, TPrimaryKey> validatableEntity)
+                    validatableEntity.Validate().EnsureDomainValidationValid();
+            });
     }
 }

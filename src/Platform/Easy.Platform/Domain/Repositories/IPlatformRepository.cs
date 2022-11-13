@@ -114,13 +114,20 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey>
 public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformRepository<TEntity, TPrimaryKey>
     where TEntity : class, IEntity<TPrimaryKey>, new()
 {
-    public IUnitOfWork CurrentReadonlyDataEnumerableUow();
+    /// <summary>
+    /// Return enumerable from query belong to <see cref="IUnitOfWorkManager.GlobalUow" />. <br />
+    /// A single separated global uow in current scoped is used by repository for read data using query, usually when need to return data
+    /// as enumerable to help download data like streaming data (not load all big data into ram) <br />
+    /// or any other purpose that just want to using query directly without think about uow of the query. <br />
+    /// This uow is auto created once per scope when access it. <br />
+    /// This won't affect the normal current uow queue list when Begin a new uow.
+    /// </summary>
+    public IQueryable<TEntity> GetGlobalUowQuery();
 
-    public IEnumerable<TEntity> GetReadonlyDataEnumerable();
-
-    public IEnumerable<TSelector> GetReadonlyDataEnumerable<TSelector>(Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder);
-
-    public IEnumerable<TSelector> GetReadonlyDataEnumerable<TSelector>(Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder);
+    /// <summary>
+    /// Return query of <see cref="IUnitOfWorkManager.CurrentActiveUow" />
+    /// </summary>
+    public IQueryable<TEntity> GetQuery();
 
     public IQueryable<TEntity> GetQuery(IUnitOfWork unitOfWork);
 
@@ -182,7 +189,7 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
     /// which could not run parallels because db context is not thread safe. <br />
     /// Ex:
     /// <br />
-    /// var fullItemsQueryBuilder = repository.CreateQueryBuilder(query => query.Where());<br />
+    /// var fullItemsQueryBuilder = repository.GetQueryBuilder(query => query.Where());<br />
     /// var pagedEntities = await repository.GetAllAsync(queryBuilder: query =>
     /// fullItemsQueryBuilder(query).PageBy(request.SkipCount, request.MaxResultCount));<br />
     /// var totalCount = await repository.CountAsync(fullItemsQueryBuilder, cancellationToken);
@@ -195,14 +202,25 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
     /// which could not run parallels because db context is not thread safe. <br />
     /// Ex:
     /// <br />
-    /// var fullItemsQueryBuilder = repository.CreateQueryBuilder((uow, query) => query.Where());<br />
+    /// var fullItemsQueryBuilder = repository.GetQueryBuilder((uow, query) => query.Where());<br />
     /// var pagedEntities = await repository.GetAllAsync(queryBuilder: (uow, query) =>
     /// fullItemsQueryBuilder(query).PageBy(request.SkipCount, request.MaxResultCount));<br />
     /// var totalCount = await repository.CountAsync(fullItemsQueryBuilder, cancellationToken);
     /// </summary>
-    public Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TResult>> GetQueryBuilder<TResult>(Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TResult>> builderFn);
+    public Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TResult>> GetQueryBuilder<TResult>(
+        Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TResult>> builderFn);
 
-    ///<inheritdoc cref="GetQueryBuilder{TResult}(Func{IQueryable{TEntity},IQueryable{TResult}})"/>
+    /// <summary>
+    /// Help to create a function to return a query which use want to use in the queryBuilder for a lot of
+    /// other function. It's important to support PARALLELS query. If use GetAllQuery() to use outside, we need to open a uow without close,
+    /// which could not run parallels because db context is not thread safe. <br />
+    /// Ex:
+    /// <br />
+    /// var fullItemsQueryBuilder = repository.GetQueryBuilder(p => p.PropertyX == true);<br />
+    /// var pagedEntities = await repository.GetAllAsync(queryBuilder: query =>
+    /// fullItemsQueryBuilder(query).PageBy(request.SkipCount, request.MaxResultCount));<br />
+    /// var totalCount = await repository.CountAsync(fullItemsQueryBuilder, cancellationToken);
+    /// </summary>
     public Func<IQueryable<TEntity>, IQueryable<TEntity>> GetQueryBuilder(Expression<Func<TEntity, bool>> queryExpression);
 }
 

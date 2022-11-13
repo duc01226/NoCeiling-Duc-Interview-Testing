@@ -202,7 +202,7 @@ public static class Validation
     }
 }
 
-public struct Validation<T>
+public readonly struct Validation<T>
 {
     public List<Error> Errors { get; }
     public T Value { get; }

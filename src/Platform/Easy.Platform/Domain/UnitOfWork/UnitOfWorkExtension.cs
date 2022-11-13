@@ -5,17 +5,20 @@ namespace Easy.Platform.Domain.UnitOfWork;
 
 public static class UnitOfWorkExtension
 {
-    public static TInnerUow FindFirstInnerUowOfType<TInnerUow>(this IEnumerable<IUnitOfWork> innerUnitOfWorks)
-        where TInnerUow : class, IUnitOfWork
+    public static TUnitOfWork FirstUowOfType<TUnitOfWork>(this IEnumerable<IUnitOfWork> unitOfWorks)
+        where TUnitOfWork : class, IUnitOfWork
     {
-        return innerUnitOfWorks
+        return unitOfWorks
             .Select(
-                innerUnitOfWork => innerUnitOfWork
-                    .When(_ => innerUnitOfWork.GetType().IsAssignableTo(typeof(TInnerUow)), _ => innerUnitOfWork.As<TInnerUow>())
+                uow => uow
+                    .When(_ => uow is TUnitOfWork, _ => uow.As<TUnitOfWork>())
                     .Else(
-                        _ => innerUnitOfWork.InnerUnitOfWorks
-                            .Select(innerUnitOfWorkLevel2 => innerUnitOfWorkLevel2.FindFirstInnerUowOfType<TInnerUow>())
-                            .FirstOrDefault(innerUnitOfWorkLevel2 => innerUnitOfWorkLevel2 != null))
+                        _ => uow.InnerUnitOfWorks
+                            .Select(
+                                innerUow => uow is TUnitOfWork
+                                    ? innerUow.As<TUnitOfWork>()
+                                    : innerUow.InnerUnitOfWorks.FirstUowOfType<TUnitOfWork>())
+                            .FirstOrDefault(recursiveInnerUow => recursiveInnerUow != null))
                     .Execute())
             .FirstOrDefault(p => p != null);
     }

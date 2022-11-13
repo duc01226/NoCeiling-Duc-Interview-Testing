@@ -97,7 +97,7 @@ public class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicationHandler
         var (pagedEntities, totalCount) = await Util.TaskRunner.WhenAll(
             repository.GetAllAsync(
                 query => fullItemsQueryBuilder(query)
-                    .OrderBy(p => p.SnippetText)
+                    .OrderByDescending(p => p.CreatedDate)
                     .PipeIf(
                         request.IsPagedRequestValid(),
                         query => query.PageBy(request.SkipCount, request.MaxResultCount)),

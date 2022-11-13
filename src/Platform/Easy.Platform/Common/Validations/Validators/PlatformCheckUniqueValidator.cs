@@ -2,9 +2,9 @@ using System.Linq.Expressions;
 
 namespace Easy.Platform.Common.Validations.Validators;
 
-public class PlatformCheckUniquenessValidator<T> : PlatformValidator<T>
+public class PlatformCheckUniqueValidator<T> : PlatformValidator<T>
 {
-    public PlatformCheckUniquenessValidator(
+    public PlatformCheckUniqueValidator(
         T targetItem,
         Expression<Func<T, bool>> findOtherDuplicatedItemExpr,
         string errorMessage)

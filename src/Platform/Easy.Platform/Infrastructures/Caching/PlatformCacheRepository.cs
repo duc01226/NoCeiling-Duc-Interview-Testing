@@ -1,4 +1,7 @@
+using System.Collections.Concurrent;
+using Easy.Platform.Common.Extensions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Infrastructures.Caching;
 
@@ -15,8 +18,8 @@ public interface IPlatformCacheRepository
     /// Gets a value with the given key.
     /// </summary>
     /// <param name="cacheKey">A string identifying the requested value.</param>
-    /// <param name="token">Optional. The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
-    /// <returns>The <see cref="Task"/> that represents the asynchronous operation, containing the located value or null.</returns>
+    /// <param name="token">Optional. The <see cref="CancellationToken" /> used to propagate notifications that the operation should be canceled.</param>
+    /// <returns>The <see cref="Task" /> that represents the asynchronous operation, containing the located value or null.</returns>
     Task<T> GetAsync<T>(PlatformCacheKey cacheKey, CancellationToken token = default);
 
     /// <summary>
@@ -33,8 +36,8 @@ public interface IPlatformCacheRepository
     /// <param name="cacheKey">A string identifying the requested value.</param>
     /// <param name="value">The value to set in the cache.</param>
     /// <param name="cacheOptions">The cache options for the value.</param>
-    /// <param name="token">Optional. The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
-    /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
+    /// <param name="token">Optional. The <see cref="CancellationToken" /> used to propagate notifications that the operation should be canceled.</param>
+    /// <returns>The <see cref="Task" /> that represents the asynchronous operation.</returns>
     Task SetAsync<T>(
         PlatformCacheKey cacheKey,
         T value,
@@ -55,8 +58,8 @@ public interface IPlatformCacheRepository
     /// <param name="cacheKey">A string identifying the requested value.</param>
     /// <param name="value">The value to set in the cache.</param>
     /// <param name="absoluteExpirationInSeconds">The absoluteExpirationInSeconds cache options for the value.</param>
-    /// <param name="token">Optional. The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
-    /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
+    /// <param name="token">Optional. The <see cref="CancellationToken" /> used to propagate notifications that the operation should be canceled.</param>
+    /// <returns>The <see cref="Task" /> that represents the asynchronous operation.</returns>
     Task SetAsync<T>(
         PlatformCacheKey cacheKey,
         T value,
@@ -67,16 +70,16 @@ public interface IPlatformCacheRepository
     /// Removes the value with the given key.
     /// </summary>
     /// <param name="cacheKey">A string identifying the requested value.</param>
-    /// <param name="token">Optional. The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
-    /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
+    /// <param name="token">Optional. The <see cref="CancellationToken" /> used to propagate notifications that the operation should be canceled.</param>
+    /// <returns>The <see cref="Task" /> that represents the asynchronous operation.</returns>
     Task RemoveAsync(PlatformCacheKey cacheKey, CancellationToken token = default);
 
     /// <summary>
     /// Removes the value with the given key predicate.
     /// </summary>
     /// <param name="cacheKeyPredicate">A string identifying the requested value predicate.</param>
-    /// <param name="token">Optional. The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
-    /// <returns>The <see cref="Task"/> that represents the asynchronous operation.</returns>
+    /// <param name="token">Optional. The <see cref="CancellationToken" /> used to propagate notifications that the operation should be canceled.</param>
+    /// <returns>The <see cref="Task" /> that represents the asynchronous operation.</returns>
     Task RemoveAsync(Func<PlatformCacheKey, bool> cacheKeyPredicate, CancellationToken token = default);
 
     /// <summary>
@@ -91,7 +94,7 @@ public interface IPlatformCacheRepository
     /// <param name="request">The request function return data to set in the cache.</param>
     /// <param name="cacheKey">A string identifying the requested value.</param>
     /// <param name="cacheOptions">The cache options for the value.</param>
-    /// <param name="token">Optional. The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
+    /// <param name="token">Optional. The <see cref="CancellationToken" /> used to propagate notifications that the operation should be canceled.</param>
     Task<TData> CacheRequestAsync<TData>(
         Func<Task<TData>> request,
         PlatformCacheKey cacheKey,
@@ -104,7 +107,7 @@ public interface IPlatformCacheRepository
     /// <param name="request">The request function return data to set in the cache.</param>
     /// <param name="cacheKey">A string identifying the requested value.</param>
     /// <param name="absoluteExpirationInSeconds">The absoluteExpirationInSeconds cache options for the value.</param>
-    /// <param name="token">Optional. The <see cref="CancellationToken"/> used to propagate notifications that the operation should be canceled.</param>
+    /// <param name="token">Optional. The <see cref="CancellationToken" /> used to propagate notifications that the operation should be canceled.</param>
     Task<TData> CacheRequestAsync<TData>(
         Func<Task<TData>> request,
         PlatformCacheKey cacheKey,
@@ -112,18 +115,24 @@ public interface IPlatformCacheRepository
         CancellationToken token = default) where TData : new();
 
     /// <summary>
-    /// Return default cache entry options value. This could be config when register module, override <see cref="PlatformCachingModule.DefaultPlatformCacheEntryOptions"/>
+    /// Return default cache entry options value. This could be config when register module, override <see cref="PlatformCachingModule.DefaultPlatformCacheEntryOptions" />
     /// </summary>
     PlatformCacheEntryOptions GetDefaultCacheEntryOptions();
 }
 
 public abstract class PlatformCacheRepository : IPlatformCacheRepository
 {
+    public static readonly string CachedKeysCollectionName = "___PlatformGlobalCacheKeys___";
+
+    protected readonly Lazy<ConcurrentDictionary<PlatformCacheKey, object>> GlobalAllRequestCachedKeys;
+    protected readonly ILogger Logger;
     private readonly IServiceProvider serviceProvider;
 
-    public PlatformCacheRepository(IServiceProvider serviceProvider)
+    public PlatformCacheRepository(IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
     {
         this.serviceProvider = serviceProvider;
+        Logger = loggerFactory.CreateLogger(GetType());
+        GlobalAllRequestCachedKeys = new Lazy<ConcurrentDictionary<PlatformCacheKey, object>>(LoadGlobalAllRequestCachedKeys);
     }
 
     public abstract T Get<T>(PlatformCacheKey cacheKey);
@@ -182,19 +191,24 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
         PlatformCacheEntryOptions cacheOptions = null,
         CancellationToken token = default) where TData : new()
     {
-        var cachedData = await GetAsync<TData>(cacheKey, token);
-        if (cachedData != null)
-            return cachedData;
+        var cachedData = GlobalAllRequestCachedKeys.Value.ContainsKey(cacheKey)
+            ? await GetAsync<TData>(cacheKey, token)
+            : default;
 
-        var requestedData = await request();
+        return cachedData ?? await RequestAndCacheNewData();
 
-        await SetAsync(
-            cacheKey,
-            requestedData,
-            cacheOptions,
-            token);
+        async Task<TData> RequestAndCacheNewData()
+        {
+            var requestedData = await request();
 
-        return requestedData;
+            await SetAsync(
+                cacheKey,
+                requestedData,
+                cacheOptions,
+                token);
+
+            return requestedData;
+        }
     }
 
     public async Task<TData> CacheRequestAsync<TData>(
@@ -217,5 +231,26 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
     public PlatformCacheEntryOptions GetDefaultCacheEntryOptions()
     {
         return serviceProvider.GetService<PlatformCacheEntryOptions>() ?? new PlatformCacheEntryOptions();
+    }
+
+    /// <summary>
+    /// Used to build a unique cache key to store list of all request cached keys
+    /// </summary>
+    public abstract PlatformCacheKey GetGlobalAllRequestCachedKeysCacheKey();
+
+    private ConcurrentDictionary<PlatformCacheKey, object> LoadGlobalAllRequestCachedKeys()
+    {
+        try
+        {
+            return GetAsync<List<PlatformCacheKey>>(GetGlobalAllRequestCachedKeysCacheKey()).Result?
+                       .Select(p => new KeyValuePair<PlatformCacheKey, object>(p, null))
+                       .Pipe(_ => new ConcurrentDictionary<PlatformCacheKey, object>(_)) ??
+                   new ConcurrentDictionary<PlatformCacheKey, object>();
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "LoadGlobalCachedKeys failed. Fallback to empty default value.");
+            return new ConcurrentDictionary<PlatformCacheKey, object>();
+        }
     }
 }

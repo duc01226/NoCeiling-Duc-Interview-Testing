@@ -1,5 +1,3 @@
-using Easy.Platform.Common.Timing;
-
 namespace Easy.Platform.Domain.Entities;
 
 public interface IAuditedEntity<TUserId>
@@ -16,12 +14,14 @@ public interface IAuditedEntity<TUserId>
 public abstract class RootAuditedEntity<TEntity, TPrimaryKey, TUserId> : RootEntity<TEntity, TPrimaryKey>, IAuditedEntity<TUserId>
     where TEntity : Entity<TEntity, TPrimaryKey>, new()
 {
-    public RootAuditedEntity() { }
-
-    public RootAuditedEntity(TUserId createdBy = default)
+    public RootAuditedEntity()
     {
-        CreatedDate ??= Clock.Now;
+        CreatedDate ??= DateTime.UtcNow;
         LastUpdatedDate ??= CreatedDate;
+    }
+
+    public RootAuditedEntity(TUserId createdBy = default) : this()
+    {
         CreatedBy = createdBy;
         LastUpdatedBy ??= CreatedBy;
     }

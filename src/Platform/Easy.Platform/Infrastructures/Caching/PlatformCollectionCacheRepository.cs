@@ -308,12 +308,11 @@ public abstract class PlatformCollectionCacheRepository<TCollectionCacheKeyProvi
         PlatformCacheEntryOptions cacheOptions = null,
         CancellationToken token = default) where TData : new()
     {
-        return await CacheRepository()
-            .CacheRequestAsync(
-                request,
-                CollectionCacheKeyProvider.GetKey(requestKeyParts),
-                cacheOptions,
-                token);
+        return await CacheRepository().CacheRequestAsync(
+            request,
+            CollectionCacheKeyProvider.GetKey(requestKeyParts),
+            cacheOptions,
+            token);
     }
 
     public Task<TData> CacheRequestUseConfigOptionsAsync<TConfigurationCacheOptions, TData>(

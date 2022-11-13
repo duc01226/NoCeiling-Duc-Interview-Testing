@@ -10,17 +10,17 @@ public interface IPlatformMessageBusScanner
     /// <summary>
     /// Get all routing key pattern of all defined consumers
     /// </summary>
-    List<Type> ScanAllDefinedMessageBusConsumerTypes();
+    List<Type> ScanAllDefinedConsumerTypes();
 
     /// <summary>
     /// Get all binding routing key of all defined message and consumers
     /// </summary>
-    List<string> ScanAllDefinedBusMessageAndConsumerBindingRoutingKeys();
+    List<string> ScanAllDefinedMessageAndConsumerBindingRoutingKeys();
 
     /// <summary>
     /// Get all assemblies for scanning event bus message/consumer
     /// </summary>
-    List<Assembly> GetScanAssemblies();
+    List<Assembly> ScanAssemblies();
 }
 
 public class PlatformMessageBusScanner : IPlatformMessageBusScanner
@@ -32,35 +32,35 @@ public class PlatformMessageBusScanner : IPlatformMessageBusScanner
         this.serviceProvider = serviceProvider;
     }
 
-    public virtual List<Type> ScanAllDefinedMessageBusConsumerTypes()
+    public virtual List<Type> ScanAllDefinedConsumerTypes()
     {
-        return GetScanAssemblies()
+        return ScanAssemblies()
             .SelectMany(p => p.GetTypes())
             .Where(p => p.IsAssignableTo(typeof(IPlatformMessageBusConsumer)) && p.IsClass && !p.IsAbstract)
             .Distinct()
             .ToList();
     }
 
-    public virtual List<string> ScanAllDefinedBusMessageAndConsumerBindingRoutingKeys()
+    public virtual List<string> ScanAllDefinedMessageAndConsumerBindingRoutingKeys()
     {
-        return AllDefinedConsumerAttributeBindingRoutingKeys()
+        return AllDefinedMessageBusConsumerAttributes().Select(p => p.ConsumerBindingRoutingKey())
             .Concat(AllDefaultBindingRoutingKeyForDefinedConsumers().Select(p => p.ToString()))
-            .Concat(AllDefaultBindingRoutingKeyForDefinedBusMessages().Select(p => p.ToString()))
+            .Concat(AllDefaultBindingRoutingKeyForDefinedMessages().Select(p => p.ToString()))
             .Distinct()
             .ToList();
     }
 
-    public List<Assembly> GetScanAssemblies()
+    public List<Assembly> ScanAssemblies()
     {
         return serviceProvider.GetServices<PlatformModule>()
-            .Where(p => !p.GetType().IsAssignableTo(typeof(PlatformInfrastructureModule)))
+            .Where(p => p is not PlatformInfrastructureModule)
             .Select(p => p.Assembly)
             .ToList();
     }
 
     public List<PlatformConsumerRoutingKeyAttribute> AllDefinedMessageBusConsumerAttributes()
     {
-        return ScanAllDefinedMessageBusConsumerTypes()
+        return ScanAllDefinedConsumerTypes()
             .SelectMany(
                 messageConsumerType => messageConsumerType
                     .GetCustomAttributes(true)
@@ -69,7 +69,7 @@ public class PlatformMessageBusScanner : IPlatformMessageBusScanner
                         messageConsumerTypeAttribute => new
                         {
                             MessageConsumerTypeAttribute = messageConsumerTypeAttribute,
-                            ConsumerBindingRoutingKey = messageConsumerTypeAttribute.GetConsumerBindingRoutingKey()
+                            ConsumerBindingRoutingKey = messageConsumerTypeAttribute.ConsumerBindingRoutingKey()
                         }))
             .GroupBy(p => p.ConsumerBindingRoutingKey, p => p.MessageConsumerTypeAttribute)
             .Select(group => group.First())
@@ -78,30 +78,25 @@ public class PlatformMessageBusScanner : IPlatformMessageBusScanner
 
     public List<PlatformBusMessageRoutingKey> AllDefaultBindingRoutingKeyForDefinedConsumers()
     {
-        return ScanAllDefinedMessageBusConsumerTypes()
+        return ScanAllDefinedConsumerTypes()
             .Where(messageBusConsumerType => !messageBusConsumerType.GetCustomAttributes<PlatformConsumerRoutingKeyAttribute>().Any())
             .Select(messageBusConsumerType => messageBusConsumerType.FindMatchedGenericType(typeof(IPlatformMessageBusConsumer<>)))
-            .Select(consumerGenericType => IPlatformMessageBusConsumer.BuildForConsumerDefaultBindingRoutingKey(consumerGenericType))
+            .Select(IPlatformMessageBusConsumer.BuildForConsumerDefaultBindingRoutingKey)
             .Distinct()
             .ToList();
     }
 
-    public List<PlatformBusMessageRoutingKey> AllDefaultBindingRoutingKeyForDefinedBusMessages()
+    public List<PlatformBusMessageRoutingKey> AllDefaultBindingRoutingKeyForDefinedMessages()
     {
-        return AllDefinedBusBusMessageTypes()
+        return AllDefinedMessageTypes()
             .Select(messageType => PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(messageType))
             .Distinct()
             .ToList();
     }
 
-    public List<string> AllDefinedConsumerAttributeBindingRoutingKeys()
+    public List<Type> AllDefinedMessageTypes()
     {
-        return AllDefinedMessageBusConsumerAttributes().SelectList(p => p.GetConsumerBindingRoutingKey());
-    }
-
-    public List<Type> AllDefinedBusBusMessageTypes()
-    {
-        return GetScanAssemblies()
+        return ScanAssemblies()
             .SelectMany(p => p.GetTypes())
             .Where(p => p.IsAssignableTo(typeof(IPlatformMessage)) && p.IsClass && !p.IsAbstract)
             .Distinct()

@@ -240,7 +240,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
             Type.GetType(toHandleOutboxMessage.MessageTypeFullName, throwOnError: false) ??
             ServiceProvider
                 .GetService<IPlatformMessageBusScanner>()!
-                .GetScanAssemblies()
+                .ScanAssemblies()
                 .ConcatSingle(typeof(PlatformModule).Assembly)
                 .Select(assembly => assembly.GetType(toHandleOutboxMessage.MessageTypeFullName))
                 .FirstOrDefault(p => p != null);
