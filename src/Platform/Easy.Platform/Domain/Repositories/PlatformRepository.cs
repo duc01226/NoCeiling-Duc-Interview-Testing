@@ -157,6 +157,11 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         return query => query.Where(queryExpression);
     }
 
+    public IUnitOfWork TryGetCurrentActiveUow()
+    {
+        return UnitOfWorkManager.TryGetCurrentActiveUow()?.UowOfType<TUow>();
+    }
+
     public TUow GlobalUow()
     {
         return UnitOfWorkManager.GlobalUow.UowOfType<TUow>();

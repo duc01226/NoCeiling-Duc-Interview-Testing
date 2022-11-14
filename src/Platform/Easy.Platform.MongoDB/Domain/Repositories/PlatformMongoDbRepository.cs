@@ -21,6 +21,10 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
     {
     }
 
+    // Auto open a uow if there's no current active uow because for mongodb the uow is not a real transaction uow
+    // Support for old system code or other application want to use repository but without open new uow
+    protected override TDbContext DbContext => GetUowDbContext(TryGetCurrentActiveUow() ?? UnitOfWorkManager.Begin());
+
     public virtual IMongoCollection<TEntity> Table => DbContext.GetCollection<TEntity>();
 
     public virtual IMongoCollection<TEntity> GetTable(IUnitOfWork uow)
