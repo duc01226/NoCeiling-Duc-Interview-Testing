@@ -23,7 +23,7 @@ services:
     image: ${REGISTRY:-duc01226}/easy-platform-example-app-text-snippet-api:${PLATFORM:-linux}-${TAG:-latest}
     build:
       context: .
-      dockerfile: PlatformExampleApp/PlatformExampleApp.TextSnippet.Api/Dockerfile
+      dockerfile: PlatformExampleApp/PlatformExampleApp.TextSnippet.Api/dev.Dockerfile
     depends_on:
       - sql-data
       - mongo-data
