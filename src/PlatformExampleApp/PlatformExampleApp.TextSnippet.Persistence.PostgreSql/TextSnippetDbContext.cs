@@ -22,7 +22,7 @@ public class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDbContext
         public TextSnippetDbContext CreateDbContext(string[] args)
         {
             var optionsBuilder = new DbContextOptionsBuilder<TextSnippetDbContext>();
-            optionsBuilder.UseNpgsql("Host=localhost;Port=5433;Username=postgres;Password=postgres;Database=TextSnippedDb");
+            optionsBuilder.UseNpgsql("Host=localhost;Port=54320;Username=postgres;Password=postgres;Database=TextSnippedDb");
 
             return new TextSnippetDbContext(optionsBuilder.Options, new LoggerFactory(), null);
         }

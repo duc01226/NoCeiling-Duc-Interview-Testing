@@ -52,7 +52,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5433:5432"
+      - "54320:5432"
     volumes:
       - Easy.Platform-postgres-sql-data:/var/lib/postgresql/data
       - Easy.Platform-postgres-sql-pgdata:/var/lib/postgresql/pgdata
