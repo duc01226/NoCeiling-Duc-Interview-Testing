@@ -7,13 +7,6 @@ namespace Easy.Platform.Common.Extensions;
 
 public static class DependencyInjectionExtension
 {
-    public enum ReplaceServiceStrategy
-    {
-        ByService,
-        ByImplementation,
-        ByBoth
-    }
-
     public static string[] DefaultIgnoreRegisterLibraryInterfacesNameSpacePrefixes { get; set; } = { "System", "Microsoft" };
 
     /// <summary>
@@ -547,7 +540,7 @@ public static class DependencyInjectionExtension
         if (implementationType.IsGenericType)
             implementationType
                 .GetInterfaces()
-                .Where(implementationTypeInterface => implementationType.MatchGenericArguments(implementationTypeInterface))
+                .Where(implementationType.MatchGenericArguments)
                 .Where(DefaultIgnoreRegisterLibraryInterfacesForImplementationExpr())
                 .ForEach(
                     implementationTypeInterface => services.Register(
@@ -603,7 +596,7 @@ public static class DependencyInjectionExtension
         if (implementationType.IsGenericType)
             implementationType
                 .GetInterfaces()
-                .Where(implementationTypeInterface => implementationType.MatchGenericArguments(implementationTypeInterface))
+                .Where(implementationType.MatchGenericArguments)
                 .Where(DefaultIgnoreRegisterLibraryInterfacesForImplementationExpr())
                 .ForEach(
                     implementationTypeInterface => services.Register(
@@ -806,5 +799,12 @@ public static class DependencyInjectionExtension
     public static async Task<TResult> ExecuteInjectScopedAsync<TResult>(this IServiceProvider serviceProvider, Delegate method, params object[] manuallyParams)
     {
         return await serviceProvider.ExecuteScopedAsync(scope => scope.ExecuteInjectAsync<TResult>(method, manuallyParams));
+    }
+
+    public enum ReplaceServiceStrategy
+    {
+        ByService,
+        ByImplementation,
+        ByBoth
     }
 }

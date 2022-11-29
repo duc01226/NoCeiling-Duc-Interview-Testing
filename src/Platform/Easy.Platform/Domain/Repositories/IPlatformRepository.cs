@@ -84,6 +84,12 @@ public interface IPlatformBasicRootRepository<TEntity, TPrimaryKey> : IPlatformB
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default);
 
+    public Task<List<TEntity>> UpdateManyAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Action<TEntity> updateAction,
+        bool dismissSendEvent = false,
+        CancellationToken cancellationToken = default);
+
     public Task<List<TEntity>> DeleteManyAsync(
         List<TPrimaryKey> entityIds,
         bool dismissSendEvent = false,
@@ -137,6 +143,14 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
 
     public Task<TResult> GetAsync<TResult>(
         Func<IQueryable<TEntity>, Task<TResult>> queryToResultBuilder,
+        CancellationToken cancellationToken = default);
+
+    public Task<TResult> GetAsync<TResult>(
+        Func<IUnitOfWork, IQueryable<TEntity>, TResult> queryToResultBuilder,
+        CancellationToken cancellationToken = default);
+
+    public Task<TResult> GetAsync<TResult>(
+        Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> queryToResultBuilder,
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> GetAllAsync(

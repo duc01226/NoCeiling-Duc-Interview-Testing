@@ -21,7 +21,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
 
     private bool isProcessing;
 
-    protected PlatformConsumeInboxBusMessageHostedService(
+    public PlatformConsumeInboxBusMessageHostedService(
         IServiceProvider serviceProvider,
         ILoggerFactory loggerFactory,
         IPlatformApplicationSettingContext applicationSettingContext,
@@ -85,7 +85,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         {
             var toHandleMessages = await PopToHandleInboxEventBusMessages(cancellationToken);
 
-            // Handle parallel for sameTrackIdMessages (1 track message could be handled by many consumers)
+            // Handle parallel consumers for sameTrackIdMessages (1 track message could be handled by many consumers)
             // ForEachAsync to handle one by one consumers group (Handle each message at a time)
             await toHandleMessages
                 .GroupBy(p => p.GetTrackId())

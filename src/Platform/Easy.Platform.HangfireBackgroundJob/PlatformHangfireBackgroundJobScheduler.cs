@@ -106,7 +106,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
 
     public void TriggerRecurringJob<TJobExecutor>() where TJobExecutor : IPlatformBackgroundJobExecutor
     {
-        RecurringJob.Trigger(BuildRecurringJobId<TJobExecutor>());
+        RecurringJob.TriggerJob(BuildRecurringJobId<TJobExecutor>());
     }
 
     public void RemoveAllRecurringJobs()
@@ -180,9 +180,9 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
                     .GetType()
                     .GetInterfaces()
                     .FirstOrDefault(
-                        x =>
-                            x.IsGenericType &&
-                            x.GetGenericTypeDefinition() == typeof(IPlatformBackgroundJobExecutor<>));
+                        x => x.IsGenericType &&
+                             x.GetGenericTypeDefinition() == typeof(IPlatformBackgroundJobExecutor<>));
+
                 if (withParamJobExecutorType != null)
                 {
                     // Parse job executor param to correct type

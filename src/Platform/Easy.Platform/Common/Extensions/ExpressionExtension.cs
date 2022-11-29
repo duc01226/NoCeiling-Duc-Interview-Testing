@@ -27,17 +27,17 @@ public static class ExpressionExtension
     }
 
     /// <summary>
-    ///     Returns the name of the specified property of the specified type.
+    /// Returns the name of the specified property of the specified type.
     /// </summary>
     /// <typeparam name="T">
-    ///     The type the property is a member of.
+    /// The type the property is a member of.
     /// </typeparam>
     /// <typeparam name="TProp">The type of the property.</typeparam>
     /// <param name="property">
-    ///     The property.
+    /// The property.
     /// </param>
     /// <returns>
-    ///     The property name.
+    /// The property name.
     /// </returns>
     public static string GetPropertyName<T, TProp>(this Expression<Func<T, TProp>> property)
     {
@@ -54,12 +54,15 @@ public static class ExpressionExtension
 
     public static Expression<Func<T, bool>> AndAlso<T>(this Expression<Func<T, bool>> first, Expression<Func<T, bool>> second)
     {
+        if (first.IsConstantTrue()) return second;
+        if (second.IsConstantTrue()) return first;
+
         return first.Compose(second, Expression.AndAlso);
     }
 
     public static Expression<Func<T, bool>> AndAlsoNot<T>(this Expression<Func<T, bool>> first, Expression<Func<T, bool>> second)
     {
-        return first.Compose(second.Not(), Expression.AndAlso);
+        return AndAlso(first, second).Not();
     }
 
     public static Expression<Func<T, bool>> Or<T>(this Expression<Func<T, bool>> first, Expression<Func<T, bool>> second)
@@ -78,5 +81,15 @@ public static class ExpressionExtension
         var body = Expression.Not(one.Body);
 
         return Expression.Lambda<Func<T, bool>>(body, candidateExpr);
+    }
+
+    public static bool IsConstantTrue(this LambdaExpression lambda)
+    {
+        return lambda.Body.NodeType == ExpressionType.Constant && true.Equals(((ConstantExpression)lambda.Body).Value);
+    }
+
+    public static bool IsConstantFalse(this LambdaExpression lambda)
+    {
+        return lambda.Body.NodeType == ExpressionType.Constant && false.Equals(((ConstantExpression)lambda.Body).Value);
     }
 }

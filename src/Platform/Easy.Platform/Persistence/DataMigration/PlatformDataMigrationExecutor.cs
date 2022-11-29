@@ -19,11 +19,14 @@ public interface IPlatformDataMigrationExecutor<in TDbContext> : IPlatformDataMi
     /// <summary>
     /// Set this data to state that the data migration only valid if db initialized before a certain date
     /// </summary>
-    DateTime? RunOnlyDbInitializedBeforeDate { get; }
+    DateTime? RunOnlyForDbInitializedBeforeDate { get; }
 
     DateTime? ExpiredAt { get; }
+
     bool IsDisposed { get; set; }
+
     Task Execute(TDbContext dbContext);
+
     bool IsExpired();
 
     /// <summary>
@@ -32,11 +35,6 @@ public interface IPlatformDataMigrationExecutor<in TDbContext> : IPlatformDataMi
     /// Example: "00001_MigrationName"
     /// </summary>
     string GetOrderByValue();
-
-    /// <summary>
-    /// Default is False. Override this method to create custom condition that this executor is Obsolete, should not be executed
-    /// </summary>
-    bool IsObsolete(TDbContext dbContext);
 }
 
 /// <summary>
@@ -49,9 +47,22 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
 {
     public abstract string Name { get; }
     public virtual int Order => 0;
+
+    /// <summary>
+    /// The find the date that this migration will not be executed after a given date
+    /// </summary>
     public virtual DateTime? ExpiredAt => null;
-    public virtual DateTime? RunOnlyDbInitializedBeforeDate => null;
+
+    /// <summary>
+    /// Override this prop define the date, usually the date you define your data migration. <br/>
+    /// When define it, for example RunOnlyDbInitializedBeforeDate = 2000/12/31, mean that after 2000/12/31,
+    /// if you run a fresh new system with no db, db is init created after 2000/12/31, the migration will be not executed.
+    /// This will help to prevent run not necessary data migration for a new system fresh db 
+    /// </summary>
+    public virtual DateTime? RunOnlyForDbInitializedBeforeDate => null;
+
     public abstract Task Execute(TDbContext dbContext);
+
     public bool IsDisposed { get; set; }
 
     public bool IsExpired()
@@ -78,11 +89,6 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
         GC.SuppressFinalize(this);
 
         IsDisposed = true;
-    }
-
-    public virtual bool IsObsolete(TDbContext dbContext)
-    {
-        return false;
     }
 
     public static List<PlatformDataMigrationExecutor<TDbContext>> ScanAllDataMigrationExecutors(

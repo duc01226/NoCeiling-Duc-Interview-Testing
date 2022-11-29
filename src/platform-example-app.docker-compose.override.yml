@@ -70,7 +70,7 @@ services:
     ports:
       - "5001:80"
     healthcheck:
-      test: curl --fail http://0.0.0.0/swagger/index.html || exit 1
+      test: curl --fail http://0.0.0.0:80 || exit 1
       interval: 5s
       timeout: 10s #This property specifies the number of seconds Docker awaits for your health check command to return an exit code before declaring it as failed.
       retries: 10 #This property specifies the number of consecutive health check failures required to declare the container as unhealthy.
@@ -78,6 +78,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
       - "localhost:host-gateway"
+    mem_limit: 150m
 
   text-snippet-webspa:
     build:

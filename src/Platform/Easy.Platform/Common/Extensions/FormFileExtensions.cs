@@ -14,4 +14,9 @@ public static class FormFileExtensions
             return fileStream.ToArray();
         }
     }
+
+    public static string GetFileExtension(this IFormFile file)
+    {
+        return Path.GetExtension(file.FileName);
+    }
 }

@@ -119,11 +119,10 @@ public class PlatformObjectJsonConverter : JsonConverter<object>
 
     public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options)
     {
-        // We do not handle write object, so we remove PlatformObjectJsonConverter
-        // and write object by default implementation of JsonSerializer
-        var removedPlatformObjectJsonConverterOptions = options.Clone()
+        // We do not handle write object, so we remove itself to prevent stack overflow
+        var removedItSelfOptions = options.Clone()
             .With(p => p.Converters.RemoveWhere(p => p is PlatformObjectJsonConverter, out _));
 
-        JsonSerializer.Serialize(writer, value, removedPlatformObjectJsonConverterOptions);
+        JsonSerializer.Serialize(writer, value, removedItSelfOptions);
     }
 }

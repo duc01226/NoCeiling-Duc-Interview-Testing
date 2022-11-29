@@ -18,7 +18,7 @@ public static class JsonSerializerOptionsExtension
                     p.SetValue(cloned, p.GetValue(options));
                 });
 
-        options.Converters.ForEach(optionsConverter => cloned.Converters.Add(optionsConverter));
+        options.Converters.ForEach(cloned.Converters.Add);
 
         return cloned;
     }

@@ -15,6 +15,14 @@ public abstract class PlatformMongoMigrationExecutor<TDbContext>
     /// </summary>
     public virtual DateTime? ExpiredDate { get; } = null;
 
+    /// <summary>
+    /// Override this prop define the date, usually the date you define your data migration. <br />
+    /// When define it, for example RunOnlyDbInitializedBeforeDate = 2000/12/31, mean that after 2000/12/31,
+    /// if you run a fresh new system with no db, db is init created after 2000/12/31, the migration will be not executed.
+    /// This will help to prevent run not necessary data migration for a new system fresh db
+    /// </summary>
+    public virtual DateTime? RunOnlyDbInitializedBeforeDate => null;
+
     public abstract Task Execute(TDbContext dbContext);
 
     /// <summary>

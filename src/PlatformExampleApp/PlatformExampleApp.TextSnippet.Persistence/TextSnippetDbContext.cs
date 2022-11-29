@@ -23,7 +23,7 @@ public class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDbContext
         public TextSnippetDbContext CreateDbContext(string[] args)
         {
             var optionsBuilder = new DbContextOptionsBuilder<TextSnippetDbContext>();
-            optionsBuilder.UseSqlServer("Data Source=localhost,14330;Initial Catalog=TextSnippedDb;User ID=sa;Password=123456Abc");
+            optionsBuilder.UseSqlServer("Data Source=localhost,14330;Initial Catalog=TextSnippedDb;User ID=sa;Password=123456Abc; Encrypt=False;");
 
             return new TextSnippetDbContext(optionsBuilder.Options, new LoggerFactory(), null);
         }

@@ -306,4 +306,9 @@ public readonly struct Validation<T>
     {
         return ToString().GetHashCode();
     }
+
+    public T EnsureValid()
+    {
+        return IsValid ? Value : throw new Exception(ToString());
+    }
 }

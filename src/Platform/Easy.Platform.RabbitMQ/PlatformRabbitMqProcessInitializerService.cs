@@ -193,8 +193,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
                 return false;
             },
             retryAttempt => TimeSpan.Zero,
-            retryCount: messageBusScanner.ScanAllDefinedMessageAndConsumerBindingRoutingKeys().Count *
-                        3); // Count * 3 to ensure retry declare queue works for all queues
+            retryCount: messageBusScanner.ScanAllDefinedConsumerBindingRoutingKeys().Count * 3); // Count * 3 to ensure retry declare queue works for all queues
     }
 
     private void StartConsumers()
@@ -211,7 +210,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
             applicationRabbitConsumer.Received += OnMessageReceived;
 
             // Binding all defined event bus consumer to RabbitMQ Basic Consumer
-            messageBusScanner.ScanAllDefinedMessageAndConsumerBindingRoutingKeys()
+            messageBusScanner.ScanAllDefinedConsumerBindingRoutingKeys()
                 .Select(GetConsumerQueueName)
                 .ToList()
                 .ForEach(
@@ -485,7 +484,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
     private void DeclareRabbitMqExchangesAndQueuesConfiguration()
     {
         // Get exchange routing key for all consumers in source code
-        var allDefinedMessageBusConsumerPatternRoutingKeys = messageBusScanner.ScanAllDefinedMessageAndConsumerBindingRoutingKeys();
+        var allDefinedMessageBusConsumerPatternRoutingKeys = messageBusScanner.ScanAllDefinedConsumerBindingRoutingKeys();
 
         // Declare all exchanges
         DeclareExchangesForRoutingKeys(allDefinedMessageBusConsumerPatternRoutingKeys);

@@ -55,25 +55,38 @@ public static class PlatformInboxMessageBusConsumerHelper
                 PlatformInboxBusMessage.ConsumeStatuses.Processing,
                 cancellationToken);
 
-            await TriggerHandleWaitingProcessingMessageConsumer(consumer, message, newInboxMessage, routingKey);
+            await TriggerHandleWaitingProcessingInboxMessageConsumer(consumer, message, newInboxMessage, routingKey, logger);
         }
     }
 
-    public static Task TriggerHandleWaitingProcessingMessageConsumer<TMessage>(
+    public static Task TriggerHandleWaitingProcessingInboxMessageConsumer<TMessage>(
         IPlatformMessageBusConsumer<TMessage> consumer,
         TMessage message,
         PlatformInboxBusMessage newInboxMessage,
-        string routingKey) where TMessage : class, new()
+        string routingKey,
+        ILogger logger) where TMessage : class, new()
     {
         var consumerType = consumer.GetType();
 
         return PlatformApplicationGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
             async (IServiceProvider serviceProvider) =>
             {
-                await serviceProvider.GetService(consumerType)
-                    .Cast<IPlatformMessageBusConsumer<TMessage>>()
-                    .With(_ => _.HandleExistingInboxMessageTrackId = newInboxMessage.GetTrackId())
-                    .HandleAsync(message, routingKey);
+                try
+                {
+                    await serviceProvider.GetService(consumerType)
+                        .Cast<IPlatformMessageBusConsumer<TMessage>>()
+                        .With(_ => _.HandleExistingInboxMessageTrackId = newInboxMessage.GetTrackId())
+                        .HandleAsync(message, routingKey);
+                }
+                catch (Exception e)
+                {
+                    // Catch and just log error to prevent retry queue message. Inbox message will be automatically retry handling via
+                    // inbox hosted service
+                    logger.LogWarning(
+                        e,
+                        "TriggerHandleWaitingProcessingInboxMessageConsumer [ConsumerType:{consumerType}] failed. InboxMessage will be retried later.",
+                        consumerType.Name);
+                }
             });
     }
 

@@ -6,8 +6,7 @@ namespace Easy.Platform.Application.Context.UserContext.Default;
 /// </summary>
 public class PlatformDefaultApplicationUserContextAccessor : IPlatformApplicationUserContextAccessor
 {
-    private static readonly AsyncLocal<UserContextHolder> UserContextCurrentThread =
-        new AsyncLocal<UserContextHolder>();
+    private static readonly AsyncLocal<UserContextHolder> UserContextCurrentThread = new();
 
     public IPlatformApplicationUserContext Current
     {
@@ -41,7 +40,7 @@ public class PlatformDefaultApplicationUserContextAccessor : IPlatformApplicatio
         return new PlatformDefaultApplicationUserContext();
     }
 
-    private class UserContextHolder
+    private sealed class UserContextHolder
     {
         public IPlatformApplicationUserContext Context { get; set; }
     }

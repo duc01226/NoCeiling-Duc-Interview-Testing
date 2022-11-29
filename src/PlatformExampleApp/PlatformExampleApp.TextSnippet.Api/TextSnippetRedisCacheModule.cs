@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 namespace PlatformExampleApp.TextSnippet.Api;
 
 /// <summary>
-/// Implement RedisCacheModule and use it to use distributed cache via <see cref="PlatformCacheRepositoryType.Distributed"/>
+/// Implement RedisCacheModule and use it to use distributed cache via <see cref="PlatformCacheRepositoryType.Distributed" />
 /// </summary>
 public class TextSnippetRedisCacheModule : PlatformRedisCacheModule
 {

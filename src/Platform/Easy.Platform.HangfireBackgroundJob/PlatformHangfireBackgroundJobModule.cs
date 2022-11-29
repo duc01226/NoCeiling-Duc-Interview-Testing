@@ -45,16 +45,18 @@ public abstract class PlatformHangfireBackgroundJobModule : PlatformBackgroundJo
         // UseActivator on init so that ServiceProvider have enough all registered services
         GlobalConfiguration.Configuration.UseActivator(new PlatformHangfireActivator(ServiceProvider));
 
-        await StartBackgroundJobProcessing(serviceScope);
-
         await ReplaceAllLatestRecurringBackgroundJobs(serviceScope);
+
+        await StartBackgroundJobProcessing(serviceScope);
     }
 
+    // By default We only want one worker run at a time to prevent stacking multiple background job
+    // running at the same time could cause performance issues
     protected virtual BackgroundJobServerOptions BackgroundJobServerOptionsConfigure(
         IServiceProvider provider,
         BackgroundJobServerOptions options)
     {
-        options.WorkerCount = Environment.ProcessorCount;
+        options.WorkerCount = 1;
 
         return options;
     }

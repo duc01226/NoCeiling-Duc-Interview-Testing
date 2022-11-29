@@ -8,14 +8,19 @@ namespace Easy.Platform.Infrastructures.MessageBus;
 public interface IPlatformMessageBusScanner
 {
     /// <summary>
-    /// Get all routing key pattern of all defined consumers
+    /// Get all type of all defined consumers
     /// </summary>
     List<Type> ScanAllDefinedConsumerTypes();
 
     /// <summary>
-    /// Get all binding routing key of all defined message and consumers
+    /// Get all binding routing key of all defined messages
     /// </summary>
-    List<string> ScanAllDefinedMessageAndConsumerBindingRoutingKeys();
+    List<string> ScanAllDefinedMessageBindingRoutingKeys();
+
+    /// <summary>
+    /// Get all binding routing key of all defined consumers
+    /// </summary>
+    List<string> ScanAllDefinedConsumerBindingRoutingKeys();
 
     /// <summary>
     /// Get all assemblies for scanning event bus message/consumer
@@ -41,11 +46,19 @@ public class PlatformMessageBusScanner : IPlatformMessageBusScanner
             .ToList();
     }
 
-    public virtual List<string> ScanAllDefinedMessageAndConsumerBindingRoutingKeys()
+    public virtual List<string> ScanAllDefinedMessageBindingRoutingKeys()
     {
-        return AllDefinedMessageBusConsumerAttributes().Select(p => p.ConsumerBindingRoutingKey())
+        return AllDefaultBindingRoutingKeyForDefinedMessages()
+            .Select(p => p.ToString())
+            .Distinct()
+            .ToList();
+    }
+
+    public List<string> ScanAllDefinedConsumerBindingRoutingKeys()
+    {
+        return AllDefinedMessageBusConsumerAttributes()
+            .Select(p => p.ConsumerBindingRoutingKey())
             .Concat(AllDefaultBindingRoutingKeyForDefinedConsumers().Select(p => p.ToString()))
-            .Concat(AllDefaultBindingRoutingKeyForDefinedMessages().Select(p => p.ToString()))
             .Distinct()
             .ToList();
     }

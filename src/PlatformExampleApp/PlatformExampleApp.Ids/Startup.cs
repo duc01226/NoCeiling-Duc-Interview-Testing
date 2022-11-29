@@ -44,10 +44,7 @@ namespace PlatformExampleApp.Ids
                 .AddTestUsers(TestUsers.Users)
                 // this adds the config data from DB (clients, resources, CORS)
                 .AddConfigurationStore(
-                    options =>
-                    {
-                        options.ConfigureDbContext = builder => builder.UseSqlite(connectionString);
-                    })
+                    options => options.ConfigureDbContext = builder => builder.UseSqlite(connectionString))
                 // this adds the operational data from DB (codes, tokens, consents)
                 .AddOperationalStore(
                     options =>
@@ -77,22 +74,14 @@ namespace PlatformExampleApp.Ids
 
         public void Configure(IApplicationBuilder app)
         {
-            if (Environment.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-                app.UseDatabaseErrorPage();
-            }
+            if (Environment.IsDevelopment()) app.UseDeveloperExceptionPage();
 
             app.UseStaticFiles();
 
             app.UseRouting();
             app.UseIdentityServer();
             app.UseAuthorization();
-            app.UseEndpoints(
-                endpoints =>
-                {
-                    endpoints.MapDefaultControllerRoute();
-                });
+            app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
         }
     }
 }

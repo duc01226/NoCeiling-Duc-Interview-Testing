@@ -17,26 +17,28 @@ public static class PlatformJsonSerializer
     /// <summary>
     /// Use Lazy for thread safe
     /// </summary>
-    public static Lazy<JsonSerializerOptions> CurrentOptions { get; private set; } =
-        new(() => DefaultOptions);
+    public static Lazy<JsonSerializerOptions> CurrentOptions { get; private set; } = new(() => DefaultOptions);
 
     public static void SetCurrentOptions(JsonSerializerOptions serializerOptions)
     {
         CurrentOptions = new Lazy<JsonSerializerOptions>(() => serializerOptions);
     }
 
-    public static JsonSerializerOptions ConfigOptionsByCurrentOptions(
-        JsonSerializerOptions options)
+    public static JsonSerializerOptions ApplyPlatformCurrentOptions(JsonSerializerOptions options)
     {
         options.DefaultIgnoreCondition = CurrentOptions.Value.DefaultIgnoreCondition;
         options.PropertyNamingPolicy = CurrentOptions.Value.PropertyNamingPolicy;
 
         options.Converters.Clear();
-        CurrentOptions.Value.Converters.ForEach(p => options.Converters.Add(p));
+        CurrentOptions.Value.Converters.ForEach(options.Converters.Add);
 
         return options;
     }
 
+    /// <summary>
+    /// Config JsonSerializerOptions with some platform best practices options. <br />
+    /// Support some customization
+    /// </summary>
     public static JsonSerializerOptions ConfigOptions(
         JsonSerializerOptions options,
         bool useJsonStringEnumConverter = true,
@@ -44,6 +46,9 @@ public static class PlatformJsonSerializer
         List<JsonConverter> customConverters = null)
     {
         options.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        options.ReadCommentHandling = JsonCommentHandling.Skip;
+        options.PropertyNameCaseInsensitive = true;
+        options.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         if (useCamelCaseNaming)
             options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
 
@@ -51,9 +56,11 @@ public static class PlatformJsonSerializer
         if (useJsonStringEnumConverter)
             options.Converters.Add(new JsonStringEnumConverter());
         options.Converters.Add(new PlatformObjectJsonConverter());
-        options.Converters.Add(new PlatformDynamicJsonConverter());
         options.Converters.Add(new PlatformClassTypeJsonConverter());
-        customConverters?.ForEach(p => options.Converters.Add(p));
+        options.Converters.Add(new PlatformIgnoreMethodBaseJsonConverter());
+        options.Converters.Add(new PlatformNullableDateTimeJsonConverter());
+        options.Converters.Add(new PlatformPrimitiveTypeToStringJsonConverter());
+        customConverters?.ForEach(options.Converters.Add);
 
         return options;
     }
@@ -79,9 +86,27 @@ public static class PlatformJsonSerializer
             customSerializerOptions ?? CurrentOptions.Value);
     }
 
+    public static string SerializeWithDefaultOptions<TValue>(
+        TValue value,
+        bool useJsonStringEnumConverter = true,
+        bool useCamelCaseNaming = false,
+        List<JsonConverter> customConverters = null)
+    {
+        return Serialize(value, BuildDefaultOptions(useJsonStringEnumConverter, useCamelCaseNaming, customConverters));
+    }
+
     public static T Deserialize<T>(string jsonValue)
     {
         return JsonSerializer.Deserialize<T>(jsonValue, CurrentOptions.Value);
+    }
+
+    public static T DeserializeWithDefaultOptions<T>(
+        string jsonValue,
+        bool useJsonStringEnumConverter = true,
+        bool useCamelCaseNaming = false,
+        List<JsonConverter> customConverters = null)
+    {
+        return Deserialize<T>(jsonValue, BuildDefaultOptions(useJsonStringEnumConverter, useCamelCaseNaming, customConverters));
     }
 
     public static T Deserialize<T>(string jsonValue, JsonSerializerOptions customSerializerOptions)

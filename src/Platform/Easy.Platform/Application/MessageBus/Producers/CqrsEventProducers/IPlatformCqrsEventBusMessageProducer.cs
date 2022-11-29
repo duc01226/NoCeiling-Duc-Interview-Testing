@@ -10,10 +10,18 @@ using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.MessageBus.Producers.CqrsEventProducers;
 
+public interface IPlatformCqrsEventBusMessageProducer
+{
+    public static Type GetTMessageArgumentType(Type cqrsEventBusMessageProducerType)
+    {
+        return cqrsEventBusMessageProducerType.GetGenericArguments()[1];
+    }
+}
+
 /// <summary>
 /// This interface is used for conventional register all PlatformCqrsEventBusProducer
 /// </summary>
-public interface IPlatformCqrsEventBusMessageProducer<in TEvent> : INotificationHandler<TEvent>
+public interface IPlatformCqrsEventBusMessageProducer<in TEvent> : INotificationHandler<TEvent>, IPlatformCqrsEventBusMessageProducer
     where TEvent : PlatformCqrsEvent, new()
 {
 }

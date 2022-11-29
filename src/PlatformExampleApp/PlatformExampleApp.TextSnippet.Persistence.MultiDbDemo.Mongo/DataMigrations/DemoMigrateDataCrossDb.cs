@@ -49,14 +49,4 @@ internal class DemoMigrateDataCrossDb : PlatformDataMigrationExecutor<TextSnippe
         if (disposing)
             demoMigrateDataCrossDbContext.Dispose();
     }
-
-    /// <summary>
-    /// Demo code if the database schema is changed so that this application data migration is not valid anymore
-    /// </summary>
-    /// <returns></returns>
-    public override bool IsObsolete(TextSnippetMultiDbDemoDbContext dbContext)
-    {
-        return demoMigrateDataCrossDbContext.MigrationHistoryCollection.AsQueryable()
-            .Any(p => p.Name == "StopDemoMigrateApplicationDataCrossDb");
-    }
 }

@@ -20,7 +20,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
     private readonly IPlatformApplicationSettingContext applicationSettingContext;
     private bool isProcessing;
 
-    protected PlatformSendOutboxBusMessageHostedService(
+    public PlatformSendOutboxBusMessageHostedService(
         IServiceProvider serviceProvider,
         ILoggerFactory loggerFactory,
         IPlatformApplicationSettingContext applicationSettingContext,

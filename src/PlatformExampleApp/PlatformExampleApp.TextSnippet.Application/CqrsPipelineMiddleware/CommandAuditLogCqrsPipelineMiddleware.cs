@@ -10,6 +10,7 @@ namespace PlatformExampleApp.TextSnippet.Application.CqrsPipelineMiddleware;
 /// We do audit log a command after it's executed here.
 /// </summary>
 public class CommandAuditLogCqrsPipelineMiddleware<TRequest, TResponse> : PlatformCqrsPipelineMiddleware<TRequest, TResponse>
+    where TRequest : notnull, IRequest<TResponse>
 {
     private readonly ILogger<CommandAuditLogCqrsPipelineMiddleware<TRequest, TResponse>> logger;
 

@@ -13,12 +13,22 @@ public static class DictionaryExtension
         return dictionary;
     }
 
-    /// <inheritdoc cref="Upsert{TDic,TKey,TValue}"/>
+    /// <inheritdoc cref="Upsert{TDic,TKey,TValue}" />
     public static IDictionary<TKey, TValue> Upsert<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, TValue value)
     {
         dictionary.Remove(key);
         dictionary.Add(key, value);
 
         return dictionary;
+    }
+
+    /// <summary>
+    /// Try get value from key. Return default value if key is not existing
+    /// </summary>
+    public static TValue TryGetValueOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key)
+    {
+        if (dictionary.TryGetValue(key, out var value)) return value;
+
+        return default;
     }
 }

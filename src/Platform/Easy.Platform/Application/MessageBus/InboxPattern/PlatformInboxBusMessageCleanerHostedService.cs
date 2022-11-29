@@ -13,17 +13,17 @@ namespace Easy.Platform.Application.MessageBus.InboxPattern;
 public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProcessHostedService
 {
     /// <summary>
-    /// Default number messages is deleted in every process. Default is 100;
+    /// Default number messages is deleted in every process. Default is 10;
     /// </summary>
-    public const int DefaultNumberOfDeleteMessagesBatch = 100;
+    public const int DefaultNumberOfDeleteMessagesBatch = 10;
 
     public const int MinimumRetryCleanInboxMessageTimesToWarning = 2;
 
     public const string DefaultDeleteProcessedMessageInSecondsSettingKey = "MessageBus:InboxDeleteProcessedMessageInSeconds";
 
-    private readonly IPlatformApplicationSettingContext applicationSettingContext;
-
     protected readonly IConfiguration Configuration;
+
+    private readonly IPlatformApplicationSettingContext applicationSettingContext;
 
     private bool isProcessing;
 

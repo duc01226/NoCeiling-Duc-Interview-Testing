@@ -23,7 +23,7 @@ public interface IPlatformPersistenceModule : IPlatformModule
     /// Default false. Override this to true for db context used to migrate cross db data,
     /// do not need to run migration and register repositories
     /// </summary>
-    bool ForReadDataOnly { get; }
+    bool ForCrossDbMigrationOnly { get; }
 
     /// <summary>
     /// Default false. Override this to true for db context module db from
@@ -58,7 +58,7 @@ public interface IPlatformPersistenceModule : IPlatformModule
 /// </summary>
 public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersistenceModule
 {
-    public new const int DefaultExecuteInitPriority = PlatformInfrastructureModule.DefaultExecuteInitPriority + 1;
+    public new const int DefaultExecuteInitPriority = PlatformInfrastructureModule.DefaultExecuteInitPriority * ExecuteInitPriorityNextLevelDistance;
 
     protected PlatformPersistenceModule(IServiceProvider serviceProvider, IConfiguration configuration) : base(serviceProvider, configuration)
     {
@@ -66,7 +66,7 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
 
     public static int DefaultDbInitAndMigrationRetryCount => PlatformEnvironment.IsDevelopment ? 5 : 10;
 
-    public virtual bool ForReadDataOnly => false;
+    public virtual bool ForCrossDbMigrationOnly => false;
 
     public virtual bool DisableDbInitializingAndMigration => false;
 
@@ -179,7 +179,7 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
 
     private void RegisterRepositories(IServiceCollection serviceCollection)
     {
-        if (ForReadDataOnly) return;
+        if (ForCrossDbMigrationOnly) return;
 
         if (RegisterLimitedRepositoryImplementationTypes()?.Any() == true)
             RegisterLimitedRepositoryImplementationTypes()
@@ -193,8 +193,6 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
 public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenceModule, IPlatformPersistenceModule
     where TDbContext : class, IPlatformDbContext
 {
-    public new const int DefaultExecuteInitPriority = PlatformInfrastructureModule.DefaultExecuteInitPriority + 1;
-
     protected PlatformPersistenceModule(IServiceProvider serviceProvider, IConfiguration configuration) : base(serviceProvider, configuration)
     {
     }
@@ -203,7 +201,7 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
 
     public override async Task MigrateApplicationDataAsync(IServiceScope serviceScope)
     {
-        if (ForReadDataOnly || DisableDbInitializingAndMigration) return;
+        if (ForCrossDbMigrationOnly || DisableDbInitializingAndMigration) return;
 
         // if the db server container is not created on run docker compose,
         // the migration action could fail for network related exception. So that we do retry to ensure that Initialize action run successfully.
@@ -229,7 +227,7 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
 
     public override async Task InitializeDb(IServiceScope serviceScope)
     {
-        if (ForReadDataOnly || DisableDbInitializingAndMigration) return;
+        if (ForCrossDbMigrationOnly || DisableDbInitializingAndMigration) return;
 
         // if the db server container is not created on run docker compose,
         // the migration action could fail for network related exception. So that we do retry to ensure that Initialize action run successfully.
@@ -258,12 +256,5 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
         serviceCollection.RegisterAllForImplementation<TDbContext>(ServiceLifeTime.Scoped);
 
         base.InternalRegister(serviceCollection);
-    }
-
-    protected override async Task InternalInit(IServiceScope serviceScope)
-    {
-        await base.InternalInit(serviceScope);
-
-        await InitializeDb(serviceScope);
     }
 }

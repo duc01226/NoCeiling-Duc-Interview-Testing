@@ -48,7 +48,7 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
 
     protected virtual Task OnException(HttpContext context, Exception exception)
     {
-        if (exception is BadHttpRequestException or OperationCanceledException)
+        if (exception is BadHttpRequestException or OperationCanceledException or TaskCanceledException)
         {
             Logger.LogWarning(exception, exception.GetType().Name);
             return Task.CompletedTask;

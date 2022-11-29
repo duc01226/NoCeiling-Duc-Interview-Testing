@@ -6,9 +6,10 @@ public class PlatformDataMigrationHistory
 
     public PlatformDataMigrationHistory()
     {
+        CreatedDate = DateTime.UtcNow;
     }
 
-    public PlatformDataMigrationHistory(string name)
+    public PlatformDataMigrationHistory(string name) : this()
     {
         Name = name;
     }

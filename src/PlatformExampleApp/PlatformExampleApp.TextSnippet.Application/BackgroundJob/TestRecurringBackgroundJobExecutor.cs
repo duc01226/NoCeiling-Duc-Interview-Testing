@@ -19,8 +19,8 @@ public class TestRecurringBackgroundJobExecutor : PlatformApplicationBackgroundJ
     private readonly ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository;
 
     public TestRecurringBackgroundJobExecutor(
-        IUnitOfWorkManager unitOfWorkManager,
         ILoggerFactory loggerFactory,
+        IUnitOfWorkManager unitOfWorkManager,
         ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository,
         IPlatformCqrs cqrs,
         IPlatformApplicationBusMessageProducer busMessageProducer) : base(unitOfWorkManager, loggerFactory)
@@ -30,7 +30,7 @@ public class TestRecurringBackgroundJobExecutor : PlatformApplicationBackgroundJ
         this.busMessageProducer = busMessageProducer;
     }
 
-    public override async Task ProcessAsync()
+    public override async Task ProcessAsync(object param)
     {
         await textSnippetEntityRepository.CreateOrUpdateAsync(
             new TextSnippetEntity

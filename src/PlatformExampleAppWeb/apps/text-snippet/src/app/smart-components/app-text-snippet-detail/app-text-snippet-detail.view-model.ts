@@ -80,6 +80,6 @@ export class AppTextSnippetDetail extends PlatformViewModel implements IAppTextS
   }
 
   public isCreateNew(): boolean {
-    return this.toSaveTextSnippet?.id == null;
+    return this.toSaveTextSnippet.id == null;
   }
 }

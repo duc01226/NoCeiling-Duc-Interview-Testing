@@ -123,7 +123,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
                             $"[MessageBus] SlowProcessWarningTimeMilliseconds:{toCheckSlowProcessWarningTimeMilliseconds}. {logMessage}. MessageContent: {{BusMessage}}",
                             busMessage.AsJson());
                     else
-                        logger.LogDebug($"[MessageBus] Finished invoking consumer. {logMessage}");
+                        logger.LogInformation($"[MessageBus] Finished invoking consumer. {logMessage}");
                 });
         }
         else

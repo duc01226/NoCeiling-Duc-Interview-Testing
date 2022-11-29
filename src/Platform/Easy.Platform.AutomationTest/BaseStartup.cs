@@ -7,7 +7,7 @@ namespace Easy.Platform.AutomationTest;
 
 public abstract class BaseStartup
 {
-    public static readonly Lazy<IServiceProvider> GlobalLazyDiServiceProvider = new(() => GlobalDiServices.BuildServiceProvider());
+    public static readonly Lazy<IServiceProvider> GlobalLazyDiServiceProvider = new(() => GlobalDiServices!.BuildServiceProvider());
     public static IServiceProvider GlobalDiServiceProvider => GlobalLazyDiServiceProvider.Value;
 
     public static IServiceCollection GlobalDiServices { get; private set; } = new ServiceCollection();
@@ -29,7 +29,7 @@ public abstract class BaseStartup
 
     public static void RegisterSettingsFromConfiguration<TSettings>(IServiceCollection services) where TSettings : TestSettings
     {
-        services.AddTransient(typeof(TSettings), sp => sp.GetRequiredService<IConfiguration>().Get<TSettings>());
+        services.AddTransient(typeof(TSettings), sp => sp.GetRequiredService<IConfiguration>().Get<TSettings>()!);
     }
 
     public virtual void ConfigureHostConfiguration(IHostBuilder hostBuilder)

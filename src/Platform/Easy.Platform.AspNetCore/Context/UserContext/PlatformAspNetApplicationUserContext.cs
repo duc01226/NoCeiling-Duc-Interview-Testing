@@ -89,7 +89,7 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
 
     private bool TryGetFromManuallySetValueItemsDictionary<T>(string contextKey, out T item)
     {
-        if (ManuallySetValueItemsDic.ContainsKey(contextKey) && ManuallySetValueItemsDic[contextKey] != null)
+        if (ManuallySetValueItemsDic.TryGetValue(contextKey, out var value) && value != null)
         {
             item = (T)ManuallySetValueItemsDic[contextKey];
             return true;

@@ -14,7 +14,7 @@ public class DemoMigrateDataCrossDbPersistenceModule : PlatformMongoDbPersistenc
     {
     }
 
-    public override bool ForReadDataOnly => true;
+    public override bool ForCrossDbMigrationOnly => true;
 
     protected override void ConfigureMongoOptions(PlatformMongoOptions<DemoMigrateDataCrossDbContext> options)
     {

@@ -24,7 +24,7 @@ public class PlatformValidator<T> : AbstractValidator<T>
     {
         var result = new PlatformValidator<T>();
 
-        includeValidators.ForEach(platformValidator => result.Include(platformValidator));
+        includeValidators.ForEach(result.Include);
 
         return result;
     }

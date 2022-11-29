@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, ViewEnca
 import {
   SaveTextSnippetCommand,
   SearchTextSnippetQueryDto,
+  TextSnippetDataModel,
   TextSnippetRepository
 } from '@platform-example-web/apps-domains/text-snippet-domain';
 import { Exts, PlatformApiServiceErrorResponse, PlatformSmartComponent } from '@platform-example-web/platform-core';
@@ -89,13 +90,14 @@ export class AppTextSnippetDetailComponent
       .subscribe(
         result => {
           this.updateVm(vm => {
-            vm.toSaveTextSnippet = result.savedData;
             vm.savingTextSnippet = false;
-            vm.toSaveTextSnippetId = result.savedData.id;
+            vm.toSaveTextSnippet = result.savedData;
           });
-          if (this.appUiState.currentData().selectedSnippetTextId != this.vm.toSaveTextSnippetId) {
+
+          // Select the saved snippet text
+          if (this.appUiState.currentData().selectedSnippetTextId != result.savedData.id) {
             this.appUiState.updateUiStateData(x => {
-              x.selectedSnippetTextId = this.vm.toSaveTextSnippetId;
+              x.selectedSnippetTextId = result.savedData.id;
               return x;
             });
           }

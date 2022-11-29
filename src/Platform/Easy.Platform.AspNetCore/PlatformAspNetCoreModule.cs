@@ -70,7 +70,7 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
             options => options.AddPolicy(
                 PlatformAspNetCoreModuleDefaultPolicies.CorsPolicy,
                 builder =>
-                    builder.WithOrigins(GetAllowCorsOrigins(Configuration))
+                    builder.WithOrigins(GetAllowCorsOrigins(Configuration) ?? Array.Empty<string>())
                         .SetIsOriginAllowedToAllowWildcardSubdomains()
                         .AllowAnyMethod()
                         .AllowAnyHeader()
@@ -138,7 +138,7 @@ public static class InitPlatformAspNetCoreModuleExtension
     {
         using (var scope = webApplication.Services.CreateScope())
         {
-            scope.ServiceProvider.GetRequiredService<TModule>().Init();
+            scope.ServiceProvider.GetRequiredService<TModule>().Init().WaitResult();
         }
     }
 }

@@ -11,14 +11,14 @@ namespace Easy.Platform.Common.Hosting;
 public abstract class PlatformHostedService : IHostedService, IDisposable
 {
     protected readonly ILogger Logger;
+
+    protected bool ProcessStarted;
+    protected bool ProcessStopped;
     protected readonly IServiceProvider ServiceProvider;
     private readonly object startProcessLock = new();
     private readonly object stopProcessLock = new();
 
-    protected bool ProcessStarted;
-    protected bool ProcessStopped;
-
-    protected PlatformHostedService(IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
+    public PlatformHostedService(IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
     {
         ServiceProvider = serviceProvider;
         Logger = loggerFactory.CreateLogger(GetType());

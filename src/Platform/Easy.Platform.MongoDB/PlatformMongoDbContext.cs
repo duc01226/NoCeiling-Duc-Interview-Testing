@@ -45,24 +45,20 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         Logger = loggerFactory.CreateLogger(GetType());
     }
 
-    public IMongoCollection<PlatformInboxBusMessage> InboxBusMessageCollection =>
-        Database.GetCollection<PlatformInboxBusMessage>(GetCollectionName<PlatformInboxBusMessage>());
+    public IMongoCollection<PlatformInboxBusMessage> InboxBusMessageCollection => Database.GetCollection<PlatformInboxBusMessage>(GetCollectionName<PlatformInboxBusMessage>());
 
-    public IMongoCollection<PlatformOutboxBusMessage> OutboxBusMessageCollection =>
-        Database.GetCollection<PlatformOutboxBusMessage>(GetCollectionName<PlatformOutboxBusMessage>());
+    public IMongoCollection<PlatformOutboxBusMessage> OutboxBusMessageCollection => Database.GetCollection<PlatformOutboxBusMessage>(GetCollectionName<PlatformOutboxBusMessage>());
 
     public IMongoCollection<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryCollection =>
         Database.GetCollection<PlatformDataMigrationHistory>(ApplicationDataMigrationHistoryCollectionName);
 
     public virtual string ApplicationDataMigrationHistoryCollectionName => "ApplicationDataMigrationHistory";
 
-    public IMongoCollection<PlatformMongoMigrationHistory> MigrationHistoryCollection =>
-        Database.GetCollection<PlatformMongoMigrationHistory>(DataMigrationHistoryCollectionName);
+    public IMongoCollection<PlatformMongoMigrationHistory> MigrationHistoryCollection => Database.GetCollection<PlatformMongoMigrationHistory>(DataMigrationHistoryCollectionName);
 
     public virtual string DataMigrationHistoryCollectionName => "MigrationHistory";
 
-    public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery =>
-        ApplicationDataMigrationHistoryCollection.AsQueryable();
+    public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryCollection.AsQueryable();
 
     public virtual async Task Initialize(IServiceProvider serviceProvider)
     {
@@ -151,14 +147,15 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
 
             rowVersionEntity.ConcurrencyUpdateToken = newUpdateConcurrencyUpdateToken;
 
-            var result = await GetTable<TEntity>().ReplaceOneAsync(
-                p => p.Id.Equals(entity.Id) &&
-                     (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
-                      ((IRowVersionEntity)p).ConcurrencyUpdateToken == Guid.Empty ||
-                      ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken),
-                entity,
-                new ReplaceOptions { IsUpsert = false },
-                cancellationToken);
+            var result = await GetTable<TEntity>()
+                .ReplaceOneAsync(
+                    p => p.Id.Equals(entity.Id) &&
+                         (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
+                          ((IRowVersionEntity)p).ConcurrencyUpdateToken == Guid.Empty ||
+                          ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken),
+                    entity,
+                    new ReplaceOptions { IsUpsert = false },
+                    cancellationToken);
 
             if (result.MatchedCount <= 0)
             {
@@ -170,11 +167,12 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         }
         else
         {
-            var result = await GetTable<TEntity>().ReplaceOneAsync(
-                p => p.Id.Equals(entity.Id),
-                entity,
-                new ReplaceOptions { IsUpsert = false },
-                cancellationToken);
+            var result = await GetTable<TEntity>()
+                .ReplaceOneAsync(
+                    p => p.Id.Equals(entity.Id),
+                    entity,
+                    new ReplaceOptions { IsUpsert = false },
+                    cancellationToken);
 
             if (result.MatchedCount <= 0)
                 throw new PlatformDomainEntityNotFoundException<TEntity>(entity.Id.ToString());
@@ -289,7 +287,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     {
         var entityIds = entities.Select(p => p.Id);
 
-        var existingEntityIds = await GetTable<TEntity>().AsQueryable()
+        var existingEntityIds = await GetTable<TEntity>()
+            .AsQueryable()
             .Where(p => entityIds.Contains(p.Id))
             .Select(p => p.Id)
             .Distinct()
@@ -332,9 +331,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                         var dbInitializedMigrationHistory = ApplicationDataMigrationHistoryCollection.AsQueryable()
                             .First(p => p.Name == DbInitializedApplicationDataMigrationHistoryName);
 
-                        if (!migrationExecution.IsObsolete((TDbContext)this) &&
-                            (migrationExecution.RunOnlyDbInitializedBeforeDate == null ||
-                             dbInitializedMigrationHistory.CreatedDate < migrationExecution.RunOnlyDbInitializedBeforeDate))
+                        if (migrationExecution.RunOnlyForDbInitializedBeforeDate == null ||
+                            dbInitializedMigrationHistory.CreatedDate < migrationExecution.RunOnlyForDbInitializedBeforeDate)
                         {
                             await migrationExecution.Execute((TDbContext)this);
 
@@ -377,17 +375,21 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
 
     public virtual async Task EnsureIndexesAsync(bool recreate = false)
     {
+        if (!recreate && IsEnsureIndexesMigrationExecuted()) return;
+
+        Logger.LogInformation($"[{GetType().Name}] EnsureIndexesAsync started.");
+
         await EnsureMigrationHistoryCollectionIndexesAsync(recreate);
         await EnsureApplicationDataMigrationHistoryCollectionIndexesAsync(recreate);
         await EnsureInboxBusMessageCollectionIndexesAsync(recreate);
         await EnsureOutboxBusMessageCollectionIndexesAsync(recreate);
-
-        if (recreate || !IsEnsureIndexesMigrationExecuted())
-            await InternalEnsureIndexesAsync(!IsEnsureIndexesMigrationExecuted() || recreate);
+        await InternalEnsureIndexesAsync(true);
 
         if (!IsEnsureIndexesMigrationExecuted())
             await MigrationHistoryCollection.InsertOneAsync(
                 new PlatformMongoMigrationHistory(EnsureIndexesMigrationName));
+
+        Logger.LogInformation($"[{GetType().Name}] EnsureIndexesAsync finished.");
     }
 
     public string GenerateId()
@@ -398,14 +400,29 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     public async Task Migrate()
     {
         await EnsureIndexesAsync();
+
         EnsureAllMigrationExecutorsHasUniqueName();
+
+        var dbInitializedDate = ApplicationDataMigrationHistoryCollection.AsQueryable()
+                                    .FirstOrDefault(p => p.Name == DbInitializedApplicationDataMigrationHistoryName)
+                                    ?.CreatedDate ??
+                                DateTime.UtcNow;
+
         await NotExecutedMigrationExecutors()
             .ForEachAsync(
                 async migrationExecutor =>
                 {
-                    await migrationExecutor.Execute((TDbContext)this);
-                    await MigrationHistoryCollection.InsertOneAsync(new PlatformMongoMigrationHistory(migrationExecutor.Name));
-                    await SaveChangesAsync();
+                    if (migrationExecutor.RunOnlyDbInitializedBeforeDate == null ||
+                        dbInitializedDate < migrationExecutor.RunOnlyDbInitializedBeforeDate)
+                    {
+                        Logger.LogInformation($"Migration {migrationExecutor.Name} started.");
+
+                        await migrationExecutor.Execute((TDbContext)this);
+                        await MigrationHistoryCollection.InsertOneAsync(new PlatformMongoMigrationHistory(migrationExecutor.Name));
+                        await SaveChangesAsync();
+
+                        Logger.LogInformation($"Migration {migrationExecutor.Name} finished.");
+                    }
                 });
     }
 
@@ -555,11 +572,12 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         if (upsert == false)
             await GetTable<TEntity>().InsertOneAsync(entity, null, cancellationToken);
         else
-            await GetTable<TEntity>().ReplaceOneAsync(
-                p => p.Id.Equals(entity.Id),
-                entity,
-                new ReplaceOptions { IsUpsert = true },
-                cancellationToken);
+            await GetTable<TEntity>()
+                .ReplaceOneAsync(
+                    p => p.Id.Equals(entity.Id),
+                    entity,
+                    new ReplaceOptions { IsUpsert = true },
+                    cancellationToken);
 
         if (!dismissSendEvent)
             await Cqrs.SendEntityEvent(entity, PlatformCqrsEntityEventCrudAction.Created, cancellationToken);

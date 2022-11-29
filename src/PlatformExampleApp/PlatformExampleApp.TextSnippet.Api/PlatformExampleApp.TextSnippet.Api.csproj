@@ -1,20 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <UserSecretsId>aspnet-PlatformExampleApp.TextSnippet.Api-14A6F879-C4AF-425C-9445-25F1499C7149</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Identity.Web" Version="1.1.0" />
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.10.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="1.25.9" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.17.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Platform\Easy.Platform.AspNetCore\Easy.Platform.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\Platform\Easy.Platform.AzureFileStorage\Easy.Platform.AzureFileStorage.csproj" />
     <ProjectReference Include="..\..\Platform\Easy.Platform.HangfireBackgroundJob\Easy.Platform.HangfireBackgroundJob.csproj" />
     <ProjectReference Include="..\..\Platform\Easy.Platform.RabbitMQ\Easy.Platform.RabbitMQ.csproj" />
     <ProjectReference Include="..\..\Platform\Easy.Platform.RedisCache\Easy.Platform.RedisCache.csproj" />

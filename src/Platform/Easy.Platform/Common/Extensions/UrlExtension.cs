@@ -15,7 +15,14 @@ public static class UrlExtension
 
     public static string Origin(this Uri url)
     {
-        return $"{url.Scheme}://{url.Host}".PipeIf(url.Port != DefaultHttpPort && url.Port != DefaultHttpsPort, _ => $"{_}:{url.Port}");
+        return $"{url.Scheme}://{url.Host}".PipeIf(url.Port is not DefaultHttpPort and not DefaultHttpsPort, _ => $"{_}:{url.Port}");
+    }
+
+    public static Uri ConcatRelativePath(this Uri uri, string relativePath)
+    {
+        return new UriBuilder(uri)
+            .With(_ => _.Path = _.Path.TrimEnd('/') + "/" + relativePath.TrimStart('/'))
+            .Uri;
     }
 
     public static Dictionary<string, string> QueryParams(this Uri url)

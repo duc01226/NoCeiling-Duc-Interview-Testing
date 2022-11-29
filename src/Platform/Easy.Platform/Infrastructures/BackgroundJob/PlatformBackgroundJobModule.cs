@@ -18,6 +18,11 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
 
     public static int DefaultStartBackgroundJobProcessingRetryCount => PlatformEnvironment.IsDevelopment ? 5 : 10;
 
+    /// <summary>
+    /// Default return false.
+    /// </summary>
+    protected virtual bool AutoStartBackgroundJobProcessingOnInit => false;
+
     protected override void InternalRegister(IServiceCollection serviceCollection)
     {
         base.InternalRegister(serviceCollection);
@@ -40,9 +45,10 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
     {
         await base.InternalInit(serviceScope);
 
-        await StartBackgroundJobProcessing(serviceScope);
-
         await ReplaceAllLatestRecurringBackgroundJobs(serviceScope);
+
+        if (AutoStartBackgroundJobProcessingOnInit)
+            await StartBackgroundJobProcessing(serviceScope);
     }
 
     protected async Task StartBackgroundJobProcessing(IServiceScope serviceScope)

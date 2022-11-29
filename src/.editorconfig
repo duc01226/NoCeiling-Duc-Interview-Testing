@@ -430,6 +430,8 @@ dotnet_diagnostic.IDE0022.severity = suggestion
 dotnet_diagnostic.IDE0052.severity = suggestion
 dotnet_diagnostic.IDE0240.severity = suggestion
 dotnet_diagnostic.IDE0074.severity = suggestion
+# IDE0200: Remove unnecessary lambda expression
+dotnet_diagnostic.IDE0200.severity = none
 
 dotnet_diagnostic.SA1101.severity = suggestion
 dotnet_diagnostic.SA1413.severity = suggestion
@@ -453,7 +455,7 @@ dotnet_diagnostic.CA1305.severity = none
 dotnet_diagnostic.CA1822.severity = none
 dotnet_diagnostic.CA2254.severity = none
 dotnet_diagnostic.CA1848.severity = none
-dotnet_diagnostic.CA1707.severity = suggestion
+dotnet_diagnostic.CA1707.severity = none
 dotnet_diagnostic.CA2201.severity = none
 dotnet_diagnostic.CA1725.severity = none
 dotnet_diagnostic.CA1720.severity = suggestion
@@ -478,12 +480,22 @@ dotnet_diagnostic.CA5350.severity = suggestion
 dotnet_diagnostic.CA1416.severity = suggestion
 dotnet_diagnostic.CA1846.severity = suggestion
 dotnet_diagnostic.CA1710.severity = suggestion
+dotnet_diagnostic.CA2200.severity = none
+dotnet_diagnostic.CA1852.severity = none
+dotnet_diagnostic.CA1311.severity = suggestion
+dotnet_diagnostic.CA1854.severity = suggestion
 
 dotnet_diagnostic.CS4014.severity = error
 
-dotnet_diagnostic.CS1998.severity = suggestion
+dotnet_diagnostic.CS1998.severity = none
 
 dotnet_diagnostic.EF1001.severity = suggestion
+
+# SYSLIB1045: Convert to 'GeneratedRegexAttribute'.
+dotnet_diagnostic.SYSLIB1045.severity = none
+
+# ASP0014: Suggest using top level route registrations
+dotnet_diagnostic.ASP0014.severity = suggestion
 
 ##########################################
 # License

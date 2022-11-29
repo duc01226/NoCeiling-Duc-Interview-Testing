@@ -66,13 +66,10 @@ public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid
     {
         var originalSnippetText = SnippetText;
 
-        using (var sha = SHA256.Create())
-        {
-            var bytes = Encoding.UTF8.GetBytes(SnippetText);
-            var hash = sha.ComputeHash(bytes);
+        var bytes = Encoding.UTF8.GetBytes(SnippetText);
+        var hash = SHA256.HashData(bytes);
 
-            SnippetText = Convert.ToBase64String(hash);
-        }
+        SnippetText = Convert.ToBase64String(hash);
 
         AddDomainEvents(
             new EncryptSnippetTextDomainEvent

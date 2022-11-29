@@ -8,12 +8,12 @@ namespace Easy.Platform.Common.Cqrs;
 /// Can use it for logging, command/query validation, etc ... anything before the Command/Query Handler is executed.
 /// </summary>
 public abstract class PlatformCqrsPipelineMiddleware<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-    where TRequest : notnull
+    where TRequest : notnull, IRequest<TResponse>
 {
     public async Task<TResponse> Handle(
         TRequest request,
-        CancellationToken cancellationToken,
-        RequestHandlerDelegate<TResponse> next)
+        RequestHandlerDelegate<TResponse> next,
+        CancellationToken cancellationToken)
     {
         return await HandleAsync(request, next, cancellationToken);
     }

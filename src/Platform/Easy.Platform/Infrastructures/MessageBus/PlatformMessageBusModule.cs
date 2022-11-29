@@ -12,6 +12,9 @@ public abstract class PlatformMessageBusModule : PlatformInfrastructureModule
     {
     }
 
+    // Init MessageBus before any other infrastructure module but still after the next level priority module (Persistence Module)
+    public override int ExecuteInitPriority => DefaultExecuteInitPriority + ExecuteInitPriorityNextLevelDistance - 1;
+
     protected override void InternalRegister(IServiceCollection serviceCollection)
     {
         base.InternalRegister(serviceCollection);

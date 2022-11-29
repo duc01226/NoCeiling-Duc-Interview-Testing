@@ -1,83 +1,42 @@
-using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.BackgroundJob;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.BackgroundJob;
 
-public abstract class PlatformApplicationBackgroundJobExecutor : PlatformBackgroundJobExecutor
+public abstract class PlatformApplicationBackgroundJobExecutor<TParam> : PlatformBackgroundJobExecutor<TParam>
+    where TParam : class
 {
-    protected readonly ILogger Logger;
     protected readonly IUnitOfWorkManager UnitOfWorkManager;
 
     public PlatformApplicationBackgroundJobExecutor(
         IUnitOfWorkManager unitOfWorkManager,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory) : base(loggerFactory)
     {
         UnitOfWorkManager = unitOfWorkManager;
-        Logger = loggerFactory.CreateLogger(GetType());
     }
 
     public virtual bool AutoOpenUow => true;
 
-    public override void Execute()
+    protected override async Task InternalExecuteAsync(TParam param)
     {
-        try
-        {
-            if (AutoOpenUow)
-                using (var uow = UnitOfWorkManager.Begin())
-                {
-                    ProcessAsync().WaitResult();
-
-                    uow.CompleteAsync().WaitResult();
-                }
-            else
-                ProcessAsync().WaitResult();
-        }
-        catch (Exception e)
-        {
-            Logger.LogError(e, "[BackgroundJob] Job {BackgroundJobType_Name} execution was failed.", GetType().Name);
-            throw;
-        }
-    }
-
-    public abstract Task ProcessAsync();
-}
-
-public abstract class PlatformApplicationBackgroundJobExecutor<TParam> : PlatformBackgroundJobExecutor<TParam>
-    where TParam : class
-{
-    protected readonly ILogger Logger;
-    protected readonly IUnitOfWorkManager UnitOfWorkManager;
-
-    public PlatformApplicationBackgroundJobExecutor(
-        IUnitOfWorkManager unitOfWorkManager,
-        ILoggerFactory loggerFactory)
-    {
-        UnitOfWorkManager = unitOfWorkManager;
-        Logger = loggerFactory.CreateLogger(GetType());
-    }
-
-    public override void Execute(TParam param)
-    {
-        try
-        {
+        if (AutoOpenUow)
             using (var uow = UnitOfWorkManager.Begin())
             {
-                ProcessAsync(param).WaitResult();
-                uow.CompleteAsync().WaitResult();
-            }
-        }
-        catch (Exception e)
-        {
-            Logger.LogError(
-                e,
-                "[BackgroundJob] Job {BackgroundJobType_Name} execution with param {BackgroundJob_Param} was failed.",
-                GetType().Name,
-                param?.AsJson());
-            throw;
-        }
-    }
+                await ProcessAsync(param);
 
-    public abstract Task ProcessAsync(TParam param);
+                await uow.CompleteAsync();
+            }
+        else
+            await ProcessAsync(param);
+    }
+}
+
+public abstract class PlatformApplicationBackgroundJobExecutor : PlatformApplicationBackgroundJobExecutor<object>
+{
+    protected PlatformApplicationBackgroundJobExecutor(
+        IUnitOfWorkManager unitOfWorkManager,
+        ILoggerFactory loggerFactory) : base(unitOfWorkManager, loggerFactory)
+    {
+    }
 }

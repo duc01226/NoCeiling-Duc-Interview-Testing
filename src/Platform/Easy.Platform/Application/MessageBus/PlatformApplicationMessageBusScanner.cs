@@ -10,9 +10,9 @@ public class PlatformApplicationMessageBusScanner : PlatformMessageBusScanner
     {
     }
 
-    public override List<string> ScanAllDefinedMessageAndConsumerBindingRoutingKeys()
+    public override List<string> ScanAllDefinedMessageBindingRoutingKeys()
     {
-        return base.ScanAllDefinedMessageAndConsumerBindingRoutingKeys()
+        return base.ScanAllDefinedMessageBindingRoutingKeys()
             .Concat(AllDefaultBindingRoutingKeyForCqrsEventBusMessageProducers().Select(p => p.ToString()))
             .ToList();
     }
@@ -26,7 +26,7 @@ public class PlatformApplicationMessageBusScanner : PlatformMessageBusScanner
             .Where(matchedCqrsEventBusMessageProducerType => matchedCqrsEventBusMessageProducerType != null)
             .Select(
                 cqrsEventBusMessageProducerType => PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(
-                    messageType: cqrsEventBusMessageProducerType.GetGenericArguments()[1]))
+                    messageType: IPlatformCqrsEventBusMessageProducer.GetTMessageArgumentType(cqrsEventBusMessageProducerType)))
             .Distinct()
             .ToList();
     }

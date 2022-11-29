@@ -6,7 +6,7 @@ public class Option
 {
     public readonly struct None
     {
-        public static readonly None Default = new None();
+        public static readonly None Default = new();
     }
 
     public readonly struct Some<T>
@@ -130,14 +130,14 @@ public static class OptionExt
     {
         return optionString.Match(
             () => true,
-            s => string.IsNullOrWhiteSpace(s));
+            string.IsNullOrWhiteSpace);
     }
 
     public static Validation<T> ToValidation<T>(this Option<T> opt, Error error)
     {
         return opt.Match(
             () => F.Invalid(error),
-            t => F.Valid(t));
+            F.Valid);
     }
 
     public static Task<Validation<T>> ToValidationAsync<T>(this Task<Option<T>> optTask, Error error)

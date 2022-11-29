@@ -48,7 +48,7 @@ catch (Exception e)
 static void ConfigureServices(IServiceCollection services)
 {
     services.AddControllers()
-        .AddJsonOptions(options => PlatformJsonSerializer.ConfigOptionsByCurrentOptions(options.JsonSerializerOptions));
+        .AddJsonOptions(options => PlatformJsonSerializer.ConfigOptions(options.JsonSerializerOptions, useCamelCaseNaming: false));
     // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
     services.AddEndpointsApiExplorer();
     services.AddSwaggerGen(

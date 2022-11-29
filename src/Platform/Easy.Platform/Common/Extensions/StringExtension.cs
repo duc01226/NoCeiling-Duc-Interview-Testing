@@ -74,4 +74,35 @@ public static class StringExtension
 
         return strBuilder.ToString();
     }
+
+    public static string ConcatString(this IEnumerable<char> chars)
+    {
+        return string.Concat(chars);
+    }
+
+    public static string TakeUntilNextChar(this string str, char beforeChar)
+    {
+        return str.Substring(0, str.IndexOf(beforeChar));
+    }
+
+    public static string ToBase64String(this string str)
+    {
+        return str != null ? Convert.ToBase64String(Encoding.UTF8.GetBytes(str)) : null;
+    }
+
+    /// <summary>
+    /// Parse value from base64 format to normal utf8 string. <br />
+    /// If fail return the original value.
+    /// </summary>
+    public static string TryFromBase64ToString(this string str)
+    {
+        try
+        {
+            return Encoding.UTF8.GetString(Convert.FromBase64String(str));
+        }
+        catch (Exception)
+        {
+            return str;
+        }
+    }
 }

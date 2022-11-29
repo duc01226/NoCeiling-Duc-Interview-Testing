@@ -20,7 +20,12 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     {
     }
 
-    protected virtual TDbContext DbContext => GetUowDbContext(CurrentActiveUow());
+    /// <summary>
+    /// Return CurrentActiveUow db context if exist or. <br />
+    /// Auto use GlobalUow if there's no current active uow. <br />
+    /// Support for old system code or other application want to use platform repository inherit DbContext but without open new uow
+    /// </summary>
+    protected virtual TDbContext DbContext => GetUowDbContext(TryGetCurrentActiveUow() ?? UnitOfWorkManager.GlobalUow);
 
     public TDbContext GetUowDbContext(IUnitOfWork uow)
     {
@@ -280,5 +285,14 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
 
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, cancellationToken));
+    }
+
+    public override async Task<List<TEntity>> DeleteManyAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        bool dismissSendEvent = false,
+        CancellationToken cancellationToken = default)
+    {
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+            uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(predicate, dismissSendEvent, cancellationToken));
     }
 }

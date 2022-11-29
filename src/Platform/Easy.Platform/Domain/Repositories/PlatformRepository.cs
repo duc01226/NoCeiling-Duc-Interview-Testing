@@ -1,6 +1,5 @@
 using System.Linq.Expressions;
 using Easy.Platform.Common.Cqrs;
-using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Exceptions.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
@@ -78,6 +77,16 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     public async Task<TResult> GetAsync<TResult>(Func<IQueryable<TEntity>, Task<TResult>> queryToResultBuilder, CancellationToken cancellationToken = default)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryToResultBuilder(query));
+    }
+
+    public async Task<TResult> GetAsync<TResult>(Func<IUnitOfWork, IQueryable<TEntity>, TResult> queryToResultBuilder, CancellationToken cancellationToken = default)
+    {
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryToResultBuilder(uow, query));
+    }
+
+    public async Task<TResult> GetAsync<TResult>(Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> queryToResultBuilder, CancellationToken cancellationToken = default)
+    {
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryToResultBuilder(uow, query));
     }
 
     public async Task<List<TEntity>> GetAllAsync(
@@ -217,23 +226,16 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default);
 
+    public abstract Task<List<TEntity>> DeleteManyAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        bool dismissSendEvent = false,
+        CancellationToken cancellationToken = default);
+
     public abstract Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         Expression<Func<TEntity, bool>> customCheckExistingPredicate = null,
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default);
-
-    public virtual async Task<List<TEntity>> DeleteManyAsync(
-        Expression<Func<TEntity, bool>> predicate,
-        bool dismissSendEvent = false,
-        CancellationToken cancellationToken = default)
-    {
-        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            async uow => await DeleteManyAsync(
-                await GetAllAsync(predicate, cancellationToken),
-                dismissSendEvent,
-                cancellationToken));
-    }
 
     protected virtual async Task ExecuteAutoOpenUowUsingOnceTime(
         Func<IQueryable<TEntity>, Task> executeAsync)
@@ -244,7 +246,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
                 await executeAsync(GetQuery(uow));
             }
 
-        await executeAsync(GetQuery(UnitOfWorkManager.TryGetCurrentActiveUow()));
+        await executeAsync(GetQuery(UnitOfWorkManager.CurrentActiveUow()));
     }
 
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(
@@ -257,8 +259,8 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
             }
 
         return await readDataFn(
-            UnitOfWorkManager.TryGetCurrentActiveUow(),
-            GetQuery(UnitOfWorkManager.TryGetCurrentActiveUow()));
+            UnitOfWorkManager.CurrentActiveUow(),
+            GetQuery(UnitOfWorkManager.CurrentActiveUow()));
     }
 
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(
@@ -271,24 +273,20 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
             }
 
         return readDataFn(
-            UnitOfWorkManager.TryGetCurrentActiveUow(),
-            GetQuery(UnitOfWorkManager.TryGetCurrentActiveUow()));
+            UnitOfWorkManager.CurrentActiveUow(),
+            GetQuery(UnitOfWorkManager.CurrentActiveUow()));
     }
 
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForWrite<TResult>(
         Func<IUnitOfWork, Task<TResult>> action)
     {
         if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
-            return await ServiceProvider.ExecuteInjectScopedAsync<TResult>(
-                async (IUnitOfWorkManager uowManager) =>
-                {
-                    using (var uow = UnitOfWorkManager.Begin())
-                    {
-                        var result = await action(uow);
-                        await uow.CompleteAsync();
-                        return result;
-                    }
-                });
+            using (var uow = UnitOfWorkManager.Begin())
+            {
+                var result = await action(uow);
+                await uow.CompleteAsync();
+                return result;
+            }
 
         return await action(UnitOfWorkManager.CurrentActiveUow());
     }
@@ -297,15 +295,11 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Func<IUnitOfWork, Task> action)
     {
         if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
-            await ServiceProvider.ExecuteInjectScopedAsync(
-                async (IUnitOfWorkManager uowManager) =>
-                {
-                    using (var uow = UnitOfWorkManager.Begin())
-                    {
-                        await action(uow);
-                        await uow.CompleteAsync();
-                    }
-                });
+            using (var uow = UnitOfWorkManager.Begin())
+            {
+                await action(uow);
+                await uow.CompleteAsync();
+            }
         else await action(UnitOfWorkManager.CurrentActiveUow());
     }
 

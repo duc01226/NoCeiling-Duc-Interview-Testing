@@ -6,7 +6,7 @@ namespace Easy.Platform.Common.Hosting;
 
 public abstract class PlatformIntervalProcessHostedService : PlatformHostedService
 {
-    protected PlatformIntervalProcessHostedService(
+    public PlatformIntervalProcessHostedService(
         IServiceProvider serviceProvider,
         ILoggerFactory loggerFactory) : base(serviceProvider, loggerFactory)
     {

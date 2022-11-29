@@ -81,7 +81,7 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
 
     private void RegisterDbContextOptions(IServiceCollection serviceCollection)
     {
-        serviceCollection.Register(sp => CreateDbContextOptions(sp));
+        serviceCollection.Register(CreateDbContextOptions);
 
         serviceCollection.Register<DbContextOptions, DbContextOptions<TDbContext>>();
     }

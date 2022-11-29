@@ -2,7 +2,7 @@ using Easy.Platform.Domain.UnitOfWork;
 
 namespace Easy.Platform.Application.Domain;
 
-internal class PlatformPseudoApplicationUnitOfWorkManager : PlatformUnitOfWorkManager
+internal sealed class PlatformPseudoApplicationUnitOfWorkManager : PlatformUnitOfWorkManager
 {
     public override IUnitOfWork CreateNewUow()
     {
@@ -10,7 +10,7 @@ internal class PlatformPseudoApplicationUnitOfWorkManager : PlatformUnitOfWorkMa
     }
 }
 
-internal class PlatformPseudoApplicationUnitOfWork : PlatformUnitOfWork
+internal sealed class PlatformPseudoApplicationUnitOfWork : PlatformUnitOfWork
 {
     public override bool IsNoTransactionUow()
     {

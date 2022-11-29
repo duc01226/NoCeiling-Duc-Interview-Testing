@@ -41,7 +41,8 @@ public class TextSnippetApiAspNetCoreModule : PlatformAspNetCoreModule
             p => typeof(TextSnippetRabbitMqMessageBusModule),
             p => typeof(TextSnippetRedisCacheModule),
             p => typeof(TextSnippetHangfireBackgroundJobModule),
-            p => typeof(AwsEmailInfrastructureModule)
+            p => typeof(AwsEmailInfrastructureModule),
+            p => typeof(TextSnippetAzureBlobFileStorageInfrastructureModule)
         };
 
         return result;

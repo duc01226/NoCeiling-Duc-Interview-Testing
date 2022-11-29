@@ -10,24 +10,23 @@ namespace Easy.Platform.Common.Cqrs.Events;
 public interface IPlatformCqrsEventHandler<in TEvent> : INotificationHandler<TEvent>
     where TEvent : PlatformCqrsEvent, new()
 {
-    public void MarkCurrentInstanceIsExecutedInSeparateThread();
-    public bool IsCurrentInstanceExecutedInSeparateThread();
 }
 
 public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandler<TEvent>
     where TEvent : PlatformCqrsEvent, new()
 {
     protected readonly ILogger Logger;
-    private bool isCurrentInstanceExecutedInSeparateThread;
 
     protected PlatformCqrsEventHandler(ILoggerFactory loggerFactory)
     {
         Logger = loggerFactory.CreateLogger(GetType());
     }
 
+    public bool IsCurrentInstanceExecutedInSeparateThread { get; set; }
+
     public virtual async Task Handle(TEvent request, CancellationToken cancellationToken)
     {
-        if (ExecuteSeparatelyInBackgroundThread() && !IsCurrentInstanceExecutedInSeparateThread())
+        if (ExecuteSeparatelyInBackgroundThread() && !IsCurrentInstanceExecutedInSeparateThread)
             // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
             // so the it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
             Util.TaskRunner.QueueActionInBackground(
@@ -39,8 +38,8 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                             {
                                 var thisHandlerNewInstance = sp.GetServices<INotificationHandler<TEvent>>()
                                     .First(p => p.GetType() == GetType())
-                                    .As<IPlatformCqrsEventHandler<TEvent>>()
-                                    .With(_ => _.MarkCurrentInstanceIsExecutedInSeparateThread());
+                                    .As<PlatformCqrsEventHandler<TEvent>>()
+                                    .With(_ => _.IsCurrentInstanceExecutedInSeparateThread = true);
 
                                 await thisHandlerNewInstance.Handle(request, default);
                             });
@@ -49,16 +48,6 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                 cancellationToken: default);
         else
             await ExecuteHandleAsync(request, cancellationToken);
-    }
-
-    public void MarkCurrentInstanceIsExecutedInSeparateThread()
-    {
-        isCurrentInstanceExecutedInSeparateThread = true;
-    }
-
-    public bool IsCurrentInstanceExecutedInSeparateThread()
-    {
-        return isCurrentInstanceExecutedInSeparateThread;
     }
 
     protected abstract Task HandleAsync(TEvent @event, CancellationToken cancellationToken);

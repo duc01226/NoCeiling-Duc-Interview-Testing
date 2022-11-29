@@ -64,9 +64,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                         var dbInitializedMigrationHistory = ApplicationDataMigrationHistoryDbSet.AsQueryable()
                             .First(p => p.Name == DbInitializedApplicationDataMigrationHistoryName);
 
-                        if (!migrationExecution.IsObsolete((TDbContext)this) &&
-                            (migrationExecution.RunOnlyDbInitializedBeforeDate == null ||
-                             dbInitializedMigrationHistory.CreatedDate < migrationExecution.RunOnlyDbInitializedBeforeDate))
+                        if (migrationExecution.RunOnlyForDbInitializedBeforeDate == null ||
+                            dbInitializedMigrationHistory.CreatedDate < migrationExecution.RunOnlyForDbInitializedBeforeDate)
                         {
                             await migrationExecution.Execute((TDbContext)this);
 
@@ -276,7 +275,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        var existingEntity = await GetQuery<TEntity>().AsNoTracking()
+        var existingEntity = await GetQuery<TEntity>()
+            .AsNoTracking()
             .When(_ => customCheckExistingPredicate != null, _ => _.Where(customCheckExistingPredicate!))
             .Else(_ => _.Where(p => p.Id.Equals(entity.Id)))
             .Execute()

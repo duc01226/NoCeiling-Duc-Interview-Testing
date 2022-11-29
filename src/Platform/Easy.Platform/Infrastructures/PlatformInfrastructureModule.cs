@@ -8,7 +8,7 @@ namespace Easy.Platform.Infrastructures;
 
 public abstract class PlatformInfrastructureModule : PlatformModule
 {
-    public new const int DefaultExecuteInitPriority = PlatformModule.DefaultExecuteInitPriority + 1;
+    public new const int DefaultExecuteInitPriority = PlatformModule.DefaultExecuteInitPriority + ExecuteInitPriorityNextLevelDistance;
 
     public PlatformInfrastructureModule(IServiceProvider serviceProvider, IConfiguration configuration) : base(
         serviceProvider,

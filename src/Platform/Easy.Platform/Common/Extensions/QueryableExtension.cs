@@ -28,7 +28,7 @@ public static class QueryableExtension
     }
 }
 
-internal class ParameterRebinder : ExpressionVisitor
+internal sealed class ParameterRebinder : ExpressionVisitor
 {
     private readonly Dictionary<ParameterExpression, ParameterExpression> targetToSourceParamsMap;
 
@@ -37,6 +37,7 @@ internal class ParameterRebinder : ExpressionVisitor
         this.targetToSourceParamsMap = targetToSourceParamsMap ?? new Dictionary<ParameterExpression, ParameterExpression>();
     }
 
+    // replace parameters in the target lambda expression with parameters from the source
     public static Expression ReplaceParameters<T>(Expression<T> targetExpr, Expression<T> sourceExpr)
     {
         var targetToSourceParamsMap = sourceExpr.Parameters

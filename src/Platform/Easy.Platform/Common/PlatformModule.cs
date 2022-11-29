@@ -18,7 +18,7 @@ public interface IPlatformModule
     /// <summary>
     /// Higher Priority value mean the module init will be executed before lower Priority value in the same level module dependencies
     /// <br />
-    /// Default is 1. For the default priority should be: PermissionModule => InfrastructureModule => Others Module
+    /// Default is 10. For the default priority should be: PermissionModule (Priority 1000) => InfrastructureModule (100) => Others Module (10)
     /// </summary>
     public int ExecuteInitPriority { get; }
 
@@ -53,7 +53,7 @@ public interface IPlatformModule
 
     public void RegisterServices(IServiceCollection serviceCollection);
 
-    public void Init();
+    public Task Init();
 }
 
 /// <summary>
@@ -66,7 +66,8 @@ public interface IPlatformModule
 /// </summary>
 public abstract class PlatformModule : IPlatformModule
 {
-    public const int DefaultExecuteInitPriority = 1;
+    public const int DefaultExecuteInitPriority = 10;
+    public const int ExecuteInitPriorityNextLevelDistance = 10;
 
     protected static readonly ConcurrentDictionary<string, Assembly> ExecutedRegisterByAssemblies = new();
 
@@ -145,7 +146,7 @@ public abstract class PlatformModule : IPlatformModule
         }
     }
 
-    public virtual void Init()
+    public virtual async Task Init()
     {
         lock (InitLock)
         {
@@ -157,7 +158,7 @@ public abstract class PlatformModule : IPlatformModule
             // Because PlatformModule is singleton => ServiceProvider of it is the root ServiceProvider
             PlatformApplicationGlobal.RootServiceProvider = ServiceProvider;
 
-            InitAllModuleDependencies();
+            InitAllModuleDependencies().WaitResult();
 
             using (var scope = ServiceProvider.CreateScope())
             {
@@ -210,9 +211,9 @@ public abstract class PlatformModule : IPlatformModule
         return null;
     }
 
-    protected void InitAllModuleDependencies()
+    protected async Task InitAllModuleDependencies()
     {
-        ModuleTypeDependencies()
+        await ModuleTypeDependencies()
             .Select(
                 moduleTypeProvider =>
                 {
@@ -228,8 +229,9 @@ public abstract class PlatformModule : IPlatformModule
 
                     return dependModule;
                 })
-            .OrderByDescending(p => p.ExecuteInitPriority)
-            .ForEach(p => p.Init());
+            .GroupBy(p => p.ExecuteInitPriority)
+            .OrderByDescending(p => p.Key)
+            .ForEachAsync(p => p.ToList().Select(module => module.Init()).WhenAll());
     }
 
     protected virtual void RegisterHelpers(IServiceCollection serviceCollection)
