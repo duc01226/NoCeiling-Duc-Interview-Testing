@@ -3,11 +3,12 @@ using Easy.Platform.MongoDB;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using PlatformExampleApp.TextSnippet.Application.Persistence;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.Mongo;
 
-public class TextSnippetDbContext : PlatformMongoDbContext<TextSnippetDbContext>
+public class TextSnippetDbContext : PlatformMongoDbContext<TextSnippetDbContext>, ITextSnippetDbContext
 {
     public TextSnippetDbContext(
         IOptions<PlatformMongoOptions<TextSnippetDbContext>> options,

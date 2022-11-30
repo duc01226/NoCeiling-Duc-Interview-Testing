@@ -3,10 +3,11 @@ using Easy.Platform.EfCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Logging;
+using PlatformExampleApp.TextSnippet.Application.Persistence;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql;
 
-public class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDbContext>
+public class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDbContext>, ITextSnippetDbContext
 {
     public TextSnippetDbContext(DbContextOptions<TextSnippetDbContext> options, ILoggerFactory loggerFactory, IPlatformCqrs cqrs) : base(options, loggerFactory, cqrs)
     {
