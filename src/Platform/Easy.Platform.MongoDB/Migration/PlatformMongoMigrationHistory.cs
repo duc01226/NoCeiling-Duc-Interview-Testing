@@ -17,7 +17,7 @@ public class PlatformMongoMigrationHistory
 
     public DateTime CreatedDate
     {
-        get => createdDate ?? new DateTime();
+        get => createdDate ?? DateTime.UtcNow;
         set => createdDate = value;
     }
 }
