@@ -20,6 +20,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
     public const int MinimumRetryCleanOutboxMessageTimesToWarning = 2;
 
     public const string DefaultDeleteProcessedMessageInSecondsSettingKey = "MessageBus:OutboxDeleteProcessedMessageInSeconds";
+    public const string DefaultDeleteExpiredFailedMessageInSecondsSettingKey = "MessageBus:OutboxDeleteExpiredFailedMessageInSeconds";
 
     protected readonly IConfiguration Configuration;
 
@@ -102,6 +103,15 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
                7.Days().TotalSeconds;
     }
 
+    /// <summary>
+    /// To config how long a message can live in the database in seconds. Default is two week (14 days);
+    /// </summary>
+    protected virtual double DeleteExpiredFailedMessageInSeconds()
+    {
+        return Configuration.GetSection(DefaultDeleteExpiredFailedMessageInSecondsSettingKey)?.Get<int?>() ??
+               14.Days().TotalSeconds;
+    }
+
     protected bool HasOutboxEventBusMessageRepositoryRegistered()
     {
         return ServiceProvider.ExecuteScoped(scope => scope.ServiceProvider.GetService<IPlatformOutboxBusMessageRepository>() != null);
@@ -115,10 +125,12 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
                 using (var uow = uowManager!.Begin())
                 {
                     var expiredMessages = await outboxEventBusMessageRepo.GetAllAsync(
-                        queryBuilder: query => query.Where(
-                                p => p.LastSendDate <= Clock.UtcNow.AddSeconds(-DeleteProcessedMessageInSeconds()) &&
-                                     p.SendStatus == PlatformOutboxBusMessage.SendStatuses.Processed)
-                            .OrderBy(p => p.SendStatus)
+                        queryBuilder: query => query
+                            .Where(
+                                p => (p.LastSendDate <= Clock.UtcNow.AddSeconds(-DeleteProcessedMessageInSeconds()) &&
+                                      p.SendStatus == PlatformOutboxBusMessage.SendStatuses.Processed) ||
+                                     (p.LastSendDate <= Clock.UtcNow.AddSeconds(-DeleteExpiredFailedMessageInSeconds()) &&
+                                      p.SendStatus == PlatformOutboxBusMessage.SendStatuses.Failed))
                             .Take(NumberOfDeleteMessagesBatch()),
                         cancellationToken);
 

@@ -37,14 +37,7 @@ public class PlatformOutboxEventBusMessageEntityConfiguration : PlatformEntityCo
                 p.NextRetryProcessAfter,
                 p.LastSendDate
             });
-        builder.HasIndex(
-            p => new
-            {
-                p.SendStatus,
-                p.CreatedDate
-            });
-        builder.HasIndex(p => p.LastSendDate);
+        builder.HasIndex(p => new { p.LastSendDate, p.SendStatus });
         builder.HasIndex(p => p.NextRetryProcessAfter);
-        builder.HasIndex(p => p.CreatedDate);
     }
 }

@@ -12,17 +12,21 @@ using PlatformExampleApp.TextSnippet.Persistence;
 namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
 {
     [DbContext(typeof(TextSnippetDbContext))]
-    [Migration("20221024072719_InitDb")]
-    partial class InitDb
+    [Migration("20221201074453_InitialCreate")]
+    partial class InitialCreate
     {
+        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.8")
+                .HasAnnotation("ProductVersion", "7.0.0")
+                .HasAnnotation("Proxies:ChangeTracking", false)
+                .HasAnnotation("Proxies:CheckEquality", false)
+                .HasAnnotation("Proxies:LazyLoading", true)
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("Easy.Platform.Application.MessageBus.InboxPattern.PlatformInboxBusMessage", b =>
                 {
@@ -74,17 +78,11 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedDate");
-
-                    b.HasIndex("LastConsumeDate");
-
-                    b.HasIndex("NextRetryProcessAfter");
-
                     b.HasIndex("RoutingKey");
 
-                    b.HasIndex("ConsumeStatus", "CreatedDate");
-
                     b.HasIndex("ConsumeStatus", "LastConsumeDate");
+
+                    b.HasIndex("LastConsumeDate", "ConsumeStatus");
 
                     b.HasIndex("ConsumeStatus", "NextRetryProcessAfter", "LastConsumeDate");
 
@@ -135,15 +133,11 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedDate");
-
-                    b.HasIndex("LastSendDate");
-
                     b.HasIndex("NextRetryProcessAfter");
 
                     b.HasIndex("RoutingKey");
 
-                    b.HasIndex("SendStatus", "CreatedDate");
+                    b.HasIndex("LastSendDate", "SendStatus");
 
                     b.HasIndex("SendStatus", "LastSendDate");
 
@@ -170,6 +164,9 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AddressStrings")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Addresses")
                         .HasColumnType("nvarchar(max)");

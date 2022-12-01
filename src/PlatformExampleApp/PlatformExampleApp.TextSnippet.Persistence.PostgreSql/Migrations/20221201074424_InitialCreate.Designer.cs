@@ -7,21 +7,25 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PlatformExampleApp.TextSnippet.Domain.ValueObjects;
-using PlatformExampleApp.TextSnippet.Persistence;
+using PlatformExampleApp.TextSnippet.Persistence.PostgreSql;
 
 #nullable disable
 
 namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
 {
     [DbContext(typeof(TextSnippetDbContext))]
-    [Migration("20221102124121_InitDb")]
-    partial class InitDb
+    [Migration("20221201074424_InitialCreate")]
+    partial class InitialCreate
     {
+        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.8")
+                .HasAnnotation("ProductVersion", "7.0.0")
+                .HasAnnotation("Proxies:ChangeTracking", false)
+                .HasAnnotation("Proxies:CheckEquality", false)
+                .HasAnnotation("Proxies:LazyLoading", true)
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -76,17 +80,11 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedDate");
-
-                    b.HasIndex("LastConsumeDate");
-
-                    b.HasIndex("NextRetryProcessAfter");
-
                     b.HasIndex("RoutingKey");
 
-                    b.HasIndex("ConsumeStatus", "CreatedDate");
-
                     b.HasIndex("ConsumeStatus", "LastConsumeDate");
+
+                    b.HasIndex("LastConsumeDate", "ConsumeStatus");
 
                     b.HasIndex("ConsumeStatus", "NextRetryProcessAfter", "LastConsumeDate");
 
@@ -137,15 +135,11 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedDate");
-
-                    b.HasIndex("LastSendDate");
-
                     b.HasIndex("NextRetryProcessAfter");
 
                     b.HasIndex("RoutingKey");
 
-                    b.HasIndex("SendStatus", "CreatedDate");
+                    b.HasIndex("LastSendDate", "SendStatus");
 
                     b.HasIndex("SendStatus", "LastSendDate");
 

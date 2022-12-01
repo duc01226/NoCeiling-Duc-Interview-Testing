@@ -501,10 +501,12 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                     new(
                         Builders<PlatformInboxBusMessage>.IndexKeys
                             .Ascending(p => p.ConsumeStatus)
-                            .Ascending(p => p.CreatedDate)),
-                    new(Builders<PlatformInboxBusMessage>.IndexKeys.Descending(p => p.LastConsumeDate)),
-                    new(Builders<PlatformInboxBusMessage>.IndexKeys.Descending(p => p.NextRetryProcessAfter)),
-                    new(Builders<PlatformInboxBusMessage>.IndexKeys.Descending(p => p.CreatedDate))
+                            .Ascending(p => p.NextRetryProcessAfter)
+                            .Ascending(p => p.LastConsumeDate)),
+                    new(
+                        Builders<PlatformInboxBusMessage>.IndexKeys
+                            .Descending(p => p.LastConsumeDate)
+                            .Ascending(p => p.ConsumeStatus))
                 });
     }
 
@@ -524,11 +526,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                             .Ascending(p => p.LastSendDate)),
                     new(
                         Builders<PlatformOutboxBusMessage>.IndexKeys
-                            .Ascending(p => p.SendStatus)
-                            .Ascending(p => p.CreatedDate)),
-                    new(Builders<PlatformOutboxBusMessage>.IndexKeys.Descending(p => p.LastSendDate)),
-                    new(Builders<PlatformOutboxBusMessage>.IndexKeys.Descending(p => p.NextRetryProcessAfter)),
-                    new(Builders<PlatformOutboxBusMessage>.IndexKeys.Descending(p => p.CreatedDate))
+                            .Descending(p => p.LastSendDate)
+                            .Ascending(p => p.SendStatus)),
+                    new(Builders<PlatformOutboxBusMessage>.IndexKeys.Descending(p => p.NextRetryProcessAfter))
                 });
     }
 

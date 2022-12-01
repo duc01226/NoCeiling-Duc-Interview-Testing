@@ -5,8 +5,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
 {
-    public partial class InitDb : Migration
+    /// <inheritdoc />
+    public partial class InitialCreate : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -73,8 +75,9 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                     SnippetText = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     FullText = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: false),
                     CreatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    Address_Number = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Address_Street = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AddressNumber = table.Column<string>(name: "Address_Number", type: "nvarchar(max)", nullable: true),
+                    AddressStreet = table.Column<string>(name: "Address_Street", type: "nvarchar(max)", nullable: true),
+                    AddressStrings = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Addresses = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ConcurrencyUpdateToken = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     CreatedBy = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
@@ -88,11 +91,6 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformInboxEventBusMessage_ConsumeStatus_CreatedDate",
-                table: "PlatformInboxEventBusMessage",
-                columns: new[] { "ConsumeStatus", "CreatedDate" });
-
-            migrationBuilder.CreateIndex(
                 name: "IX_PlatformInboxEventBusMessage_ConsumeStatus_LastConsumeDate",
                 table: "PlatformInboxEventBusMessage",
                 columns: new[] { "ConsumeStatus", "LastConsumeDate" });
@@ -103,19 +101,9 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                 columns: new[] { "ConsumeStatus", "NextRetryProcessAfter", "LastConsumeDate" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformInboxEventBusMessage_CreatedDate",
+                name: "IX_PlatformInboxEventBusMessage_LastConsumeDate_ConsumeStatus",
                 table: "PlatformInboxEventBusMessage",
-                column: "CreatedDate");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlatformInboxEventBusMessage_LastConsumeDate",
-                table: "PlatformInboxEventBusMessage",
-                column: "LastConsumeDate");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlatformInboxEventBusMessage_NextRetryProcessAfter",
-                table: "PlatformInboxEventBusMessage",
-                column: "NextRetryProcessAfter");
+                columns: new[] { "LastConsumeDate", "ConsumeStatus" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_PlatformInboxEventBusMessage_RoutingKey",
@@ -123,14 +111,9 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                 column: "RoutingKey");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformOutboxEventBusMessage_CreatedDate",
+                name: "IX_PlatformOutboxEventBusMessage_LastSendDate_SendStatus",
                 table: "PlatformOutboxEventBusMessage",
-                column: "CreatedDate");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlatformOutboxEventBusMessage_LastSendDate",
-                table: "PlatformOutboxEventBusMessage",
-                column: "LastSendDate");
+                columns: new[] { "LastSendDate", "SendStatus" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_PlatformOutboxEventBusMessage_NextRetryProcessAfter",
@@ -141,11 +124,6 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                 name: "IX_PlatformOutboxEventBusMessage_RoutingKey",
                 table: "PlatformOutboxEventBusMessage",
                 column: "RoutingKey");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlatformOutboxEventBusMessage_SendStatus_CreatedDate",
-                table: "PlatformOutboxEventBusMessage",
-                columns: new[] { "SendStatus", "CreatedDate" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_PlatformOutboxEventBusMessage_SendStatus_LastSendDate",
@@ -184,6 +162,7 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                 unique: true);
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(

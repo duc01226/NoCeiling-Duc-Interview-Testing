@@ -7,8 +7,10 @@ using PlatformExampleApp.TextSnippet.Domain.ValueObjects;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
 {
-    public partial class InitDb : Migration
+    /// <inheritdoc />
+    public partial class InitialCreate : Migration
     {
+        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -90,11 +92,6 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformInboxEventBusMessage_ConsumeStatus_CreatedDate",
-                table: "PlatformInboxEventBusMessage",
-                columns: new[] { "ConsumeStatus", "CreatedDate" });
-
-            migrationBuilder.CreateIndex(
                 name: "IX_PlatformInboxEventBusMessage_ConsumeStatus_LastConsumeDate",
                 table: "PlatformInboxEventBusMessage",
                 columns: new[] { "ConsumeStatus", "LastConsumeDate" });
@@ -105,19 +102,9 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
                 columns: new[] { "ConsumeStatus", "NextRetryProcessAfter", "LastConsumeDate" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformInboxEventBusMessage_CreatedDate",
+                name: "IX_PlatformInboxEventBusMessage_LastConsumeDate_ConsumeStatus",
                 table: "PlatformInboxEventBusMessage",
-                column: "CreatedDate");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlatformInboxEventBusMessage_LastConsumeDate",
-                table: "PlatformInboxEventBusMessage",
-                column: "LastConsumeDate");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlatformInboxEventBusMessage_NextRetryProcessAfter",
-                table: "PlatformInboxEventBusMessage",
-                column: "NextRetryProcessAfter");
+                columns: new[] { "LastConsumeDate", "ConsumeStatus" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_PlatformInboxEventBusMessage_RoutingKey",
@@ -125,14 +112,9 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
                 column: "RoutingKey");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformOutboxEventBusMessage_CreatedDate",
+                name: "IX_PlatformOutboxEventBusMessage_LastSendDate_SendStatus",
                 table: "PlatformOutboxEventBusMessage",
-                column: "CreatedDate");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlatformOutboxEventBusMessage_LastSendDate",
-                table: "PlatformOutboxEventBusMessage",
-                column: "LastSendDate");
+                columns: new[] { "LastSendDate", "SendStatus" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_PlatformOutboxEventBusMessage_NextRetryProcessAfter",
@@ -143,11 +125,6 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
                 name: "IX_PlatformOutboxEventBusMessage_RoutingKey",
                 table: "PlatformOutboxEventBusMessage",
                 column: "RoutingKey");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlatformOutboxEventBusMessage_SendStatus_CreatedDate",
-                table: "PlatformOutboxEventBusMessage",
-                columns: new[] { "SendStatus", "CreatedDate" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_PlatformOutboxEventBusMessage_SendStatus_LastSendDate",
@@ -205,6 +182,7 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
                 .Annotation("Npgsql:TsVectorConfig", "english");
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(

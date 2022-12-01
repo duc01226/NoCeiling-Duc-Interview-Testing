@@ -20,6 +20,7 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
     public const int MinimumRetryCleanInboxMessageTimesToWarning = 2;
 
     public const string DefaultDeleteProcessedMessageInSecondsSettingKey = "MessageBus:InboxDeleteProcessedMessageInSeconds";
+    public const string DefaultDeleteExpiredFailedMessageInSecondsSettingKey = "MessageBus:InboxDeleteExpiredFailedMessageInSeconds";
 
     protected readonly IConfiguration Configuration;
 
@@ -94,12 +95,21 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
     }
 
     /// <summary>
-    /// To config how long a message can live in the database in seconds. Default is one week (7 day);
+    /// To config how long a message can live in the database in seconds. Default is one week (7 days);
     /// </summary>
     protected virtual double DeleteProcessedMessageInSeconds()
     {
         return Configuration.GetSection(DefaultDeleteProcessedMessageInSecondsSettingKey)?.Get<int?>() ??
                7.Days().TotalSeconds;
+    }
+
+    /// <summary>
+    /// To config how long a message can live in the database in seconds. Default is two week (14 days);
+    /// </summary>
+    protected virtual double DeleteExpiredFailedMessageInSeconds()
+    {
+        return Configuration.GetSection(DefaultDeleteExpiredFailedMessageInSecondsSettingKey)?.Get<int?>() ??
+               14.Days().TotalSeconds;
     }
 
     protected bool HasInboxEventBusMessageRepositoryRegistered()
@@ -115,10 +125,12 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
                 using (var uow = uowManager!.Begin())
                 {
                     var expiredMessages = await inboxEventBusMessageRepo.GetAllAsync(
-                        queryBuilder: query => query.Where(
-                                p => p.LastConsumeDate <= Clock.UtcNow.AddSeconds(-DeleteProcessedMessageInSeconds()) &&
-                                     p.ConsumeStatus == PlatformInboxBusMessage.ConsumeStatuses.Processed)
-                            .OrderBy(p => p.LastConsumeDate)
+                        queryBuilder: query => query
+                            .Where(
+                                p => (p.LastConsumeDate <= Clock.UtcNow.AddSeconds(-DeleteProcessedMessageInSeconds()) &&
+                                      p.ConsumeStatus == PlatformInboxBusMessage.ConsumeStatuses.Processed) ||
+                                     (p.LastConsumeDate <= Clock.UtcNow.AddSeconds(-DeleteExpiredFailedMessageInSeconds()) &&
+                                      p.ConsumeStatus == PlatformInboxBusMessage.ConsumeStatuses.Failed))
                             .Take(NumberOfDeleteMessagesBatch()),
                         cancellationToken);
 

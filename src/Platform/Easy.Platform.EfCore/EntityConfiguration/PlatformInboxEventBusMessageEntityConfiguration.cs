@@ -37,14 +37,6 @@ public class PlatformInboxEventBusMessageEntityConfiguration : PlatformEntityCon
                 p.NextRetryProcessAfter,
                 p.LastConsumeDate
             });
-        builder.HasIndex(
-            p => new
-            {
-                p.ConsumeStatus,
-                p.CreatedDate
-            });
-        builder.HasIndex(p => p.LastConsumeDate);
-        builder.HasIndex(p => p.NextRetryProcessAfter);
-        builder.HasIndex(p => p.CreatedDate);
+        builder.HasIndex(p => new { p.LastConsumeDate, p.ConsumeStatus });
     }
 }
