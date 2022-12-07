@@ -68,6 +68,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PlatformExampleApp.Test", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Easy.Platform.AutomationTest", "Platform\Easy.Platform.AutomationTest\Easy.Platform.AutomationTest.csproj", "{AAF17F6A-440A-4831-8F82-6A3E44DB2828}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Easy.Platform.AzureFileStorage", "Platform\Easy.Platform.AzureFileStorage\Easy.Platform.AzureFileStorage.csproj", "{0D2E06AE-F418-431D-805D-809EEF180E6E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -170,6 +172,10 @@ Global
 		{AAF17F6A-440A-4831-8F82-6A3E44DB2828}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AAF17F6A-440A-4831-8F82-6A3E44DB2828}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AAF17F6A-440A-4831-8F82-6A3E44DB2828}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0D2E06AE-F418-431D-805D-809EEF180E6E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0D2E06AE-F418-431D-805D-809EEF180E6E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0D2E06AE-F418-431D-805D-809EEF180E6E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0D2E06AE-F418-431D-805D-809EEF180E6E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -201,6 +207,7 @@ Global
 		{D2EADB91-36D7-423C-BB17-1CCF75624C55} = {E2CCF9F9-4223-4BF8-BADD-DD55EB5D3902}
 		{667658C5-0C0F-42E7-A0C9-89C4619A5874} = {E2CCF9F9-4223-4BF8-BADD-DD55EB5D3902}
 		{AAF17F6A-440A-4831-8F82-6A3E44DB2828} = {112DE40F-A5AA-4240-B714-FFACAF9757F8}
+		{0D2E06AE-F418-431D-805D-809EEF180E6E} = {112DE40F-A5AA-4240-B714-FFACAF9757F8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1547782A-8ABF-4E37-8BAC-C85487175C1B}
