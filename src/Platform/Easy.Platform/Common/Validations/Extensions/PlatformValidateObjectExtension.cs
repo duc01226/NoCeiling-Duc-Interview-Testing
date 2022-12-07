@@ -4,6 +4,8 @@ namespace Easy.Platform.Common.Validations.Extensions;
 
 public static class PlatformValidateObjectExtension
 {
+    #region Validate
+
     public static PlatformValidationResult<TValue> Validate<TValue>(
         this TValue value,
         Func<TValue, bool> must,
@@ -40,8 +42,8 @@ public static class PlatformValidateObjectExtension
     public static PlatformValidationResult<TValue> Validate<TValue>(
         this TValue value,
         Func<TValue, bool> must,
-        PlatformValidationError expected,
-        string actual = null)
+        string expected,
+        string actual)
     {
         return PlatformValidationResult<TValue>.Validate(
             value,
@@ -52,27 +54,123 @@ public static class PlatformValidateObjectExtension
     public static PlatformValidationResult<TValue> Validate<TValue>(
         this TValue value,
         Func<TValue, bool> must,
-        Func<TValue, PlatformValidationError> error,
-        Func<TValue, string> expected)
+        Func<TValue, string> expected,
+        string actual)
     {
-        return PlatformValidationResult<TValue>.Validate(value, () => must(value), $"Expected: {error(value)}.{Environment.NewLine}Actual: {expected(value)}");
+        return PlatformValidationResult<TValue>.Validate(
+            value,
+            () => must(value),
+            $"Expected: {expected}".PipeIf(_ => !string.IsNullOrEmpty(actual), _ => _ + $".{Environment.NewLine}Actual: {actual}"));
     }
 
     public static PlatformValidationResult<TValue> Validate<TValue>(
         this TValue value,
         Func<bool> must,
-        PlatformValidationError expected,
+        string expected,
         string actual)
     {
-        return PlatformValidationResult<TValue>.Validate(value, must, $"Expected: {expected}.{Environment.NewLine}Actual: {actual}");
+        return PlatformValidationResult<TValue>.Validate(
+            value,
+            must,
+            $"Expected: {expected}".PipeIf(_ => !string.IsNullOrEmpty(actual), _ => _ + $".{Environment.NewLine}Actual: {actual}"));
     }
 
     public static PlatformValidationResult<TValue> Validate<TValue>(
         this TValue value,
         bool must,
-        PlatformValidationError expected,
+        string expected,
         string actual)
     {
-        return Validate(value, () => must, $"Expected: {expected}.{Environment.NewLine}Actual: {actual}");
+        return Validate(
+            value,
+            () => must,
+            $"Expected: {expected}".PipeIf(_ => !string.IsNullOrEmpty(actual), _ => _ + $".{Environment.NewLine}Actual: {actual}"));
     }
+
+    #endregion
+
+    #region ValidateNot
+
+    public static PlatformValidationResult<TValue> ValidateNot<TValue>(
+        this TValue value,
+        Func<TValue, bool> mustNot,
+        params PlatformValidationError[] errorMsgs)
+    {
+        return PlatformValidationResult<TValue>.ValidateNot(value, () => mustNot(value), errorMsgs);
+    }
+
+    public static PlatformValidationResult<TValue> ValidateNot<TValue>(
+        this TValue value,
+        Func<TValue, bool> mustNot,
+        Func<TValue, PlatformValidationError> errorMsgs)
+    {
+        return PlatformValidationResult<TValue>.ValidateNot(value, () => mustNot(value), errorMsgs(value));
+    }
+
+    public static PlatformValidationResult<TValue> ValidateNot<TValue>(
+        this TValue value,
+        Func<bool> mustNot,
+        params PlatformValidationError[] errorMsgs)
+    {
+        return PlatformValidationResult<TValue>.ValidateNot(value, mustNot, errorMsgs);
+    }
+
+    public static PlatformValidationResult<TValue> ValidateNot<TValue>(
+        this TValue value,
+        bool mustNot,
+        params PlatformValidationError[] errorMsgs)
+    {
+        return ValidateNot(value, () => mustNot, errorMsgs);
+    }
+
+
+    public static PlatformValidationResult<TValue> ValidateNot<TValue>(
+        this TValue value,
+        Func<TValue, bool> mustNot,
+        string expected,
+        string actual)
+    {
+        return PlatformValidationResult<TValue>.ValidateNot(
+            value,
+            () => mustNot(value),
+            $"Expected: {expected}".PipeIf(_ => !string.IsNullOrEmpty(actual), _ => _ + $".{Environment.NewLine}Actual: {actual}"));
+    }
+
+    public static PlatformValidationResult<TValue> ValidateNot<TValue>(
+        this TValue value,
+        Func<TValue, bool> mustNot,
+        Func<TValue, string> expected,
+        string actual)
+    {
+        return PlatformValidationResult<TValue>.ValidateNot(
+            value,
+            () => mustNot(value),
+            $"Expected: {expected}".PipeIf(_ => !string.IsNullOrEmpty(actual), _ => _ + $".{Environment.NewLine}Actual: {actual}"));
+    }
+
+    public static PlatformValidationResult<TValue> ValidateNot<TValue>(
+        this TValue value,
+        Func<bool> mustNot,
+        string expected,
+        string actual)
+    {
+        return PlatformValidationResult<TValue>.ValidateNot(
+            value,
+            mustNot,
+            $"Expected: {expected}".PipeIf(_ => !string.IsNullOrEmpty(actual), _ => _ + $".{Environment.NewLine}Actual: {actual}"));
+    }
+
+    public static PlatformValidationResult<TValue> ValidateNot<TValue>(
+        this TValue value,
+        bool mustNot,
+        string expected,
+        string actual)
+    {
+        return ValidateNot(
+            value,
+            () => mustNot,
+            $"Expected: {expected}".PipeIf(_ => !string.IsNullOrEmpty(actual), _ => _ + $".{Environment.NewLine}Actual: {actual}"));
+    }
+
+    #endregion
 }

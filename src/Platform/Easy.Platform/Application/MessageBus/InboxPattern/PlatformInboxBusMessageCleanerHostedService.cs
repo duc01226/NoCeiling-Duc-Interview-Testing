@@ -4,7 +4,6 @@ using Easy.Platform.Common.Hosting;
 using Easy.Platform.Common.Timing;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.UnitOfWork;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -12,17 +11,9 @@ namespace Easy.Platform.Application.MessageBus.InboxPattern;
 
 public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProcessHostedService
 {
-    /// <summary>
-    /// Default number messages is deleted in every process. Default is 10;
-    /// </summary>
-    public const int DefaultNumberOfDeleteMessagesBatch = 10;
-
     public const int MinimumRetryCleanInboxMessageTimesToWarning = 2;
 
-    public const string DefaultDeleteProcessedMessageInSecondsSettingKey = "MessageBus:InboxDeleteProcessedMessageInSeconds";
-    public const string DefaultDeleteExpiredFailedMessageInSecondsSettingKey = "MessageBus:InboxDeleteExpiredFailedMessageInSeconds";
-
-    protected readonly IConfiguration Configuration;
+    protected readonly PlatformInboxConfig InboxConfig;
 
     private readonly IPlatformApplicationSettingContext applicationSettingContext;
 
@@ -32,10 +23,10 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
         IServiceProvider serviceProvider,
         ILoggerFactory loggerFactory,
         IPlatformApplicationSettingContext applicationSettingContext,
-        IConfiguration configuration) : base(serviceProvider, loggerFactory)
+        PlatformInboxConfig inboxConfig) : base(serviceProvider, loggerFactory)
     {
         this.applicationSettingContext = applicationSettingContext;
-        Configuration = configuration;
+        InboxConfig = inboxConfig;
     }
 
     public static bool MatchImplementation(ServiceDescriptor serviceDescriptor)
@@ -80,36 +71,32 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
         isProcessing = false;
     }
 
+    protected override TimeSpan ProcessTriggerIntervalTime()
+    {
+        return InboxConfig.MessageCleanerTriggerIntervalInMinutes.Minutes();
+    }
+
     protected virtual int ProcessClearMessageRetryCount()
     {
-        return 5;
+        return InboxConfig.ProcessClearMessageRetryCount;
     }
 
-    /// <summary>
-    /// To config maximum number messages is deleted in every process. Default is
-    /// <see cref="DefaultNumberOfDeleteMessagesBatch" />;
-    /// </summary>
+    /// <inheritdoc cref="PlatformInboxConfig.NumberOfDeleteMessagesBatch"/>
     protected virtual int NumberOfDeleteMessagesBatch()
     {
-        return DefaultNumberOfDeleteMessagesBatch;
+        return InboxConfig.NumberOfDeleteMessagesBatch;
     }
 
-    /// <summary>
-    /// To config how long a message can live in the database in seconds. Default is one week (7 days);
-    /// </summary>
+    /// <inheritdoc cref="PlatformInboxConfig.DeleteProcessedMessageInSeconds"/>
     protected virtual double DeleteProcessedMessageInSeconds()
     {
-        return Configuration.GetSection(DefaultDeleteProcessedMessageInSecondsSettingKey)?.Get<int?>() ??
-               7.Days().TotalSeconds;
+        return InboxConfig.DeleteProcessedMessageInSeconds;
     }
 
-    /// <summary>
-    /// To config how long a message can live in the database in seconds. Default is two week (14 days);
-    /// </summary>
+    /// <inheritdoc cref="PlatformInboxConfig.DeleteExpiredFailedMessageInSeconds"/>
     protected virtual double DeleteExpiredFailedMessageInSeconds()
     {
-        return Configuration.GetSection(DefaultDeleteExpiredFailedMessageInSecondsSettingKey)?.Get<int?>() ??
-               14.Days().TotalSeconds;
+        return InboxConfig.DeleteExpiredFailedMessageInSeconds;
     }
 
     protected bool HasInboxEventBusMessageRepositoryRegistered()

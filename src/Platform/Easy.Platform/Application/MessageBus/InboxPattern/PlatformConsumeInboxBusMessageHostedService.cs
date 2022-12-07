@@ -229,51 +229,36 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         }
     }
 
-    // Default should be 1 per time like multi thread/instance handle once at a time. Also we have not found out way to process parallel messages
-    // because need to detect message order dependency for a same person or entity target
-    // Support deploy multiple instance horizontal scale
+    /// <inheritdoc cref="PlatformInboxConfig.NumberOfProcessConsumeInboxMessagesBatch"/>
     protected virtual int NumberOfProcessMessagesBatch()
     {
-        return Environment.ProcessorCount;
+        return inboxConfig.NumberOfProcessConsumeInboxMessagesBatch;
     }
 
     protected virtual int ProcessConsumeMessageRetryCount()
     {
-        return 10;
+        return inboxConfig.ProcessConsumeMessageRetryCount;
     }
 
-    /// <summary>
-    /// To config how long a message can live in the database as Processing status in seconds. Default is 3600 * 24 seconds;
-    /// This to handle that if message for some reason has been set as Processing but failed to process and has not been set
-    /// back to failed.
-    /// </summary>
+    /// <inheritdoc cref="PlatformInboxConfig.MessageProcessingMaximumTimeInSeconds"/>
     protected virtual double MessageProcessingMaximumTimeInSeconds()
     {
-        return 3600 * 24;
+        return inboxConfig.MessageProcessingMaximumTimeInSeconds;
     }
 
-    /// <summary>
-    /// Config the time to true to log consumer process time. Default is true
-    /// </summary>
+    /// <inheritdoc cref="PlatformInboxConfig.IsLogConsumerProcessTime"/>
     protected virtual bool IsLogConsumerProcessTime()
     {
-        return true;
+        return inboxConfig.IsLogConsumerProcessTime;
     }
 
-    /// <summary>
-    /// Config the time in milliseconds to log warning if the process consumer time is over
-    /// LogConsumerProcessWarningTimeMilliseconds. Default is 5000
-    /// </summary>
+    /// <inheritdoc cref="PlatformInboxConfig.LogErrorSlowProcessWarningTimeMilliseconds"/>
     protected virtual double LogErrorSlowProcessWarningTimeMilliseconds()
     {
-        return 5000;
+        return inboxConfig.LogErrorSlowProcessWarningTimeMilliseconds;
     }
 
-    /// <summary>
-    /// This is used to calculate the next retry process message time.
-    /// Ex: NextRetryProcessAfter = DateTime.UtcNow.AddSeconds(retryProcessFailedMessageInSecondsUnit * Math.Pow(2,
-    /// retriedProcessCount ?? 0));
-    /// </summary>
+    /// <inheritdoc cref="PlatformInboxConfig.RetryProcessFailedMessageInSecondsUnit"/>
     protected virtual double RetryProcessFailedMessageDelayTimeInSecondsUnit()
     {
         return inboxConfig.RetryProcessFailedMessageInSecondsUnit;

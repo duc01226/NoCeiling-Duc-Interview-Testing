@@ -87,20 +87,7 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
         RegisterRepositories(serviceCollection);
 
         RegisterInboxEventBusMessageRepository(serviceCollection);
-        serviceCollection.Register(
-            serviceType: typeof(PlatformInboxConfig),
-            InboxConfigProvider,
-            ServiceLifeTime.Transient,
-            replaceIfExist: true,
-            DependencyInjectionExtension.ReplaceServiceStrategy.ByService);
-
         RegisterOutboxEventBusMessageRepository(serviceCollection);
-        serviceCollection.Register(
-            serviceType: typeof(PlatformOutboxConfig),
-            OutboxConfigProvider,
-            ServiceLifeTime.Transient,
-            replaceIfExist: true,
-            DependencyInjectionExtension.ReplaceServiceStrategy.ByService);
 
         serviceCollection.RegisterAllFromType<IPersistenceService>(Assembly);
         serviceCollection.RegisterAllFromType<IPlatformDataMigrationExecutor>(Assembly);
@@ -142,27 +129,11 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
     }
 
     /// <summary>
-    /// Support to custom the inbox config. Default return null
-    /// </summary>
-    protected virtual PlatformInboxConfig InboxConfigProvider(IServiceProvider serviceProvider)
-    {
-        return new PlatformInboxConfig();
-    }
-
-    /// <summary>
     /// EnableOutboxBusMessage feature by register the IPlatformOutboxBusMessageRepository
     /// </summary>
     protected virtual bool EnableOutboxBusMessage()
     {
         return false;
-    }
-
-    /// <summary>
-    /// Support to custom the outbox config. Default return null
-    /// </summary>
-    protected virtual PlatformOutboxConfig OutboxConfigProvider(IServiceProvider serviceProvider)
-    {
-        return new PlatformOutboxConfig();
     }
 
     protected virtual void RegisterUnitOfWorkManager(IServiceCollection serviceCollection)

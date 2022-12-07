@@ -28,16 +28,16 @@ public class PlatformValidationResult<TValue> : ValidationResult
     public new List<PlatformValidationError> Errors => finalCombinedValidationErrors ??= FinalCombinedValidation().RootValidationErrors;
     public override bool IsValid => !Errors.Any();
 
-    protected List<PlatformValidationError> RootValidationErrors { get; } = new List<PlatformValidationError>();
+    protected List<PlatformValidationError> RootValidationErrors { get; } = new();
     protected bool IsRootValidationValid => !RootValidationErrors.Any();
 
-    protected List<LogicalAndValidationsChainItem> LogicalAndValidationsChain { get; set; } = new List<LogicalAndValidationsChainItem>();
+    protected List<LogicalAndValidationsChainItem> LogicalAndValidationsChain { get; set; } = new();
 
     /// <summary>
     ///     Dictionary map from LogicalAndValidationsChainItem Position to ExceptionCreatorFn
     /// </summary>
     protected Dictionary<int, Func<PlatformValidationResult<TValue>, Exception>> LogicalAndValidationsChainInvalidExceptions { get; } =
-        new Dictionary<int, Func<PlatformValidationResult<TValue>, Exception>>();
+        new();
 
     private PlatformValidationResult<TValue> FinalCombinedValidation()
     {
@@ -137,7 +137,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
     }
 
     /// <summary>
-    ///     Return a valid validation result if the condition is true, otherwise return a invalid validation with errors.
+    /// Return a valid validation result if the condition is true, otherwise return a invalid validation with errors.
     /// </summary>
     /// <param name="value">The validation target object.</param>
     /// <param name="must">The valid condition.</param>
@@ -158,6 +158,30 @@ public class PlatformValidationResult<TValue> : ValidationResult
         params PlatformValidationError[] errors)
     {
         return must() ? Valid(value) : Invalid(value, errors);
+    }
+
+    /// <summary>
+    /// Return a invalid validation result with errors if the condition is true, otherwise return a valid.
+    /// </summary>
+    /// <param name="value">The validation target object.</param>
+    /// <param name="mustNot">The invalid condition.</param>
+    /// <param name="errors">The errors if the invalid condition is true.</param>
+    /// <returns>A validation result.</returns>
+    public static PlatformValidationResult<TValue> ValidateNot(
+        TValue value,
+        bool mustNot,
+        params PlatformValidationError[] errors)
+    {
+        return ValidateNot(value, () => mustNot, errors);
+    }
+
+    /// <inheritdoc cref="ValidateNot(TValue,bool,Easy.Platform.Common.Validations.PlatformValidationError[])" />
+    public static PlatformValidationResult<TValue> ValidateNot(
+        TValue value,
+        Func<bool> mustNot,
+        params PlatformValidationError[] errors)
+    {
+        return mustNot() ? Invalid(value, errors) : Valid(value);
     }
 
     /// <summary>
@@ -290,6 +314,13 @@ public class PlatformValidationResult<TValue> : ValidationResult
         Func<TValue, Task<PlatformValidationResult<TValue>>> nextValidation)
     {
         return !IsValid ? this : await nextValidation(Value);
+    }
+
+    public PlatformValidationResult<TValue> AndNot(
+        Func<TValue, bool> mustNot,
+        params PlatformValidationError[] errors)
+    {
+        return And(() => ValidateNot(value: Value, () => mustNot(Value), errors));
     }
 
     public PlatformValidationResult<TValue> Or(PlatformValidationResult<TValue> nextValidation)

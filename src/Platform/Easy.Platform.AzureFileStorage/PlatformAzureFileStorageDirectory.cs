@@ -37,28 +37,28 @@ public class PlatformAzureFileStorageDirectory : IPlatformFileStorageDirectory
 
     public PlatformAzureFileStorageDirectory(BlobContainerClient blobContainer, string directoryRelativePath)
     {
-        Uri = blobContainer.Uri;
+        DirectoryAbsoluteUri = blobContainer.Uri;
         BlobContainer = blobContainer;
-        Prefix = directoryRelativePath;
-        ContainerName = blobContainer.Name;
+        DirectoryRelativePathPrefix = directoryRelativePath;
+        RootDirectoryName = blobContainer.Name;
     }
 
     public BlobContainerClient BlobContainer { get; }
 
-    public string ContainerName { get; }
-    public Uri Uri { get; set; }
-    public string Prefix { get; set; }
+    public string RootDirectoryName { get; }
+    public Uri DirectoryAbsoluteUri { get; set; }
+    public string DirectoryRelativePathPrefix { get; set; }
 
-    public IPlatformFileStorageDirectory GetDirectoryReference(string directoryRelativePath)
+    public IPlatformFileStorageDirectory GetRelativeChildDirectory(string directoryRelativePath)
     {
         return new PlatformAzureFileStorageDirectory(
             BlobContainer,
-            $"{Prefix}/{directoryRelativePath}");
+            $"{DirectoryRelativePathPrefix}/{directoryRelativePath}");
     }
 
     public IEnumerable<IPlatformFileStorageFileItem> GetFileItems()
     {
-        var result = BlobContainer.GetBlobs(BlobTraits.Metadata, BlobStates.None, Prefix)
+        var result = BlobContainer.GetBlobs(BlobTraits.Metadata, BlobStates.None, DirectoryRelativePathPrefix)
             .Where(p => !ReservedFileNames.Any(_ => p.Name.EndsWith(_)))
             .Select(p => PlatformAzureFileStorageFileItem.Create(p, BlobContainer));
 

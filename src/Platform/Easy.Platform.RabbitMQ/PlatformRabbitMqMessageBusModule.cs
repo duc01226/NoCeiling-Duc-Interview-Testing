@@ -33,10 +33,7 @@ public abstract class PlatformRabbitMqMessageBusModule : PlatformMessageBusModul
         serviceCollection.Register<PlatformRabbitMqProcessInitializerService>(ServiceLifeTime.Singleton);
         serviceCollection.RegisterHostedService<PlatformRabbitMqStartProcessHostedService>();
 
-        RegisterRabbitMqInboxEventBusMessageCleanerHostedService(serviceCollection);
         RegisterRabbitMqConsumeInboxEventBusMessageHostedService(serviceCollection);
-
-        RegisterRabbitMqOutboxEventBusMessageCleanerHostedService(serviceCollection);
         RegisterRabbitMqSendOutboxEventBusMessageHostedService(serviceCollection);
     }
 
@@ -49,22 +46,10 @@ public abstract class PlatformRabbitMqMessageBusModule : PlatformMessageBusModul
 
     protected abstract PlatformRabbitMqOptions RabbitMqOptionsFactory(IServiceProvider serviceProvider);
 
-    protected virtual void RegisterRabbitMqInboxEventBusMessageCleanerHostedService(IServiceCollection serviceCollection)
-    {
-        serviceCollection.RemoveIfExist(PlatformInboxBusMessageCleanerHostedService.MatchImplementation);
-        serviceCollection.RegisterHostedService<PlatformRabbitMqInboxBusMessageCleanerHostedService>();
-    }
-
     protected virtual void RegisterRabbitMqConsumeInboxEventBusMessageHostedService(IServiceCollection serviceCollection)
     {
         serviceCollection.RemoveIfExist(PlatformConsumeInboxBusMessageHostedService.MatchImplementation);
         serviceCollection.RegisterHostedService<PlatformRabbitMqConsumeInboxBusMessageHostedService>();
-    }
-
-    protected virtual void RegisterRabbitMqOutboxEventBusMessageCleanerHostedService(IServiceCollection serviceCollection)
-    {
-        serviceCollection.RemoveIfExist(PlatformOutboxBusMessageCleanerHostedService.MatchImplementation);
-        serviceCollection.RegisterHostedService<PlatformRabbitMqOutboxBusMessageCleanerHostedService>();
     }
 
     protected virtual void RegisterRabbitMqSendOutboxEventBusMessageHostedService(IServiceCollection serviceCollection)

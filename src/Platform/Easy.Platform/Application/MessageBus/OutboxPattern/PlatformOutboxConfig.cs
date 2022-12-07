@@ -12,4 +12,34 @@ public class PlatformOutboxConfig
     /// Set StandaloneUowForOutbox = true only when apply platform for old code/project have not open and complete uow. Remove it after finish refactoring
     /// </summary>
     public bool StandaloneUowForOutbox { get; set; }
+
+    /// <summary>
+    /// To config how long a message can live in the database in seconds. Default is one week (7 day);
+    /// </summary>
+    public double DeleteProcessedMessageInSeconds { get; set; } = TimeSpan.FromDays(7).TotalSeconds;
+
+    /// <summary>
+    /// To config how long a message can live in the database in seconds. Default is two week (14 days);
+    /// </summary>
+    public double DeleteExpiredFailedMessageInSeconds { get; set; } = TimeSpan.FromDays(14).TotalSeconds;
+
+    // <summary>
+    /// Default number messages is deleted in every process. Default is 10;
+    /// </summary>
+    public int NumberOfDeleteMessagesBatch { get; set; } = 10;
+
+    public double MessageCleanerTriggerIntervalInMinutes { get; set; } = 1;
+
+    public int ProcessClearMessageRetryCount { get; set; } = 5;
+
+    public int NumberOfProcessSendOutboxMessagesBatch { get; set; } = Environment.ProcessorCount;
+
+    public int ProcessSendMessageRetryCount { get; set; } = 10;
+
+    /// <summary>
+    /// To config how long a message can live in the database as Processing status in seconds. Default is 3600 seconds;
+    /// This to handle that if message for some reason has been set as Processing but failed to process and has not been set
+    /// back to failed.
+    /// </summary>
+    public int MessageProcessingMaximumTimeInSeconds { get; set; } = 3600;
 }

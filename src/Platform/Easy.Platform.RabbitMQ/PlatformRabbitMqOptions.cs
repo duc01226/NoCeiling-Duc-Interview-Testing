@@ -1,5 +1,3 @@
-using Easy.Platform.Application.MessageBus.InboxPattern;
-using Easy.Platform.Application.MessageBus.OutboxPattern;
 using RabbitMQ.Client;
 
 namespace Easy.Platform.RabbitMQ;
@@ -76,39 +74,4 @@ public class PlatformRabbitMqOptions
     /// For best practice, prevent queue too long in memory will store messages in the storage
     /// </summary>
     public int QueueMaxNumberMessagesInMemory { get; set; } = 100;
-
-    public PlatformRabbitMqInboxEventBusMessageOptions InboxEventBusMessageOptions { get; set; } = new();
-
-    public PlatformRabbitMqOutboxEventBusMessageOptions OutboxEventBusMessageOptions { get; set; } = new();
-}
-
-public class PlatformRabbitMqInboxEventBusMessageOptions
-{
-    /// <summary>
-    /// <inheritdoc cref="PlatformInboxBusMessageCleanerHostedService.ProcessTriggerIntervalTime" />
-    /// </summary>
-    public long CleanMessageProcessTriggerIntervalInMinutes { get; set; } = 1;
-
-    /// <summary>
-    /// <inheritdoc cref="PlatformInboxBusMessageCleanerHostedService.NumberOfDeleteMessagesBatch" />
-    /// </summary>
-    public int NumberOfDeleteMessagesBatch { get; set; } =
-        PlatformInboxBusMessageCleanerHostedService.DefaultNumberOfDeleteMessagesBatch;
-
-    public double DeleteProcessedMessageInSeconds { get; set; } = TimeSpan.FromDays(7).TotalSeconds;
-}
-
-public class PlatformRabbitMqOutboxEventBusMessageOptions
-{
-    /// <summary>
-    /// <inheritdoc cref="PlatformOutboxBusMessageCleanerHostedService.ProcessTriggerIntervalTime" />
-    /// </summary>
-    public long CleanMessageProcessTriggerIntervalInMinutes { get; set; } = 1;
-
-    /// <summary>
-    /// <inheritdoc cref="PlatformOutboxBusMessageCleanerHostedService.NumberOfDeleteMessagesBatch" />
-    /// </summary>
-    public int NumberOfDeleteMessagesBatch { get; set; } = PlatformOutboxBusMessageCleanerHostedService.DefaultNumberOfDeleteMessagesBatch;
-
-    public double DeleteProcessedMessageInSeconds { get; set; } = TimeSpan.FromDays(7).TotalSeconds;
 }

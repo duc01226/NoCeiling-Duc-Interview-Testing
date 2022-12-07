@@ -2,6 +2,7 @@ namespace Easy.Platform.Infrastructures.FileStorage;
 
 public interface IPlatformFileStorageFileItem
 {
+    public string RootDirectory { get; }
     public string FullFilePath { get; }
     public DateTimeOffset? LastModified { get; }
     public string ContentType { get; }
@@ -9,4 +10,6 @@ public interface IPlatformFileStorageFileItem
     public long Size { get; }
     public string Description { get; }
     public string AbsoluteUri { get; }
+
+    public string FullFilePathWithoutRootDirectory();
 }

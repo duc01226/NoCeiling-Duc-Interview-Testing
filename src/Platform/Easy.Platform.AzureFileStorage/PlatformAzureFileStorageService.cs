@@ -85,6 +85,7 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
 
             return new PlatformAzureFileStorageFileItem
             {
+                RootDirectory = rootDirectory,
                 FullFilePath = PlatformAzureFileStorageFileItem.GetFullFilePath(blobClient),
                 AbsoluteUri = blobClient.Uri.AbsoluteUri,
                 ContentType = blobHttpHeaders.ContentType,
@@ -223,6 +224,7 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
 
         return new PlatformAzureFileStorageFileItem
         {
+            RootDirectory = rootDirectory,
             FullFilePath = PlatformAzureFileStorageFileItem.GetFullFilePath(blobClient),
             AbsoluteUri = blobClient.Uri.AbsoluteUri,
             ContentType = PlatformFileMimeTypeMapper.Instance.GetMimeType(filePath),

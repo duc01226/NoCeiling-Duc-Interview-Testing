@@ -4,21 +4,33 @@ namespace Easy.Platform.Infrastructures.FileStorage;
 
 public interface IPlatformFileStorageDirectory
 {
-    public string ContainerName { get; }
-    public Uri Uri { get; set; }
-    public string Prefix { get; set; }
+    public string RootDirectoryName { get; }
+    public Uri DirectoryAbsoluteUri { get; set; }
 
-    public IPlatformFileStorageDirectory GetDirectoryReference(string directoryRelativePath);
+    /// <summary>
+    /// Present the virtual folder path prefix, not including RootDirectory. <br />
+    /// Example: a file item path: root/folder1/folder2/fileName.extension. The folder2 will be: <br />
+    /// {RootDirectory: root, Prefix: folder1/folder2}
+    /// </summary>
+    public string DirectoryRelativePathPrefix { get; set; }
+
+    public IPlatformFileStorageDirectory GetRelativeChildDirectory(string directoryRelativePath);
 
     public IEnumerable<IPlatformFileStorageFileItem> GetFileItems();
 
     public List<IPlatformFileStorageDirectory> GetDirectChildDirectories()
     {
-        var result = GetFileItems()
-            .AsEnumerable()
-            .Select(blobItem => blobItem.FullFilePath.TrimStart('/').Substring(startIndex: Prefix.Length).TrimStart('/').TakeUntilNextChar('/'))
+        var fileItems = GetFileItems().ToList();
+
+        var result = fileItems
+            .Select(
+                blobItem => blobItem.FullFilePath
+                    .TrimStart('/')
+                    .Substring(blobItem.RootDirectory.Length).TrimStart('/')
+                    .Substring(startIndex: DirectoryRelativePathPrefix.Length).TrimStart('/')
+                    .TakeUntilNextChar('/'))
             .Distinct()
-            .SelectList(directChildDirectoryName => GetDirectoryReference(directChildDirectoryName));
+            .SelectList(directChildDirectoryName => GetRelativeChildDirectory(directChildDirectoryName));
 
         return result;
     }

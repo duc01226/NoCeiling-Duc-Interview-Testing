@@ -177,7 +177,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
                             queryBuilder: query => query
                                 .Where(PlatformOutboxBusMessage.ToHandleOutboxEventBusMessagesExpr(MessageProcessingMaximumTimeInSeconds()))
                                 .OrderBy(p => p.LastSendDate)
-                                .Take(NumberOfProcessMessagesBatch()),
+                                .Take(NumberOfProcessSendOutboxMessagesBatch()),
                             cancellationToken);
 
                         toHandleMessages.ForEach(
@@ -209,24 +209,20 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
         }
     }
 
-    protected virtual int NumberOfProcessMessagesBatch()
+    protected virtual int NumberOfProcessSendOutboxMessagesBatch()
     {
-        return Environment.ProcessorCount;
+        return OutboxConfig.NumberOfProcessSendOutboxMessagesBatch;
     }
 
     protected virtual int ProcessSendMessageRetryCount()
     {
-        return 10;
+        return OutboxConfig.ProcessSendMessageRetryCount;
     }
 
-    /// <summary>
-    /// To config how long a message can live in the database as Processing status in seconds. Default is 3600 seconds;
-    /// This to handle that if message for some reason has been set as Processing but failed to process and has not been set
-    /// back to failed.
-    /// </summary>
+    /// <inheritdoc cref="PlatformOutboxConfig.MessageProcessingMaximumTimeInSeconds"/>
     protected virtual double MessageProcessingMaximumTimeInSeconds()
     {
-        return 3600;
+        return OutboxConfig.MessageProcessingMaximumTimeInSeconds;
     }
 
     protected bool HasOutboxEventBusMessageRepositoryRegistered()

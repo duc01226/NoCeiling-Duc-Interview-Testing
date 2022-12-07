@@ -31,6 +31,15 @@ public class SaveSnippetTextCommand : PlatformCqrsCommand<SaveSnippetTextCommand
         return this
             .Validate(p => Data != null, "Data must be not null.")
             .And(p => Data.MapToEntity().Validate())
+            .And(p => p.JustDemoUsingValidateNot())
+            .Of<IPlatformCqrsRequest>();
+    }
+
+    public PlatformValidationResult<IPlatformCqrsRequest> JustDemoUsingValidateNot()
+    {
+        return this
+            .ValidateNot(p => Data == null, "Data must be not null.")
+            .AndNot(p => Data.MapToEntity().Validate().IsValid == false, Data.MapToEntity().Validate().Errors.First())
             .Of<IPlatformCqrsRequest>();
     }
 }

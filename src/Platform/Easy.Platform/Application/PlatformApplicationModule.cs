@@ -174,6 +174,22 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             });
     }
 
+    /// <summary>
+    /// Support to custom the inbox config. Default return null
+    /// </summary>
+    protected virtual PlatformInboxConfig InboxConfigProvider(IServiceProvider serviceProvider)
+    {
+        return new PlatformInboxConfig();
+    }
+
+    /// <summary>
+    /// Support to custom the outbox config. Default return null
+    /// </summary>
+    protected virtual PlatformOutboxConfig OutboxConfigProvider(IServiceProvider serviceProvider)
+    {
+        return new PlatformOutboxConfig();
+    }
+
     protected override void RegisterHelpers(IServiceCollection serviceCollection)
     {
         serviceCollection.RegisterAllFromType<IPlatformHelper>(typeof(PlatformApplicationModule).Assembly);
@@ -232,6 +248,19 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
 
         if (AutoRegisterDefaultCaching)
             RegisterRuntimeModuleDependencies<PlatformCachingModule>(serviceCollection);
+
+        serviceCollection.Register(
+            serviceType: typeof(PlatformInboxConfig),
+            InboxConfigProvider,
+            ServiceLifeTime.Transient,
+            replaceIfExist: true,
+            DependencyInjectionExtension.ReplaceServiceStrategy.ByService);
+        serviceCollection.Register(
+            serviceType: typeof(PlatformOutboxConfig),
+            OutboxConfigProvider,
+            ServiceLifeTime.Transient,
+            replaceIfExist: true,
+            DependencyInjectionExtension.ReplaceServiceStrategy.ByService);
     }
 
     protected override async Task InternalInit(IServiceScope serviceScope)

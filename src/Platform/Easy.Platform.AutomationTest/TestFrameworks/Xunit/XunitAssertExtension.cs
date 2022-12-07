@@ -18,6 +18,15 @@ public static class XunitAssertExtension
         PlatformValidationError expected,
         string? actual = null)
     {
-        return value.Validate(must, expected, actual).AssertValid();
+        return value.Validate(must, expected: expected, actual: actual).AssertValid();
+    }
+
+    public static TValue AssertMustNot<TValue>(
+        this TValue value,
+        Func<TValue, bool> mustNot,
+        PlatformValidationError expected,
+        string? actual = null)
+    {
+        return value.ValidateNot(mustNot, expected: expected, actual: actual).AssertValid();
     }
 }
