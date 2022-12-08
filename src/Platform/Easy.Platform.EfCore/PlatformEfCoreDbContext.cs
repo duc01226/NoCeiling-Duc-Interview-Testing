@@ -177,7 +177,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     {
         await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
 
-        var result = IsEntityTracked(entity) ? entity : GetTable<TEntity>().Update(entity).Entity;
+        var result = GetTable<TEntity>().Update(entity).Entity;
 
         if (result is IRowVersionEntity rowVersionEntity)
             rowVersionEntity.ConcurrencyUpdateToken = Guid.NewGuid();
