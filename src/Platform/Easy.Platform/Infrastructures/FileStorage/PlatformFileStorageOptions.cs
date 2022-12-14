@@ -15,7 +15,7 @@ public class PlatformFileStorageOptions
         None,
 
         /// <summary>
-        /// Container and file data can be read via anonymous request. Clients can enumerate files within the container via anonymous request, but cannot enumerate containers within the storage account.
+        /// Container and file data can be read via anonymous request. Clients can enumerate files within the container via anonymous request, but cannot enumerate other containers within the storage account.
         /// </summary>
         Container,
 

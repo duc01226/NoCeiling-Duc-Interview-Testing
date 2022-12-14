@@ -1,14 +1,20 @@
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using Easy.Platform.Common.Extensions;
 using Microsoft.AspNetCore.Http;
 
 namespace Easy.Platform.Infrastructures.FileStorage;
 
 public class PlatformFileStorageUploader
 {
+    private string contentType;
     private PlatformFileStorageUploader() { }
 
-    public string ContentType { get; private init; }
+    public string ContentType
+    {
+        get => contentType.IsNullOrEmpty() ? PlatformFileMimeTypeMapper.Instance.GetMimeType(FileName) : contentType;
+        set => contentType = value;
+    }
 
     public string RootDirectory { get; private init; }
 
@@ -24,30 +30,14 @@ public class PlatformFileStorageUploader
 
     public Stream Stream { get; private init; }
 
-    /// <summary>
-    /// Get content of UploadFile. If ContentType is null we will check from file extension
-    /// </summary>
-    /// <returns></returns>
-    public string GetContentType()
-    {
-        if (!string.IsNullOrEmpty(ContentType)) return ContentType;
+    public PlatformFileStorageOptions.PublicAccessTypes PublicAccessType { get; set; } = PlatformFileStorageOptions.PublicAccessTypes.None;
 
-        return PlatformFileMimeTypeMapper.Instance.GetMimeType(FileName);
-    }
-
-    /// <summary>
-    /// Init new upload file
-    /// </summary>
-    /// <param name="stream">stream content</param>
-    /// <param name="prefixDirectoryPath">folder path where to store content on cloud</param>
-    /// <param name="fileName">file name on cloud</param>
-    /// <param name="isPrivate">Decide this content is public or private</param>
-    /// <param name="contentType"></param>
     public static PlatformFileStorageUploader Create(
         Stream stream,
         [NotNull] string prefixDirectoryPath,
         [NotNull] string fileName,
-        bool isPrivate = true,
+        [NotNull] string rootDirectory,
+        PlatformFileStorageOptions.PublicAccessTypes publicAccessType,
         string contentType = null)
     {
         ArgumentNullException.ThrowIfNull(stream, nameof(stream));
@@ -57,10 +47,47 @@ public class PlatformFileStorageUploader
         return new PlatformFileStorageUploader
         {
             Stream = stream,
-            RootDirectory = IPlatformFileStorageService.GetDefaultRootDirectoryName(isPrivate),
+            RootDirectory = rootDirectory,
             PrefixDirectoryPath = prefixDirectoryPath,
             FileName = fileName,
-            ContentType = contentType
+            ContentType = contentType,
+            PublicAccessType = publicAccessType
+        };
+    }
+
+    public static PlatformFileStorageUploader Create(
+        Stream stream,
+        [NotNull] string prefixDirectoryPath,
+        [NotNull] string fileName,
+        string contentType = null)
+    {
+        return Create(
+            stream,
+            prefixDirectoryPath,
+            fileName,
+            rootDirectory: IPlatformFileStorageService.GetDefaultRootDirectoryName(isPrivate: true),
+            publicAccessType: IPlatformFileStorageService.GetDefaultPublicAccessType(isPrivate: true),
+            contentType);
+    }
+
+    public static PlatformFileStorageUploader Create(
+        IFormFile formFile,
+        [NotNull] string prefixDirectoryPath,
+        [NotNull] string rootDirectory,
+        PlatformFileStorageOptions.PublicAccessTypes publicAccessType,
+        string fileName = null,
+        string contentType = null,
+        string fileDescription = null)
+    {
+        return new PlatformFileStorageUploader
+        {
+            Stream = formFile.OpenReadStream(),
+            RootDirectory = rootDirectory,
+            PrefixDirectoryPath = prefixDirectoryPath,
+            FileName = fileName ?? formFile.FileName,
+            ContentType = contentType,
+            FileDescription = fileDescription,
+            PublicAccessType = publicAccessType
         };
     }
 
@@ -68,19 +95,55 @@ public class PlatformFileStorageUploader
         IFormFile formFile,
         [NotNull] string prefixDirectoryPath,
         string fileName = null,
-        bool isPrivate = true,
+        string contentType = null,
+        string fileDescription = null)
+    {
+        return Create(
+            formFile,
+            prefixDirectoryPath,
+            rootDirectory: IPlatformFileStorageService.GetDefaultRootDirectoryName(isPrivate: true),
+            publicAccessType: IPlatformFileStorageService.GetDefaultPublicAccessType(isPrivate: true),
+            fileName,
+            contentType,
+            fileDescription);
+    }
+
+    public static PlatformFileStorageUploader Create(
+        IPlatformFile platformFileInfo,
+        [NotNull] string prefixDirectoryPath,
+        [NotNull] string rootDirectory,
+        PlatformFileStorageOptions.PublicAccessTypes publicAccessType,
+        string fileName = null,
         string contentType = null,
         string fileDescription = null)
     {
         return new PlatformFileStorageUploader
         {
-            Stream = formFile.OpenReadStream(),
-            RootDirectory = IPlatformFileStorageService.GetDefaultRootDirectoryName(isPrivate),
+            Stream = platformFileInfo.OpenReadStream(),
+            RootDirectory = rootDirectory,
             PrefixDirectoryPath = prefixDirectoryPath,
-            FileName = fileName ?? formFile.FileName,
+            FileName = fileName ?? platformFileInfo.GetFileName(),
             ContentType = contentType,
-            FileDescription = fileDescription
+            FileDescription = fileDescription,
+            PublicAccessType = publicAccessType
         };
+    }
+
+    public static PlatformFileStorageUploader Create(
+        IPlatformFile platformFileInfo,
+        [NotNull] string prefixDirectoryPath,
+        string fileName = null,
+        string contentType = null,
+        string fileDescription = null)
+    {
+        return Create(
+            platformFileInfo,
+            prefixDirectoryPath,
+            rootDirectory: IPlatformFileStorageService.GetDefaultRootDirectoryName(isPrivate: true),
+            publicAccessType: IPlatformFileStorageService.GetDefaultPublicAccessType(isPrivate: true),
+            fileName,
+            contentType,
+            fileDescription);
     }
 
     /// <summary>

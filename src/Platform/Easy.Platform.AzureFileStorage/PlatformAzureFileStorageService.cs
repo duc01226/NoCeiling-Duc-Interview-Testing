@@ -37,8 +37,9 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
         return UploadAsync(
             fileStorageUploader.Stream,
             fileStorageUploader.RootDirectory,
-            $"{fileStorageUploader.PrefixDirectoryPath}/{fileStorageUploader.FileName}",
-            fileStorageUploader.GetContentType(),
+            $"{fileStorageUploader.PrefixDirectoryPath.TrimEnd('/')}/{fileStorageUploader.FileName}",
+            fileStorageUploader.PublicAccessType,
+            fileStorageUploader.ContentType,
             fileStorageUploader.FileDescription,
             cancellationToken);
     }
@@ -47,13 +48,14 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
         Stream contentStream,
         string rootDirectory,
         string filePath,
+        PlatformFileStorageOptions.PublicAccessTypes? publicAccessType = null,
         string mimeContentType = null,
         string fileDescription = null,
         CancellationToken cancellationToken = default)
     {
         var pureFilePath = filePath.RemoveSpecialCharactersUri();
 
-        var blobClient = GetBlobClient(rootDirectory, pureFilePath);
+        var blobClient = GetBlobClient(rootDirectory, pureFilePath, publicAccessType);
         var blobHttpHeaders = new BlobHttpHeaders
         {
             ContentType = mimeContentType ?? PlatformFileMimeTypeMapper.Instance.GetMimeType(pureFilePath)
@@ -101,9 +103,26 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
         }
     }
 
+    public Task<IPlatformFileStorageFileItem> UploadAsync(
+        IFormFile formFile,
+        string prefixDirectoryPath,
+        bool isPrivate = true,
+        string fileDescription = null,
+        CancellationToken cancellationToken = default)
+    {
+        var fileUploader = PlatformFileStorageUploader.Create(
+            formFile,
+            prefixDirectoryPath,
+            rootDirectory: IPlatformFileStorageService.GetDefaultRootDirectoryName(isPrivate),
+            publicAccessType: IPlatformFileStorageService.GetDefaultPublicAccessType(isPrivate),
+            fileDescription: fileDescription);
+
+        return UploadAsync(fileUploader, cancellationToken);
+    }
+
     public async Task<bool> ExistsAsync(string rootDirectory, string filePath)
     {
-        var containerClient = GetAzureBlobContainerClient(rootDirectory);
+        var containerClient = GetAzureBlobContainerClient(rootDirectory, null);
 
         var pureFilePath = filePath.RemoveSpecialCharactersUri();
         var blobClient = containerClient.GetBlobClient(pureFilePath);
@@ -134,7 +153,7 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
 
     public async Task<Stream> GetStreamAsync(string rootDirectory, string filePath, CancellationToken cancellationToken = default)
     {
-        var containerClient = GetAzureBlobContainerClient(rootDirectory);
+        var containerClient = GetAzureBlobContainerClient(rootDirectory, null);
 
         var pureFilePath = filePath.RemoveSpecialCharactersUri();
         var blobClient = containerClient.GetBlobClient(pureFilePath);
@@ -212,9 +231,11 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
         return blobServiceClient.Uri.AbsoluteUri;
     }
 
-    public IPlatformFileStorageDirectory GetDirectory(string rootDirectory, string directoryPath)
+    public IPlatformFileStorageDirectory GetDirectory(
+        string rootDirectory,
+        string directoryPath)
     {
-        return new PlatformAzureFileStorageDirectory(GetAzureBlobContainerClient(rootDirectory), directoryPath);
+        return new PlatformAzureFileStorageDirectory(GetAzureBlobContainerClient(rootDirectory, null), directoryPath);
     }
 
     public IPlatformFileStorageFileItem GetFileItem(string rootDirectory, string filePath)
@@ -235,23 +256,10 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
         };
     }
 
-    public Task<IPlatformFileStorageFileItem> UploadAsync(
-        IFormFile formFile,
-        string prefixDirectoryPath,
-        bool isPrivate = true,
-        string fileDescription = null,
-        CancellationToken cancellationToken = default)
-    {
-        var fileUploader = PlatformFileStorageUploader.Create(
-            formFile,
-            prefixDirectoryPath,
-            isPrivate: isPrivate,
-            fileDescription: fileDescription);
-
-        return UploadAsync(fileUploader, cancellationToken);
-    }
-
-    public async Task UpdateFileDescriptionAsync(string rootDirectory, string filePath, string fileDescription)
+    public async Task UpdateFileDescriptionAsync(
+        string rootDirectory,
+        string filePath,
+        string fileDescription)
     {
         var blobClient = GetBlobClient(rootDirectory, filePath);
 
@@ -276,6 +284,17 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
 
             throw new Exception(errContent);
         }
+    }
+
+    public static PublicAccessType MapToAzurePublicAccessType(PlatformFileStorageOptions.PublicAccessTypes filePublicAccessType)
+    {
+        return filePublicAccessType switch
+        {
+            PlatformFileStorageOptions.PublicAccessTypes.None => PublicAccessType.None,
+            PlatformFileStorageOptions.PublicAccessTypes.Container => PublicAccessType.BlobContainer,
+            PlatformFileStorageOptions.PublicAccessTypes.File => PublicAccessType.Blob,
+            _ => PublicAccessType.None
+        };
     }
 
     /// <summary>
@@ -307,9 +326,9 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
         return response.Value;
     }
 
-    private BlobClient GetBlobClient(PlatformAzureBlobPathInfo blobInfo)
+    private BlobClient GetBlobClient(PlatformAzureBlobPathInfo blobInfo, PlatformFileStorageOptions.PublicAccessTypes? publicAccessType)
     {
-        var blobContainerClient = GetAzureBlobContainerClient(blobInfo.ContainerName);
+        var blobContainerClient = GetAzureBlobContainerClient(blobInfo.ContainerName, publicAccessType);
 
         var blobClient = blobContainerClient.GetBlobClient(blobInfo.BlobName);
 
@@ -318,43 +337,35 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
 
     private BlobClient GetBlobClient(string fullFilePath)
     {
-        return GetBlobClient(PlatformAzureBlobPathInfo.Create(fullFilePath));
+        var fileBlobPathInfo = PlatformAzureBlobPathInfo.Create(fullFilePath);
+
+        return GetBlobClient(fileBlobPathInfo, null);
     }
 
-    private BlobClient GetBlobClient(string rootDirectory, string filePath)
+    private BlobClient GetBlobClient(string rootDirectory, string filePath, PlatformFileStorageOptions.PublicAccessTypes? publicAccessType = null)
     {
-        return GetBlobClient(PlatformAzureBlobPathInfo.Create(rootDirectory, filePath));
+        return GetBlobClient(PlatformAzureBlobPathInfo.Create(rootDirectory, filePath), publicAccessType);
     }
 
-    private BlobContainerClient GetAzureBlobContainerClient(string containerName)
+    private BlobContainerClient GetAzureBlobContainerClient(
+        string containerName,
+        PlatformFileStorageOptions.PublicAccessTypes? publicAccessType)
     {
         var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
-        var publicAccessType = GetContainerPublicAccessType(containerName);
+        var azurePublicAccessType = GetAzureContainerPublicAccessType(containerName, publicAccessType);
 
-        containerClient.CreateIfNotExistsAsync(publicAccessType);
+        containerClient.CreateIfNotExistsAsync(azurePublicAccessType);
 
         return containerClient;
     }
 
-    private PublicAccessType GetContainerPublicAccessType(string containerName)
+    private PublicAccessType GetAzureContainerPublicAccessType(string containerName, PlatformFileStorageOptions.PublicAccessTypes? filePublicAccessType)
     {
-        return containerName switch
-        {
-            IPlatformFileStorageService.DefaultPrivateRootDirectoryName => PublicAccessType.None,
-            IPlatformFileStorageService.DefaultPublicRootDirectoryName => PublicAccessType.BlobContainer,
-            _ => MapToAzurePublicAccessType(fileStorageOptions.DefaultFileAccessType)
-        };
-    }
+        if (filePublicAccessType != null) return MapToAzurePublicAccessType(filePublicAccessType.Value);
 
-    private PublicAccessType MapToAzurePublicAccessType(PlatformFileStorageOptions.PublicAccessTypes fileAccessType)
-    {
-        return fileAccessType switch
-        {
-            PlatformFileStorageOptions.PublicAccessTypes.None => PublicAccessType.None,
-            PlatformFileStorageOptions.PublicAccessTypes.Container => PublicAccessType.BlobContainer,
-            PlatformFileStorageOptions.PublicAccessTypes.File => PublicAccessType.Blob,
-            _ => PublicAccessType.None
-        };
+        return MapToAzurePublicAccessType(
+            IPlatformFileStorageService.GetDefaultRootDirectoryPublicAccessType(containerName) ??
+            fileStorageOptions.DefaultFileAccessType);
     }
 
     #region ValidateFileName

@@ -3,6 +3,7 @@ using System.IO;
 using Easy.Platform.Common.Validations;
 using Easy.Platform.Infrastructures.Abstract;
 using Microsoft.AspNetCore.Http;
+using static Easy.Platform.Infrastructures.FileStorage.PlatformFileStorageOptions;
 
 namespace Easy.Platform.Infrastructures.FileStorage;
 
@@ -16,6 +17,23 @@ public interface IPlatformFileStorageService : IPlatformInfrastructureService
         return isPrivate
             ? DefaultPrivateRootDirectoryName
             : DefaultPublicRootDirectoryName;
+    }
+
+    public static PublicAccessTypes GetDefaultPublicAccessType(bool isPrivate)
+    {
+        return isPrivate
+            ? PublicAccessTypes.None
+            : PublicAccessTypes.Container;
+    }
+
+    public static PublicAccessTypes? GetDefaultRootDirectoryPublicAccessType(string rootDirectoryName)
+    {
+        return rootDirectoryName switch
+        {
+            DefaultPrivateRootDirectoryName => PublicAccessTypes.None,
+            DefaultPublicRootDirectoryName => PublicAccessTypes.Container,
+            _ => null
+        };
     }
 
     /// <summary>
@@ -42,6 +60,7 @@ public interface IPlatformFileStorageService : IPlatformInfrastructureService
         Stream contentStream,
         [NotNull] string rootDirectory,
         [NotNull] string filePath,
+        PublicAccessTypes? publicAccessType = null,
         string mimeContentType = null,
         string fileDescription = null,
         CancellationToken cancellationToken = default);
