@@ -1,8 +1,10 @@
 using System.Net;
+using System.Text.Json;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Exceptions;
 using Easy.Platform.AspNetCore.Middleware.Abstracts;
 using Easy.Platform.Common.Exceptions;
+using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Domain.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -102,7 +104,9 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
 
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = errorResponse.StatusCode;
-        return context.Response.WriteAsync(errorResponse.AsJson(), context.RequestAborted);
+        return context.Response.WriteAsync(
+            PlatformJsonSerializer.Serialize(errorResponse, options => options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase),
+            context.RequestAborted);
     }
 
     protected void LogKnownRequestWarning(Exception exception, HttpContext context)

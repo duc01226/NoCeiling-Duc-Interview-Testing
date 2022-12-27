@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Cqrs.Queries;
 using Easy.Platform.Common.Cqrs.Queries;
+using Easy.Platform.Common.Dtos;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Persistence.Services;
 using PlatformExampleApp.TextSnippet.Application.EntityDtos;
@@ -11,7 +12,7 @@ using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
 namespace PlatformExampleApp.TextSnippet.Application.UseCaseQueries;
 
-public class SearchSnippetTextQuery : PlatformCqrsPagedResultQuery<SearchSnippetTextQueryResult, TextSnippetEntityDto>
+public class SearchSnippetTextQuery : PlatformCqrsPagedQuery<SearchSnippetTextQueryResult, TextSnippetEntityDto>
 {
     public string SearchText { get; set; }
     public Guid? SearchId { get; set; }
@@ -22,9 +23,7 @@ public class SearchSnippetTextQuery : PlatformCqrsPagedResultQuery<SearchSnippet
 
 public class SearchSnippetTextQueryResult : PlatformCqrsQueryPagedResult<TextSnippetEntityDto>
 {
-    public SearchSnippetTextQueryResult() { }
-
-    public SearchSnippetTextQueryResult(List<TextSnippetEntityDto> items, int totalCount, int? pageSize) : base(items, totalCount, pageSize)
+    public SearchSnippetTextQueryResult(List<TextSnippetEntityDto> items, long totalCount, IPlatformPagedRequest pagedRequest) : base(items, totalCount, pagedRequest)
     {
     }
 }
@@ -108,6 +107,6 @@ public class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicationHandler
         return new SearchSnippetTextQueryResult(
             pagedEntities.Select(p => new TextSnippetEntityDto(p)).ToList(),
             totalCount,
-            request.MaxResultCount);
+            request);
     }
 }

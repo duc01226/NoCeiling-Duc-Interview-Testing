@@ -45,16 +45,19 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         Logger = loggerFactory.CreateLogger(GetType());
     }
 
-    public IMongoCollection<PlatformInboxBusMessage> InboxBusMessageCollection => Database.GetCollection<PlatformInboxBusMessage>(GetCollectionName<PlatformInboxBusMessage>());
+    public IMongoCollection<PlatformInboxBusMessage> InboxBusMessageCollection =>
+        Database.GetCollection<PlatformInboxBusMessage>(GetCollectionName<PlatformInboxBusMessage>());
 
-    public IMongoCollection<PlatformOutboxBusMessage> OutboxBusMessageCollection => Database.GetCollection<PlatformOutboxBusMessage>(GetCollectionName<PlatformOutboxBusMessage>());
+    public IMongoCollection<PlatformOutboxBusMessage> OutboxBusMessageCollection =>
+        Database.GetCollection<PlatformOutboxBusMessage>(GetCollectionName<PlatformOutboxBusMessage>());
 
     public IMongoCollection<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryCollection =>
         Database.GetCollection<PlatformDataMigrationHistory>(ApplicationDataMigrationHistoryCollectionName);
 
     public virtual string ApplicationDataMigrationHistoryCollectionName => "ApplicationDataMigrationHistory";
 
-    public IMongoCollection<PlatformMongoMigrationHistory> MigrationHistoryCollection => Database.GetCollection<PlatformMongoMigrationHistory>(DataMigrationHistoryCollectionName);
+    public IMongoCollection<PlatformMongoMigrationHistory> MigrationHistoryCollection =>
+        Database.GetCollection<PlatformMongoMigrationHistory>(DataMigrationHistoryCollectionName);
 
     public virtual string DataMigrationHistoryCollectionName => "MigrationHistory";
 
@@ -84,6 +87,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         return source.FirstAsync(cancellationToken);
     }
 
+    public Task<int> CountAsync<TEntity>(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default) where TEntity : class, IEntity
+    {
+        return GetQuery<TEntity>().Where(predicate).CountAsync(cancellationToken);
+    }
+
     public Task<TResult> FirstOrDefaultAsync<TEntity, TResult>(Func<IQueryable<TEntity>, IQueryable<TResult>> queryBuilder, CancellationToken cancellationToken = default)
         where TEntity : class, IEntity
     {
@@ -93,6 +101,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     public Task<int> CountAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
     {
         return query.CountAsync(cancellationToken);
+    }
+
+    public Task<bool> AnyAsync<TEntity>(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default) where TEntity : class, IEntity
+    {
+        return GetQuery<TEntity>().Where(predicate).AnyAsync(cancellationToken);
     }
 
     public Task<bool> AnyAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)

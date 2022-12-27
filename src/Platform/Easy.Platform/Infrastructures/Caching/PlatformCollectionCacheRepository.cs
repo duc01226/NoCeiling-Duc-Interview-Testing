@@ -74,39 +74,37 @@ public interface IPlatformCollectionCacheRepository<TCollectionCacheKeyProvider>
         Func<Task<TData>> request,
         string requestKey = PlatformContextCacheKeyProvider.DefaultRequestKey,
         PlatformCacheEntryOptions cacheOptions = null,
-        CancellationToken token = default) where TData : new();
+        CancellationToken token = default);
 
     Task<TData> CacheRequestAsync<TData>(
         Func<Task<TData>> request,
         object[] requestKeyParts = null,
         PlatformCacheEntryOptions cacheOptions = null,
-        CancellationToken token = default) where TData : new();
+        CancellationToken token = default);
 
     Task<TData> CacheRequestUseConfigOptionsAsync<TConfigurationCacheOptions, TData>(
         Func<Task<TData>> request,
         object[] requestKeyParts = null,
         CancellationToken token = default)
-        where TData : new()
         where TConfigurationCacheOptions : PlatformConfigurationCacheEntryOptions;
 
     Task<TData> CacheRequestUseConfigOptionsAsync<TConfigurationCacheOptions, TData>(
         Func<Task<TData>> request,
         string requestKey,
         CancellationToken token = default)
-        where TData : new()
         where TConfigurationCacheOptions : PlatformConfigurationCacheEntryOptions;
 
     Task<TData> CacheRequestAsync<TData>(
         Func<Task<TData>> request,
         string requestKey,
         double? absoluteExpirationInSeconds,
-        CancellationToken token = default) where TData : new();
+        CancellationToken token = default);
 
     Task<TData> CacheRequestAsync<TData>(
         Func<Task<TData>> request,
         object[] requestKeyParts,
         double? absoluteExpirationInSeconds,
-        CancellationToken token = default) where TData : new();
+        CancellationToken token = default);
 }
 
 /// <summary>
@@ -292,7 +290,7 @@ public abstract class PlatformCollectionCacheRepository<TCollectionCacheKeyProvi
         Func<Task<TData>> request,
         string requestKey = PlatformContextCacheKeyProvider.DefaultRequestKey,
         PlatformCacheEntryOptions cacheOptions = null,
-        CancellationToken token = default) where TData : new()
+        CancellationToken token = default)
     {
         return await CacheRepository()
             .CacheRequestAsync(
@@ -306,20 +304,20 @@ public abstract class PlatformCollectionCacheRepository<TCollectionCacheKeyProvi
         Func<Task<TData>> request,
         object[] requestKeyParts = null,
         PlatformCacheEntryOptions cacheOptions = null,
-        CancellationToken token = default) where TData : new()
+        CancellationToken token = default)
     {
-        return await CacheRepository().CacheRequestAsync(
-            request,
-            CollectionCacheKeyProvider.GetKey(requestKeyParts),
-            cacheOptions,
-            token);
+        return await CacheRepository()
+            .CacheRequestAsync(
+                request,
+                CollectionCacheKeyProvider.GetKey(requestKeyParts),
+                cacheOptions,
+                token);
     }
 
     public Task<TData> CacheRequestUseConfigOptionsAsync<TConfigurationCacheOptions, TData>(
         Func<Task<TData>> request,
         object[] requestKeyParts = null,
         CancellationToken token = default)
-        where TData : new()
         where TConfigurationCacheOptions : PlatformConfigurationCacheEntryOptions
     {
         return CacheRequestAsync(
@@ -333,7 +331,6 @@ public abstract class PlatformCollectionCacheRepository<TCollectionCacheKeyProvi
         Func<Task<TData>> request,
         string requestKey,
         CancellationToken token = default)
-        where TData : new()
         where TConfigurationCacheOptions : PlatformConfigurationCacheEntryOptions
     {
         return CacheRequestAsync(
@@ -347,7 +344,7 @@ public abstract class PlatformCollectionCacheRepository<TCollectionCacheKeyProvi
         Func<Task<TData>> request,
         string requestKey,
         double? absoluteExpirationInSeconds,
-        CancellationToken token = default) where TData : new()
+        CancellationToken token = default)
     {
         var defaultCacheOptions = CacheRepository()
             .GetDefaultCacheEntryOptions()
@@ -364,7 +361,7 @@ public abstract class PlatformCollectionCacheRepository<TCollectionCacheKeyProvi
         Func<Task<TData>> request,
         object[] requestKeyParts,
         double? absoluteExpirationInSeconds,
-        CancellationToken token = default) where TData : new()
+        CancellationToken token = default)
     {
         var defaultCacheOptions = CacheRepository()
             .GetDefaultCacheEntryOptions()

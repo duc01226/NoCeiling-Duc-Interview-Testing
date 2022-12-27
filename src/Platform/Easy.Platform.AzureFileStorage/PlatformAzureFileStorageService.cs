@@ -108,6 +108,7 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
         string prefixDirectoryPath,
         bool isPrivate = true,
         string fileDescription = null,
+        string fileName = null,
         CancellationToken cancellationToken = default)
     {
         var fileUploader = PlatformFileStorageUploader.Create(
@@ -115,7 +116,8 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
             prefixDirectoryPath,
             rootDirectory: IPlatformFileStorageService.GetDefaultRootDirectoryName(isPrivate),
             publicAccessType: IPlatformFileStorageService.GetDefaultPublicAccessType(isPrivate),
-            fileDescription: fileDescription);
+            fileDescription: fileDescription,
+            fileName: fileName);
 
         return UploadAsync(fileUploader, cancellationToken);
     }

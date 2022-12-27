@@ -1,5 +1,4 @@
 using Easy.Platform.Common.Dtos;
-using Easy.Platform.Common.Validations;
 using MediatR;
 
 namespace Easy.Platform.Common.Cqrs.Queries;
@@ -16,8 +15,7 @@ public abstract class PlatformCqrsQuery<TResult> : PlatformCqrsRequest, IPlatfor
 {
 }
 
-public abstract class PlatformCqrsPagedResultQuery<TResult, TItem>
-    : PlatformCqrsQuery<TResult>, IPlatformPagedRequest<PlatformCqrsPagedResultQuery<TResult, TItem>>
+public abstract class PlatformCqrsPagedQuery<TResult, TItem> : PlatformCqrsQuery<TResult>, IPlatformPagedRequest
     where TResult : PlatformCqrsQueryPagedResult<TItem>
 {
     public virtual int? SkipCount { get; set; }
@@ -26,10 +24,5 @@ public abstract class PlatformCqrsPagedResultQuery<TResult, TItem>
     public bool IsPagedRequestValid()
     {
         return (SkipCount == null || SkipCount >= 0) && (MaxResultCount == null || MaxResultCount >= 0);
-    }
-
-    public new PlatformValidationResult<PlatformCqrsPagedResultQuery<TResult, TItem>> Validate()
-    {
-        return PlatformValidationResult<PlatformCqrsPagedResultQuery<TResult, TItem>>.Valid(this);
     }
 }

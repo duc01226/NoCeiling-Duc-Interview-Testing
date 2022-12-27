@@ -121,6 +121,11 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         return source.FirstAsync(cancellationToken);
     }
 
+    public Task<int> CountAsync<TEntity>(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default) where TEntity : class, IEntity
+    {
+        return GetQuery<TEntity>().Where(predicate).CountAsync(cancellationToken);
+    }
+
     public Task<TResult> FirstOrDefaultAsync<TEntity, TResult>(Func<IQueryable<TEntity>, IQueryable<TResult>> queryBuilder, CancellationToken cancellationToken = default)
         where TEntity : class, IEntity
     {
@@ -130,6 +135,11 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     public Task<int> CountAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
     {
         return query.CountAsync(cancellationToken);
+    }
+
+    public Task<bool> AnyAsync<TEntity>(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default) where TEntity : class, IEntity
+    {
+        return GetQuery<TEntity>().Where(predicate).AnyAsync(cancellationToken);
     }
 
     public Task<bool> AnyAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)

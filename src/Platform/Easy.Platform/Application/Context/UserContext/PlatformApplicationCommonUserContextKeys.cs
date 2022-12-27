@@ -55,7 +55,7 @@ public static class PlatformApplicationCommonUserContextKeys
         var userMiddleNamePart = ((context.UserMiddleName() ?? string.Empty) + " ").Trim();
         var userLastNamePart = context.UserLastName() ?? string.Empty;
 
-        return $"{userFirstNamePart}{userMiddleNamePart}{userLastNamePart}";
+        return $"{userFirstNamePart} {userMiddleNamePart} {userLastNamePart}";
     }
 
     public static string UserFirstName(this IPlatformApplicationUserContext context)

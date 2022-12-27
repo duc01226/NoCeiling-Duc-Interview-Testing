@@ -99,7 +99,7 @@ public interface IPlatformCacheRepository
         Func<Task<TData>> request,
         PlatformCacheKey cacheKey,
         PlatformCacheEntryOptions cacheOptions = null,
-        CancellationToken token = default) where TData : new();
+        CancellationToken token = default);
 
     /// <summary>
     /// Return cache from request function if exist. If not, call request function to get data, cache the data and return it.
@@ -112,7 +112,7 @@ public interface IPlatformCacheRepository
         Func<Task<TData>> request,
         PlatformCacheKey cacheKey,
         double? absoluteExpirationInSeconds = null,
-        CancellationToken token = default) where TData : new();
+        CancellationToken token = default);
 
     /// <summary>
     /// Return default cache entry options value. This could be config when register module, override <see cref="PlatformCachingModule.DefaultPlatformCacheEntryOptions" />
@@ -189,7 +189,7 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
         Func<Task<TData>> request,
         PlatformCacheKey cacheKey,
         PlatformCacheEntryOptions cacheOptions = null,
-        CancellationToken token = default) where TData : new()
+        CancellationToken token = default)
     {
         var cachedData = GlobalAllRequestCachedKeys.Value.ContainsKey(cacheKey)
             ? await GetAsync<TData>(cacheKey, token)
@@ -215,7 +215,7 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
         Func<Task<TData>> request,
         PlatformCacheKey cacheKey,
         double? absoluteExpirationInSeconds = null,
-        CancellationToken token = default) where TData : new()
+        CancellationToken token = default)
     {
         return await CacheRequestAsync(
             request,
@@ -242,7 +242,8 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
     {
         try
         {
-            return GetAsync<List<PlatformCacheKey>>(GetGlobalAllRequestCachedKeysCacheKey()).Result?
+            return GetAsync<List<PlatformCacheKey>>(GetGlobalAllRequestCachedKeysCacheKey())
+                       .Result?
                        .Select(p => new KeyValuePair<PlatformCacheKey, object>(p, null))
                        .Pipe(_ => new ConcurrentDictionary<PlatformCacheKey, object>(_)) ??
                    new ConcurrentDictionary<PlatformCacheKey, object>();

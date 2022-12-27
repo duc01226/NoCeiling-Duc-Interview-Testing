@@ -44,6 +44,7 @@ public interface IPlatformFileStorageService : IPlatformInfrastructureService
         [NotNull] string prefixDirectoryPath,
         bool isPrivate,
         string fileDescription = null,
+        string fileName = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

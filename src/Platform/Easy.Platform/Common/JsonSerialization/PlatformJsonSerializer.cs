@@ -24,17 +24,6 @@ public static class PlatformJsonSerializer
         CurrentOptions = new Lazy<JsonSerializerOptions>(() => serializerOptions);
     }
 
-    public static JsonSerializerOptions ApplyPlatformCurrentOptions(JsonSerializerOptions options)
-    {
-        options.DefaultIgnoreCondition = CurrentOptions.Value.DefaultIgnoreCondition;
-        options.PropertyNamingPolicy = CurrentOptions.Value.PropertyNamingPolicy;
-
-        options.Converters.Clear();
-        CurrentOptions.Value.Converters.ForEach(options.Converters.Add);
-
-        return options;
-    }
-
     /// <summary>
     /// Config JsonSerializerOptions with some platform best practices options. <br />
     /// Support some customization
@@ -45,6 +34,7 @@ public static class PlatformJsonSerializer
         bool useCamelCaseNaming = false,
         List<JsonConverter> customConverters = null)
     {
+        options.TypeInfoResolver = new PlatformPrivateConstructorContractResolver();
         options.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
         options.ReadCommentHandling = JsonCommentHandling.Skip;
         options.PropertyNameCaseInsensitive = true;
@@ -59,6 +49,7 @@ public static class PlatformJsonSerializer
         options.Converters.Add(new PlatformClassTypeJsonConverter());
         options.Converters.Add(new PlatformIgnoreMethodBaseJsonConverter());
         options.Converters.Add(new PlatformNullableDateTimeJsonConverter());
+        options.Converters.Add(new PlatformFormattedStringToDateTimeJsonConverter());
         options.Converters.Add(new PlatformPrimitiveTypeToStringJsonConverter());
         customConverters?.ForEach(options.Converters.Add);
 
@@ -84,6 +75,14 @@ public static class PlatformJsonSerializer
             value,
             value?.GetType() ?? typeof(TValue),
             customSerializerOptions ?? CurrentOptions.Value);
+    }
+
+    public static string Serialize<TValue>(TValue value, Action<JsonSerializerOptions> customSerializerOptionsConfig)
+    {
+        return JsonSerializer.Serialize(
+            value,
+            value?.GetType() ?? typeof(TValue),
+            CurrentOptions.Value.Clone().With(customSerializerOptionsConfig));
     }
 
     public static string SerializeWithDefaultOptions<TValue>(

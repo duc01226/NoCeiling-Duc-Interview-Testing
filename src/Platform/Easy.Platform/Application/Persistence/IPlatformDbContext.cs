@@ -31,9 +31,17 @@ public interface IPlatformDbContext : IDisposable
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default);
 
+    public Task<int> CountAsync<TEntity>(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity;
+
     public Task<int> CountAsync<TSource>(
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default);
+
+    public Task<bool> AnyAsync<TEntity>(
+        Expression<Func<TEntity, bool>> predicate,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity;
 
     public Task<bool> AnyAsync<TSource>(
         IQueryable<TSource> source,
@@ -137,4 +145,3 @@ public interface IPlatformDbContext : IDisposable
             cancellationToken);
     }
 }
-
