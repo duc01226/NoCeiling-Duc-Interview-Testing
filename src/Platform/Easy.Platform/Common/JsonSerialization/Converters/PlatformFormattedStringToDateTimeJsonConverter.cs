@@ -1,5 +1,6 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using Easy.Platform.Common.Extensions;
 
 namespace Easy.Platform.Common.JsonSerialization.Converters;
 
@@ -7,13 +8,9 @@ public class PlatformFormattedStringToDateTimeJsonConverter : JsonConverter<Date
 {
     public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        var type = reader.TokenType;
-
         var strValue = reader.GetString();
 
-        var parsedResult = DateTime.TryParse(strValue, out var parsedDate);
-
-        return parsedDate;
+        return strValue.IsNullOrEmpty() ? default : DateTime.Parse(strValue!);
     }
 
     public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
