@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -9,6 +10,7 @@ using Easy.Platform.Common.Timing;
 using Easy.Platform.Infrastructures.MessageBus;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry.Context.Propagation;
 using Polly;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -26,6 +28,8 @@ public sealed class PlatformRabbitMqProcessInitializerService
     public const int CheckToRestartProcessDelaySeconds = 6;
     public const int AckMessageRetryCount = CheckToRestartProcessMaxFailedCounter * 3;
     public const int AckMessageRetryDelaySeconds = 6;
+    public static readonly ActivitySource ActivitySource = new(nameof(PlatformRabbitMqProcessInitializerService));
+    public static readonly TextMapPropagator TracingActivityPropagator = Propagators.DefaultTextMapPropagator;
 
     private readonly IPlatformApplicationSettingContext applicationSettingContext;
     private readonly object checkToRestartProcessRunningLock = new();
@@ -260,12 +264,23 @@ public sealed class PlatformRabbitMqProcessInitializerService
                     {
                         if (cancellationToken.IsCancellationRequested) return;
 
-                        using (var scope = serviceProvider.CreateScope())
-                        {
-                            var consumer = scope.ServiceProvider.GetService(consumerType).Cast<IPlatformMessageBusConsumer>();
+                        var parentContext = TracingActivityPropagator.Extract(
+                            default,
+                            rabbitMqMessage.BasicProperties,
+                            ExtractTraceContextFromBasicProperties);
 
-                            if (consumer != null)
-                                await ExecuteConsumer(rabbitMqMessage, consumer);
+                        using (var activity = ActivitySource.StartActivity(
+                            nameof(ExecuteConsumer),
+                            ActivityKind.Consumer,
+                            parentContext.ActivityContext))
+                        {
+                            using (var scope = serviceProvider.CreateScope())
+                            {
+                                var consumer = scope.ServiceProvider.GetService(consumerType).Cast<IPlatformMessageBusConsumer>();
+
+                                if (consumer != null)
+                                    await ExecuteConsumer(rabbitMqMessage, consumer, activity);
+                            }
                         }
                     })
                 .WhenAll();
@@ -433,7 +448,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
     /// <summary>
     /// Return Exception if failed to execute consumer
     /// </summary>
-    private async Task ExecuteConsumer(BasicDeliverEventArgs args, IPlatformMessageBusConsumer consumer)
+    private async Task ExecuteConsumer(BasicDeliverEventArgs args, IPlatformMessageBusConsumer consumer, Activity traceActivity = null)
     {
         // Get a generic type: PlatformMessageBusMessage<TMessage> where TMessage = TMessagePayload
         // of IPlatformMessageBusConsumer<TMessagePayload>
@@ -449,6 +464,10 @@ public sealed class PlatformRabbitMqProcessInitializerService
                 $"RabbitMQ parsing message to {consumerMessageType.Name} error for the routing key {args.RoutingKey}.{Environment.NewLine} Body: {Encoding.UTF8.GetString(args.Body.Span)}"));
 
         if (busMessage != null)
+        {
+            traceActivity?.SetTag("consumer", consumer.GetType().Name);
+            traceActivity?.SetTag("message", busMessage.AsJson());
+
             await PlatformMessageBusConsumer.InvokeConsumerAsync(
                 consumer,
                 busMessage,
@@ -457,6 +476,26 @@ public sealed class PlatformRabbitMqProcessInitializerService
                 options.LogErrorSlowProcessWarningTimeMilliseconds,
                 Logger,
                 currentCancellationToken);
+        }
+    }
+
+    private IEnumerable<string> ExtractTraceContextFromBasicProperties(IBasicProperties props, string key)
+    {
+        try
+        {
+            if (props.Headers != null && props.Headers.ContainsKey(key))
+            {
+                props.Headers.TryGetValue(key, out var value);
+
+                return new[] { Encoding.UTF8.GetString(value.As<byte[]>() ?? Array.Empty<byte>()) };
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to extract trace context");
+        }
+
+        return Enumerable.Empty<string>();
     }
 
     private IModel InitRabbitMqChannel()

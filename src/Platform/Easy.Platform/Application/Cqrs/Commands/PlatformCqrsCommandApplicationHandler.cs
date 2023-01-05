@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Reflection.Metadata;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Exceptions;
 using Easy.Platform.Common.Cqrs;
@@ -12,6 +14,11 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.Cqrs.Commands;
+
+public interface IPlatformCqrsCommandApplicationHandler
+{
+    public static readonly ActivitySource ActivitySource = new($"{nameof(Handle)}{nameof(IPlatformCqrsCommand)}");
+}
 
 public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> : PlatformCqrsRequestApplicationHandler<TCommand>, IRequestHandler<TCommand, TResult>
     where TCommand : PlatformCqrsCommand<TResult>, IPlatformCqrsRequest, new()
@@ -31,33 +38,39 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
 
     public virtual async Task<TResult> Handle(TCommand request, CancellationToken cancellationToken)
     {
-        var validRequest = (TCommand)PopulateAuditInfo(request)
-            .Validate()
-            .EnsureValidationValid();
+        using (var activity = IPlatformCqrsCommandApplicationHandler.ActivitySource.StartActivity($"{nameof(IPlatformCqrsCommandApplicationHandler)}.{nameof(Handle)}"))
+        {
+            activity?.SetTag("RequestType", request.GetType().Name);
+            activity?.SetTag("Request", request.AsJson());
 
-        var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
-            () => ExecuteHandleAsync(validRequest, cancellationToken),
-            onException: ex =>
-            {
-                if (ex is PlatformPermissionException ||
-                    ex is PlatformNotFoundException ||
-                    ex is PlatformApplicationException ||
-                    ex is PlatformDomainException)
-                    PlatformApplicationGlobal.LoggerFactory.CreateLogger(GetType())
-                        .LogWarning(
-                            ex,
-                            "[{Tag1}] Command has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. UserContext:{UserContext}",
-                            "LogicErrorWarning",
-                            request.AuditTrackId,
-                            request.AsJson(),
-                            CurrentUser.GetAllKeyValues().AsJson());
-            });
+            var validRequest = (TCommand)PopulateAuditInfo(request)
+                .Validate()
+                .EnsureValidationValid();
 
-        await Cqrs.SendEvent(
-            new PlatformCqrsCommandEvent<TCommand>(validRequest, PlatformCqrsCommandEventAction.Executed),
-            cancellationToken);
+            var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
+                () => ExecuteHandleAsync(validRequest, cancellationToken),
+                onException: ex =>
+                {
+                    if (ex is PlatformPermissionException ||
+                        ex is PlatformNotFoundException ||
+                        ex is PlatformApplicationException ||
+                        ex is PlatformDomainException)
+                        PlatformApplicationGlobal.LoggerFactory.CreateLogger(GetType())
+                            .LogWarning(
+                                ex,
+                                "[{Tag1}] Command has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. UserContext:{UserContext}",
+                                "LogicErrorWarning",
+                                request.AuditTrackId,
+                                request.AsJson(),
+                                CurrentUser.GetAllKeyValues().AsJson());
+                });
 
-        return result;
+            await Cqrs.SendEvent(
+                new PlatformCqrsCommandEvent<TCommand>(validRequest, PlatformCqrsCommandEventAction.Executed),
+                cancellationToken);
+
+            return result;
+        }
     }
 
     protected abstract Task<TResult> HandleAsync(TCommand request, CancellationToken cancellationToken);

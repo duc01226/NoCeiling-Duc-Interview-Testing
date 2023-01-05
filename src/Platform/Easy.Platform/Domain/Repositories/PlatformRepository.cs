@@ -84,7 +84,9 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryToResultBuilder(uow, query));
     }
 
-    public async Task<TResult> GetAsync<TResult>(Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> queryToResultBuilder, CancellationToken cancellationToken = default)
+    public async Task<TResult> GetAsync<TResult>(
+        Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> queryToResultBuilder,
+        CancellationToken cancellationToken = default)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryToResultBuilder(uow, query));
     }
@@ -245,8 +247,8 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
             {
                 await executeAsync(GetQuery(uow));
             }
-
-        await executeAsync(GetQuery(UnitOfWorkManager.CurrentActiveUow()));
+        else
+            await executeAsync(GetQuery(UnitOfWorkManager.CurrentActiveUow()));
     }
 
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(
@@ -255,7 +257,12 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
             using (var uow = UnitOfWorkManager.CreateNewUow())
             {
-                return await readDataFn(uow, GetQuery(uow));
+                var result = await readDataFn(uow, GetQuery(uow));
+
+                if (result is IQueryable)
+                    throw new Exception("Do not allow to return out IQueryable. Please as Enumerable or ToList in the query builder");
+
+                return result;
             }
 
         return await readDataFn(
@@ -269,7 +276,12 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
             using (var uow = UnitOfWorkManager.CreateNewUow())
             {
-                return readDataFn(uow, GetQuery(uow));
+                var result = readDataFn(uow, GetQuery(uow));
+
+                if (result is IQueryable)
+                    throw new Exception("Do not allow to return out IQueryable. Please as Enumerable or ToList in the query builder");
+
+                return result;
             }
 
         return readDataFn(

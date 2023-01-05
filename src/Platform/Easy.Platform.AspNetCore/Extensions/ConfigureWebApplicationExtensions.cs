@@ -40,7 +40,7 @@ public static class ConfigureWebApplicationExtensions
         this IApplicationBuilder applicationBuilder,
         string specificCorPolicy = null)
     {
-        var defaultCorsPolicyName = applicationBuilder.ApplicationServices.GetService<IWebHostEnvironment>().IsDevelopment() || PlatformEnvironment.IsDevelopment
+        var defaultCorsPolicyName = applicationBuilder.ApplicationServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment() || PlatformEnvironment.IsDevelopment
             ? PlatformAspNetCoreModuleDefaultPolicies.DevelopmentCorsPolicy
             : PlatformAspNetCoreModuleDefaultPolicies.CorsPolicy;
         applicationBuilder.UseCors(specificCorPolicy ?? defaultCorsPolicyName);

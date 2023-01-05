@@ -10,6 +10,10 @@ using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 namespace Easy.Platform.Common;
 
@@ -36,6 +40,9 @@ public interface IPlatformModule
     public bool RegisterServicesExecuted { get; }
     public bool Initiated { get; }
 
+    public Action<TracerProviderBuilder> AdditionalTracingConfigure { get; }
+    public List<IPlatformModule> AllDependencyModules(IServiceCollection useServiceCollection);
+
     public static bool CheckIsRootModule(IPlatformModule module)
     {
         return !module.IsDependencyModule;
@@ -54,6 +61,8 @@ public interface IPlatformModule
     public void RegisterServices(IServiceCollection serviceCollection);
 
     public Task Init();
+
+    public string[] TracingSources();
 }
 
 /// <summary>
@@ -137,6 +146,7 @@ public abstract class PlatformModule : IPlatformModule
             RegisterDefaultLogs(serviceCollection);
             RegisterCqrs(serviceCollection);
             RegisterHelpers(serviceCollection);
+            RegisterDistributedTracing(serviceCollection);
             InternalRegister(serviceCollection);
 
             RegisterServicesExecuted = true;
@@ -171,6 +181,61 @@ public abstract class PlatformModule : IPlatformModule
         }
     }
 
+    public List<IPlatformModule> AllDependencyModules(IServiceCollection useServiceCollection = null)
+    {
+        return ModuleTypeDependencies()
+            .Select(
+                moduleTypeProvider =>
+                {
+                    var moduleType = moduleTypeProvider(Configuration);
+                    var serviceProvider = useServiceCollection?.BuildServiceProvider() ?? ServiceProvider;
+
+                    var dependModule = serviceProvider.GetService(moduleType)
+                        .As<IPlatformModule>()
+                        .Ensure(
+                            dependModule => dependModule != null,
+                            $"Module {GetType().Name} depend on {moduleType.Name} but Module {moduleType.Name} does not implement IPlatformModule");
+
+                    dependModule.IsDependencyModule = true;
+
+                    return dependModule;
+                })
+            .ToList();
+    }
+
+    public virtual string[] TracingSources() { return Array.Empty<string>(); }
+    public virtual Action<TracerProviderBuilder> AdditionalTracingConfigure => null;
+
+    protected void RegisterDistributedTracing(IServiceCollection serviceCollection)
+    {
+        if (IsRootModule)
+        {
+            var configOpenTelemetryTracing = ConfigDistributedTracing();
+            if (configOpenTelemetryTracing.Enabled)
+            {
+                var allDependencyModules = AllDependencyModules(serviceCollection);
+                var allDependencyModulesTracingSources = allDependencyModules.SelectMany(p => p.TracingSources());
+
+                serviceCollection.AddOpenTelemetry()
+                    .WithTracing(
+                        builder => builder
+                            .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(configOpenTelemetryTracing.AppName ?? GetType().Assembly.GetName().Name!))
+                            .AddConsoleExporter()
+                            .AddSource(TracingSources().Concat(allDependencyModulesTracingSources).ToArray())
+                            .WithIf(AdditionalTracingConfigure != null, AdditionalTracingConfigure)
+                            .WithIf(configOpenTelemetryTracing.AdditionalTraceConfig != null, configOpenTelemetryTracing.AdditionalTraceConfig)
+                            .WithIf(configOpenTelemetryTracing.AddOtlpExporterConfig != null, _ => _.AddOtlpExporter(configOpenTelemetryTracing.AddOtlpExporterConfig))
+                            .WithIf(
+                                allDependencyModules.Any(),
+                                _ => allDependencyModules
+                                    .Where(dependencyModule => dependencyModule.AdditionalTracingConfigure != null)
+                                    .Select(dependencyModule => dependencyModule.AdditionalTracingConfigure)
+                                    .ForEach(dependencyModuleAdditionalTracingConfigure => dependencyModuleAdditionalTracingConfigure(_))))
+                    .StartWithHost();
+            }
+        }
+    }
+
     protected static void ExecuteRegisterByAssemblyOnlyOnce(Action<Assembly> action, Assembly assembly, string actionName)
     {
         var executedRegisterByAssemblyKey = $"Action:{ExecutedRegisterByAssemblies.ContainsKey(actionName)};Assembly:{assembly.FullName}";
@@ -183,7 +248,9 @@ public abstract class PlatformModule : IPlatformModule
         }
     }
 
-    protected virtual void InternalRegister(IServiceCollection serviceCollection) { }
+    protected virtual void InternalRegister(IServiceCollection serviceCollection)
+    {
+    }
 
     protected virtual Task InternalInit(IServiceScope serviceScope)
     {
@@ -213,22 +280,7 @@ public abstract class PlatformModule : IPlatformModule
 
     protected async Task InitAllModuleDependencies()
     {
-        await ModuleTypeDependencies()
-            .Select(
-                moduleTypeProvider =>
-                {
-                    var moduleType = moduleTypeProvider(Configuration);
-
-                    var dependModule = ServiceProvider.GetService(moduleType)
-                        .As<IPlatformModule>()
-                        .Ensure(
-                            dependModule => dependModule != null,
-                            $"Module {GetType().Name} depend on {moduleType.Name} but Module {moduleType.Name} does not implement IPlatformModule");
-
-                    dependModule.IsDependencyModule = true;
-
-                    return dependModule;
-                })
+        await AllDependencyModules()
             .GroupBy(p => p.ExecuteInitPriority)
             .OrderByDescending(p => p.Key)
             .ForEachAsync(p => p.ToList().Select(module => module.Init()).WhenAll());
@@ -237,6 +289,11 @@ public abstract class PlatformModule : IPlatformModule
     protected virtual void RegisterHelpers(IServiceCollection serviceCollection)
     {
         serviceCollection.RegisterAllFromType<IPlatformHelper>(Assembly);
+    }
+
+    protected virtual DistributedTracingConfig ConfigDistributedTracing()
+    {
+        return new DistributedTracingConfig();
     }
 
     private void RegisterDefaultLogs(IServiceCollection serviceCollection)
@@ -264,5 +321,13 @@ public abstract class PlatformModule : IPlatformModule
         ModuleTypeDependencies()
             .Select(moduleTypeProvider => moduleTypeProvider(Configuration))
             .ForEach(moduleType => serviceCollection.RegisterModule(moduleType));
+    }
+
+    public class DistributedTracingConfig
+    {
+        public bool Enabled { get; set; }
+        public Action<TracerProviderBuilder> AdditionalTraceConfig { get; set; }
+        public Action<OtlpExporterOptions> AddOtlpExporterConfig { get; set; }
+        public string AppName { get; set; }
     }
 }

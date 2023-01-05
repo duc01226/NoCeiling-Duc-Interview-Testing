@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Extensions.DiagnosticSources;
 
 namespace Easy.Platform.MongoDB;
 
@@ -17,7 +18,11 @@ public class PlatformMongoClient : IPlatformMongoClient
 {
     public PlatformMongoClient(IOptions<PlatformMongoOptions> options)
     {
-        MongoClient = new MongoClient(options.Value.ConnectionString);
+        var clientSettings = MongoClientSettings.FromUrl(MongoUrl.Create(options.Value.ConnectionString));
+        clientSettings.ClusterConfigurator = cb => cb.Subscribe(
+            new DiagnosticsActivityEventSubscriber(new InstrumentationOptions { CaptureCommandText = true }));
+
+        MongoClient = new MongoClient(clientSettings);
     }
 
     public MongoClient MongoClient { get; set; }

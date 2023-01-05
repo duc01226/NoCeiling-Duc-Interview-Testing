@@ -331,13 +331,30 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Auto apply configuration by convention for the current dbcontext (usually persistence layer) assembly.
-        modelBuilder.ApplyConfigurationsFromAssembly(GetType().Assembly);
+        var applyForLimitedEntityTypes = ApplyForLimitedEntityTypes();
+        modelBuilder.ApplyConfigurationsFromAssembly(
+            GetType().Assembly,
+            entityConfigType =>
+                applyForLimitedEntityTypes == null ||
+                applyForLimitedEntityTypes.Any(
+                    limitedEntityType =>
+                    {
+                        var limitedEntityTypeConfiguration = typeof(IEntityTypeConfiguration<>).GetGenericTypeDefinition().MakeGenericType(limitedEntityType);
+                        return entityConfigType.IsAssignableTo(limitedEntityTypeConfiguration);
+                    }));
+
         modelBuilder.ApplyConfiguration(new PlatformDataMigrationHistoryEntityConfiguration());
         modelBuilder.ApplyConfiguration(new PlatformInboxEventBusMessageEntityConfiguration());
         modelBuilder.ApplyConfiguration(new PlatformOutboxEventBusMessageEntityConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }
+
+    /// <summary>
+    /// Override this in case you have two db context in same project, you dont want it to scan and apply entity configuration conflicted with each others. <br/>
+    /// return Util.ListBuilder.New(typeof(Your Limited entity type for the db context to auto run entity configuration by scanning assembly));
+    /// </summary>
+    protected virtual List<Type> ApplyForLimitedEntityTypes() { return null; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

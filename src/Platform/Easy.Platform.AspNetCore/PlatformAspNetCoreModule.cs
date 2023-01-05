@@ -10,6 +10,7 @@ using Easy.Platform.Persistence;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTelemetry.Trace;
 
 namespace Easy.Platform.AspNetCore;
 
@@ -21,6 +22,11 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
         configuration)
     {
     }
+
+    public override Action<TracerProviderBuilder> AdditionalTracingConfigure =>
+        builder => builder
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation();
 
     /// <summary>
     /// Default is True. Override this return to False if you need to seed data manually

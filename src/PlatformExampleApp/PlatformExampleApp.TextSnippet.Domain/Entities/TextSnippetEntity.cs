@@ -18,6 +18,8 @@ public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid
 
     public string FullText { get; set; }
 
+    public TimeOnly TimeOnly { get; set; } = TimeOnly.MaxValue;
+
     /// <summary>
     /// Demo ForeignKey for TextSnippetAssociatedEntity
     /// </summary>

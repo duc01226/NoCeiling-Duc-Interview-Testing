@@ -19,6 +19,10 @@ internal class TextSnippetEntityConfiguration : PlatformAuditedEntityConfigurati
             .IsRequired();
         builder.OwnsOne(p => p.Address);
         builder.Property(p => p.Addresses).HasJsonConversion();
+        builder.Property(p => p.TimeOnly)
+            .HasConversion(
+                v => v.ToString(),
+                v => TimeOnly.Parse(v));
         builder.Property(p => p.AddressStrings).HasJsonConversion();
 
         // Do this to fix the warning

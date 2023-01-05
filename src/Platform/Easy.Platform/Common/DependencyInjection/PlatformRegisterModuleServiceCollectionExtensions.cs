@@ -28,7 +28,7 @@ public static class PlatformRegisterModuleServiceCollectionExtensions
 
         var serviceProvider = services.BuildServiceProvider();
 
-        var newRegisterModule = (PlatformModule)serviceProvider.GetService(moduleType);
+        var newRegisterModule = (PlatformModule)serviceProvider.GetRequiredService(moduleType);
 
         newRegisterModule.RegisterServices(services);
 

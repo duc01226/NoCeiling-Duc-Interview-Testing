@@ -62,4 +62,14 @@ public class TextSnippetApiAspNetCoreModule : PlatformAspNetCoreModule
     {
         return PlatformJsonSerializer.BuildDefaultOptions(useCamelCaseNaming: true);
     }
+
+    // Apply DistributedTracingConfig OpenTelemetry
+    //protected override DistributedTracingConfig ConfigDistributedTracing()
+    //{
+    //    return new DistributedTracingConfig
+    //    {
+    //        Enabled = Configuration.GetSection("DistributedTracingConfig:Enabled").Get<bool>(),
+    //        AddOtlpExporterConfig = opt => { opt.Endpoint = new Uri(Configuration["DistributedTracingConfig:AddOtlpExporterConfig:Endpoint"]!); }
+    //    };
+    //}
 }

@@ -16,6 +16,7 @@ public class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, Guid>
         FullText = entity.FullText;
         Address = entity.Address != null ? ExampleAddressValueObjectDto.Create(entity.Address) : null;
         CreatedDate = entity.CreatedDate;
+        TimeOnly = entity.TimeOnly;
     }
 
     public Guid? Id { get; set; }
@@ -23,6 +24,8 @@ public class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, Guid>
     public string SnippetText { get; set; }
 
     public string FullText { get; set; }
+
+    public TimeOnly? TimeOnly { get; set; }
 
     public ExampleAddressValueObjectDto Address { get; set; }
 
@@ -45,6 +48,7 @@ public class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, Guid>
         toBeUpdatedEntity.SnippetText = SnippetText;
         toBeUpdatedEntity.FullText = FullText;
         toBeUpdatedEntity.Address = Address?.MapToObject();
+        toBeUpdatedEntity.TimeOnly = TimeOnly ?? default;
 
         return toBeUpdatedEntity;
     }

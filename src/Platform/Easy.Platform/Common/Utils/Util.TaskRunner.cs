@@ -251,16 +251,18 @@ public static partial class Util
         /// </summary>
         public static async Task ProfilingAsync(
             Func<Task> asyncTask,
-            Action<long> afterExecution = null,
+            Action<double> afterExecution = null,
             Action beforeExecution = null)
         {
             beforeExecution?.Invoke();
 
-            var stopwatch = Stopwatch.StartNew();
-            await asyncTask();
-            stopwatch.Stop();
+            var startTime = Stopwatch.GetTimestamp();
 
-            afterExecution?.Invoke(stopwatch.ElapsedMilliseconds);
+            await asyncTask();
+
+            var elapsedTime = Stopwatch.GetElapsedTime(startTime);
+
+            afterExecution?.Invoke(elapsedTime.TotalMilliseconds);
         }
 
         public static async Task WhenAll(params Task[] tasks)

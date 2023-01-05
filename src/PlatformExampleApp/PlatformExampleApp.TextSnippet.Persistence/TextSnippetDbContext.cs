@@ -28,4 +28,11 @@ public class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDbContext
             return new TextSnippetDbContext(optionsBuilder.Options, new LoggerFactory(), null);
         }
     }
+
+    // Override this in case you have two db context in same project, you dont want it to scan and apply entity configuration conflicted with each others
+    //protected override List<Type> ApplyForLimitedEntityTypes()
+    //{
+    //    return Util.ListBuilder.New(
+    //        typeof(Your Limited entity type for the db context to auto run entity configuration by scanning assembly));
+    //}
 }

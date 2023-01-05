@@ -1,6 +1,9 @@
+using Easy.Platform.Application.BackgroundJob;
 using Easy.Platform.Application.Context;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Context.UserContext.Default;
+using Easy.Platform.Application.Cqrs.Commands;
+using Easy.Platform.Application.Cqrs.Queries;
 using Easy.Platform.Application.Domain;
 using Easy.Platform.Application.MessageBus;
 using Easy.Platform.Application.MessageBus.Consumers;
@@ -172,6 +175,14 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                     exception.Message,
                     retry);
             });
+    }
+
+    public override string[] TracingSources()
+    {
+        return Util.ListBuilder.NewArray(
+            IPlatformCqrsCommandApplicationHandler.ActivitySource.Name,
+            IPlatformCqrsQueryApplicationHandler.ActivitySource.Name,
+            IPlatformApplicationBackgroundJobExecutor.ActivitySource.Name);
     }
 
     /// <summary>

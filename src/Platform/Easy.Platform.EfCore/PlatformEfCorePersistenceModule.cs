@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTelemetry.Trace;
 
 namespace Easy.Platform.EfCore;
 
@@ -25,6 +26,9 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
         IConfiguration configuration) : base(serviceProvider, configuration)
     {
     }
+
+    public override Action<TracerProviderBuilder> AdditionalTracingConfigure =>
+        builder => builder.AddSqlClientInstrumentation(options => options.SetDbStatementForText = true);
 
     protected override void InternalRegister(IServiceCollection serviceCollection)
     {

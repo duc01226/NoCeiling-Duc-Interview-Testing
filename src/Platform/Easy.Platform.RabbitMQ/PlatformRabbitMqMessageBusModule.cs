@@ -19,6 +19,13 @@ public abstract class PlatformRabbitMqMessageBusModule : PlatformMessageBusModul
     {
     }
 
+    public override string[] TracingSources()
+    {
+        return Util.ListBuilder.NewArray(
+            PlatformRabbitMqMessageBusProducer.ActivitySource.Name,
+            PlatformRabbitMqProcessInitializerService.ActivitySource.Name);
+    }
+
     protected override void InternalRegister(IServiceCollection serviceCollection)
     {
         base.InternalRegister(serviceCollection);

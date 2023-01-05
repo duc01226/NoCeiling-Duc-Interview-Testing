@@ -1,6 +1,9 @@
+using System.Diagnostics;
 using System.Text;
 using Easy.Platform.Infrastructures.MessageBus;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry;
+using OpenTelemetry.Context.Propagation;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 
@@ -11,6 +14,9 @@ namespace Easy.Platform.RabbitMQ;
 /// </summary>
 public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
 {
+    public static readonly ActivitySource ActivitySource = new(nameof(PlatformRabbitMqMessageBusProducer));
+    public static readonly TextMapPropagator TracingActivityPropagator = Propagators.DefaultTextMapPropagator;
+
     protected readonly IPlatformRabbitMqExchangeProvider ExchangeProvider;
     protected readonly ILogger Logger;
     protected readonly PlatformRabbitMqChannelPool MqChannelPool;
@@ -58,27 +64,60 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
 
     private void PublishMessageToQueue(string message, string routingKey)
     {
-        try
+        using (var activity = ActivitySource.StartActivity($"{nameof(PlatformRabbitMqMessageBusProducer)}.{nameof(PublishMessageToQueue)}", ActivityKind.Producer))
         {
-            var channel = MqChannelPool.Get();
+            activity?.AddTag("routingKey", routingKey);
+            activity?.AddTag("message", message);
 
-            channel.BasicPublish(
-                ExchangeProvider.GetExchangeName(routingKey),
-                routingKey,
-                null,
-                body: Encoding.UTF8.GetBytes(message));
+            try
+            {
+                var channel = MqChannelPool.Get();
 
-            channel.Close();
+                var publishRequestProps = channel.CreateBasicProperties();
+
+                InjectDistributedTracingInfoIntoRequestProps(activity, publishRequestProps);
+
+                channel.BasicPublish(
+                    ExchangeProvider.GetExchangeName(routingKey),
+                    routingKey,
+                    publishRequestProps,
+                    body: Encoding.UTF8.GetBytes(message));
+
+                channel.Close();
+            }
+            catch (AlreadyClosedException alreadyClosedException)
+            {
+                if (alreadyClosedException.ShutdownReason.ReplyCode == 404)
+                    Logger.LogWarning(
+                        $"Tried to send a message with routing key {routingKey} from {GetType().FullName} " +
+                        "but exchange is not found. May be there is no consumer registered to consume this message." +
+                        "If in source code has consumers for this message, this could be unexpected errors");
+                else
+                    throw;
+            }
         }
-        catch (AlreadyClosedException alreadyClosedException)
+
+        // This help consumer can extract tracing information for continuing tracing
+        void InjectDistributedTracingInfoIntoRequestProps(Activity activity, IBasicProperties publishRequestProps)
         {
-            if (alreadyClosedException.ShutdownReason.ReplyCode == 404)
-                Logger.LogWarning(
-                    $"Tried to send a message with routing key {routingKey} from {GetType().FullName} " +
-                    "but exchange is not found. May be there is no consumer registered to consume this message." +
-                    "If in source code has consumers for this message, this could be unexpected errors");
-            else
-                throw;
+            if (activity != null)
+                TracingActivityPropagator.Inject(
+                    new PropagationContext(activity.Context, Baggage.Current),
+                    publishRequestProps,
+                    InjectDistributedTracingContextIntoSendMessageRequestHeader);
+        }
+
+        void InjectDistributedTracingContextIntoSendMessageRequestHeader(IBasicProperties props, string key, string value)
+        {
+            try
+            {
+                props.Headers ??= new Dictionary<string, object>();
+                props.Headers[key] = value;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to inject trace context.");
+            }
         }
     }
 }
