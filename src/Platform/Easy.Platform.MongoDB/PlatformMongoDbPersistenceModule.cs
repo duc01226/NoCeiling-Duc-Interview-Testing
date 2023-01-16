@@ -58,7 +58,8 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
 
         serviceCollection.Register<PlatformMongoDbContext<TDbContext>, TDbContext>();
 
-        RegisterMongoDbUow(serviceCollection);
+        if (!ForCrossDbMigrationOnly)
+            RegisterMongoDbUow(serviceCollection);
 
         BsonClassMapHelper.TryRegisterClassMapWithDefaultInitializer<PlatformDataMigrationHistory>();
         BsonClassMapHelper.TryRegisterClassMapWithDefaultInitializer<PlatformMongoMigrationHistory>();

@@ -1,43 +1,61 @@
 {
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "npmScope": "platform-example-web",
   "affected": {
     "defaultBase": "master"
   },
-  "implicitDependencies": {
-    "package.json": {
-      "dependencies": "*",
-      "devDependencies": "*"
-    },
-    ".eslintrc.json": "*"
-  },
   "tasksRunnerOptions": {
     "default": {
-      "runner": "@nrwl/workspace/tasks-runners/default",
+      "runner": "@nrwl/nx-cloud",
       "options": {
-        "cacheableOperations": ["build", "lint", "test", "e2e"]
+        "cacheableOperations": ["build", "lint", "test", "e2e"],
+        "accessToken": "MjJkNTcxMWItYzE3Yi00NWM1LTg0MzktMDVlNjk2NTU5NmNlfHJlYWQtd3JpdGU="
       }
     }
   },
-  "projects": {
-    "apps-text-snippet-domain": {
-      "tags": []
+  "targetDefaults": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"]
     },
-    "platform-core": {
-      "tags": []
+    "test": {
+      "inputs": ["default", "^production", "{workspaceRoot}/jest.preset.js"]
     },
-    "other-micro-app": {
-      "tags": []
+    "e2e": {
+      "inputs": ["default", "^production"]
     },
-    "other-micro-app-e2e": {
-      "tags": [],
-      "implicitDependencies": ["other-micro-app"]
+    "lint": {
+      "inputs": ["default", "{workspaceRoot}/.eslintrc.json"]
+    }
+  },
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "production": [
+      "default",
+      "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
+      "!{projectRoot}/tsconfig.spec.json",
+      "!{projectRoot}/jest.config.[jt]s",
+      "!{projectRoot}/.eslintrc.json"
+    ],
+    "sharedGlobals": []
+  },
+  "cli": {
+    "packageManager": "yarn"
+  },
+  "generators": {
+    "@nrwl/angular:application": {
+      "style": "scss",
+      "linter": "eslint",
+      "unitTestRunner": "jest",
+      "e2eTestRunner": "none"
     },
-    "text-snippet": {
-      "tags": []
+    "@nrwl/angular:library": {
+      "linter": "eslint",
+      "unitTestRunner": "jest",
+      "strict": false
     },
-    "text-snippet-e2e": {
-      "tags": [],
-      "implicitDependencies": ["text-snippet"]
+    "@nrwl/angular:component": {
+      "style": "scss"
     }
   }
 }

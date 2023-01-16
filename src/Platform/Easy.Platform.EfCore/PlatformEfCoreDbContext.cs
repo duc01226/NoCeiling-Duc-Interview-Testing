@@ -6,6 +6,7 @@ using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.EfCore.EntityConfiguration;
+using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -18,13 +19,16 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     protected readonly IPlatformCqrs Cqrs;
     protected readonly ILogger Logger;
+    protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
 
     public PlatformEfCoreDbContext(
         DbContextOptions<TDbContext> options,
         ILoggerFactory loggerFactory,
-        IPlatformCqrs cqrs) : base(options)
+        IPlatformCqrs cqrs,
+        PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration) : base(options)
     {
         Cqrs = cqrs;
+        PersistenceConfiguration = persistenceConfiguration;
         Logger = loggerFactory.CreateLogger(GetType());
     }
 
@@ -187,7 +191,11 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     {
         await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
 
-        var result = GetTable<TEntity>().Update(entity).Entity;
+        // Run DetachLocalIfAny to prevent
+        // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
+        var result = entity
+            .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
+            .Pipe(entity => GetTable<TEntity>().Update(entity).Entity);
 
         if (result is IRowVersionEntity rowVersionEntity)
             rowVersionEntity.ConcurrencyUpdateToken = Guid.NewGuid();
@@ -318,6 +326,15 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         return entities;
     }
 
+    private TEntity DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(TEntity entity) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        var local = GetTable<TEntity>().Local.FirstOrDefault(entry => entry.Id.Equals(entity.Id));
+
+        if (local != null && local != entity) GetTable<TEntity>().Entry(local).State = EntityState.Detached;
+
+        return entity;
+    }
+
     public DbSet<TEntity> GetTable<TEntity>() where TEntity : class, IEntity, new()
     {
         return Set<TEntity>();
@@ -330,18 +347,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Auto apply configuration by convention for the current dbcontext (usually persistence layer) assembly.
-        var applyForLimitedEntityTypes = ApplyForLimitedEntityTypes();
-        modelBuilder.ApplyConfigurationsFromAssembly(
-            GetType().Assembly,
-            entityConfigType =>
-                applyForLimitedEntityTypes == null ||
-                applyForLimitedEntityTypes.Any(
-                    limitedEntityType =>
-                    {
-                        var limitedEntityTypeConfiguration = typeof(IEntityTypeConfiguration<>).GetGenericTypeDefinition().MakeGenericType(limitedEntityType);
-                        return entityConfigType.IsAssignableTo(limitedEntityTypeConfiguration);
-                    }));
+        ApplyEntityConfigurationsFromAssembly(modelBuilder);
 
         modelBuilder.ApplyConfiguration(new PlatformDataMigrationHistoryEntityConfiguration());
         modelBuilder.ApplyConfiguration(new PlatformInboxEventBusMessageEntityConfiguration());
@@ -350,8 +356,25 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         base.OnModelCreating(modelBuilder);
     }
 
+    private void ApplyEntityConfigurationsFromAssembly(ModelBuilder modelBuilder)
+    {
+        // Auto apply configuration by convention for the current dbcontext (usually persistence layer) assembly.
+        var applyForLimitedEntityTypes = ApplyForLimitedEntityTypes();
+
+        if (applyForLimitedEntityTypes == null && PersistenceConfiguration.ForCrossDbMigrationOnly) return;
+
+        modelBuilder.ApplyConfigurationsFromAssembly(
+            GetType().Assembly,
+            entityConfigType => applyForLimitedEntityTypes == null ||
+                                applyForLimitedEntityTypes.Any(
+                                    limitedEntityType => typeof(IEntityTypeConfiguration<>)
+                                        .GetGenericTypeDefinition()
+                                        .MakeGenericType(limitedEntityType)
+                                        .Pipe(limitedEntityTypeConfiguration => entityConfigType.IsAssignableTo(limitedEntityTypeConfiguration))));
+    }
+
     /// <summary>
-    /// Override this in case you have two db context in same project, you dont want it to scan and apply entity configuration conflicted with each others. <br/>
+    /// Override this in case you have two db context in same project, you dont want it to scan and apply entity configuration conflicted with each others. <br />
     /// return Util.ListBuilder.New(typeof(Your Limited entity type for the db context to auto run entity configuration by scanning assembly));
     /// </summary>
     protected virtual List<Type> ApplyForLimitedEntityTypes() { return null; }

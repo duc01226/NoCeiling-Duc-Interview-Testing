@@ -2,7 +2,6 @@
   "compileOnSave": false,
   "compilerOptions": {
     "rootDir": ".",
-    "typeRoots": ["typings", "node_modules/@types"],
     "sourceMap": true,
     "declaration": false,
     "moduleResolution": "node",
@@ -14,13 +13,12 @@
     "lib": ["es2017", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
-    "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@platform-example-web/apps-domains/text-snippet-domain": ["libs/apps-domains/text-snippet-domain/src/index.ts"],
-      "@platform-example-web/platform-core": ["libs/platform-core/src/index.ts"]
-    }
+      "@libs/apps-domains/text-snippet-domain": ["libs/apps-domains/text-snippet-domain/src/index.ts"],
+      "@libs/platform-core": ["libs/platform-core/src/index.ts"]
+    },
+    "typeRoots": ["node_modules/@types", "./typings"]
   },
-  "exclude": ["node_modules", "tmp"],
-  "include": ["typings/*.d.ts"]
+  "exclude": ["node_modules", "tmp"]
 }

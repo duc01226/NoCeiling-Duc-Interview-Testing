@@ -5,6 +5,14 @@
     "esbenp.prettier-vscode",
     "firsttris.vscode-jest-runner",
     "dbaeumer.vscode-eslint",
-    "rbbit.typescript-hero"
+    "rbbit.typescript-hero",
+    "emeraldwalk.runonsave",
+    "vscode-icons-team.vscode-icons",
+    "pkief.material-icon-theme",
+    "christian-kohler.npm-intellisense",
+    "christian-kohler.path-intellisense",
+    "streetsidesoftware.code-spell-checker",
+    "alefragnani.bookmarks",
+    "eamodio.gitlens"
   ]
 }

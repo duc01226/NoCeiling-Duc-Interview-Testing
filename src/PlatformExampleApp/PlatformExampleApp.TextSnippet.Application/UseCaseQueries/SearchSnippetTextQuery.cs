@@ -62,7 +62,7 @@ public class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicationHandler
         //        p => p.Id,
         //        p => p.Id,
         //        (entity, demoEntity) => entity),
-        //    cancellationToken: cancellationToken);
+        //    cancellationToken);
 
         // STEP 1: Build Queries
         var fullItemsQueryBuilder = repository.GetQueryBuilder(

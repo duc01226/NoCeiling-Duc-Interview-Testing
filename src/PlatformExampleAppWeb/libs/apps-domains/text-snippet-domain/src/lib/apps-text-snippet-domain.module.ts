@@ -1,9 +1,9 @@
 import { ModuleWithProviders, NgModule, Type } from '@angular/core';
-import { PlatformDomainModule, PlatformRepositoryErrorEventHandler } from '@platform-example-web/platform-core';
+import { PlatformDomainModule, PlatformRepositoryErrorEventHandler } from '@libs/platform-core';
 
 import { TextSnippetApi } from './apis';
-import { AppsTextSnippetDomainModuleConfig } from './apps-text-snippet-domain.config';
 import { TextSnippetRepositoryContext } from './apps-text-snippet.repository-context';
+import { AppsTextSnippetDomainModuleConfig } from './apps-text-snippet-domain.config';
 import { TextSnippetRepository } from './repositories';
 
 @NgModule({
@@ -16,24 +16,16 @@ export class AppsTextSnippetDomainModule {
   }): ModuleWithProviders<PlatformDomainModule>[] {
     return [
       ...PlatformDomainModule.forRoot({
-        moduleConfig: {
-          type: AppsTextSnippetDomainModuleConfig,
-          configFactory: () => config.moduleConfigFactory()
-        },
         appRepositoryContext: TextSnippetRepositoryContext,
         appRepositories: [TextSnippetRepository],
         appApis: [TextSnippetApi],
-        appRepositoryErrorEventHandlers: config.appRepositoryErrorEventHandlers
-      })
-    ];
-  }
-
-  public static forChild(): ModuleWithProviders<PlatformDomainModule>[] {
-    return [
-      ...PlatformDomainModule.forChild({
-        appModuleRepositoryContext: TextSnippetRepositoryContext,
-        appModuleRepositories: [TextSnippetRepository],
-        appModuleApis: [TextSnippetApi]
+        appRepositoryErrorEventHandlers: config.appRepositoryErrorEventHandlers,
+        additionalProviders: [
+          {
+            provide: AppsTextSnippetDomainModuleConfig,
+            useFactory: () => config.moduleConfigFactory()
+          }
+        ]
       })
     ];
   }

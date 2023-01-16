@@ -1,0 +1,17 @@
+// Spacing css variables generater.
+//
+// Default unit is 4px, scale by media.
+//
+// --space-1 = 4px
+// --space-2 = 8px
+// ..
+// example:
+// margin-top: var(--space-5);
+
+:root {
+  --space-unit: 4px;
+
+  each(range(30), {
+    --space-@{value}: calc(@value * var(--space-unit));
+  });
+}

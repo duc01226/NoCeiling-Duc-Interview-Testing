@@ -3,23 +3,26 @@ import { ModuleWithProviders, NgModule, Provider, Type } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { TranslateModule, TranslateModuleConfig } from '@ngx-translate/core';
+import { GlobalConfig, ToastrModule } from 'ngx-toastr';
 
 import { PlatformApiService } from './api-services';
-import { PlatformAppUiStateManager } from './app-ui-state-manager';
+import { PlatformAppUiStateData, PlatformAppUiStateStore } from './app-ui-state';
 import {
   DefaultPlatformAuthHttpRequestOptionsAppenderService,
-  PlatformAuthHttpRequestOptionsAppenderService,
+  PlatformAuthHttpRequestOptionsAppenderService
 } from './auth-services';
 import {
   IPlatformEventManager,
   PlatformEvent,
   PlatformEventHandler,
   PlatformEventManager,
-  PlatformEventManagerSubscriptionsMap,
+  PlatformEventManagerSubscriptionsMap
 } from './events';
-import { Exts } from './extensions';
 import { PlatformHighlightSearchTextPipe, PlatformPipe } from './pipes';
 import { PlatformCoreModuleConfig } from './platform-core.config';
+import { PlatformTranslateConfig } from './translations';
+import { list_selectMany } from './utils';
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 type ForRootModules = PlatformCoreModule | BrowserModule | BrowserAnimationsModule;
@@ -30,24 +33,38 @@ type ForChildModules = PlatformCoreModule;
   exports: [CommonModule, FormsModule, ReactiveFormsModule, PlatformHighlightSearchTextPipe]
 })
 export class PlatformCoreModule {
-  public static forRoot<TAppUiStateData>(config: {
-    moduleConfig: {
+  public static forRoot<TAppUiStateData extends PlatformAppUiStateData>(config: {
+    moduleConfig?: {
       type: Type<PlatformCoreModuleConfig>;
       configFactory: () => PlatformCoreModuleConfig;
     };
     eventManager?: Type<IPlatformEventManager>;
     eventHandlerMaps?: [Type<PlatformEvent>, Type<PlatformEventHandler<PlatformEvent>>[]][];
 
-    appRootUiState: Type<PlatformAppUiStateManager<TAppUiStateData>>;
+    appRootUiState?: Type<PlatformAppUiStateStore<TAppUiStateData>>;
     apiServices?: Type<PlatformApiService>[];
     authHttpRequestOptionsAppender?: Type<PlatformAuthHttpRequestOptionsAppenderService>;
+    translate?: { platformConfig?: PlatformTranslateConfig; config?: TranslateModuleConfig };
+    toastConfig?: Partial<GlobalConfig>;
   }): ModuleWithProviders<ForRootModules>[] {
     return [
       {
         ngModule: PlatformCoreModule,
         providers: [
-          { provide: config.moduleConfig.type, useFactory: () => config.moduleConfig.configFactory() },
-          { provide: PlatformCoreModuleConfig, useExisting: config.moduleConfig.type },
+          ...(config.moduleConfig != null
+            ? [
+                { provide: PlatformCoreModuleConfig, useExisting: config.moduleConfig.type },
+                {
+                  provide: config.moduleConfig.type,
+                  useFactory: () => config.moduleConfig?.configFactory()
+                }
+              ]
+            : [
+                {
+                  provide: PlatformCoreModuleConfig,
+                  useFactory: () => new PlatformCoreModuleConfig()
+                }
+              ]),
 
           {
             provide: PlatformEventManagerSubscriptionsMap,
@@ -56,7 +73,7 @@ export class PlatformCoreModule {
           },
           // Register all eventHandlers from eventHandlerMaps
           ...(config.eventHandlerMaps != null
-            ? Exts.List.selectMany(config.eventHandlerMaps, ([event, eventHandlers]) => eventHandlers)
+            ? list_selectMany(config.eventHandlerMaps, ([event, eventHandlers]) => eventHandlers)
             : []),
           PlatformEventManager,
           ...(config.eventManager != null ? [config.eventManager] : []),
@@ -69,7 +86,14 @@ export class PlatformCoreModule {
             apiServices: config.apiServices,
             authHttpRequestOptionsAppender: config.authHttpRequestOptionsAppender,
             moduleUiState: config.appRootUiState
-          })
+          }),
+          {
+            provide: PlatformTranslateConfig,
+            useValue:
+              config.translate?.platformConfig != null
+                ? config.translate.platformConfig
+                : PlatformTranslateConfig.defaultConfig()
+          }
         ]
       },
       {
@@ -77,12 +101,21 @@ export class PlatformCoreModule {
       },
       {
         ngModule: BrowserAnimationsModule
-      }
+      },
+      TranslateModule.forRoot(config.translate?.config),
+      ToastrModule.forRoot(
+        config.toastConfig ?? {
+          newestOnTop: true,
+          positionClass: 'toast-bottom-right',
+          preventDuplicates: true,
+          enableHtml: true
+        }
+      )
     ];
   }
 
-  public static forChild<TAppUiStateData>(config: {
-    appModuleState?: Type<PlatformAppUiStateManager<TAppUiStateData>>;
+  public static forChild<TAppUiStateData extends PlatformAppUiStateData>(config: {
+    appModuleState?: Type<PlatformAppUiStateStore<TAppUiStateData>>;
     apiServices?: Type<PlatformApiService>[];
     authHttpRequestOptionsAppender?: Type<PlatformAuthHttpRequestOptionsAppenderService>;
   }): ModuleWithProviders<ForChildModules>[] {
@@ -100,8 +133,8 @@ export class PlatformCoreModule {
     ];
   }
 
-  private static buildCanBeInChildModuleProviders<TAppUiStateData>(config: {
-    moduleUiState?: Type<PlatformAppUiStateManager<TAppUiStateData>>;
+  private static buildCanBeInChildModuleProviders<TAppUiStateData extends PlatformAppUiStateData>(config: {
+    moduleUiState?: Type<PlatformAppUiStateStore<TAppUiStateData>>;
     apiServices?: Type<PlatformApiService>[];
     authHttpRequestOptionsAppender?: Type<PlatformAuthHttpRequestOptionsAppenderService>;
     pipes?: Type<PlatformPipe<unknown, unknown, unknown>>[];

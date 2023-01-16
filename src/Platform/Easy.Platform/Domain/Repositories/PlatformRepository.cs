@@ -29,33 +29,44 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         return UnitOfWorkManager.CurrentActiveUow().UowOfType<TUow>();
     }
 
-    public abstract Task<TEntity> GetByIdAsync(TPrimaryKey id, CancellationToken cancellationToken = default);
+    public abstract Task<TEntity> GetByIdAsync(
+        TPrimaryKey id,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public abstract Task<List<TEntity>> GetByIdsAsync(
         List<TPrimaryKey> ids,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public abstract Task<List<TEntity>> GetAllAsync(
         Expression<Func<TEntity, bool>> predicate = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public async Task<List<TEntity>> GetAllAsync(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => GetAllAsync(queryBuilder(uow, query), cancellationToken));
+            (uow, query) => GetAllAsync(queryBuilder(uow, query), cancellationToken),
+            loadRelatedEntities);
     }
 
     public abstract Task<List<TEntity>> GetAllAsync(
         IQueryable<TEntity> query,
         CancellationToken cancellationToken = default);
 
-    public abstract Task<TEntity> FirstAsync(Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default);
+    public abstract Task<TEntity> FirstAsync(
+        Expression<Func<TEntity, bool>> predicate = null,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public abstract Task<TEntity> FirstOrDefaultAsync(
         Expression<Func<TEntity, bool>> predicate = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public abstract Task<TEntity> FirstOrDefaultAsync(
         IQueryable<TEntity> query,
@@ -69,50 +80,66 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default);
 
-    public async Task<TResult> GetAsync<TResult>(Func<IQueryable<TEntity>, TResult> queryToResultBuilder, CancellationToken cancellationToken = default)
+    public async Task<TResult> GetAsync<TResult>(
+        Func<IQueryable<TEntity>, TResult> queryToResultBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryToResultBuilder(query));
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryToResultBuilder(query), loadRelatedEntities);
     }
 
-    public async Task<TResult> GetAsync<TResult>(Func<IQueryable<TEntity>, Task<TResult>> queryToResultBuilder, CancellationToken cancellationToken = default)
+    public async Task<TResult> GetAsync<TResult>(
+        Func<IQueryable<TEntity>, Task<TResult>> queryToResultBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryToResultBuilder(query));
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryToResultBuilder(query), loadRelatedEntities);
     }
 
-    public async Task<TResult> GetAsync<TResult>(Func<IUnitOfWork, IQueryable<TEntity>, TResult> queryToResultBuilder, CancellationToken cancellationToken = default)
+    public async Task<TResult> GetAsync<TResult>(
+        Func<IUnitOfWork, IQueryable<TEntity>, TResult> queryToResultBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryToResultBuilder(uow, query));
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryToResultBuilder(uow, query), loadRelatedEntities);
     }
 
     public async Task<TResult> GetAsync<TResult>(
         Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> queryToResultBuilder,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryToResultBuilder(uow, query));
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryToResultBuilder(uow, query), loadRelatedEntities);
     }
 
     public async Task<List<TEntity>> GetAllAsync(
         Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => GetAllAsync(queryBuilder(query), cancellationToken));
+            (uow, query) => GetAllAsync(queryBuilder(query), cancellationToken),
+            loadRelatedEntities);
     }
 
     public Task<TEntity> FirstOrDefaultAsync(
         Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => FirstOrDefaultAsync(queryBuilder(query), cancellationToken));
+            (uow, query) => FirstOrDefaultAsync(queryBuilder(query), cancellationToken),
+            loadRelatedEntities);
     }
 
     public Task<TEntity> FirstOrDefaultAsync(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => FirstOrDefaultAsync(queryBuilder(uow, query), cancellationToken));
+            (uow, query) => FirstOrDefaultAsync(queryBuilder(uow, query), cancellationToken),
+            loadRelatedEntities);
     }
 
     public abstract Task<List<TSelector>> GetAllAsync<TSelector>(
@@ -141,17 +168,10 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Func<IQueryable<TEntity>, IQueryable<TQueryItemResult>> queryBuilder,
         CancellationToken cancellationToken = default);
 
-    public IQueryable<TEntity> GetGlobalUowQuery()
+    public IQueryable<TEntity> GetGlobalUowQuery(params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        return GetQuery(GlobalUow());
+        return GetQuery(GlobalUow(), loadRelatedEntities);
     }
-
-    public IQueryable<TEntity> GetQuery()
-    {
-        return GetQuery(CurrentActiveUow());
-    }
-
-    public abstract IQueryable<TEntity> GetQuery(IUnitOfWork uow);
 
     public Func<IQueryable<TEntity>, IQueryable<TResult>> GetQueryBuilder<TResult>(Func<IQueryable<TEntity>, IQueryable<TResult>> builderFn)
     {
@@ -166,6 +186,13 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     public Func<IQueryable<TEntity>, IQueryable<TEntity>> GetQueryBuilder(Expression<Func<TEntity, bool>> queryExpression)
     {
         return query => query.Where(queryExpression);
+    }
+
+    public abstract IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object>>[] loadRelatedEntities);
+
+    public IQueryable<TEntity> GetQuery(params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+    {
+        return GetQuery(CurrentActiveUow(), loadRelatedEntities);
     }
 
     public IUnitOfWork TryGetCurrentActiveUow()
@@ -240,24 +267,26 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         CancellationToken cancellationToken = default);
 
     protected virtual async Task ExecuteAutoOpenUowUsingOnceTime(
-        Func<IQueryable<TEntity>, Task> executeAsync)
+        Func<IQueryable<TEntity>, Task> executeAsync,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
             using (var uow = UnitOfWorkManager.CreateNewUow())
             {
-                await executeAsync(GetQuery(uow));
+                await executeAsync(GetQuery(uow, loadRelatedEntities));
             }
         else
-            await executeAsync(GetQuery(UnitOfWorkManager.CurrentActiveUow()));
+            await executeAsync(GetQuery(UnitOfWorkManager.CurrentActiveUow(), loadRelatedEntities));
     }
 
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(
-        Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> readDataFn)
+        Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> readDataFn,
+        Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
             using (var uow = UnitOfWorkManager.CreateNewUow())
             {
-                var result = await readDataFn(uow, GetQuery(uow));
+                var result = await readDataFn(uow, GetQuery(uow, loadRelatedEntities));
 
                 if (result is IQueryable)
                     throw new Exception("Do not allow to return out IQueryable. Please as Enumerable or ToList in the query builder");
@@ -267,16 +296,17 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
         return await readDataFn(
             UnitOfWorkManager.CurrentActiveUow(),
-            GetQuery(UnitOfWorkManager.CurrentActiveUow()));
+            GetQuery(UnitOfWorkManager.CurrentActiveUow(), loadRelatedEntities));
     }
 
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(
-        Func<IUnitOfWork, IQueryable<TEntity>, TResult> readDataFn)
+        Func<IUnitOfWork, IQueryable<TEntity>, TResult> readDataFn,
+        Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
             using (var uow = UnitOfWorkManager.CreateNewUow())
             {
-                var result = readDataFn(uow, GetQuery(uow));
+                var result = readDataFn(uow, GetQuery(uow, loadRelatedEntities));
 
                 if (result is IQueryable)
                     throw new Exception("Do not allow to return out IQueryable. Please as Enumerable or ToList in the query builder");
@@ -286,7 +316,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
         return readDataFn(
             UnitOfWorkManager.CurrentActiveUow(),
-            GetQuery(UnitOfWorkManager.CurrentActiveUow()));
+            GetQuery(UnitOfWorkManager.CurrentActiveUow(), loadRelatedEntities));
     }
 
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForWrite<TResult>(

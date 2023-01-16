@@ -6,6 +6,10 @@
     <Nullable>disable</Nullable>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Azure.Storage.Blobs" Version="12.14.1" />
   </ItemGroup>

@@ -28,13 +28,13 @@ export class PlatformEventManager implements IPlatformEventManager {
   }
 
   private buildAggregatedSubscriptionsMap(): PlatformEventManagerSubscriptionsMap {
-    let finalResult = new PlatformEventManagerSubscriptionsMap();
+    const finalResult = new PlatformEventManagerSubscriptionsMap();
 
     this.subscriptionsMaps.forEach(subscriptionsMap => {
       subscriptionsMap.forEach((currentEventHandlerTypes, currentEventType) => {
-        let existedEventTypeItemValues = finalResult.get(currentEventType);
+        const existedEventTypeItemValues = finalResult.get(currentEventType);
         if (existedEventTypeItemValues != null) {
-          let combinedEventHandlerTypes = existedEventTypeItemValues.concat(currentEventHandlerTypes);
+          const combinedEventHandlerTypes = existedEventTypeItemValues.concat(currentEventHandlerTypes);
           finalResult.set(currentEventType, combinedEventHandlerTypes);
         } else {
           finalResult.set(currentEventType, currentEventHandlerTypes);
@@ -47,7 +47,4 @@ export class PlatformEventManager implements IPlatformEventManager {
 }
 
 @Injectable()
-export class PlatformEventManagerSubscriptionsMap extends Map<
-  Type<PlatformEvent>,
-  Type<PlatformEventHandler<PlatformEvent>>[]
-> {}
+export class PlatformEventManagerSubscriptionsMap extends Map<Type<PlatformEvent>, Type<PlatformEventHandler<PlatformEvent>>[]> {}

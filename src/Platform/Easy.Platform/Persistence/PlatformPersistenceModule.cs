@@ -82,15 +82,18 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
 
         serviceCollection.RegisterAllFromType<IPlatformDbContext>(Assembly, ServiceLifeTime.Scoped);
 
-        RegisterUnitOfWorkManager(serviceCollection);
-        serviceCollection.RegisterAllFromType<IUnitOfWork>(Assembly);
-        RegisterRepositories(serviceCollection);
+        if (!ForCrossDbMigrationOnly)
+        {
+            RegisterUnitOfWorkManager(serviceCollection);
+            serviceCollection.RegisterAllFromType<IUnitOfWork>(Assembly);
+            RegisterRepositories(serviceCollection);
 
-        RegisterInboxEventBusMessageRepository(serviceCollection);
-        RegisterOutboxEventBusMessageRepository(serviceCollection);
+            RegisterInboxEventBusMessageRepository(serviceCollection);
+            RegisterOutboxEventBusMessageRepository(serviceCollection);
 
-        serviceCollection.RegisterAllFromType<IPersistenceService>(Assembly);
-        serviceCollection.RegisterAllFromType<IPlatformDataMigrationExecutor>(Assembly);
+            serviceCollection.RegisterAllFromType<IPersistenceService>(Assembly);
+            serviceCollection.RegisterAllFromType<IPlatformDataMigrationExecutor>(Assembly);
+        }
     }
 
     protected override async Task InternalInit(IServiceScope serviceScope)
@@ -225,7 +228,17 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
     protected override void InternalRegister(IServiceCollection serviceCollection)
     {
         serviceCollection.RegisterAllForImplementation<TDbContext>(ServiceLifeTime.Scoped);
+        RegisterPersistenceConfiguration(serviceCollection);
 
         base.InternalRegister(serviceCollection);
+    }
+
+    protected void RegisterPersistenceConfiguration(IServiceCollection serviceCollection)
+    {
+        serviceCollection.Register(
+            sp => new PlatformPersistenceConfiguration<TDbContext>
+            {
+                ForCrossDbMigrationOnly = ForCrossDbMigrationOnly
+            });
     }
 }

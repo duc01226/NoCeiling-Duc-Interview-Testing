@@ -1,4 +1,4 @@
-import { IPlatformDataModel, PlatformDataModel } from '@platform-example-web/platform-core';
+import { IPlatformDataModel, PlatformDataModel } from '@libs/platform-core';
 
 export interface ITextSnippetDataModel extends IPlatformDataModel {
   snippetText: string;

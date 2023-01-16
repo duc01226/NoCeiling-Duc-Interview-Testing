@@ -1,9 +1,57 @@
 {
-  "html.format.wrapLineLength": 120,
+  // Editor Options
+  // When opening a file, `editor.tabSize` and `editor.insertSpaces` will NOT be detected based on the file contents.
+  "editor.detectIndentation": false,
+  "editor.formatOnSave": false,
+  "editor.fontLigatures": true,
+  // Controls if the editor will insert spaces for tabs.
+  "editor.insertSpaces": true,
+  // Controls whether the editor should render whitespace characters
+  // "editor.renderWhitespace": "all",
+  // Controls the rendering size of tabs in characters.
+  "editor.tabSize": 2,
+  // Without this setting, editor.wordWrapColumn is not used.
+  "editor.wordWrap": "on",
+  // Controls after how many characters the editor will wrap to the next line. Setting this to 0 turns on viewport width wrapping
+  "editor.wordWrapColumn": 120,
+  // Format Options
   "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "editor.formatOnSave": true,
-  "prettier.printWidth": 120,
-  "prettier.singleQuote": true,
-  "typescriptHero.imports.organizeOnSave": true,
-  "cSpell.words": ["Appender", "Buildable", "dtos", "linebreak", "nonblock", "nrwl", "paren", "parens"]
+  "editor.codeActionsOnSave": ["source.formatDocument", "source.fixAll.eslint"],
+  // Files Options
+  "files.encoding": "utf8",
+  "files.insertFinalNewline": true,
+  // When enabled, will trim trailing whitespace when you save a file.
+  "files.trimTrailingWhitespace": true,
+  "files.exclude": {
+    "**/.git": true
+  },
+  "files.watcherExclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+    "**/lib": true,
+    "**/temp": true,
+    "**/dist": true,
+    "**/coverage": true
+  },
+  // Configure glob patterns for excluding files and folders in searches. Inherits all glob patterns from the file.exclude setting.
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/lib": true,
+    "**/dist": true
+  },
+  // Others
+  "typescript.preferences.quoteStyle": "single",
+  "workbench.iconTheme": "vscode-icons",
+  "cSpell.words": ["Appender", "Buildable", "dtos", "linebreak", "nonblock", "nrwl", "paren", "parens"],
+  "tslint.alwaysShowRuleFailuresAsWarnings": false,
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "match": "\\.component.html$",
+        "cmd": "node ./scripts/format-angular-template.js --staged=true ${file}"
+      }
+    ]
+  },
+  "material-icon-theme.activeIconPack": "angular_ngrx",
+  "angular.enable-strict-mode-prompt": false
 }

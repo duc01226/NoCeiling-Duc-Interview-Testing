@@ -1,7 +1,10 @@
 {
-  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "es2022",
+    "useDefineForClassFields": false
+  },
   "files": [],
-  "include": ["../../../typings/**/*.d.ts"],
+  "include": [],
   "references": [
     {
       "path": "./tsconfig.lib.json"
@@ -10,15 +13,5 @@
       "path": "./tsconfig.spec.json"
     }
   ],
-  "compilerOptions": {
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true
-  },
-  "angularCompilerOptions": {
-    "strictInjectionParameters": true,
-    "strictInputAccessModifiers": true,
-    "strictTemplates": true
-  }
+  "extends": "../../../tsconfig.base.json"
 }

@@ -1,4 +1,4 @@
-import { PlatformRepositoryContext } from '@platform-example-web/platform-core';
+import { PlatformRepositoryContext } from '@libs/platform-core';
 import { BehaviorSubject } from 'rxjs';
 
 import { TextSnippetDataModel } from './data-models';

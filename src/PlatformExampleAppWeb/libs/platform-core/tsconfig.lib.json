@@ -2,13 +2,12 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "../../dist/out-tsc",
-    "target": "es2015",
     "declaration": true,
     "declarationMap": true,
     "inlineSources": true,
-    "types": [],
-    "lib": ["dom", "es2018"]
+    "target": "ES2022",
+    "useDefineForClassFields": false
   },
-  "exclude": ["src/test-setup.ts", "**/*.spec.ts"],
-  "include": ["**/*.ts", "../../typings/**/*.d.ts"]
+  "exclude": ["jest.config.ts", "**/*.test.ts", "**/*.spec.ts"],
+  "include": ["**/*.ts"]
 }

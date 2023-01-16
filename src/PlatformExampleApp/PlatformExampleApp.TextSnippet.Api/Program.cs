@@ -107,6 +107,8 @@ static void ConfigureRequestPipeline(WebApplication app)
     app.UseSwagger();
     app.UseSwaggerUI();
 
+    if (!PlatformEnvironment.IsDevelopment) app.UseHttpsRedirection();
+
     // Reference middleware orders: https://docs.microsoft.com/en-us/aspnet/core/fundamentals/middleware/?view=aspnetcore-5.0#middleware-order
 
     app.UseGlobalExceptionHandlerMiddleware();

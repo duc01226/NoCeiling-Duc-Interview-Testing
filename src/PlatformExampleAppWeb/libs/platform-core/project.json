@@ -1,0 +1,32 @@
+{
+  "name": "platform-core",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/platform-core/src",
+  "prefix": "platform",
+  "targets": {
+    "build": {
+      "executor": "@nrwl/angular:package",
+      "outputs": ["{workspaceRoot}/dist/libs/platform-core"],
+      "options": {
+        "project": "libs/platform-core/ng-package.json"
+      },
+      "configurations": {
+        "production": {
+          "tsConfig": "libs/platform-core/tsconfig.lib.prod.json"
+        },
+        "development": {
+          "tsConfig": "libs/platform-core/tsconfig.lib.json"
+        }
+      },
+      "defaultConfiguration": "production"
+    },
+    "lint": {
+      "executor": "@nrwl/linter:eslint",
+      "options": {
+        "lintFilePatterns": ["libs/platform-core/**/*.ts", "libs/platform-core/**/*.html"]
+      }
+    }
+  },
+  "tags": []
+}

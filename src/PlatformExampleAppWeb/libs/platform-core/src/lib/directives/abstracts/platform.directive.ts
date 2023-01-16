@@ -2,7 +2,7 @@ import { AfterViewInit, ChangeDetectorRef, Directive, OnDestroy, OnInit } from '
 import { BehaviorSubject, MonoTypeOperatorFunction, Subscription } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
 
-import { Utils } from '../../utils';
+import { task_delay } from '../../utils';
 
 @Directive()
 export abstract class PlatformDirective implements OnInit, AfterViewInit, OnDestroy {
@@ -18,14 +18,14 @@ export abstract class PlatformDirective implements OnInit, AfterViewInit, OnDest
 
   private detectChangesDelaySubs: Subscription = new Subscription();
 
-  public detectChanges(delay?: number, onDone?: () => unknown, checkParentForHostBinding: boolean = false): void {
+  public detectChanges(delayTime?: number, onDone?: () => unknown, checkParentForHostBinding: boolean = false): void {
     this.detectChangesDelaySubs.unsubscribe();
     if (!this.canDetectChanges) {
       return;
     }
 
-    const delayTime = delay == null ? PlatformDirective.defaultDetectChangesDelay : delay;
-    this.detectChangesDelaySubs = Utils.TaskRunner.delay(() => {
+    const finalDelayTime = delayTime == null ? PlatformDirective.defaultDetectChangesDelay : delayTime;
+    this.detectChangesDelaySubs = task_delay(() => {
       if (this.canDetectChanges) {
         this.changeDetector.detectChanges();
         if (checkParentForHostBinding) {
@@ -35,7 +35,7 @@ export abstract class PlatformDirective implements OnInit, AfterViewInit, OnDest
           onDone();
         }
       }
-    }, delayTime);
+    }, finalDelayTime);
   }
 
   public untilDestroyed<T>(): MonoTypeOperatorFunction<T> {

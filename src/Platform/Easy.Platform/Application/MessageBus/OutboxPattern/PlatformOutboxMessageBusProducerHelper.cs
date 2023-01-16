@@ -163,7 +163,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         existingOutboxMessage.LastSendDate = DateTime.UtcNow;
         existingOutboxMessage.SendStatus = PlatformOutboxBusMessage.SendStatuses.Processed;
 
-        await outboxBusMessageRepository.UpdateAsync(existingOutboxMessage, dismissSendEvent: true, cancellationToken: cancellationToken);
+        await outboxBusMessageRepository.UpdateAsync(existingOutboxMessage, dismissSendEvent: true, cancellationToken);
     }
 
     public async Task UpdateExistingOutboxMessageFailedInNewScopeAsync(
@@ -226,7 +226,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             retriedProcessCount: existingOutboxMessage.RetriedProcessCount,
             retryProcessFailedMessageInSecondsUnit);
 
-        await outboxBusMessageRepository.UpdateAsync(existingOutboxMessage, dismissSendEvent: true, cancellationToken: cancellationToken);
+        await outboxBusMessageRepository.UpdateAsync(existingOutboxMessage, dismissSendEvent: true, cancellationToken);
 
         LogSendOutboxMessageFailed(exception, existingOutboxMessage);
     }

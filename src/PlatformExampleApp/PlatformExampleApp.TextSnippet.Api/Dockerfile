@@ -23,6 +23,7 @@ COPY PlatformExampleApp/PlatformExampleApp.TextSnippet.Persistence.PostgreSql/Pl
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
 
+# Restore Platform packages
 COPY Platform/Easy.Platform/Easy.Platform.csproj Platform/Easy.Platform/
 COPY Platform/Easy.Platform.AspNetCore/Easy.Platform.AspNetCore.csproj Platform/Easy.Platform.AspNetCore/
 COPY Platform/Easy.Platform.EfCore/Easy.Platform.EfCore.csproj Platform/Easy.Platform.EfCore/
@@ -49,10 +50,12 @@ COPY --from=csproj /src .
 RUN dotnet restore ./PlatformExampleApp/PlatformExampleApp.TextSnippet.Api/PlatformExampleApp.TextSnippet.Api.csproj
 
 FROM build AS publish
+ARG Configuration=Release
+
 COPY ./.editorconfig ./.editorconfig
 COPY Platform Platform
 COPY PlatformExampleApp PlatformExampleApp
-RUN dotnet publish ./PlatformExampleApp/PlatformExampleApp.TextSnippet.Api/PlatformExampleApp.TextSnippet.Api.csproj -c Release -o /app --no-restore
+RUN dotnet publish ./PlatformExampleApp/PlatformExampleApp.TextSnippet.Api/PlatformExampleApp.TextSnippet.Api.csproj -c ${Configuration} -o /app --no-restore
 
 FROM base AS final
 # install curl to do health check

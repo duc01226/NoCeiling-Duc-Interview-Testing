@@ -35,7 +35,8 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
         base.InternalRegister(serviceCollection);
 
         RegisterDbContextOptions(serviceCollection);
-        RegisterEfCoreUow(serviceCollection);
+        if (!ForCrossDbMigrationOnly)
+            RegisterEfCoreUow(serviceCollection);
 
         serviceCollection.Register<IPlatformFullTextSearchPersistenceService>(FullTextSearchPersistenceServiceProvider);
     }

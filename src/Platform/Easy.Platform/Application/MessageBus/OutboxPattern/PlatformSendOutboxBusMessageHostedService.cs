@@ -219,7 +219,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
         return OutboxConfig.ProcessSendMessageRetryCount;
     }
 
-    /// <inheritdoc cref="PlatformOutboxConfig.MessageProcessingMaximumTimeInSeconds"/>
+    /// <inheritdoc cref="PlatformOutboxConfig.MessageProcessingMaximumTimeInSeconds" />
     protected virtual double MessageProcessingMaximumTimeInSeconds()
     {
         return OutboxConfig.MessageProcessingMaximumTimeInSeconds;

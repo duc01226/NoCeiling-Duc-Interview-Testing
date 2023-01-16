@@ -1,5 +1,6 @@
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.EfCore;
+using Easy.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Logging;
@@ -9,7 +10,11 @@ namespace PlatformExampleApp.TextSnippet.Persistence;
 
 public class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDbContext>, ITextSnippetDbContext
 {
-    public TextSnippetDbContext(DbContextOptions<TextSnippetDbContext> options, ILoggerFactory loggerFactory, IPlatformCqrs cqrs) : base(options, loggerFactory, cqrs)
+    public TextSnippetDbContext(
+        DbContextOptions<TextSnippetDbContext> options,
+        ILoggerFactory loggerFactory,
+        IPlatformCqrs cqrs,
+        PlatformPersistenceConfiguration<TextSnippetDbContext> persistenceConfiguration) : base(options, loggerFactory, cqrs, persistenceConfiguration)
     {
     }
 
@@ -25,7 +30,7 @@ public class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDbContext
             var optionsBuilder = new DbContextOptionsBuilder<TextSnippetDbContext>();
             optionsBuilder.UseSqlServer("Data Source=localhost,14330;Initial Catalog=TextSnippedDb;User ID=sa;Password=123456Abc; Encrypt=False;");
 
-            return new TextSnippetDbContext(optionsBuilder.Options, new LoggerFactory(), null);
+            return new TextSnippetDbContext(optionsBuilder.Options, new LoggerFactory(), null, new PlatformPersistenceConfiguration<TextSnippetDbContext>());
         }
     }
 

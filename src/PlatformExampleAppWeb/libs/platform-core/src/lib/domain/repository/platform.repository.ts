@@ -4,10 +4,9 @@ import { catchError, distinctUntilChanged, finalize, map, switchMap, take, takeU
 import { PlatformApiServiceErrorResponse } from '../../api-services';
 import { PlatformCommandDto, PlatformQueryDto } from '../../dtos';
 import { IPlatformEventManager } from '../../events';
-import { Exts } from '../../extensions';
 import { PlatformCoreModuleConfig } from '../../platform-core.config';
-import { Utils } from '../../utils';
-import { PlatformRepositoryErrorEvent } from '../events';
+import { cloneDeep, dictionary_upsert, isDifferent, task_delay } from '../../utils';
+import { PlatformRepositoryErrorEvent } from '../events/repository-error.event';
 import { PlatformRepositoryContext } from '../platform.repository-context';
 
 /* eslint-disable object-shorthand */
@@ -39,7 +38,7 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
     refreshRelatedRequests?: { requestName: string; requestPartialPayload: PlatformQueryDto | PlatformCommandDto }[];
     optionalProps?: (keyof TModel)[];
   }): Observable<TApiResult> {
-    let {
+    const {
       repoDataSubject,
       apiRequestFn,
       requestName,
@@ -52,8 +51,8 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
       asRequest,
       refreshRelatedRequests
     } = config;
-    let replaceItem = config.replaceItem ?? true;
-    let optionalProps = config.optionalProps ?? [];
+    const replaceItem = config.replaceItem ?? true;
+    const optionalProps = config.optionalProps ?? [];
 
     const requestId = this.buildRequestId(requestName, requestPayload);
     const stopRefreshNotifier$ = new Subject();
@@ -94,17 +93,17 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
         let resultObs = repoDataSubject.asObservable().pipe(
           map(repoData => {
             const cachedRequestData = <TApiResult>this.context.loadedRequestDataDic[requestId];
-            return finalResultBuilder(repoData, Exts.Object.cloneDeep(cachedRequestData));
+            return finalResultBuilder(repoData, cloneDeep(cachedRequestData));
           }),
-          distinctUntilChanged((x, y) => Exts.Object.isEqual(x, y)),
-          map(x => Exts.Object.cloneDeep(x))
+          distinctUntilChanged((x, y) => !isDifferent(x, y)),
+          map(x => cloneDeep(x))
         );
         if (asRequest) {
           resultObs = resultObs.pipe(take(1));
         }
         return resultObs.pipe(
           finalize(() => {
-            stopRefreshNotifier$.next();
+            stopRefreshNotifier$.next(null);
             this.context.loadedRequestSubscriberCountDic[requestId] -= 1;
             this.clearLoadedRequestDataCacheItem(requestName);
           })
@@ -171,11 +170,11 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
   protected processRefreshData(options: {
     requestName: string;
     requestPayload?: PlatformQueryDto | PlatformCommandDto;
-    delay?: number;
+    delayTime?: number;
   }): void {
-    const delay = options.delay ?? 500;
+    const delayTime = options.delayTime ?? 500;
 
-    Utils.TaskRunner.delay(() => {
+    task_delay(() => {
       const requestId = this.buildRequestId(options.requestName, options.requestPayload);
       const requestIdPrefix = requestId.endsWith(']') ? requestId.slice(0, requestId.length - 1) : requestId;
       Object.keys(this.context.loadedRequestRefreshFnDic).forEach(key => {
@@ -183,13 +182,10 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
           this.context.loadedRequestRefreshFnDic[key]();
         }
       });
-    }, delay);
+    }, delayTime);
   }
 
-  protected processClearRefreshDataRequest(
-    requestName: string,
-    requestPartialPayload?: PlatformQueryDto | PlatformCommandDto
-  ): void {
+  protected processClearRefreshDataRequest(requestName: string, requestPartialPayload?: PlatformQueryDto | PlatformCommandDto): void {
     const requestId = this.buildRequestId(requestName, requestPartialPayload);
     const requestIdPrefix = requestId.endsWith(']') ? requestId.slice(0, requestId.length - 1) : requestId;
     Object.keys(this.context.loadedRequestRefreshFnDic).forEach(key => {
@@ -208,7 +204,7 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
     onDataChanged?: (newState: Dictionary<TModel>) => void,
     optionalProps: (keyof TModel)[] = []
   ): Dictionary<TModel> {
-    return Exts.Dictionary.upsert(
+    return dictionary_upsert(
       dataSubject.getValue(),
       data,
       item => modelIdFn(item) ?? '',
@@ -222,8 +218,8 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
   }
 
   private updateCachedRequestData<TApiResult>(requestId: string, apiResult: TApiResult): boolean {
-    if (Exts.Object.isDifferent(this.context.loadedRequestDataDic[requestId], apiResult)) {
-      this.context.loadedRequestDataDic[requestId] = Exts.Object.cloneDeep(apiResult);
+    if (isDifferent(this.context.loadedRequestDataDic[requestId], apiResult)) {
+      this.context.loadedRequestDataDic[requestId] = cloneDeep(apiResult);
       return true;
     }
     return false;
@@ -243,16 +239,7 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
     replaceItem: boolean;
     optionalProps: (keyof TModel)[];
   }): void {
-    let {
-      requestId,
-      apiResult,
-      repoDataSubject,
-      modelDataExtractor,
-      modelIdFn,
-      initModelItemFn,
-      replaceItem,
-      optionalProps
-    } = config;
+    const { requestId, apiResult, repoDataSubject, modelDataExtractor, modelIdFn, initModelItemFn, replaceItem, optionalProps } = config;
 
     let hasChanged = this.updateCachedRequestData<TApiResult>(requestId, apiResult);
     const newData = this.upsertData(

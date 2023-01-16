@@ -13,23 +13,26 @@ public class DemoUseDemoDomainServiceCommand : PlatformCqrsCommand<DemoUseDemoDo
 
 public class DemoUseDemoDomainServiceCommandResult : PlatformCqrsCommandResult
 {
-    public DemoDomainService.TransferSnippetTextToMultiDbDemoEntityNameResult
+    public TransferSnippetTextToMultiDbDemoEntityNameService.TransferSnippetTextToMultiDbDemoEntityNameResult
         TransferSnippetTextToMultiDbDemoEntityNameResult
-    { get; set; }
+    {
+        get;
+        set;
+    }
 }
 
 public class DemoUseDemoDomainServiceCommandHandler : PlatformCqrsCommandApplicationHandler<DemoUseDemoDomainServiceCommand, DemoUseDemoDomainServiceCommandResult>
 {
     // Demo use demoDomainService
-    private readonly DemoDomainService demoDomainService;
+    private readonly TransferSnippetTextToMultiDbDemoEntityNameService transferSnippetTextToMultiDbDemoEntityNameService;
 
     public DemoUseDemoDomainServiceCommandHandler(
         IPlatformApplicationUserContextAccessor userContext,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
-        DemoDomainService demoDomainService) : base(userContext, unitOfWorkManager, cqrs)
+        TransferSnippetTextToMultiDbDemoEntityNameService transferSnippetTextToMultiDbDemoEntityNameService) : base(userContext, unitOfWorkManager, cqrs)
     {
-        this.demoDomainService = demoDomainService;
+        this.transferSnippetTextToMultiDbDemoEntityNameService = transferSnippetTextToMultiDbDemoEntityNameService;
     }
 
     protected override async Task<DemoUseDemoDomainServiceCommandResult> HandleAsync(
@@ -37,7 +40,7 @@ public class DemoUseDemoDomainServiceCommandHandler : PlatformCqrsCommandApplica
         CancellationToken cancellationToken)
     {
         var transferSnippetTextToMultiDbDemoEntityNameResult =
-            await demoDomainService.TransferSnippetTextToMultiDbDemoEntityName();
+            await transferSnippetTextToMultiDbDemoEntityNameService.Execute();
 
         return new DemoUseDemoDomainServiceCommandResult
         {

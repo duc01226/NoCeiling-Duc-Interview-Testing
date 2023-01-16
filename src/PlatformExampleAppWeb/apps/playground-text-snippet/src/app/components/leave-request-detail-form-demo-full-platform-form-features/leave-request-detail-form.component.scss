@@ -1,0 +1,262 @@
+@import '../../../../assets/styles/variables.scss';
+@import '../../../../../../../libs/bravo-common/src/styles/variables.scss';
+@import '../../../../../../../libs/bravo-common/src/styles/mixins.scss';
+
+.leave-request-detail-form {
+  font-family: 'Inter';
+  font-style: normal;
+  max-width: 870px;
+  margin: 0 auto;
+  background-color: #fff;
+
+  &__body {
+    max-height: calc(95vh - 150px);
+    overflow: auto;
+  }
+
+  &__note {
+    font-weight: 400;
+    padding: 16px 24px;
+  }
+
+  &__wrapper {
+    .mat-dialog-container {
+      padding: 0 !important;
+    }
+  }
+
+  &__header {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 0 var(--space-6);
+    height: 56px;
+  }
+
+  &__header-title {
+    margin-bottom: 0;
+    font-weight: 700;
+    font-size: 16px;
+    color: #354047;
+  }
+
+  &__header-status {
+    margin-left: var(--space-6);
+  }
+
+  &__header-close-btn {
+    margin-left: auto;
+    cursor: pointer;
+  }
+
+  &__action-button {
+    cursor: pointer;
+    color: #c42b1c;
+    font-size: 16px;
+    background-color: #ececec;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+
+    bravo-button {
+      font-weight: 400;
+      line-height: 24px;
+
+      background: none;
+      outline: none;
+      border: none;
+      flex: 1;
+    }
+
+    .bravo-button {
+      .btn-outline-primary {
+        background-color: #ffffff;
+        border-radius: 4px;
+        border-color: #ffffff;
+        color: #000000;
+      }
+    }
+  }
+
+  &__cancel-btn {
+    height: 64px;
+    margin-top: 0.5px;
+    width: 100%;
+    font-weight: 400;
+    font-size: var(--base-font-size);
+    font-family: var(--base-font-family);
+    color: var(--danger-button-color);
+
+    .icon {
+      margin-right: var(--space-1);
+    }
+  }
+
+  &__top-error-alert {
+    margin: 16px 26px 0px 26px;
+  }
+
+  &__check-date-range-overlap-error-alert {
+    flex-grow: 1;
+  }
+
+  .mat-radio-button.mat-accent .mat-radio-ripple .mat-ripple-element {
+    background-color: #43b9de !important;
+  }
+
+  .mat-radio-button.mat-accent .mat-radio-inner-circle {
+    background-color: #43b9de !important;
+    z-index: 3;
+  }
+
+  .mat-radio-button .mat-radio-outer-circle {
+    border-color: #43b9de !important;
+    z-index: 3;
+  }
+
+  &__panel-form {
+    background-color: #f6f8fb;
+    border-top: 1px solid #c7d5e0;
+    border-bottom: 1px solid #c7d5e0;
+    padding: 16px 0px;
+  }
+
+  &__row {
+    padding: 16px 24px;
+    display: flex;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 24px;
+  }
+
+  &__inner-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    flex: 1;
+
+    &--title-top {
+      align-items: flex-start;
+    }
+  }
+
+  &__field {
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 24px;
+    color: #354047;
+    min-width: 150px;
+    margin: unset;
+  }
+
+  &__field-required {
+    color: #ef3636;
+  }
+
+  &__field-error {
+    color: #ef3636;
+  }
+
+  &__content {
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 24px;
+    color: #354047;
+    min-width: 240px;
+
+    &--full {
+      flex: 1;
+    }
+  }
+
+  &__section {
+    padding-left: 0;
+    display: inline-flex;
+  }
+
+  &__section-item {
+    margin-right: 24px;
+  }
+
+  &__dropdown-select {
+    width: 100%;
+    height: 32px;
+    background-color: #fcfcfc;
+  }
+
+  &__divider {
+    width: 100%;
+    height: 0.5px;
+    background-color: #ececec;
+  }
+
+  &__row-info {
+    padding: 16px 26px 0px 26px;
+    display: flex;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  &__info-icon {
+    min-width: 24px;
+    margin: -20px 8px 0 0;
+  }
+
+  &__info-message {
+    flex-grow: 1;
+    flex-basis: min-content;
+    line-height: 24px;
+  }
+
+  &__info {
+    padding: 15px 15px;
+  }
+
+  .date-picker {
+    width: 240px;
+    height: 32px;
+    display: flex;
+
+    &__input {
+      width: calc(100% - 32px);
+      border-radius: 4px 0px 0px 4px;
+      padding: 0px 12px;
+      background: #fcfcfc;
+      border: 1px solid #ececec;
+      font-size: 16px;
+    }
+
+    &__toggle-btn {
+      background-color: #43b9de;
+      height: 100%;
+      width: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0px 4px 4px 0px;
+      cursor: pointer;
+
+      &:hover {
+        opacity: 0.7;
+      }
+    }
+  }
+}
+
+@include bravo-flex-layout-mobile() {
+  .leave-request-detail-form {
+    &__content {
+      flex: 1;
+
+      &__dropdown-select {
+        width: 100%;
+      }
+
+      .mat-datepicker-input {
+        width: calc(100% - 40px);
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
-import { ModuleWithProviders, NgModule, Provider, Type } from '@angular/core';
+import { EnvironmentProviders, ModuleWithProviders, NgModule, Provider, Type } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { PlatformApiService } from './api-services';
@@ -11,7 +11,6 @@ import {
   PlatformRepositoryErrorEventHandler,
 } from './domain';
 import { PlatformEventManagerSubscriptionsMap } from './events';
-import { PlatformDomainModuleConfig } from './platform-domain.config';
 
 @NgModule({
   imports: [],
@@ -19,28 +18,23 @@ import { PlatformDomainModuleConfig } from './platform-domain.config';
 })
 export class PlatformDomainModule {
   public static forRoot(config: {
-    moduleConfig: {
-      type: Type<PlatformDomainModuleConfig>;
-      configFactory: () => PlatformDomainModuleConfig;
-    };
     appRepositoryContext?: Type<PlatformRepositoryContext>;
     appRepositories?: Type<PlatformRepository<PlatformRepositoryContext>>[];
     appApis?: Type<PlatformApiService>[];
     appRepositoryErrorEventHandlers?: Type<PlatformRepositoryErrorEventHandler>[];
+    additionalProviders?: Array<Provider | EnvironmentProviders>;
   }): ModuleWithProviders<PlatformDomainModule>[] {
     return [
       {
         ngModule: PlatformDomainModule,
         providers: [
-          { provide: config.moduleConfig.type, useFactory: () => config.moduleConfig.configFactory() },
-          { provide: PlatformDomainModuleConfig, useExisting: config.moduleConfig.type },
-
           ...this.buildRepositoryRelatedProviders({
             repositoryContext: config.appRepositoryContext,
             repositories: config.appRepositories,
             apis: config.appApis,
             repositoryErrorEventHandlers: config.appRepositoryErrorEventHandlers
-          })
+          }),
+          ...(config.additionalProviders != null ? config.additionalProviders : [])
         ]
       }
     ];

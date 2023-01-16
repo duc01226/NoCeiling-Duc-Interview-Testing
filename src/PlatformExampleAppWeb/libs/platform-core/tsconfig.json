@@ -1,22 +1,27 @@
 {
   "extends": "../../tsconfig.base.json",
   "files": [],
-  "include": ["../../typings/**/*.d.ts"],
+  "include": [],
   "references": [
     {
       "path": "./tsconfig.lib.json"
     },
     {
-      "path": "./tsconfig.spec.json"
+      "path": "./tsconfig.lib.prod.json"
     }
   ],
   "compilerOptions": {
+    "target": "es2020",
     "forceConsistentCasingInFileNames": true,
     "strict": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
     "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "types": ["node", "../../typings/custom-global"]
   },
   "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
     "strictInjectionParameters": true,
     "strictInputAccessModifiers": true,
     "strictTemplates": true

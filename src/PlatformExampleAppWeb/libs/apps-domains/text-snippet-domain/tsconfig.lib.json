@@ -2,13 +2,11 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "../../../dist/out-tsc",
-    "target": "es2015",
     "declaration": true,
     "declarationMap": true,
     "inlineSources": true,
-    "types": [],
-    "lib": ["dom", "es2018"]
+    "types": ["node", "../../../typings/custom-global"]
   },
-  "exclude": ["src/test-setup.ts", "**/*.spec.ts"],
-  "include": ["**/*.ts", "../../../typings/**/*.d.ts"]
+  "exclude": ["src/test-setup.ts", "src/**/*.spec.ts", "jest.config.ts", "src/**/*.test.ts"],
+  "include": ["src/**/*.ts"]
 }

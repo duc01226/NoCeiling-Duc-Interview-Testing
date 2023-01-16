@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Repositories;
@@ -27,22 +28,28 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         return GetUowDbContext(uow).Set<TEntity>();
     }
 
-    public override IQueryable<TEntity> GetQuery(IUnitOfWork uow)
+    public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        return GetTable(uow).AsNoTracking().AsQueryable();
+        return GetTable(uow).Pipe(p => loadRelatedEntities.ForEach(loadWithEntityPropPath => p.Include(loadWithEntityPropPath))).AsNoTracking().AsQueryable();
     }
 
-    public override Task<List<TSource>> ToListAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public override Task<List<TSource>> ToListAsync<TSource>(
+        IQueryable<TSource> source,
+        CancellationToken cancellationToken = default)
     {
         return source.ToListAsync(cancellationToken);
     }
 
-    public override Task<TSource> FirstOrDefaultAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public override Task<TSource> FirstOrDefaultAsync<TSource>(
+        IQueryable<TSource> source,
+        CancellationToken cancellationToken = default)
     {
         return source.FirstOrDefaultAsync(cancellationToken);
     }
 
-    public override Task<TSource> FirstAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public override Task<TSource> FirstAsync<TSource>(
+        IQueryable<TSource> source,
+        CancellationToken cancellationToken = default)
     {
         return source.FirstAsync(cancellationToken);
     }
@@ -70,8 +77,8 @@ public abstract class PlatformEfCoreRootRepository<TEntity, TPrimaryKey, TDbCont
     {
     }
 
-    public override IQueryable<TEntity> GetQuery(IUnitOfWork uow)
+    public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        return GetTable(uow).AsQueryable();
+        return GetTable(uow).Pipe(p => loadRelatedEntities.ForEach(loadWithEntityPropPath => p.Include(loadWithEntityPropPath))).AsQueryable();
     }
 }

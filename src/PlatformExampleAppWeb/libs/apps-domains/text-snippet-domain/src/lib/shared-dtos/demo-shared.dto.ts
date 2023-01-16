@@ -1,3 +1,3 @@
-import { PlatformResultDto } from '@platform-example-web/platform-core';
+import { PlatformResultDto } from '@libs/platform-core';
 
 export class DemoSharedDto extends PlatformResultDto {}

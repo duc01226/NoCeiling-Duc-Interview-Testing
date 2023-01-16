@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Repositories;
@@ -28,22 +29,28 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         return GetUowDbContext(uow).GetCollection<TEntity>();
     }
 
-    public override IQueryable<TEntity> GetQuery(IUnitOfWork uow)
+    public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return GetTable(uow).AsQueryable();
     }
 
-    public override Task<List<TSource>> ToListAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public override Task<List<TSource>> ToListAsync<TSource>(
+        IQueryable<TSource> source,
+        CancellationToken cancellationToken = default)
     {
         return source.As<IMongoQueryable<TSource>>().ToListAsync(cancellationToken);
     }
 
-    public override Task<TSource> FirstOrDefaultAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public override Task<TSource> FirstOrDefaultAsync<TSource>(
+        IQueryable<TSource> source,
+        CancellationToken cancellationToken = default)
     {
         return source.As<IMongoQueryable<TSource>>().FirstOrDefaultAsync(cancellationToken);
     }
 
-    public override Task<TSource> FirstAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public override Task<TSource> FirstAsync<TSource>(
+        IQueryable<TSource> source,
+        CancellationToken cancellationToken = default)
     {
         return source.As<IMongoQueryable<TSource>>().FirstAsync(cancellationToken);
     }

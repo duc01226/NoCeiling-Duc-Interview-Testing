@@ -12,7 +12,7 @@ import {
   PlatformPagedQueryDto,
   PlatformPagedResultDto,
   PlatformResultDto,
-} from '@platform-example-web/platform-core';
+} from '@libs/platform-core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -27,13 +27,13 @@ export class TextSnippetApi extends PlatformApiService {
     authHttpRequestOptionsAppender: PlatformAuthHttpRequestOptionsAppenderService,
     private domainModuleConfig: AppsTextSnippetDomainModuleConfig
   ) {
-    super(moduleConfig, http, authHttpRequestOptionsAppender);
+    super(http, moduleConfig, authHttpRequestOptionsAppender);
   }
   protected get apiUrl(): string {
     return `${this.domainModuleConfig.textSnippetApiHost}/api/TextSnippet`;
   }
 
-  public search(query: SearchTextSnippetQueryDto): Observable<PlatformPagedResultDto<TextSnippetDataModel>> {
+  public search(query: SearchTextSnippetQuery): Observable<PlatformPagedResultDto<TextSnippetDataModel>> {
     return this.get<IPlatformPagedResultDto<ITextSnippetDataModel>>('/search', query).pipe(
       map(_ => {
         _.items = _.items.map(item => new TextSnippetDataModel(item));
@@ -55,7 +55,7 @@ export interface ISearchTextSnippetQuery extends IPlatformRepositoryPagedQuery {
   searchId?: string;
 }
 
-export class SearchTextSnippetQueryDto extends PlatformPagedQueryDto implements ISearchTextSnippetQuery {
+export class SearchTextSnippetQuery extends PlatformPagedQueryDto implements ISearchTextSnippetQuery {
   public constructor(data?: ISearchTextSnippetQuery) {
     super(data);
     this.searchText = data?.searchText;

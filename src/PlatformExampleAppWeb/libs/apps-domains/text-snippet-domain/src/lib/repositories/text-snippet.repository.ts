@@ -4,11 +4,11 @@ import {
   PlatformEventManager,
   PlatformPagedResultDto,
   PlatformRepository,
-} from '@platform-example-web/platform-core';
+} from '@libs/platform-core';
 import { Observable } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 
-import { SaveTextSnippetCommand, SaveTextSnippetCommandResult, SearchTextSnippetQueryDto, TextSnippetApi } from '../apis';
+import { SaveTextSnippetCommand, SaveTextSnippetCommandResult, SearchTextSnippetQuery, TextSnippetApi } from '../apis';
 import { TextSnippetRepositoryContext } from '../apps-text-snippet.repository-context';
 import { TextSnippetDataModel } from '../data-models';
 
@@ -22,7 +22,7 @@ export class TextSnippetRepository extends PlatformRepository<TextSnippetReposit
   ) {
     super(moduleConfig, context, eventManager);
   }
-  public search(query: SearchTextSnippetQueryDto): Observable<PlatformPagedResultDto<TextSnippetDataModel>> {
+  public search(query: SearchTextSnippetQuery): Observable<PlatformPagedResultDto<TextSnippetDataModel>> {
     return this.processUpsertData({
       repoDataSubject: this.context.textSnippetSubject,
       apiRequestFn: () => this.textSnippetApi.search(query),

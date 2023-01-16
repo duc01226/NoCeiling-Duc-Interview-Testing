@@ -23,7 +23,7 @@ services:
     image: ${REGISTRY:-duc01226}/easy-platform-example-app-text-snippet-api:${PLATFORM:-linux}-${TAG:-latest}
     build:
       context: .
-      dockerfile: PlatformExampleApp/PlatformExampleApp.TextSnippet.Api/dev.Dockerfile
+      dockerfile: PlatformExampleApp/PlatformExampleApp.TextSnippet.Api/Dockerfile
     depends_on:
       - sql-data
       - mongo-data
@@ -37,7 +37,7 @@ services:
       context: PlatformExampleAppWeb
       args:
         configuration: "production"
-      dockerfile: apps/text-snippet/Dockerfile
+      dockerfile: apps/playground-text-snippet/Dockerfile
 
   chrome1:
     image: selenium/node-chrome:4.4.0-20220831
