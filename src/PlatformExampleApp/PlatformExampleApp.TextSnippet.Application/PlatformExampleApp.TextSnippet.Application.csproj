@@ -4,6 +4,10 @@
     <TargetFramework>net7.0</TargetFramework>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\Platform\Easy.Platform\Easy.Platform.csproj" />
     <ProjectReference Include="..\PlatformExampleApp.Shared\PlatformExampleApp.Shared.csproj" />
