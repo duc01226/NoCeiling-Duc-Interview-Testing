@@ -22,7 +22,7 @@ public static partial class TextSnippetApp
         public SpinnerUiComponent GlobalSpinner { get; set; }
 
         public override string AppName => Const.AppName;
-        public override string ErrorElementCssSelector => ".mat-error";
+        public override string ErrorElementCssSelector => ".mat-mdc-error";
         public override IWebElement? GlobalSpinnerElement => GlobalSpinner.RootElement;
 
         public override TResult WaitUntilAssertSuccess<TResult>(

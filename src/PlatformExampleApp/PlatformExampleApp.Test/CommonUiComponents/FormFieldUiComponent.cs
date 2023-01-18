@@ -6,18 +6,18 @@ public class FormFieldUiComponent : UiComponent<FormFieldUiComponent>
     {
     }
 
-    public override string RootElementClassSelector => ".mat-form-field";
-    public IWebElement? InputElement => FindChildOrRootElement(".mat-input-element");
+    public override string RootElementClassSelector => ".mat-mdc-form-field";
+    public IWebElement? InputElement => FindChildOrRootElement(".mat-mdc-input-element");
     public string Value => InputElement?.Value() ?? "";
 
     public FormFieldUiComponent SendKeysAndFocusOut(string text)
     {
-        return SendKeysAndFocusOut(text, ".mat-input-element");
+        return SendKeysAndFocusOut(text, ".mat-mdc-input-element");
     }
 
     public FormFieldUiComponent Clear()
     {
-        return Clear(".mat-input-element");
+        return Clear(".mat-mdc-input-element");
     }
 
     public FormFieldUiComponent ReplaceTextAndEnter(string text)

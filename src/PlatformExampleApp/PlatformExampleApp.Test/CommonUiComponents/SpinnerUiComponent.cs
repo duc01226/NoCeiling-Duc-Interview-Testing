@@ -6,5 +6,5 @@ public class SpinnerUiComponent : UiComponent<SpinnerUiComponent>
     {
     }
 
-    public override string RootElementClassSelector => ".platform-mat-spinner";
+    public override string RootElementClassSelector => ".platform-mat-mdc-spinner";
 }

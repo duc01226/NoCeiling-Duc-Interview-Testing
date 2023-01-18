@@ -13,11 +13,11 @@ COPY angular.json .
 COPY .eslintrc.json .
 COPY decorate-angular-cli.js .
 COPY libs libs
+COPY typings typings
 COPY tools tools
 
 # Build app files
 COPY apps/playground-text-snippet apps/playground-text-snippet
-COPY libs libs
 ARG configuration=development
 RUN npm run ng build playground-text-snippet -- --configuration=${configuration}
 # BUILDER END

@@ -7,7 +7,7 @@ public static partial class TextSnippetApp
 {
     public class HomePage : BasePage<HomePage>
     {
-        public const string DefaultTitle = "TextSnippet";
+        public const string DefaultTitle = "Playground TextSnippet";
         public const int TextSnippetItemsGridPageSize = 10;
         public static readonly string GripSnippetTextColName = "SnippetText";
 

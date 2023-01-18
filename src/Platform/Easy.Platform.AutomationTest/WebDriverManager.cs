@@ -54,7 +54,7 @@ public class WebDriverManager : IWebDriverManager
 
     public IWebDriver CreateLocalMachineWebDriver(string version = "Latest", Architecture architecture = Architecture.Auto)
     {
-        return CreateLocalMachineWebDriver(BuildDefaultDriverConfig(Settings));
+        return CreateLocalMachineWebDriver(BuildDefaultDriverConfig(Settings), version, architecture);
     }
 
     public IWebDriver CreateLocalMachineWebDriver(IDriverConfig config, string version = "Latest", Architecture architecture = Architecture.Auto)
