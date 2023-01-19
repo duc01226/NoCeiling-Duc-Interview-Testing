@@ -7,9 +7,14 @@ import { PlatformAuthHttpRequestOptionsAppenderService } from '../../auth-servic
 import { HttpClientOptions, PlatformHttpService } from '../../http-services';
 import { PlatformCoreModuleConfig } from '../../platform-core.config';
 import { removeNullProps, toPlainObj } from '../../utils';
-import { IPlatformApiServiceErrorResponse, PlatformApiServiceErrorInfoCode, PlatformApiServiceErrorResponse } from './platform.api-error';
+import {
+  IPlatformApiServiceErrorResponse,
+  PlatformApiServiceErrorInfoCode,
+  PlatformApiServiceErrorResponse
+} from './platform.api-error';
 
-const ERR_CONNECTION_REFUSED_STATUS: HttpStatusCode[] = [0, 504];
+const ERR_CONNECTION_REFUSED_STATUSES: HttpStatusCode[] = [0, 504];
+const UNAUTHORIZATION_STATUSES: HttpStatusCode[] = [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden];
 
 @Injectable()
 export abstract class PlatformApiService extends PlatformHttpService {
@@ -51,7 +56,9 @@ export abstract class PlatformApiService extends PlatformHttpService {
   }
 
   protected delete<T>(path: string): Observable<T> {
-    return super.httpDelete<T>(this.apiUrl + path, this.getHttpOptions()).pipe(catchError(err => this.catchHttpError<T>(err)));
+    return super
+      .httpDelete<T>(this.apiUrl + path, this.getHttpOptions())
+      .pipe(catchError(err => this.catchHttpError<T>(err)));
   }
 
   protected catchHttpError<T>(errorResponse: HttpErrorResponse | Error): Observable<T> {
@@ -59,7 +66,7 @@ export abstract class PlatformApiService extends PlatformHttpService {
       return this.throwError<T>({ error: { code: errorResponse.name, message: errorResponse.message }, requestId: '' });
     }
 
-    if (ERR_CONNECTION_REFUSED_STATUS.includes(errorResponse.status)) {
+    if (ERR_CONNECTION_REFUSED_STATUSES.includes(errorResponse.status)) {
       return this.throwError({
         error: {
           code: PlatformApiServiceErrorInfoCode.ConnectionRefused,
@@ -69,12 +76,22 @@ export abstract class PlatformApiService extends PlatformHttpService {
       });
     }
 
-    const apiErrorResponse = <IPlatformApiServiceErrorResponse>errorResponse.error;
+    const apiErrorResponse = <IPlatformApiServiceErrorResponse | null>errorResponse.error;
     if (apiErrorResponse?.error != null && apiErrorResponse.error.code != null) {
       return this.throwError({
         error: apiErrorResponse.error,
         statusCode: errorResponse.status,
         requestId: apiErrorResponse.requestId
+      });
+    }
+
+    if (UNAUTHORIZATION_STATUSES.includes(errorResponse.status)) {
+      return this.throwError({
+        error: {
+          code: PlatformApiServiceErrorInfoCode.PlatformPermissionException,
+          message: errorResponse.message ?? 'You are unauthorized or forbidden'
+        },
+        requestId: apiErrorResponse?.requestId ?? ''
       });
     }
 
@@ -84,7 +101,7 @@ export abstract class PlatformApiService extends PlatformHttpService {
         message: errorResponse.message
       },
       statusCode: errorResponse.status,
-      requestId: apiErrorResponse.requestId
+      requestId: apiErrorResponse?.requestId ?? ''
     });
   }
 
@@ -115,7 +132,11 @@ export abstract class PlatformApiService extends PlatformHttpService {
     return finalOptions;
   }
 
-  private flattenHttpGetParam(inputParams: IApiGetParams | FormData, returnParam: IApiGetParams = {}, prefix?: string): IApiGetParams {
+  private flattenHttpGetParam(
+    inputParams: IApiGetParams | FormData,
+    returnParam: IApiGetParams = {},
+    prefix?: string
+  ): IApiGetParams {
     // eslint-disable-next-line guard-for-in
     for (const paramKey in inputParams || {}) {
       const inputParamValue = inputParams instanceof FormData ? inputParams.get(paramKey) : inputParams[paramKey];
