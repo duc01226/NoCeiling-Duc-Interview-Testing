@@ -1,8 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-constraint */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { clone as lodashClone, cloneDeep as lodashCloneDeep, keys as lodashKeys, values as lodashValues } from 'lodash-es';
+import {
+  clone as lodashClone,
+  cloneDeep as lodashCloneDeep,
+  keys as lodashKeys,
+  values as lodashValues
+} from 'lodash-es';
 import { PartialDeep } from 'type-fest';
 
+import { Time } from '../common-types';
 import { any } from './_common-functions';
 
 export function keys<T extends object>(source: T, ignorePrivate: boolean = true): (keyof T & string)[] {
@@ -23,6 +29,7 @@ export function keys<T extends object>(source: T, ignorePrivate: boolean = true)
   }
   return result;
 }
+
 export function dictionaryMapTo<TSource, TTarget>(
   source: Dictionary<TSource>,
   mapCallback: (item: TSource) => TTarget
@@ -33,19 +40,21 @@ export function dictionaryMapTo<TSource, TTarget>(
   });
   return result;
 }
+
 export function toPlainObj<T>(source: T, ignorePrivate: boolean = true): any {
   if (source == undefined) return undefined;
   if (typeof source != 'object') return source;
   if (source instanceof Array) {
     return source.map(p => toPlainObj(p, ignorePrivate));
   }
-  if (source instanceof Date) return source;
+  if (source instanceof Date || source instanceof Time) return source;
   const objResult: Dictionary<any> = {};
   keys(source, ignorePrivate).forEach(key => {
     objResult[key] = toPlainObj((<any>source)[key], ignorePrivate);
   });
   return objResult;
 }
+
 export function clone<T>(value: T, updateClonedValueAction?: (clonedValue: T) => undefined | T | void): T {
   if (value == undefined) return value;
 
@@ -62,13 +71,17 @@ export function clone<T>(value: T, updateClonedValueAction?: (clonedValue: T) =>
 
 export function immutableUpdate<TObject extends object>(
   targetObj: TObject,
-  partialStateOrUpdaterFn: PartialDeep<TObject> | Partial<TObject> | ((state: TObject) => void | PartialDeep<TObject> | Partial<TObject>)
+  partialStateOrUpdaterFn:
+    | PartialDeep<TObject>
+    | Partial<TObject>
+    | ((state: TObject) => void | PartialDeep<TObject> | Partial<TObject>),
+  deepItemInArray: boolean = false
 ): TObject {
-  const clonnedObj = clone(targetObj);
+  const clonedObj = clone(targetObj);
   let stateChanged = false;
 
   if (typeof partialStateOrUpdaterFn == 'object') {
-    stateChanged = assignDeep(clonnedObj, <object>partialStateOrUpdaterFn, 'deepCheck');
+    stateChanged = assignDeep(clonedObj, <object>partialStateOrUpdaterFn, 'deepCheck', deepItemInArray);
   }
 
   if (typeof partialStateOrUpdaterFn == 'function') {
@@ -78,15 +91,15 @@ export function immutableUpdate<TObject extends object>(
 
     if (updatedStateResult != undefined) {
       // Case the partialStateOrUpdaterFn return partial updated props object
-      stateChanged = assignDeep(clonnedObj, <object>updatedStateResult, 'deepCheck');
+      stateChanged = assignDeep(clonedObj, <object>updatedStateResult, 'deepCheck', deepItemInArray);
     } else {
       // Case the partialStateOrUpdaterFn edit the object state directly.
       // Then the clonnedDeepState is actual an updated result, use it to update the clonedState
-      stateChanged = assignDeep(clonnedObj, <object>clonnedDeepState, 'deepCheck');
+      stateChanged = assignDeep(clonedObj, <object>clonnedDeepState, 'deepCheck', deepItemInArray);
     }
   }
 
-  return stateChanged ? clonnedObj : targetObj;
+  return stateChanged ? clonedObj : targetObj;
 }
 
 export function cloneWithNewValues<T extends object>(value: T, newValues: T | Partial<T>): T {
@@ -97,6 +110,7 @@ export function cloneWithNewValues<T extends object>(value: T, newValues: T | Pa
   });
   return clonedValue;
 }
+
 export function cloneDeep<T extends any>(
   value: T,
   deepLevel?: number,
@@ -226,7 +240,9 @@ export function removeProps(obj: object, filterProp: (propValue: any) => boolean
 }
 
 export function getPropertyDescriptor(obj: object, prop: string): PropertyDescriptor | undefined {
-  return Object.getOwnPropertyDescriptor(obj, prop) ?? Object.getOwnPropertyDescriptor(Object.getPrototypeOf(obj), prop);
+  return (
+    Object.getOwnPropertyDescriptor(obj, prop) ?? Object.getOwnPropertyDescriptor(Object.getPrototypeOf(obj), prop)
+  );
 }
 
 export function removeNullProps<T>(obj: T): T {
@@ -268,7 +284,10 @@ function mapObject<T extends object>(
       if (checkDiff === true && (<any>target)[key] == (<any>source)[key]) return;
       if (checkDiff === 'deepCheck' && !isDifferent((<any>target)[key], (<any>source)[key])) return;
 
-      if (mapObjectCheckTwoValueCanSetDirectly((<any>target)[key], (<any>source)[key]) || getPropertyDescriptor(target, key)?.set != null) {
+      if (
+        mapObjectCheckTwoValueCanSetDirectly((<any>target)[key], (<any>source)[key]) ||
+        getPropertyDescriptor(target, key)?.set != null
+      ) {
         (<any>target)[key] = cloneSource ? cloneDeep((<any>source)[key]) : (<any>source)[key];
         hasDataChanged = true;
       } else {
@@ -276,13 +295,25 @@ function mapObject<T extends object>(
 
         if ((<any>target)[key] instanceof Array && (<any>source)[key] instanceof Array) {
           if (deepItemInArray) {
-            hasDataChanged = mapArray((<any>target)[key], (<any>source)[key], cloneSource, makeTargetValuesSameSourceValues, checkDiff);
+            hasDataChanged = mapArray(
+              (<any>target)[key],
+              (<any>source)[key],
+              cloneSource,
+              makeTargetValuesSameSourceValues,
+              checkDiff
+            );
           } else {
             (<any>target)[key] = cloneSource ? cloneDeep((<any>source)[key]) : (<any>source)[key];
             hasDataChanged = true;
           }
         } else {
-          hasDataChanged = mapObject((<any>target)[key], (<any>source)[key], cloneSource, makeTargetValuesSameSourceValues, checkDiff);
+          hasDataChanged = mapObject(
+            (<any>target)[key],
+            (<any>source)[key],
+            cloneSource,
+            makeTargetValuesSameSourceValues,
+            checkDiff
+          );
         }
       }
     });
@@ -323,7 +354,13 @@ function mapObject<T extends object>(
         hasDataChanged = true;
       } else {
         targetArray[i] = clone(targetArray[i], newTargetArrayItem => {
-          hasDataChanged = mapObject(newTargetArrayItem, sourceArray[i], cloneSource, makeTargetValuesSameSourceValues, checkDiff);
+          hasDataChanged = mapObject(
+            newTargetArrayItem,
+            sourceArray[i],
+            cloneSource,
+            makeTargetValuesSameSourceValues,
+            checkDiff
+          );
         });
       }
     }

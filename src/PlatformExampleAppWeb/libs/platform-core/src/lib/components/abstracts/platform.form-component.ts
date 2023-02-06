@@ -92,7 +92,8 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     if (this.formConfig && this.form) return;
 
     const initialFormConfig = this.initialFormConfig();
-    if (initialFormConfig == undefined) throw new Error('initialFormConfig must not be undefined or formConfig and form must be input');
+    if (initialFormConfig == undefined)
+      throw new Error('initialFormConfig must not be undefined or formConfig and form must be input');
 
     this.formConfig = initialFormConfig;
     this.form = this.buildForm(this.formConfig);
@@ -127,7 +128,10 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
   };
 
   public isFormValid(): boolean {
-    return this.form.valid && (this.formConfig.childForms == undefined || this.isAllChildFormsValid(this.formConfig.childForms()));
+    return (
+      this.form.valid &&
+      (this.formConfig.childForms == undefined || this.isAllChildFormsValid(this.formConfig.childForms()))
+    );
   }
 
   public isAllChildFormsValid(forms: (QueryList<IPlatformFormComponent> | IPlatformFormComponent)[]): boolean {
@@ -166,10 +170,16 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
       const formControl = (<any>this.form.controls)[formKey];
 
       if (isDifferent(vmFormKeyValue, (<any>currentReactiveFormValues)[formKey])) {
-        if (formControl instanceof FormArray && vmFormKeyValue instanceof Array && formControl.length != vmFormKeyValue.length) {
+        if (
+          formControl instanceof FormArray &&
+          vmFormKeyValue instanceof Array &&
+          formControl.length != vmFormKeyValue.length
+        ) {
           formControl.clear({ emitEvent: false });
           vmFormKeyValue.forEach(modelItem =>
-            formControl.push(this.buildFromArrayControlItem((<any>this.formConfig.controls)[formKey], modelItem), { emitEvent: false })
+            formControl.push(this.buildFromArrayControlItem((<any>this.formConfig.controls)[formKey], modelItem), {
+              emitEvent: false
+            })
           );
         }
 
@@ -214,7 +224,10 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     this.formConfig.groupValidations.forEach(groupValidators => {
       if (groupValidators.includes(<keyof TViewModel>formControlKey))
         groupValidators.forEach(groupValidatorControlKey => {
-          this.formControls(groupValidatorControlKey.toString()).updateValueAndValidity({ emitEvent: false, onlySelf: true });
+          this.formControls(groupValidatorControlKey.toString()).updateValueAndValidity({
+            emitEvent: false,
+            onlySelf: true
+          });
         });
     });
   }
@@ -223,7 +236,9 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     items: TItemModel[],
     formItemGroupControls: (item: TItemModel) => PlatformPartialFormGroupControls<TItemModel>
   ): FormArray<FormGroup<PlatformFormGroupControls<TItemModel>>> {
-    return new FormArray(items.map(item => new FormGroup(<PlatformFormGroupControls<TItemModel>>formItemGroupControls(item))));
+    return new FormArray(
+      items.map(item => new FormGroup(<PlatformFormGroupControls<TItemModel>>formItemGroupControls(item)))
+    );
   }
 
   protected formControlArrayFor<TItemModel>(
@@ -234,7 +249,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
   }
 
   protected updateVmOnFormValuesChange(values: Partial<TViewModel>) {
-    const newUpdatedVm: TViewModel = immutableUpdate(this.vm, values);
+    const newUpdatedVm: TViewModel = immutableUpdate(this.vm, values, true);
 
     if (newUpdatedVm != this.vm) {
       this.internalSetVm(newUpdatedVm, false);
@@ -246,11 +261,16 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 
     keys(formConfig.controls).forEach(key => {
       const formConfigControlsConfigItem: PlatformFormGroupControlConfigProp<unknown> = (<any>formConfig.controls)[key];
-      const formConfigControlsConfigArrayItem = <PlatformFormGroupControlConfigPropArray<unknown>>(<any>formConfig.controls)[key];
+      const formConfigControlsConfigArrayItem = <PlatformFormGroupControlConfigPropArray<unknown>>(
+        (<any>formConfig.controls)[key]
+      );
 
       if (formConfigControlsConfigItem instanceof FormControl) {
         (<any>controls)[key] = formConfigControlsConfigItem;
-      } else if (formConfigControlsConfigArrayItem.itemControl != undefined && formConfigControlsConfigArrayItem.modelItems != undefined) {
+      } else if (
+        formConfigControlsConfigArrayItem.itemControl != undefined &&
+        formConfigControlsConfigArrayItem.modelItems != undefined
+      ) {
         (<any>controls)[key] = new FormArray(
           formConfigControlsConfigArrayItem.modelItems().map(modelItem => {
             return this.buildFromArrayControlItem(formConfigControlsConfigArrayItem, modelItem);
@@ -279,10 +299,15 @@ export type PlatformFormConfig<TFormModel> = {
 };
 
 export type PlatformPartialFormGroupControlsConfig<TFormModel> = {
-  [P in keyof TFormModel]?: PlatformFormGroupControlConfigProp<TFormModel[P]>;
+  [P in keyof TFormModel]?: TFormModel[P] extends readonly unknown[]
+    ? FormControl<TFormModel[P]> | PlatformFormGroupControlConfigPropArray<ArrayElement<TFormModel[P]>>
+    : FormControl<TFormModel[P]>;
 };
 
-export type PlatformFormGroupControlConfigProp<TFormModelProp> = TFormModelProp extends unknown[]
+// Need to be code duplicated used in "export type PlatformPartialFormGroupControlsConfig<TFormModel> = {"
+// "[P in keyof TFormModel]?: TFormModel[P] ..." should be equal to PlatformFormGroupControlConfigProp<TFormModel[P]>
+// dont know why it will get type errors when using if TFormModel[P] is enum
+export type PlatformFormGroupControlConfigProp<TFormModelProp> = TFormModelProp extends readonly unknown[]
   ? FormControl<TFormModelProp> | PlatformFormGroupControlConfigPropArray<ArrayElement<TFormModelProp>>
   : FormControl<TFormModelProp>;
 
@@ -292,14 +317,27 @@ export type PlatformFormGroupControlConfigPropArray<TItemModel> = {
 };
 
 export type PlatformFormGroupControls<TFormModel> = {
-  [P in keyof TFormModel]: PlatformFormGroupControlProp<TFormModel[P]>;
+  [P in keyof TFormModel]: TFormModel[P] extends readonly unknown[]
+    ?
+        | FormControl<TFormModel[P]>
+        | FormArray<FormControl<ArrayElement<TFormModel[P]>>>
+        | FormArray<FormGroup<PlatformFormGroupControls<ArrayElement<TFormModel[P]>>>>
+    : FormControl<TFormModel[P]>;
 };
 
 export type PlatformPartialFormGroupControls<TFormModel> = {
-  [P in keyof TFormModel]?: PlatformFormGroupControlProp<TFormModel[P]>;
+  [P in keyof TFormModel]?: TFormModel[P] extends readonly unknown[]
+    ?
+        | FormControl<TFormModel[P]>
+        | FormArray<FormControl<ArrayElement<TFormModel[P]>>>
+        | FormArray<FormGroup<PlatformFormGroupControls<ArrayElement<TFormModel[P]>>>>
+    : FormControl<TFormModel[P]>;
 };
 
-export type PlatformFormGroupControlProp<TFormModelProp> = TFormModelProp extends unknown[]
+// Need to be code duplicated used in "export type PlatformFormGroupControls<TFormModel> = {", "export type PlatformPartialFormGroupControls<TFormModel> = {"
+// "[P in keyof TFormModel]: TFormModel[P] ..." should be equal to PlatformFormGroupControlProp<TFormModel[P]>
+// dont know why it will get type errors when using if TFormModel[P] is enum, boolean
+export type PlatformFormGroupControlProp<TFormModelProp> = TFormModelProp extends readonly unknown[]
   ?
       | FormControl<TFormModelProp>
       | FormArray<FormControl<ArrayElement<TFormModelProp>>>

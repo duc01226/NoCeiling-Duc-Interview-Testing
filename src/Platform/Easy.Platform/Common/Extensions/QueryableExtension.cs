@@ -26,6 +26,28 @@ public static class QueryableExtension
         // apply composition of lambda expression bodies to parameters from the first expression
         return Expression.Lambda<T>(merge(firstExpr.Body, secondExprBody), firstExpr.Parameters);
     }
+
+    public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> query, string propertyName, OrderDirection orderDirection = OrderDirection.Asc)
+    {
+        return orderDirection == OrderDirection.Desc
+            ? query.OrderByDescending(GetSortExpression<T>(propertyName))
+            : query.OrderBy(GetSortExpression<T>(propertyName));
+    }
+
+    public static Expression<Func<T, object>> GetSortExpression<T>(string propertyName)
+    {
+        var item = Expression.Parameter(typeof(T));
+        var prop = Expression.Convert(Expression.Property(item, propertyName), typeof(object));
+        var selector = Expression.Lambda<Func<T, object>>(prop, item);
+
+        return selector;
+    }
+}
+
+public enum OrderDirection
+{
+    Asc,
+    Desc
 }
 
 internal sealed class ParameterRebinder : ExpressionVisitor
