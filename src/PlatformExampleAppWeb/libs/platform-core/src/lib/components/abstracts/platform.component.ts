@@ -197,9 +197,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     return (observableOrValue: TOrigin | Observable<TOrigin> | null = null) => {
       previousEffectSub.unsubscribe();
 
-      const newEffectSub: Subscription = generator(
-        observableOrValue instanceof Observable ? observableOrValue : of(observableOrValue)
-      )
+      const newEffectSub: Subscription = generator(observableOrValue)
         .pipe(
           this.untilDestroyed(),
           finalize(() => {
