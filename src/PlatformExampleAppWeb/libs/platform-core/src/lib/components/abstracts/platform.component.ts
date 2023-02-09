@@ -2,7 +2,7 @@
 import { AfterViewInit, ChangeDetectorRef, Directive, inject, OnDestroy, OnInit } from '@angular/core';
 import { tapResponse } from '@ngrx/component-store';
 import { ToastrService } from 'ngx-toastr';
-import { BehaviorSubject, defer, MonoTypeOperatorFunction, Observable, of, Subscription } from 'rxjs';
+import { BehaviorSubject, defer, MonoTypeOperatorFunction, Observable, Subscription } from 'rxjs';
 import { filter, finalize, map, takeUntil, tap } from 'rxjs/operators';
 
 import { PlatformApiServiceErrorResponse } from '../../api-services';

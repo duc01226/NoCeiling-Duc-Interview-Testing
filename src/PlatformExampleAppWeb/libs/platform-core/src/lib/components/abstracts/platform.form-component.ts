@@ -176,10 +176,13 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
           formControl.length != vmFormKeyValue.length
         ) {
           formControl.clear({ emitEvent: false });
-          vmFormKeyValue.forEach(modelItem =>
-            formControl.push(this.buildFromArrayControlItem((<any>this.formConfig.controls)[formKey], modelItem), {
-              emitEvent: false
-            })
+          vmFormKeyValue.forEach((modelItem, index) =>
+            formControl.push(
+              this.buildFromArrayControlItem((<any>this.formConfig.controls)[formKey], modelItem, index),
+              {
+                emitEvent: false
+              }
+            )
           );
         }
 
@@ -272,8 +275,8 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
         formConfigControlsConfigArrayItem.modelItems != undefined
       ) {
         (<any>controls)[key] = new FormArray(
-          formConfigControlsConfigArrayItem.modelItems().map(modelItem => {
-            return this.buildFromArrayControlItem(formConfigControlsConfigArrayItem, modelItem);
+          formConfigControlsConfigArrayItem.modelItems().map((modelItem, index) => {
+            return this.buildFromArrayControlItem(formConfigControlsConfigArrayItem, modelItem, index);
           })
         );
       }
@@ -284,9 +287,10 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 
   protected buildFromArrayControlItem(
     formConfigControlsConfigArrayItem: PlatformFormGroupControlConfigPropArray<unknown>,
-    modelItem: unknown
+    modelItem: unknown,
+    modelItemIndex: number
   ) {
-    const itemControl = formConfigControlsConfigArrayItem.itemControl(modelItem);
+    const itemControl = formConfigControlsConfigArrayItem.itemControl(modelItem, modelItemIndex);
     return itemControl instanceof FormControl ? itemControl : new FormGroup(itemControl);
   }
 }
@@ -313,7 +317,10 @@ export type PlatformFormGroupControlConfigProp<TFormModelProp> = TFormModelProp 
 
 export type PlatformFormGroupControlConfigPropArray<TItemModel> = {
   modelItems: () => TItemModel[];
-  itemControl: (item: TItemModel) => PlatformPartialFormGroupControls<TItemModel> | FormControl<TItemModel>;
+  itemControl: (
+    item: TItemModel,
+    itemIndex: number
+  ) => PlatformPartialFormGroupControls<TItemModel> | FormControl<TItemModel>;
 };
 
 export type PlatformFormGroupControls<TFormModel> = {

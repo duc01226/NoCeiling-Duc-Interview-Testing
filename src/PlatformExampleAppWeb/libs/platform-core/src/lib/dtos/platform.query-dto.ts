@@ -1,4 +1,4 @@
-import { clone } from "../utils";
+import { clone } from '../utils';
 
 /* eslint-disable @typescript-eslint/no-empty-interface */
 export interface IPlatformQueryDto {}
@@ -21,7 +21,7 @@ export class PlatformPagedQueryDto extends PlatformQueryDto implements IPlatform
   }
 
   public skipCount: number = 0;
-  public maxResultCount: number = 20;
+  public maxResultCount: number = 0;
 
   public withPageIndex(pageIndex: number): PlatformPagedQueryDto {
     return clone(this, _ => {

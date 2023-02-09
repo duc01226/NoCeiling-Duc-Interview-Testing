@@ -46,8 +46,7 @@ export class Time implements ITime {
   }
 
   public updateHour(hour: number) {
-    const validHour = hour < 0 ? 0 : hour % 24;
-    this.hour = validHour;
+    this.hour = hour < 0 ? 0 : hour % 24;
 
     return this;
   }
@@ -70,13 +69,16 @@ export class Time implements ITime {
   public updateSecond(second: number) {
     this.second = second < 0 ? 60 + (second % 60) : second % 60;
     this.changeMinute(Math.floor(second / 60));
+
+    return this;
   }
 
   public toString(): string {
-    return `${number_formatLength(this.hour, 0)}:${number_formatLength(this.minute, 0)}:${number_formatLength(
-      this.second,
-      0
-    )}`;
+    return (
+      `${number_formatLength(this.hour, 2)}` +
+      `:${number_formatLength(this.minute, 2)}` +
+      `:${number_formatLength(this.second, 2)}`
+    );
   }
 
   public toJSON(): string {

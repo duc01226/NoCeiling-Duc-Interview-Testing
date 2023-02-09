@@ -20,3 +20,10 @@ export function number_formatLength(num: number, length: number) {
 export function number_isInteger(value: unknown): value is number {
   return typeof value === 'number' && isFinite(value) && Math.floor(value) === value;
 }
+
+export function number_range(start: number, end: number, step: number = 1): number[] {
+  const length = Math.floor((end - start) / step) + 1;
+  return Array(length)
+    .fill(0)
+    .map((_, idx) => start + idx * step);
+}
