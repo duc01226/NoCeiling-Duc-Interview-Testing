@@ -103,7 +103,7 @@ public abstract class PlatformHangfireBackgroundJobModule : PlatformBackgroundJo
             }
 
             default:
-                throw new ArgumentOutOfRangeException();
+                throw new Exception("Invalid PlatformHangfireBackgroundJobStorageType");
         }
     }
 

@@ -20,7 +20,7 @@ public abstract class RootAuditedEntity<TEntity, TPrimaryKey, TUserId> : RootEnt
         LastUpdatedDate ??= CreatedDate;
     }
 
-    public RootAuditedEntity(TUserId createdBy = default) : this()
+    public RootAuditedEntity(TUserId createdBy) : this()
     {
         CreatedBy = createdBy;
         LastUpdatedBy ??= CreatedBy;

@@ -21,7 +21,7 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
 
     protected Dictionary<string, object> ManuallySetValueItemsDic { get; } = new();
 
-    public T GetValue<T>(string contextKey)
+    public T GetValue<T>(string contextKey = "")
     {
         if (contextKey == null)
             throw new ArgumentNullException(nameof(contextKey));
@@ -38,7 +38,7 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
         return default;
     }
 
-    public void SetValue(object value, string contextKey)
+    public void SetValue(object value, string contextKey = "")
     {
         if (contextKey == null)
             throw new ArgumentNullException(nameof(contextKey));

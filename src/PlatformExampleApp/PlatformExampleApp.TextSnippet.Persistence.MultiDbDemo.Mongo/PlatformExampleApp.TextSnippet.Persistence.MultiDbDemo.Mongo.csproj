@@ -9,6 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="8.52.0.60960">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\Platform\Easy.Platform.MongoDB\Easy.Platform.MongoDB.csproj" />
     <ProjectReference Include="..\..\Platform\Easy.Platform\Easy.Platform.csproj" />
     <ProjectReference Include="..\PlatformExampleApp.TextSnippet.Domain\PlatformExampleApp.TextSnippet.Domain.csproj" />

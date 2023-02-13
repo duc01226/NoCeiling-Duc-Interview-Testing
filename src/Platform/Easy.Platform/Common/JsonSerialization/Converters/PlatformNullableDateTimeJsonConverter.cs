@@ -15,7 +15,7 @@ public class PlatformNullableDateTimeJsonConverter : JsonConverter<DateTime?>
         var strValue = reader.GetString();
         if (strValue.IsNullOrEmpty()) return null;
 
-        var parsedResult = DateTime.TryParse(strValue, out var parsedDate);
+        DateTime.TryParse(strValue, out var parsedDate);
 
         return parsedDate;
     }

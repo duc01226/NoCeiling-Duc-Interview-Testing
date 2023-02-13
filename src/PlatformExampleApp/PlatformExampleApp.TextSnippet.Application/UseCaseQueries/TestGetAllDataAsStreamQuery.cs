@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Cqrs.Queries;
 using Easy.Platform.Common.Cqrs.Queries;
@@ -27,6 +28,7 @@ public class TestGetAllDataAsStreamQueryHandler : PlatformCqrsQueryApplicationHa
         this.textSnippetRepository = textSnippetRepository;
     }
 
+    [SuppressMessage("Minor Code Smell", "S1481:Unused local variables should be removed", Justification = "<Pending>")]
     protected override async Task<IEnumerable<TextSnippetEntityDto>> HandleAsync(TestGetAllDataAsStreamQuery request, CancellationToken cancellationToken)
     {
         var result = Enumerable.Range(0, 10000).Aggregate(GetDataFn(), (items, i) => items.Concat(GetDataFn()));

@@ -7,9 +7,44 @@
     "@nrwl/nx",
     "import",
     "simple-import-sort",
-    "unused-imports"
+    "unused-imports",
+    "sonarjs",
+    "prettier"
+  ],
+  "extends": [
+    "plugin:prettier/recommended"
   ],
   "overrides": [
+    {
+      "files": [
+        "*.ts",
+        "*.scss",
+        "*.js"
+      ],
+      "rules": {
+        "prettier/prettier": [
+          "error",
+          {},
+          {
+            "usePrettierrc": true
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "*.html"
+      ],
+      "rules": {
+        "prettier/prettier": [
+          "off",
+          {},
+          {
+            "usePrettierrc": true
+          }
+        ]
+      }
+    },
     {
       "files": [
         "*.ts",
@@ -49,7 +84,8 @@
         "*.tsx"
       ],
       "extends": [
-        "plugin:@nrwl/nx/typescript"
+        "plugin:@nrwl/nx/typescript",
+        "plugin:sonarjs/recommended"
       ],
       "rules": {
         "@typescript-eslint/no-inferrable-types": "off",
@@ -80,7 +116,11 @@
             "variableDeclarationIgnoreFunction": true
           }
         ],
-        "@typescript-eslint/member-ordering": "off"
+        "@typescript-eslint/member-ordering": "off",
+        "sonarjs/no-duplicate-string": "off",
+        "sonarjs/no-identical-functions": "off",
+        "sonarjs/cognitive-complexity": "off",
+        "prettier/prettier": "error"
       }
     },
     {

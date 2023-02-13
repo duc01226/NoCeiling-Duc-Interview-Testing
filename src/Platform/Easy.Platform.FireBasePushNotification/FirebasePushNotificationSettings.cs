@@ -11,4 +11,9 @@ public class FireBasePushNotificationSettings
     /// FCM Server Key
     /// </summary>
     public string ServerKey { get; set; }
+
+    /// <summary>
+    /// FCM Server Key
+    /// </summary>
+    public string ServerUrl { get; set; } = "https://fcm.googleapis.com/fcm/send";
 }

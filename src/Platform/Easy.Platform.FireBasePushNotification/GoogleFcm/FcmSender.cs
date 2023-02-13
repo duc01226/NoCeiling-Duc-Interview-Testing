@@ -21,7 +21,6 @@ internal interface IFcmSender
 /// </summary>
 internal class FcmSender : IFcmSender
 {
-    private readonly string fcmUrl = "https://fcm.googleapis.com/fcm/send";
     private readonly HttpClient http;
     private readonly FireBasePushNotificationSettings settings;
 
@@ -62,7 +61,7 @@ internal class FcmSender : IFcmSender
     {
         var serialized = PlatformJsonSerializer.Serialize(payload);
 
-        using (var httpRequest = new HttpRequestMessage(HttpMethod.Post, fcmUrl))
+        using (var httpRequest = new HttpRequestMessage(HttpMethod.Post, settings.ServerUrl))
         {
             httpRequest.Headers.Add("Authorization", $"key = {settings.ServerKey}");
 

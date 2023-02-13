@@ -161,7 +161,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
                 consumer,
                 Util.ListBuilder.NewArray(eventBusMessage, routingKey));
             if (invokeResult is Task invokeTask)
-                await invokeTask;
+                await invokeTask.WaitAsync(cancellationToken);
         }
         catch (Exception e)
         {

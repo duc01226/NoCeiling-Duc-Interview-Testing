@@ -4,17 +4,16 @@
 
 using System;
 
-namespace IdentityServerHost.Quickstart.UI
+namespace IdentityServerHost.Quickstart.UI;
+
+public static class AccountOptions
 {
-    public class AccountOptions
-    {
-        public static bool AllowLocalLogin { get; set; } = true;
-        public static bool AllowRememberLogin { get; set; } = true;
-        public static TimeSpan RememberMeLoginDuration { get; set; } = TimeSpan.FromDays(30);
+    public static bool AllowLocalLogin { get; set; } = true;
+    public static bool AllowRememberLogin { get; set; } = true;
+    public static TimeSpan RememberMeLoginDuration { get; set; } = TimeSpan.FromDays(30);
 
-        public static bool ShowLogoutPrompt { get; set; } = true;
-        public static bool AutomaticRedirectAfterSignOut { get; set; }
+    public static bool ShowLogoutPrompt { get; set; } = true;
+    public static bool AutomaticRedirectAfterSignOut { get; set; }
 
-        public static string InvalidCredentialsErrorMessage { get; set; } = "Invalid username or password";
-    }
+    public static string InvalidCredentialsErrorMessage { get; set; } = "Invalid username or password";
 }

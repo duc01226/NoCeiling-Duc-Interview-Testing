@@ -40,9 +40,9 @@ public class PlatformFileStorageUploader
         PlatformFileStorageOptions.PublicAccessTypes publicAccessType,
         string contentType = null)
     {
-        ArgumentNullException.ThrowIfNull(stream, nameof(stream));
-        ArgumentNullException.ThrowIfNull(prefixDirectoryPath, nameof(prefixDirectoryPath));
-        ArgumentNullException.ThrowIfNull(fileName, nameof(fileName));
+        ArgumentNullException.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(prefixDirectoryPath);
+        ArgumentNullException.ThrowIfNull(fileName);
 
         return new PlatformFileStorageUploader
         {

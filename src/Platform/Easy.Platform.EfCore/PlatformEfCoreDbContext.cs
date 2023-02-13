@@ -136,9 +136,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         return queryBuilder(GetQuery<TEntity>()).FirstOrDefaultAsync(cancellationToken);
     }
 
-    public Task<int> CountAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
+    public Task<int> CountAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
     {
-        return query.CountAsync(cancellationToken);
+        return source.CountAsync(cancellationToken);
     }
 
     public Task<bool> AnyAsync<TEntity>(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default) where TEntity : class, IEntity
@@ -146,19 +146,19 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         return GetQuery<TEntity>().Where(predicate).AnyAsync(cancellationToken);
     }
 
-    public Task<bool> AnyAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
+    public Task<bool> AnyAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
     {
-        return query.AnyAsync(cancellationToken);
+        return source.AnyAsync(cancellationToken);
     }
 
-    public async Task<List<T>> GetAllAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
+    public async Task<List<T>> GetAllAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
     {
-        return await query.ToListAsync(cancellationToken);
+        return await source.ToListAsync(cancellationToken);
     }
 
-    public Task<T> FirstOrDefaultAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
+    public Task<T> FirstOrDefaultAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
     {
-        return query.FirstOrDefaultAsync(cancellationToken);
+        return source.FirstOrDefaultAsync(cancellationToken);
     }
 
     public Task<List<TResult>> GetAllAsync<TEntity, TResult>(Func<IQueryable<TEntity>, IQueryable<TResult>> queryBuilder, CancellationToken cancellationToken = default)

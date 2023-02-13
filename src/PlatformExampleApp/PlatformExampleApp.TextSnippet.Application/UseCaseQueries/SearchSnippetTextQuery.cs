@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Cqrs.Queries;
@@ -32,6 +33,7 @@ public class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicationHandler
 {
     // This is just a demo that helper is used by Application Commands/Queries
     // ReSharper disable once NotAccessedField.Local
+    [SuppressMessage("Critical Code Smell", "S4487:Unread \"private\" fields should be removed", Justification = "<Pending>")]
     private readonly ExampleHelper exampleHelper;
 
     private readonly IPlatformFullTextSearchPersistenceService fullTextSearchPersistenceService;

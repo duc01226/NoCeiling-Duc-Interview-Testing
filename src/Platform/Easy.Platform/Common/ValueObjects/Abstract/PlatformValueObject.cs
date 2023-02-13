@@ -12,17 +12,22 @@ public interface IPlatformValueObject<TValueObject> : IEquatable<TValueObject>
     string ToString();
 }
 
-public abstract class PlatformValueObject<TValueObject> : IPlatformValueObject<TValueObject>
+public abstract class PlatformValueObject<TValueObject> : IPlatformValueObject<TValueObject>, IEquatable<PlatformValueObject<TValueObject>>
     where TValueObject : PlatformValueObject<TValueObject>, new()
 {
+    public bool Equals(PlatformValueObject<TValueObject> other)
+    {
+        return ToString() == other?.ToString();
+    }
+
     public override bool Equals(object obj)
     {
         return ToString() == obj?.ToString();
     }
 
-    public bool Equals(TValueObject p)
+    public bool Equals(TValueObject other)
     {
-        return ToString() == p?.ToString();
+        return ToString() == other?.ToString();
     }
 
     public override int GetHashCode()

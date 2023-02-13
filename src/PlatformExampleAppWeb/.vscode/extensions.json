@@ -13,6 +13,7 @@
     "christian-kohler.path-intellisense",
     "streetsidesoftware.code-spell-checker",
     "alefragnani.bookmarks",
-    "eamodio.gitlens"
+    "eamodio.gitlens",
+    "sonarsource.sonarlint-vscode"
   ]
 }

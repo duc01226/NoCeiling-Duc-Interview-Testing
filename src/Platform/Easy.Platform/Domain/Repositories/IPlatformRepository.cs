@@ -141,7 +141,7 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
     /// </summary>
     public IQueryable<TEntity> GetQuery(params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
-    public IQueryable<TEntity> GetQuery(IUnitOfWork unitOfWork, params Expression<Func<TEntity, object>>[] loadRelatedEntities);
+    public IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public Task<TResult> GetAsync<TResult>(
         Func<IQueryable<TEntity>, TResult> queryToResultBuilder,

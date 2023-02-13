@@ -41,7 +41,7 @@ public interface IPlatformModule
     public bool Initiated { get; }
 
     public Action<TracerProviderBuilder> AdditionalTracingConfigure { get; }
-    public List<IPlatformModule> AllDependencyModules(IServiceCollection useServiceCollection);
+    public List<IPlatformModule> AllDependencyModules(IServiceCollection useServiceCollection = null);
 
     public static bool CheckIsRootModule(IPlatformModule module)
     {
@@ -283,7 +283,7 @@ public abstract class PlatformModule : IPlatformModule
         await AllDependencyModules()
             .GroupBy(p => p.ExecuteInitPriority)
             .OrderByDescending(p => p.Key)
-            .ForEachAsync(p => p.ToList().Select(module => module.Init()).WhenAll());
+            .ForEachAsync(p => p.Select(module => module.Init()).WhenAll());
     }
 
     protected virtual void RegisterHelpers(IServiceCollection serviceCollection)

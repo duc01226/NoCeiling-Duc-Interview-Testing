@@ -210,6 +210,6 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext>
 /// </summary>
 public abstract class PlatformMongoDbPersistenceModuleCache
 {
-    public static readonly HashSet<Type> RegisteredClassMapTypes = new();
-    public static readonly HashSet<Type> RegisteredSerializerTypes = new();
+    public static HashSet<Type> RegisteredClassMapTypes { get; } = new();
+    public static HashSet<Type> RegisteredSerializerTypes { get; } = new();
 }

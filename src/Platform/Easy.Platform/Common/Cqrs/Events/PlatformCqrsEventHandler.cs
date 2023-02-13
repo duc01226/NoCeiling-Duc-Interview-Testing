@@ -24,7 +24,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     public bool IsCurrentInstanceExecutedInSeparateThread { get; set; }
 
-    public virtual async Task Handle(TEvent request, CancellationToken cancellationToken)
+    public virtual async Task Handle(TEvent notification, CancellationToken cancellationToken)
     {
         if (ExecuteSeparatelyInBackgroundThread() && !IsCurrentInstanceExecutedInSeparateThread)
             // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
@@ -41,13 +41,13 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                                     .As<PlatformCqrsEventHandler<TEvent>>()
                                     .With(_ => _.IsCurrentInstanceExecutedInSeparateThread = true);
 
-                                await thisHandlerNewInstance.Handle(request, default);
+                                await thisHandlerNewInstance.Handle(notification, default);
                             });
                 },
                 PlatformApplicationGlobal.RootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType()),
                 cancellationToken: default);
         else
-            await ExecuteHandleAsync(request, cancellationToken);
+            await ExecuteHandleAsync(notification, cancellationToken);
     }
 
     protected abstract Task HandleAsync(TEvent @event, CancellationToken cancellationToken);

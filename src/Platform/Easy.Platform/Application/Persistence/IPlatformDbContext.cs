@@ -52,7 +52,7 @@ public interface IPlatformDbContext : IDisposable
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity;
 
-    Task<List<T>> GetAllAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default);
+    Task<List<T>> GetAllAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default);
 
     Task<List<TResult>> GetAllAsync<TEntity, TResult>(
         Func<IQueryable<TEntity>, IQueryable<TResult>> queryBuilder,

@@ -44,7 +44,7 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
             var jsonMessage = message.AsJson();
             var selectedRoutingKey = routingKey ?? message.As<IPlatformSelfRoutingKeyBusMessage>()?.RoutingKey();
 
-            await PublishMessageToQueueAsync(jsonMessage, selectedRoutingKey, cancellationToken);
+            await PublishMessageToQueueAsync(jsonMessage, selectedRoutingKey);
 
             return message;
         }
@@ -56,8 +56,7 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
 
     private async Task PublishMessageToQueueAsync(
         string message,
-        string routingKey,
-        CancellationToken cancellationToken = default)
+        string routingKey)
     {
         PublishMessageToQueue(message, routingKey);
     }

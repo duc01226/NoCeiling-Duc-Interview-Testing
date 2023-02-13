@@ -2,17 +2,6 @@ namespace Easy.Platform.Common.Extensions;
 
 public static class DateTimeExtension
 {
-    public enum MonToSunDayOfWeeks
-    {
-        Monday,
-        Tuesday,
-        Wednesday,
-        Thursday,
-        Friday,
-        Saturday,
-        Sunday
-    }
-
     public static DateTime FirstDateOfMonth(this DateTime dateTime)
     {
         return new DateTime(
@@ -62,5 +51,16 @@ public static class DateTimeExtension
     public static DateTime ConvertToTimeZone(this DateTime dateTime, int timeZoneOffset)
     {
         return dateTime.ToUniversalTime().AddHours(-timeZoneOffset / 60);
+    }
+
+    public enum MonToSunDayOfWeeks
+    {
+        Monday,
+        Tuesday,
+        Wednesday,
+        Thursday,
+        Friday,
+        Saturday,
+        Sunday
     }
 }

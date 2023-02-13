@@ -16,9 +16,9 @@ public class PlatformHangfireActivator : JobActivator
         this.serviceProvider = serviceProvider;
     }
 
-    public override object ActivateJob(Type type)
+    public override object ActivateJob(Type jobType)
     {
-        return serviceProvider.GetService(type) ?? Activator.CreateInstance(type);
+        return serviceProvider.GetService(jobType) ?? Activator.CreateInstance(jobType);
     }
 
     public override JobActivatorScope BeginScope(JobActivatorContext context)

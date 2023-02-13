@@ -106,7 +106,7 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
     public Task<IPlatformFileStorageFileItem> UploadAsync(
         IFormFile formFile,
         string prefixDirectoryPath,
-        bool isPrivate = true,
+        bool isPrivate,
         string fileDescription = null,
         string fileName = null,
         CancellationToken cancellationToken = default)
@@ -433,9 +433,8 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
             if (fileName.EndsWith("/", StringComparison.Ordinal))
                 throw new ArgumentException(
                     string.Format(CultureInfo.InvariantCulture, "Invalid {0} name. Check MSDN for more information about valid {0} naming.", "file"));
-            foreach (var reservedFileName in ReservedFileNames)
-                if (reservedFileName.Equals(fileName, StringComparison.OrdinalIgnoreCase))
-                    throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "Invalid {0} name. This {0} name is reserved.", "file"));
+            if (ReservedFileNames.Any(p => p.Equals(fileName, StringComparison.OrdinalIgnoreCase)))
+                throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "Invalid {0} name. This {0} name is reserved.", "file"));
 
             return PlatformValidationResult.Valid(fileName);
         }

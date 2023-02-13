@@ -57,7 +57,9 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
 
     // This only for demo define and use infrastructure services
     // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
+    [SuppressMessage("Minor Code Smell", "S1450:Private fields only used as local variables in methods should become local variables", Justification = "<Pending>")]
     private readonly ISendMailService sendMailService;
+
     private readonly ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository;
 
     public SaveSnippetTextCommandHandler(
@@ -78,6 +80,7 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
     }
 
     [SuppressMessage("Style", "IDE0039:Use local function", Justification = "<Pending>")]
+    [SuppressMessage("Minor Code Smell", "S1481:Unused local variables should be removed", Justification = "<Pending>")]
     protected override async Task<SaveSnippetTextCommandResult> HandleAsync(
         SaveSnippetTextCommand request,
         CancellationToken cancellationToken)
@@ -150,7 +153,7 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
 
         // STEP 2: Do validation and ensure that all logic is valid
         var validToSaveEntity = toSaveEntity
-            .With(toSaveEntity => toSaveEntity.SnippetText = toSaveEntity.SnippetText) //Demo Update Data By With Support Chaining
+            .With(toSaveEntity => toSaveEntity.SnippetText += " Update") //Demo Update Data By With Support Chaining
             .ValidateSavePermission(userId: CurrentUser.UserId<Guid?>()) // Demo Permission Logic
             .And(entity => toSaveEntity.ValidateSomeSpecificIsXxxLogic()) // Demo domain business logic
             .And(entity => ValidateSomeThisCommandApplicationLogic(entity)) // Demo application business logic

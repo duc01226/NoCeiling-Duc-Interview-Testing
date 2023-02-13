@@ -19,6 +19,7 @@ COPY tools tools
 # Build app files
 COPY apps/playground-text-snippet apps/playground-text-snippet
 ARG configuration=development
+RUN npm run ng lint playground-text-snippet
 RUN npm run ng build playground-text-snippet -- --configuration=${configuration}
 # BUILDER END
 

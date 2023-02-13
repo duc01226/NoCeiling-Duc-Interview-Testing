@@ -270,7 +270,7 @@ public static class ListExtension
 
     public static ValueTuple<Dictionary<TKey, T>, List<TKey>> ToDictionaryWithKeysList<T, TKey>(this IEnumerable<T> items, Func<T, TKey> selectKey)
     {
-        var dict = items.ToList().ToDictionary(selectKey, p => p);
+        var dict = items.ToDictionary(selectKey, p => p);
         var keys = dict.Keys.ToList();
 
         return (dict, keys);

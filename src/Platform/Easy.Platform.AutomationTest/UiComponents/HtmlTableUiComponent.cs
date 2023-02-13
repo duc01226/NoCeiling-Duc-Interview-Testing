@@ -23,7 +23,7 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
         Rows = ReadRows();
     }
 
-    public List<Row> Rows { get; set; } = new();
+    public List<Row> Rows { get; set; }
     public List<IWebElement> Columns { get; set; }
 
     public List<Row> ReadRows()

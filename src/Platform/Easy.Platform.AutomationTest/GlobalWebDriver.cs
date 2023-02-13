@@ -3,7 +3,7 @@ using OpenQA.Selenium;
 namespace Easy.Platform.AutomationTest;
 
 /// <summary>
-/// This web driver is only created once during all test cases. Could reuse this if you want to save init new web driver resource. <br/>
+/// This web driver is only created once during all test cases. Could reuse this if you want to save init new web driver resource. <br />
 /// Should only use this for test cases which is not affected by other test cases if it's running in the same browser
 /// </summary>
 public class GlobalWebDriver : IDisposable
@@ -33,12 +33,11 @@ public class GlobalWebDriver : IDisposable
         if (Disposed)
             return;
 
-        if (disposing)
-            if (LazyDriver.IsValueCreated)
-            {
-                Value.Quit();
-                Value.Dispose();
-            }
+        if (disposing && LazyDriver.IsValueCreated)
+        {
+            Value.Quit();
+            Value.Dispose();
+        }
 
         Disposed = true;
     }

@@ -110,7 +110,7 @@ public static class DependencyInjectionExtension
     }
 
     /// <summary>
-    /// <inheritdoc cref="RegisterAllForImplementation(IServiceCollection,Type,ServiceLifeTime,bool,ReplaceServiceStrategy)" />
+    ///     <inheritdoc cref="RegisterAllForImplementation(IServiceCollection,Type,ServiceLifeTime,bool,ReplaceServiceStrategy)" />
     /// </summary>
     public static IServiceCollection RegisterAllForImplementation<TImplementation>(
         this IServiceCollection services,
@@ -169,7 +169,6 @@ public static class DependencyInjectionExtension
                     services.AddSingleton(serviceType, implementationType);
                 break;
 
-            case ServiceLifeTime.Transient:
             default:
                 if (replaceIfExist)
                     services.ReplaceTransient(serviceType, implementationType, replaceStrategy);
@@ -346,7 +345,6 @@ public static class DependencyInjectionExtension
                 else
                     services.AddSingleton(serviceType, p => implementationFunc(p));
                 break;
-            case ServiceLifeTime.Transient:
             default:
                 if (replaceIfExist)
                     services.ReplaceTransient(serviceType, implementationFunc, replaceStrategy);

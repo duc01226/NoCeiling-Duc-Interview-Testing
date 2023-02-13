@@ -53,5 +53,9 @@
     ]
   },
   "material-icon-theme.activeIconPack": "angular_ngrx",
-  "angular.enable-strict-mode-prompt": false
+  "angular.enable-strict-mode-prompt": false,
+  "eslint.alwaysShowStatus": true,
+  "[typescript]": {
+    "editor.formatOnSave": true
+  }
 }

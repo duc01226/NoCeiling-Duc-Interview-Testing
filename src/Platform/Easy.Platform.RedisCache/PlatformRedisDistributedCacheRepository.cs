@@ -112,9 +112,8 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         if (disposed)
             return;
 
-        if (disposing)
-            if (redisCache.IsValueCreated)
-                redisCache.Value.Dispose();
+        if (disposing && redisCache.IsValueCreated)
+            redisCache.Value.Dispose();
 
         disposed = true;
     }

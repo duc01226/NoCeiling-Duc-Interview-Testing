@@ -7,12 +7,7 @@ namespace Easy.Platform.Common.JsonSerialization;
 
 public static class PlatformJsonSerializer
 {
-    public static readonly JsonSerializerOptions DefaultOptions;
-
-    static PlatformJsonSerializer()
-    {
-        DefaultOptions = BuildDefaultOptions();
-    }
+    public static readonly JsonSerializerOptions DefaultOptions = BuildDefaultOptions();
 
     /// <summary>
     /// Use Lazy for thread safe

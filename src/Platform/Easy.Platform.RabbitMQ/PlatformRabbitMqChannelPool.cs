@@ -29,7 +29,7 @@ public class PlatformRabbitMqChannelPool : DefaultObjectPool<IModel>, IDisposabl
 
     public void Dispose()
     {
-        GlobalChannel?.Dispose();
+        Dispose(true);
         GC.SuppressFinalize(this);
     }
 
@@ -55,15 +55,20 @@ public class PlatformRabbitMqChannelPool : DefaultObjectPool<IModel>, IDisposabl
         GlobalChannel?.Dispose();
         GlobalChannel = null;
     }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        GlobalChannel?.Dispose();
+    }
 }
 
 public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>
 {
     private readonly IConnectionFactory connectionFactory;
-    private readonly ILogger<PlatformRabbitMqChannelPoolPolicy> logger;
-    private readonly PlatformRabbitMqOptions options;
 
     private Lazy<IConnection> connectionInitializer;
+    private readonly ILogger<PlatformRabbitMqChannelPoolPolicy> logger;
+    private readonly PlatformRabbitMqOptions options;
 
     public PlatformRabbitMqChannelPoolPolicy(
         PlatformRabbitMqOptions options,
