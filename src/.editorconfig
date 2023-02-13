@@ -544,9 +544,6 @@ dotnet_diagnostic.S3925.severity = suggestion
 # S3442: "abstract" classes should not have "public" constructors
 dotnet_diagnostic.S3442.severity = suggestion
 
-# S3427: Method overloads with default parameter values should not overlap 
-dotnet_diagnostic.S3427.severity = suggestion
-
 # S3358: Ternary operators should not be nested
 dotnet_diagnostic.S3358.severity = suggestion
 

@@ -23,7 +23,7 @@ public class DemoScheduleBackgroundJobManuallyCommandBackgroundJobExecutor
     }
 
     public override async Task ProcessAsync(
-        DemoScheduleBackgroundJobManuallyCommandBackgroundJobExecutorParam param)
+        DemoScheduleBackgroundJobManuallyCommandBackgroundJobExecutorParam param = null)
     {
         await textSnippetEntityRepository.CreateOrUpdateAsync(
             new TextSnippetEntity

@@ -47,17 +47,17 @@ public interface IPage<TPage, out TSettings> : IUiComponent where TPage : IPage<
 
     public TResult WaitUntilAssertSuccess<TResult>(
         Func<TPage, TResult> waitForSuccess,
-        double maxWaitSeconds);
+        double? maxWaitSeconds = null);
 
     public TResult WaitUntilAssertSuccess<TResult>(
         Func<TPage, TResult> waitForSuccess,
         Action<TPage> stopIfFail,
-        double maxWaitSeconds);
+        double? maxWaitSeconds = null);
 
     public TResult WaitUntilAssertSuccess<TResult, TStopIfFailResult>(
         Func<TPage, TResult> waitForSuccess,
         Func<TPage, TStopIfFailResult> stopIfFail,
-        double maxWaitSeconds);
+        double? maxWaitSeconds = null);
 
     public static string BuildQueryParamsUrlPart(TPage page)
     {
@@ -135,9 +135,11 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         Settings = settings;
     }
 
-    protected TSettings Settings { get; }
-
     public abstract string ErrorElementCssSelector { get; }
+
+    protected TSettings Settings { get; }
+    protected virtual int DefaultWaitUntilMaxSeconds => Util.TaskRunner.DefaultWaitUntilMaxSeconds;
+
     public override string RootElementClassSelector => "body";
     public abstract string Title { get; }
     public abstract IWebElement? GlobalSpinnerElement { get; }
@@ -196,15 +198,15 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
 
     public virtual TResult WaitUntilAssertSuccess<TResult>(
         Func<TPage, TResult> waitForSuccess,
-        double maxWaitSeconds)
+        double? maxWaitSeconds = null)
     {
-        return this.As<TPage>().WaitUntilNoException(waitForSuccess, maxWaitSeconds);
+        return this.As<TPage>().WaitUntilNoException(waitForSuccess, maxWaitSeconds ?? DefaultWaitUntilMaxSeconds);
     }
 
     public virtual TResult WaitUntilAssertSuccess<TResult>(
         Func<TPage, TResult> waitForSuccess,
         Action<TPage> stopIfFail,
-        double maxWaitSeconds)
+        double? maxWaitSeconds = null)
     {
         return this.As<TPage>()
             .WaitUntilNoException(
@@ -214,24 +216,24 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
                     stopIfFail(_);
                     return default(TResult);
                 },
-                maxWaitSeconds);
+                maxWaitSeconds ?? DefaultWaitUntilMaxSeconds);
     }
 
     public virtual TResult WaitUntilAssertSuccess<TResult, TStopIfFailResult>(
         Func<TPage, TResult> waitForSuccess,
         Func<TPage, TStopIfFailResult> stopIfFail,
-        double maxWaitSeconds)
+        double? maxWaitSeconds = null)
     {
-        return this.As<TPage>().WaitUntilNoException(waitForSuccess, stopIfFail, maxWaitSeconds);
+        return this.As<TPage>().WaitUntilNoException(waitForSuccess, stopIfFail, maxWaitSeconds ?? DefaultWaitUntilMaxSeconds);
     }
 
     public virtual TPage WaitGlobalSpinnerStopped(
-        int maxWaitForLoadingDataSeconds,
+        int? maxWaitForLoadingDataSeconds = null,
         string waitForMsg = "Page Global Spinner is stopped")
     {
         return (TPage)this.WaitUntil(
             _ => GlobalSpinnerElement?.IsClickable() != true,
-            maxWaitSeconds: maxWaitForLoadingDataSeconds, // Multiple wait time to test failed waiting timeout
+            maxWaitSeconds: maxWaitForLoadingDataSeconds ?? DefaultWaitUntilMaxSeconds, // Multiple wait time to test failed waiting timeout
             waitForMsg: waitForMsg);
     }
 }

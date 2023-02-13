@@ -98,10 +98,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
         ILogger logger = null,
         CancellationToken cancellationToken = default)
     {
-        if (logger == null)
-            throw new ArgumentNullException(nameof(logger));
-
-        logger.LogDebug(
+        logger?.LogDebug(
             "[MessageBus] Start invoking consumer. Name: {ConsumerName}. RoutingKey: {RoutingKey}. TrackingId: {TrackingId}",
             consumer.GetType().FullName,
             routingKey,
@@ -119,11 +116,11 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
                     var toCheckSlowProcessWarningTimeMilliseconds = consumer.SlowProcessWarningTimeMilliseconds() ??
                                                                     slowProcessWarningTimeMilliseconds;
                     if (elapsedMilliseconds >= toCheckSlowProcessWarningTimeMilliseconds)
-                        logger.LogWarning(
+                        logger?.LogWarning(
                             $"[MessageBus] SlowProcessWarningTimeMilliseconds:{toCheckSlowProcessWarningTimeMilliseconds}. {logMessage}. MessageContent: {{BusMessage}}",
                             busMessage.AsJson());
                     else
-                        logger.LogInformation($"[MessageBus] Finished invoking consumer. {logMessage}");
+                        logger?.LogInformation($"[MessageBus] Finished invoking consumer. {logMessage}");
                 });
         }
         else
@@ -134,7 +131,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
                 routingKey,
                 cancellationToken);
 
-            logger.LogDebug(
+            logger?.LogDebug(
                 "[MessageBus] Finished invoking consumer. Name: {ConsumerName}. RoutingKey: {RoutingKey}. TrackingId: {TrackingId}",
                 consumer.GetType().FullName,
                 routingKey,

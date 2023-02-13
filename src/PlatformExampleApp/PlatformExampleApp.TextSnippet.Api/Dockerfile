@@ -6,7 +6,7 @@ EXPOSE 80
 EXPOSE 443
 
 # Build csproj files layer
-FROM alpine as csproj
+FROM alpine AS csproj
 WORKDIR /src
 COPY PlatformExampleApp/PlatformExampleApp.Shared/PlatformExampleApp.Shared.csproj PlatformExampleApp/PlatformExampleApp.Shared/
 COPY PlatformExampleApp/PlatformExampleApp.Test/PlatformExampleApp.Test.csproj PlatformExampleApp/PlatformExampleApp.Test/

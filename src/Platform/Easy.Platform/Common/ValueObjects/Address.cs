@@ -8,14 +8,14 @@ public class Address : PlatformValueObject<Address>
     public Address() { }
 
     public Address(
-        string streetNumber = "",
-        string street = "",
-        string ward = "",
-        string district = "",
-        string city = "",
-        string state = "",
-        string country = "",
-        string zipCode = "")
+        string streetNumber,
+        string street,
+        string ward,
+        string district,
+        string city,
+        string state,
+        string country,
+        string zipCode)
     {
         StreetNumber = streetNumber;
         Street = street;
@@ -35,19 +35,6 @@ public class Address : PlatformValueObject<Address>
     public string State { get; set; } = "";
     public string Country { get; set; } = "";
     public string ZipCode { get; set; } = "";
-
-    public static Address New(
-        string streetNumber = "",
-        string street = "",
-        string ward = "",
-        string district = "",
-        string city = "",
-        string state = "",
-        string country = "",
-        string zipCode = "")
-    {
-        return new Address(streetNumber, street, ward, district, city, state, country, zipCode);
-    }
 
     public override string ToString()
     {

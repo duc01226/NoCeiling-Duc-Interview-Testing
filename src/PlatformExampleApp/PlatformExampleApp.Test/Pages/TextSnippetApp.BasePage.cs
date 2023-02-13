@@ -25,34 +25,6 @@ public static partial class TextSnippetApp
         public override string ErrorElementCssSelector => ".mat-mdc-error";
         public override IWebElement? GlobalSpinnerElement => GlobalSpinner.RootElement;
 
-        public override TResult WaitUntilAssertSuccess<TResult>(
-            Func<TPage, TResult> waitForSuccess,
-            double maxWaitSeconds = DefaultMaxRequestWaitSeconds)
-        {
-            return base.WaitUntilAssertSuccess(waitForSuccess, maxWaitSeconds);
-        }
-
-        public override TResult WaitUntilAssertSuccess<TResult>(
-            Func<TPage, TResult> waitForSuccess,
-            Action<TPage> stopIfFail,
-            double maxWaitSeconds = DefaultMaxRequestWaitSeconds)
-        {
-            return base.WaitUntilAssertSuccess(waitForSuccess, stopIfFail, maxWaitSeconds);
-        }
-
-        public override TResult WaitUntilAssertSuccess<TResult, TStopIfFailResult>(
-            Func<TPage, TResult> waitForSuccess,
-            Func<TPage, TStopIfFailResult> stopIfFail,
-            double maxWaitSeconds = DefaultMaxRequestWaitSeconds)
-        {
-            return base.WaitUntilAssertSuccess(waitForSuccess, stopIfFail, maxWaitSeconds);
-        }
-
-        public override TPage WaitGlobalSpinnerStopped(
-            int maxWaitForLoadingDataSeconds = DefaultMaxRequestWaitSeconds,
-            string waitForMsg = "Page Global Spinner is stopped")
-        {
-            return base.WaitGlobalSpinnerStopped(maxWaitForLoadingDataSeconds, waitForMsg);
-        }
+        protected override int DefaultWaitUntilMaxSeconds => DefaultMaxRequestWaitSeconds;
     }
 }

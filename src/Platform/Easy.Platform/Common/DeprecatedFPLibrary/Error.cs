@@ -9,13 +9,13 @@ public class Error
         Message = message;
     }
 
-    internal Error(string message, string code = null)
+    internal Error(string message, string code)
     {
         Message = message;
         Code = code;
     }
 
-    internal Error(string message, int? httpStatus = null)
+    internal Error(string message, int? httpStatus)
     {
         Message = message;
         HttpStatus = httpStatus;

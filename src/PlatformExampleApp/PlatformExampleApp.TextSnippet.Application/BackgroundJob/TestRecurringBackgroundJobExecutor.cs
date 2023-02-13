@@ -30,7 +30,7 @@ public class TestRecurringBackgroundJobExecutor : PlatformApplicationBackgroundJ
         this.busMessageProducer = busMessageProducer;
     }
 
-    public override async Task ProcessAsync(object param)
+    public override async Task ProcessAsync(object param = null)
     {
         await textSnippetEntityRepository.CreateOrUpdateAsync(
             new TextSnippetEntity

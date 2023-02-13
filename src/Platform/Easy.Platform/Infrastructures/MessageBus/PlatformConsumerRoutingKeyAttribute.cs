@@ -27,9 +27,9 @@ public class PlatformConsumerRoutingKeyAttribute : Attribute
     /// </param>
     public PlatformConsumerRoutingKeyAttribute(
         string messageGroup,
-        string producerContext = PlatformBusMessageRoutingKey.MatchAllSingleGroupLevelChar,
-        string messageType = PlatformBusMessageRoutingKey.MatchAllSingleGroupLevelChar,
-        string messageAction = PlatformBusMessageRoutingKey.MatchAllSingleGroupLevelChar)
+        string producerContext,
+        string messageType,
+        string messageAction)
     {
         MessageGroup = PlatformBusMessageRoutingKey.AutoFixKeyPart(messageGroup);
         ProducerContext = PlatformBusMessageRoutingKey.AutoFixKeyPart(producerContext);
