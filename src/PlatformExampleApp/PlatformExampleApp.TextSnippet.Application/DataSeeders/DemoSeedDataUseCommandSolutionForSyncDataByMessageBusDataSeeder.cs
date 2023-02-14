@@ -19,8 +19,6 @@ public class DemoSeedDataUseCommandSolutionForSyncDataByMessageBusDataSeeder : P
     {
     }
 
-    protected override bool AutoBeginUow => false;
-
     public override int DelaySeedingInBackgroundBySeconds => 30;
 
     public override int SeedOrder => 2;

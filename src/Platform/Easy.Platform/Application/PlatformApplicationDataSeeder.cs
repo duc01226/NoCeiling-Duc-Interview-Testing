@@ -62,7 +62,7 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
     /// Default is true. Override this if you want to start uow yourself or not want to
     /// auto run in a uow
     /// </summary>
-    protected virtual bool AutoBeginUow => true;
+    protected virtual bool AutoBeginUow => false;
 
     public virtual async Task SeedData()
     {

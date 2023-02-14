@@ -19,8 +19,6 @@ public class DummyPerformanceTestTextSnippetApplicationDataSeeder : PlatformAppl
         this.textSnippetRepository = textSnippetRepository;
     }
 
-    protected override bool AutoBeginUow => false;
-
     public override int DelaySeedingInBackgroundBySeconds => 30;
 
     protected override async Task InternalSeedData()
