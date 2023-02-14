@@ -47,4 +47,7 @@ export class PlatformEventManager implements IPlatformEventManager {
 }
 
 @Injectable()
-export class PlatformEventManagerSubscriptionsMap extends Map<Type<PlatformEvent>, Type<PlatformEventHandler<PlatformEvent>>[]> {}
+export class PlatformEventManagerSubscriptionsMap extends Map<
+  Type<PlatformEvent>,
+  Type<PlatformEventHandler<PlatformEvent>>[]
+> {}

@@ -23,12 +23,19 @@ export function dictionary_upsert<T>(
     }
 
     lodashKeys(newDataDic).forEach((id: string) => {
-      if (newState[id] == null || newDataDic[id] == null || typeof newDataDic[id] !== 'object' || typeof newState[id] !== 'object') {
+      if (
+        newState[id] == null ||
+        newDataDic[id] == null ||
+        typeof newDataDic[id] !== 'object' ||
+        typeof newState[id] !== 'object'
+      ) {
         // eslint-disable-next-line no-param-reassign
         newState[id] = initItem(newDataDic[id]);
       } else {
         const prevNewStateItem = newState[id];
-        const newStateItemData = replaceEachItem ? newDataDic[id] : assign<Partial<T>>(clone(newState[id]), newDataDic[id]);
+        const newStateItemData = replaceEachItem
+          ? newDataDic[id]
+          : assign<Partial<T>>(clone(newState[id]), newDataDic[id]);
         if (optionalProps.length > 0) {
           optionalProps.forEach(optionalProp => {
             if (prevNewStateItem[optionalProp] != null && newStateItemData[optionalProp] == null) {
@@ -52,7 +59,10 @@ export function dictionary_upsert<T>(
     });
   }
 
-  function modifyDic(state: Dictionary<T>, modifyDicAction: (state: Dictionary<T>) => void | Dictionary<T>): Dictionary<T> {
+  function modifyDic(
+    state: Dictionary<T>,
+    modifyDicAction: (state: Dictionary<T>) => void | Dictionary<T>
+  ): Dictionary<T> {
     const newState = clone(state);
     const modifiedState = modifyDicAction(newState);
     if (modifiedState === state) {

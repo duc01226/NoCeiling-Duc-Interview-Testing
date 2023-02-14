@@ -10,24 +10,47 @@ import { PartialDeep } from 'type-fest';
 
 import { Time } from '../common-types';
 import { any } from './_common-functions';
+import { list_distinct } from './utils.list';
 
 export function keys<T extends object>(source: T, ignorePrivate: boolean = true): (keyof T & string)[] {
   if (typeof source != 'object') return [];
-  const result: (keyof T & string)[] = [];
+
+  const objectOwnProps: (keyof T & string)[] = [];
   for (const key in source) {
     if (typeof (<any>source)[key] != 'function' && (ignorePrivate == false || !key.startsWith('_'))) {
       if (key.startsWith('_')) {
         const publicKey = <keyof T & string>key.substring(1);
-        if (!ignorePrivate) result.push(key);
+        if (!ignorePrivate) objectOwnProps.push(key);
         if ((<any>source)[key] === (<any>source)[publicKey]) {
-          result.push(publicKey);
+          objectOwnProps.push(publicKey);
         }
       } else {
-        result.push(key);
+        objectOwnProps.push(key);
       }
     }
   }
-  return result;
+
+  const objectPrototypeProps = getObjectPrototypeProps(source, Object.getPrototypeOf(source));
+
+  return list_distinct(objectOwnProps.concat(objectPrototypeProps));
+
+  function getObjectPrototypeProps(source: any, sourceCurrentAncestorPrototype: any): (keyof T & string)[] {
+    let result: string[] = [];
+
+    if (sourceCurrentAncestorPrototype != Object.prototype) {
+      result = result.concat(
+        Object.keys(Object.getOwnPropertyDescriptors(sourceCurrentAncestorPrototype)).filter(
+          key => typeof source[key] != 'function'
+        )
+      );
+
+      if (Object.getPrototypeOf(sourceCurrentAncestorPrototype) != Object.prototype) {
+        result = result.concat(getObjectPrototypeProps(source, Object.getPrototypeOf(sourceCurrentAncestorPrototype)));
+      }
+    }
+
+    return <(keyof T & string)[]>result;
+  }
 }
 
 export function dictionaryMapTo<TSource, TTarget>(
@@ -137,9 +160,9 @@ export function cloneDeep<T extends any>(
 
   function cloneInsideRecursively(source: any, deepLevel: number, currentDeepLevel: number = 1) {
     if (typeof source != 'object' || currentDeepLevel > deepLevel) return;
-    keys(source).map(key => {
-      (<any>source)[key] = lodashClone((<any>source)[key]);
-      cloneInsideRecursively((<any>source)[key], deepLevel, currentDeepLevel + 1);
+    keys(source).forEach(key => {
+      source[key] = lodashClone(source[key]);
+      cloneInsideRecursively(source[key], deepLevel, currentDeepLevel + 1);
     });
   }
 }
@@ -159,8 +182,8 @@ export function isDifferent<T extends any>(value1: T, value2: T, shallowCheckFir
   if (typeof value1 != 'object' && typeof value2 != 'object') {
     return value1 != value2;
   }
-  if (value1 instanceof Array && value2 instanceof Array) {
-    if (value1.length != value2.length) return true;
+  if (value1 instanceof Array && value2 instanceof Array && value1.length != value2.length) {
+    return true;
   }
   if (value1 instanceof Date && value2 instanceof Date) {
     return value1.getTime() != value2.getTime();
@@ -250,8 +273,7 @@ export function removeNullProps<T>(obj: T): T {
     return obj;
   }
   const objKeys = Object.keys(obj);
-  for (let i = 0; i < objKeys.length; i += 1) {
-    const key = objKeys[i];
+  for (const key of objKeys) {
     if ((<any>obj)[key] == null) {
       // eslint-disable-next-line no-param-reassign
       delete (<any>obj)[key];
@@ -322,15 +344,13 @@ function mapObject<T extends object>(
   return hasDataChanged;
 
   function mapObjectCheckTwoValueCanSetDirectly(targetValue: unknown, sourceValue: unknown) {
-    if (
+    return (
       targetValue == undefined ||
       sourceValue == undefined ||
       typeof targetValue != 'object' ||
       typeof sourceValue != 'object' ||
       sourceValue instanceof Date
-    )
-      return true;
-    return false;
+    );
   }
 
   function mapArray(

@@ -52,7 +52,10 @@ export class PlatformVm implements IPlatformVm {
     return joinedErrorsStr == '' ? undefined : joinedErrorsStr;
   }
 
-  public setErrorMsg(error: string | null | PlatformApiServiceErrorResponse | Error, requestKey: string = requestStateDefaultKey) {
+  public setErrorMsg(
+    error: string | null | PlatformApiServiceErrorResponse | Error,
+    requestKey: string = requestStateDefaultKey
+  ) {
     this.errorMsgMap = immutableUpdate(this.errorMsgMap, _ => {
       _[requestKey] =
         typeof error == 'string' || error == null

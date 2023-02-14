@@ -17,7 +17,11 @@ import {
 import { any as privateAny } from './_common-functions';
 import * as ObjectUtil from './utils.object';
 
-export function list_find<T>(collection: T[] | undefined, predicate: (item: T) => boolean, fromIndex?: number): T | undefined {
+export function list_find<T>(
+  collection: T[] | undefined,
+  predicate: (item: T) => boolean,
+  fromIndex?: number
+): T | undefined {
   return lodashFind(collection, predicate, fromIndex);
 }
 
@@ -81,8 +85,8 @@ export function list_includesAll<T>(superset: T[], subset: T[]): boolean {
 }
 
 export function list_includesAny<T>(superset: T[], subset: T[]): boolean {
-  for (let i = 0; i < subset.length; i++) {
-    const subsetItem = subset[i];
+  for (const element of subset) {
+    const subsetItem = element;
     if (superset.indexOf(subsetItem) >= 0) return true;
   }
   return false;
@@ -110,7 +114,11 @@ export function list_removeFirst<T>(collection: T[], predicate: (item: T) => boo
   return removedItem;
 }
 
-export function list_removeMissedItems<T>(collection: T[], newCollection: T[], equalCallback: (item: T, newItem: T) => boolean) {
+export function list_removeMissedItems<T>(
+  collection: T[],
+  newCollection: T[],
+  equalCallback: (item: T, newItem: T) => boolean
+) {
   return list_remove(collection, item => {
     return list_find(newCollection, newItem => equalCallback(item, newItem)) == undefined;
   });
@@ -140,7 +148,11 @@ export function list_replaceOne<T>(collection: T[], replaceItem: T, condition: (
   return collection;
 }
 
-export function list_replaceMany<T>(collection: T[], replaceItems: T[], condition: (item: T, replaceItem: T) => boolean): T[] {
+export function list_replaceMany<T>(
+  collection: T[],
+  replaceItems: T[],
+  condition: (item: T, replaceItem: T) => boolean
+): T[] {
   const replacedItems: T[] = [];
   replaceItems = ObjectUtil.clone(replaceItems);
   for (let i = 0; i < collection.length; i++) {
@@ -156,7 +168,11 @@ export function list_replaceMany<T>(collection: T[], replaceItems: T[], conditio
   return replacedItems;
 }
 
-export function list_addOrReplace<T>(collection: T[] | undefined, item: T, replaceCondition: (item: T) => boolean): T[] | undefined {
+export function list_addOrReplace<T>(
+  collection: T[] | undefined,
+  item: T,
+  replaceCondition: (item: T) => boolean
+): T[] | undefined {
   if (collection == undefined) return collection;
   for (let i = 0; i < collection.length; i++) {
     if (replaceCondition(collection[i])) {
@@ -171,7 +187,9 @@ export function list_addOrReplace<T>(collection: T[] | undefined, item: T, repla
 
 export function list_addIfNotExist<T>(collection: T[], addItems: T[], equalBy?: (item: T) => any): T[] {
   addItems.forEach(addItem => {
-    if (list_find(collection, p => (equalBy != undefined ? equalBy(p) == equalBy(addItem) : p == addItem)) == undefined) {
+    if (
+      list_find(collection, p => (equalBy != undefined ? equalBy(p) == equalBy(addItem) : p == addItem)) == undefined
+    ) {
       collection.push(addItem);
     }
   });
@@ -215,7 +233,11 @@ export function list_flat<T>(value: T[][]): T[] {
   return result;
 }
 
-export function list_rightMerge<T>(currentCollection: T[], newCollection: T[], compareSelector: (item: T) => string | number): T[] {
+export function list_rightMerge<T>(
+  currentCollection: T[],
+  newCollection: T[],
+  compareSelector: (item: T) => string | number
+): T[] {
   if (currentCollection.length == 0) return newCollection;
   const currentCollectionDic = list_toDictionary(currentCollection, compareSelector);
   const result: T[] = [];
@@ -223,12 +245,13 @@ export function list_rightMerge<T>(currentCollection: T[], newCollection: T[], c
     result.push(newCollection[i]);
 
     const innerJoinItem = currentCollectionDic[compareSelector(result[i]).toString()];
-    if (innerJoinItem != undefined) {
-      if (typeof innerJoinItem == 'object') {
-        result[i] = ObjectUtil.clone(result[i], newResultItemValue => {
-          return ObjectUtil.extend(<any>newResultItemValue, <any>currentCollectionDic[compareSelector(result[i]).toString()]);
-        });
-      }
+    if (innerJoinItem != undefined && typeof innerJoinItem == 'object') {
+      result[i] = ObjectUtil.clone(result[i], newResultItemValue => {
+        return ObjectUtil.extend(
+          <any>newResultItemValue,
+          <any>currentCollectionDic[compareSelector(result[i]).toString()]
+        );
+      });
     }
   }
   return result;

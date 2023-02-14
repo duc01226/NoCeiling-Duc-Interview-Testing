@@ -2,7 +2,11 @@
 import { Observable, of, pipe, Subscription } from 'rxjs';
 import { delay as rxjs_delay, filter as rxjs_filter, takeUntil as rxjs_takeUntil } from 'rxjs/operators';
 
-export function task_delay(callback: () => void, delayTime?: number, cancelOnFirstTrueValue$?: Observable<boolean>): Subscription {
+export function task_delay(
+  callback: () => void,
+  delayTime?: number,
+  cancelOnFirstTrueValue$?: Observable<boolean>
+): Subscription {
   if (typeof delayTime === 'number' && delayTime <= 0) {
     callback();
     return new Subscription();

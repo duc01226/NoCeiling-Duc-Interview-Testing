@@ -13,7 +13,8 @@ export class FormHelpers {
         control.updateValueAndValidity({ onlySelf: true });
       }
 
-      if (control instanceof FormArray) control.controls.some((form: AbstractControl) => !FormHelpers.validateForm(form as FormGroup));
+      if (control instanceof FormArray)
+        control.controls.some((form: AbstractControl) => !FormHelpers.validateForm(form as FormGroup));
     });
 
     return form.valid;

@@ -8,7 +8,7 @@ import {
   PlatformRepository,
   PlatformRepositoryContext,
   PlatformRepositoryErrorEvent,
-  PlatformRepositoryErrorEventHandler,
+  PlatformRepositoryErrorEventHandler
 } from './domain';
 import { PlatformEventManagerSubscriptionsMap } from './events';
 

@@ -27,7 +27,9 @@ export abstract class PlatformHttpService {
   protected abstract appendAdditionalHttpOptions(options: HttpClientOptions): HttpClientOptions;
 
   protected httpGet<T>(url: string, options?: HttpClientOptions | (() => HttpClientOptions)): Observable<T> {
-    return this.http.get(url, this.getFinalOptions(options)).pipe(<OperatorFunction<Object, T>>timeout(this.requestTimeoutInMs));
+    return this.http
+      .get(url, this.getFinalOptions(options))
+      .pipe(<OperatorFunction<Object, T>>timeout(this.requestTimeoutInMs));
   }
 
   protected httpPost<TResult>(url: string, body: object, options?: HttpClientOptions | (() => HttpClientOptions)) {
@@ -39,11 +41,15 @@ export abstract class PlatformHttpService {
 
   protected httpPut<T>(url: string, body: T, options?: HttpClientOptions | (() => HttpClientOptions)) {
     const finalBody = this.buildHttpBody(body, this.getFinalOptions(options));
-    return this.http.put(url, finalBody, this.getFinalOptions(options)).pipe(<OperatorFunction<Object, T>>timeout(this.requestTimeoutInMs));
+    return this.http
+      .put(url, finalBody, this.getFinalOptions(options))
+      .pipe(<OperatorFunction<Object, T>>timeout(this.requestTimeoutInMs));
   }
 
   protected httpDelete<T>(url: string, options?: HttpClientOptions | (() => HttpClientOptions)) {
-    return this.http.delete(url, this.getFinalOptions(options)).pipe(<OperatorFunction<Object, T>>timeout(this.requestTimeoutInMs));
+    return this.http
+      .delete(url, this.getFinalOptions(options))
+      .pipe(<OperatorFunction<Object, T>>timeout(this.requestTimeoutInMs));
   }
 
   protected buildHttpBody<T>(body: T, options: HttpClientOptions | (() => HttpClientOptions)) {
@@ -51,7 +57,9 @@ export abstract class PlatformHttpService {
     if (finalOptions.headers == undefined) return body;
 
     const headerContentType =
-      finalOptions.headers instanceof HttpHeaders ? finalOptions.headers.get('Content-type') : finalOptions.headers['Content-type'];
+      finalOptions.headers instanceof HttpHeaders
+        ? finalOptions.headers.get('Content-type')
+        : finalOptions.headers['Content-type'];
 
     if (headerContentType == 'application/x-www-form-urlencoded') return this.buildUrlEncodedFormData(body);
 

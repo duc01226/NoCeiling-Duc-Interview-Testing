@@ -1,5 +1,9 @@
 import { ChangeDetectionStrategy, Component, OnInit, ViewEncapsulation } from '@angular/core';
-import { SaveTextSnippetCommand, SearchTextSnippetQuery, TextSnippetRepository } from '@libs/apps-domains/text-snippet-domain';
+import {
+  SaveTextSnippetCommand,
+  SearchTextSnippetQuery,
+  TextSnippetRepository
+} from '@libs/apps-domains/text-snippet-domain';
 import { cloneDeep, PlatformApiServiceErrorResponse, PlatformSmartComponent } from '@libs/platform-core';
 import { of } from 'rxjs';
 
@@ -23,7 +27,7 @@ export class AppTextSnippetDetailComponent
 
     this.selectAppUiState(p => p.selectedSnippetTextId).subscribe(x => {
       this.updateVm({
-        toSaveTextSnippetId : x
+        toSaveTextSnippetId: x
       });
       this.loadSelectedTextSnippetItem();
     });
@@ -49,12 +53,11 @@ export class AppTextSnippetDetailComponent
       )
       .pipe(
         this.observerLoadingState('loadSelectedTextSnippetItem', {
-          onError: err =>
-            this.updateVm({ error: PlatformApiServiceErrorResponse.getDefaultFormattedMessage(err) })
+          onError: err => this.updateVm({ error: PlatformApiServiceErrorResponse.getDefaultFormattedMessage(err) })
         }),
         this.tapResponse(data => {
           this.updateVm({
-            toSaveTextSnippet : cloneDeep(data.items[0])
+            toSaveTextSnippet: cloneDeep(data.items[0])
           });
         })
       );
@@ -70,12 +73,12 @@ export class AppTextSnippetDetailComponent
       }),
       this.tapResponse(result => {
         this.updateVm({
-          toSaveTextSnippet : result.savedData,
-          toSaveTextSnippetId : result.savedData.id
+          toSaveTextSnippet: result.savedData,
+          toSaveTextSnippetId: result.savedData.id
         });
         if (this.appUiStateStore.currentVm.selectedSnippetTextId != this.vm.toSaveTextSnippetId) {
           this.appUiStateStore.updateState({
-            selectedSnippetTextId : this.vm.toSaveTextSnippetId
+            selectedSnippetTextId: this.vm.toSaveTextSnippetId
           });
         }
       })

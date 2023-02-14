@@ -10,7 +10,10 @@ export function ifValidator(condition: (control: FormControl) => boolean, valida
   };
 }
 
-export function ifAsyncValidator(condition: (control: FormControl) => boolean, validatorFn: AsyncValidatorFn): AsyncValidatorFn {
+export function ifAsyncValidator(
+  condition: (control: FormControl) => boolean,
+  validatorFn: AsyncValidatorFn
+): AsyncValidatorFn {
   return (control: AbstractControl) => {
     if (!condition(<FormControl>control)) {
       return of(null);

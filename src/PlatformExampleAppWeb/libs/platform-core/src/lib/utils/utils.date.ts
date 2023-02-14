@@ -52,7 +52,12 @@ export function date_addYear(date: Date, year: number): Date {
   return new Date(date);
 }
 
-export function date_getDurationInfo(miliseconds: number): { days: number; hours: number; minutes: number; seconds: number } {
+export function date_getDurationInfo(miliseconds: number): {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+} {
   const secondsForOneDay = 60 * 60 * 24;
   const secondsForOneHour = 60 * 60;
   const secondsForOneMinute = 60;

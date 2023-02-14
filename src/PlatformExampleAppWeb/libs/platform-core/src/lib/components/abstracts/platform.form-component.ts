@@ -42,12 +42,12 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     const prevMode = this._mode;
     this._mode = v;
 
-    if (this.initiated$.value) {
-      if (prevMode == 'view' && (v == 'create' || v == 'update')) {
-        this.form.enable();
-        this.patchVmValuesToForm(this.vm);
-        this.validateForm();
-      }
+    if (!this.initiated$.value) return;
+
+    if (prevMode == 'view' && (v == 'create' || v == 'update')) {
+      this.form.enable();
+      this.patchVmValuesToForm(this.vm);
+      this.validateForm();
     }
   }
 
@@ -73,7 +73,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 
     // If form and formConfig has NOT been given via input
     if (!this.formConfig && !this.form) {
-      if (this.initiated$.value == true) {
+      if (this.initiated$.value) {
         this.initForm();
       } else {
         // Init empty form

@@ -9,10 +9,13 @@
     "simple-import-sort",
     "unused-imports",
     "sonarjs",
+    "sonar",
     "prettier"
   ],
   "extends": [
-    "plugin:prettier/recommended"
+    "plugin:prettier/recommended",
+    "plugin:sonar/base",
+    "plugin:sonar/recommended"
   ],
   "overrides": [
     {
@@ -42,7 +45,8 @@
           {
             "usePrettierrc": true
           }
-        ]
+        ],
+        "sonar/destructuring-assignment-syntax": "off"
       }
     },
     {
@@ -120,7 +124,21 @@
         "sonarjs/no-duplicate-string": "off",
         "sonarjs/no-identical-functions": "off",
         "sonarjs/cognitive-complexity": "off",
-        "prettier/prettier": "error"
+        "sonarjs/no-redundant-boolean": "off",
+        "sonarjs/no-nested-template-literals": "off",
+        "sonar/for-in": "off",
+        "prettier/prettier": [
+          "error",
+          {
+            "endOfLine": "auto"
+          }
+        ],
+        "sonar/function-name": [
+          "error",
+          {
+            "format": "^_?[a-zA-Z]+_?[a-zA-Z0-9]*\\$?$"
+          }
+        ]
       }
     },
     {

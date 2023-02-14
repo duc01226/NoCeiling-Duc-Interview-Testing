@@ -73,6 +73,7 @@
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-prettier": "^4.2.1",
     "eslint-plugin-simple-import-sort": "8.0.0",
+    "eslint-plugin-sonar": "~0.10.0",
     "eslint-plugin-sonarjs": "^0.18.0",
     "eslint-plugin-unused-imports": "2.0.0",
     "jest": "28.1.1",

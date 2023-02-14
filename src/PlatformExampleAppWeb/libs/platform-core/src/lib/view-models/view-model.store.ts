@@ -103,9 +103,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> extends Com
 
   public override effect<
     ProvidedType,
-    OriginType extends
-    | Observable<ProvidedType>
-    | unknown = Observable<ProvidedType>,
+    OriginType extends Observable<ProvidedType> | unknown = Observable<ProvidedType>,
     ObservableType = OriginType extends Observable<infer A> ? A : never,
     ReturnType = ProvidedType | ObservableType extends void
       ? (observableOrValue?: ObservableType | Observable<ObservableType> | undefined) => Subscription
@@ -118,7 +116,9 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> extends Com
 
       const observable$ = isObservable(observableOrValue) ? observableOrValue : of(observableOrValue);
 
-      const newEffectSub: Subscription = generator(<OriginType><any>observable$).pipe(takeUntil(this.destroy$)).subscribe();
+      const newEffectSub: Subscription = generator(<OriginType>(<any>observable$))
+        .pipe(takeUntil(this.destroy$))
+        .subscribe();
 
       this.storeAnonymousSubscription(newEffectSub);
       previousEffectSub = newEffectSub;
@@ -150,8 +150,8 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> extends Com
   }
 
   protected cancelAllStoredSubscriptions(): void {
-    this.storedSubscriptionsMap.forEach((value, key) => this.cancelStoredSubscription(key));
-    this.storedAnonymousSubscriptions.forEach((value, key) => value.unsubscribe());
+    this.storedSubscriptionsMap.forEach((sub, key) => this.cancelStoredSubscription(key));
+    this.storedAnonymousSubscriptions.forEach(sub => sub.unsubscribe());
   }
 
   public override patchState(

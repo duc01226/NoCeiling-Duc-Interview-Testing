@@ -12,7 +12,7 @@ export class RepositoryErrorEventHandler extends PlatformEventHandler<PlatformRe
   public handle(event: PlatformRepositoryErrorEvent): void {
     if (!event.apiError.error.isApplicationError()) {
       this.uiState.updateState({
-        appError : event.apiError
+        appError: event.apiError
       });
     }
   }

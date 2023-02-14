@@ -25,7 +25,8 @@ export class PlatformApiServiceErrorResponse {
 
   public getDefaultFormattedMessage(): string {
     if (this.error.message == undefined) return '';
-    const requestIdInfoMessagePart = this.requestId != '' && !this.error.isApplicationError() ? ` | RequestId: ${this.requestId}` : '';
+    const requestIdInfoMessagePart =
+      this.requestId != '' && !this.error.isApplicationError() ? ` | RequestId: ${this.requestId}` : '';
     return `${this.error.message}${requestIdInfoMessagePart}`;
   }
 }
@@ -43,7 +44,8 @@ export class PlatformApiServiceErrorInfo implements IPlatformApiServiceErrorInfo
     if (data != null) {
       if (data.code != null) this.code = data.code;
       if (data.message != null) this.message = data.message;
-      if (data.formattedMessagePlaceholderValues != null) this.formattedMessagePlaceholderValues = data.formattedMessagePlaceholderValues;
+      if (data.formattedMessagePlaceholderValues != null)
+        this.formattedMessagePlaceholderValues = data.formattedMessagePlaceholderValues;
       if (data.target != null) this.target = data.target;
       if (data.details != null) this.details = data.details.map(p => new PlatformApiServiceErrorInfo(p));
     }

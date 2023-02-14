@@ -2,10 +2,7 @@
 import { Injectable } from '@angular/core';
 import { ComponentStore } from '@ngrx/component-store';
 
-import {
-  PlatformLanguageItem,
-  PlatformTranslateService
-} from '../translations';
+import { PlatformLanguageItem, PlatformTranslateService } from '../translations';
 
 export interface TranslateState {
   currentLang: string;

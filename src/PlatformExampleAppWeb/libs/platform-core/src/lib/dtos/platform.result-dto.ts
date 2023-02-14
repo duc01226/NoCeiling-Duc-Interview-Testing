@@ -14,7 +14,10 @@ export interface IPlatformPagedResultDto<TItem> {
   pageIndex?: number;
 }
 
-export class PlatformPagedResultDto<TItem extends IPlatformDataModel> extends PlatformResultDto implements IPlatformPagedResultDto<TItem> {
+export class PlatformPagedResultDto<TItem extends IPlatformDataModel>
+  extends PlatformResultDto
+  implements IPlatformPagedResultDto<TItem>
+{
   public constructor(data?: Partial<IPlatformPagedResultDto<TItem>>, itemInstanceCreater?: (item: TItem) => TItem) {
     super();
     this.items = data?.items?.map(_ => (itemInstanceCreater != null ? itemInstanceCreater(_) : _)) ?? [];

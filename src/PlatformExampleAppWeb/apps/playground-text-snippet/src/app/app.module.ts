@@ -48,7 +48,8 @@ export function TranslateHttpLoaderFactory(http: HttpClient) {
       }
     }),
     AppsTextSnippetDomainModule.forRoot({
-      moduleConfigFactory: () => new AppsTextSnippetDomainModuleConfig({textSnippetApiHost: environment.textSnippetApiHost}),
+      moduleConfigFactory: () =>
+        new AppsTextSnippetDomainModuleConfig({ textSnippetApiHost: environment.textSnippetApiHost }),
       appRepositoryErrorEventHandlers: [RepositoryErrorEventHandler]
     }),
     MatTableModule,

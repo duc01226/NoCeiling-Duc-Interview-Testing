@@ -1,6 +1,6 @@
 import { PlatformApiServiceErrorResponse, PlatformVm } from '@libs/platform-core';
 
-export class AppUiStateData extends PlatformVm  {
+export class AppUiStateData extends PlatformVm {
   public constructor(data?: Partial<AppUiStateData>) {
     super(data);
 

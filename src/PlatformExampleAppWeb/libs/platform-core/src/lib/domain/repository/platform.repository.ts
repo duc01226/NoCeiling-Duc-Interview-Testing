@@ -185,7 +185,10 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
     }, delayTime);
   }
 
-  protected processClearRefreshDataRequest(requestName: string, requestPartialPayload?: PlatformQueryDto | PlatformCommandDto): void {
+  protected processClearRefreshDataRequest(
+    requestName: string,
+    requestPartialPayload?: PlatformQueryDto | PlatformCommandDto
+  ): void {
     const requestId = this.buildRequestId(requestName, requestPartialPayload);
     const requestIdPrefix = requestId.endsWith(']') ? requestId.slice(0, requestId.length - 1) : requestId;
     Object.keys(this.context.loadedRequestRefreshFnDic).forEach(key => {
@@ -239,7 +242,16 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
     replaceItem: boolean;
     optionalProps: (keyof TModel)[];
   }): void {
-    const { requestId, apiResult, repoDataSubject, modelDataExtractor, modelIdFn, initModelItemFn, replaceItem, optionalProps } = config;
+    const {
+      requestId,
+      apiResult,
+      repoDataSubject,
+      modelDataExtractor,
+      modelIdFn,
+      initModelItemFn,
+      replaceItem,
+      optionalProps
+    } = config;
 
     let hasChanged = this.updateCachedRequestData<TApiResult>(requestId, apiResult);
     const newData = this.upsertData(

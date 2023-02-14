@@ -23,7 +23,7 @@ export class AppComponent
 
     this.selectAppUiState(p => p.appError).subscribe(x => {
       this.updateVm({
-        appError : x
+        appError: x
       });
     });
   }
@@ -74,8 +74,8 @@ export class AppComponent
         if (this.vm.searchText == newValue) return;
 
         this.updateVm({
-          searchText : newValue,
-          currentTextSnippetItemsPageNumber : 0
+          searchText: newValue,
+          currentTextSnippetItemsPageNumber: 0
         });
 
         this.loadSnippetTextItems();
@@ -91,17 +91,17 @@ export class AppComponent
     if (this.vm.currentTextSnippetItemsPageNumber == e.pageIndex) return;
 
     this.updateVm({
-      currentTextSnippetItemsPageNumber : e.pageIndex
+      currentTextSnippetItemsPageNumber: e.pageIndex
     });
     this.loadSnippetTextItems();
   }
 
   public toggleSelectTextSnippedGridRow(row: AppTextSnippetItemViewModel) {
     this.updateVm({
-      selectedSnippetTextId : this.vm.selectedSnippetTextId != row.data.id ? row.data.id : undefined
+      selectedSnippetTextId: this.vm.selectedSnippetTextId != row.data.id ? row.data.id : undefined
     });
     this.appUiStateStore.updateState({
-      selectedSnippetTextId : this.vm.selectedSnippetTextId
+      selectedSnippetTextId: this.vm.selectedSnippetTextId
     });
   }
 

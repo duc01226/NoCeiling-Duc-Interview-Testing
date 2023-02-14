@@ -22,7 +22,8 @@ export class PlatformCoreModuleConfig implements IPlatformCoreModuleConfig {
   public isDevelopment: boolean = false;
   public httpRequestTimeoutInSeconds: number = 60;
   public multiThemeConfig: PlatformMultiThemeModuleConfig = new PlatformMultiThemeModuleConfig();
-  public maxCacheRequestDataPerApiRequestName: number = PlatformCoreModuleConfig.defaultMaxCacheRequestDataPerApiRequestName;
+  public maxCacheRequestDataPerApiRequestName: number =
+    PlatformCoreModuleConfig.defaultMaxCacheRequestDataPerApiRequestName;
 }
 
 export interface IPlatformMultiThemeModuleConfig {

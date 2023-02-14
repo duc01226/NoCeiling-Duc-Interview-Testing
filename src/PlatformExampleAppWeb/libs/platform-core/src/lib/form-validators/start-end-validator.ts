@@ -39,17 +39,21 @@ export function startEndValidator<T extends number | Date>(
           };
         }
       } else if (checkDatePart === 'dateOnly') {
-        if ((allowEqual && date_compareOnlyDay(start, end) > 0) || (!allowEqual && date_compareOnlyDay(start, end) >= 0)) {
+        if (
+          (allowEqual && date_compareOnlyDay(start, end) > 0) ||
+          (!allowEqual && date_compareOnlyDay(start, end) >= 0)
+        ) {
           return {
             [errorKey]: buildValidatorError(start, end, options?.errorMsg)
           };
         }
-      } else if (checkDatePart === 'timeOnly') {
-        if ((allowEqual && date_compareOnlyTime(start, end) > 0) || (!allowEqual && date_compareOnlyTime(start, end) >= 0)) {
-          return {
-            [errorKey]: buildValidatorError(start, end, options?.errorMsg)
-          };
-        }
+      } else if (
+        checkDatePart === 'timeOnly' &&
+        ((allowEqual && date_compareOnlyTime(start, end) > 0) || (!allowEqual && date_compareOnlyTime(start, end) >= 0))
+      ) {
+        return {
+          [errorKey]: buildValidatorError(start, end, options?.errorMsg)
+        };
       }
     }
 

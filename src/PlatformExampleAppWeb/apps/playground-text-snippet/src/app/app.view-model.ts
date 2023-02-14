@@ -17,7 +17,9 @@ export class AppViewModel extends PlatformVm implements IAppViewModel {
   public constructor(data?: Partial<IAppViewModel>) {
     super();
     this.searchText = data?.searchText ?? '';
-    this.textSnippetItems = data?.textSnippetItems ? data?.textSnippetItems.map(x => new AppTextSnippetItemViewModel(x)) : undefined;
+    this.textSnippetItems = data?.textSnippetItems
+      ? data?.textSnippetItems.map(x => new AppTextSnippetItemViewModel(x))
+      : undefined;
     this.totalTextSnippetItems = data?.totalTextSnippetItems ?? 0;
     this.currentTextSnippetItemsPageNumber = data?.currentTextSnippetItemsPageNumber ?? 0;
     this.selectedSnippetTextId = data?.selectedSnippetTextId ?? undefined;
