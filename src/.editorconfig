@@ -464,7 +464,7 @@ dotnet_diagnostic.CA1310.severity = none
 dotnet_diagnostic.CA1051.severity = none
 dotnet_diagnostic.CA1805.severity = none
 dotnet_diagnostic.CA1845.severity = suggestion
-dotnet_diagnostic.CA1847.severity = suggestion
+dotnet_diagnostic.CA1847.severity = none
 dotnet_diagnostic.CA2253.severity = error
 dotnet_diagnostic.CA1041.severity = suggestion
 dotnet_diagnostic.CA1309.severity = none
@@ -590,7 +590,7 @@ dotnet_diagnostic.S3218.severity = suggestion
 dotnet_diagnostic.S4035.severity = suggestion
 
 # S3241: Methods should not return values that are never used
-dotnet_diagnostic.S3241.severity = suggestion
+dotnet_diagnostic.S3241.severity = none
 
 # S3887: Mutable, non-private fields should not be "readonly"
 dotnet_diagnostic.S3887.severity = none
