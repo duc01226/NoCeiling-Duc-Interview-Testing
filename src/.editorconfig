@@ -411,24 +411,24 @@ dotnet_diagnostic.IDE0040.severity = suggestion
 dotnet_diagnostic.IDE0044.severity = suggestion
 dotnet_diagnostic.IDE0050.severity = suggestion
 dotnet_diagnostic.IDE0051.severity = suggestion
-dotnet_diagnostic.IDE0053.severity = suggestion
+dotnet_diagnostic.IDE0053.severity = none
 dotnet_diagnostic.IDE0056.severity = suggestion
 dotnet_diagnostic.IDE0057.severity = none
 dotnet_diagnostic.IDE0059.severity = suggestion
 dotnet_diagnostic.IDE0060.severity = suggestion
 dotnet_diagnostic.IDE0061.severity = suggestion
 dotnet_diagnostic.IDE0072.severity = suggestion
-dotnet_diagnostic.IDE0090.severity = suggestion
+dotnet_diagnostic.IDE0090.severity = none
 dotnet_diagnostic.IDE0037.severity = suggestion
 dotnet_diagnostic.IDE0106.severity = suggestion
 dotnet_diagnostic.IDE0160.severity = none
 dotnet_diagnostic.IDE0130.severity = none
 dotnet_diagnostic.IDE0058.severity = none
-dotnet_diagnostic.IDE0078.severity = suggestion
+dotnet_diagnostic.IDE0078.severity = none
 dotnet_diagnostic.IDE0063.severity = none
 dotnet_diagnostic.IDE0022.severity = suggestion
 dotnet_diagnostic.IDE0052.severity = suggestion
-dotnet_diagnostic.IDE0240.severity = suggestion
+dotnet_diagnostic.IDE0240.severity = none
 dotnet_diagnostic.IDE0074.severity = suggestion
 # IDE0200: Remove unnecessary lambda expression
 dotnet_diagnostic.IDE0200.severity = none
@@ -462,12 +462,12 @@ dotnet_diagnostic.CA1720.severity = suggestion
 dotnet_diagnostic.CA1716.severity = none
 dotnet_diagnostic.CA1310.severity = none
 dotnet_diagnostic.CA1051.severity = none
-dotnet_diagnostic.CA1805.severity = suggestion
+dotnet_diagnostic.CA1805.severity = none
 dotnet_diagnostic.CA1845.severity = suggestion
 dotnet_diagnostic.CA1847.severity = suggestion
-dotnet_diagnostic.CA2253.severity = suggestion
+dotnet_diagnostic.CA2253.severity = error
 dotnet_diagnostic.CA1041.severity = suggestion
-dotnet_diagnostic.CA1309.severity = suggestion
+dotnet_diagnostic.CA1309.severity = none
 dotnet_diagnostic.CA2208.severity = suggestion
 dotnet_diagnostic.CA1711.severity = suggestion
 dotnet_diagnostic.CA1727.severity = error
@@ -476,20 +476,20 @@ dotnet_diagnostic.CA1806.severity = none
 dotnet_diagnostic.CA1826.severity = none
 dotnet_diagnostic.CA1842.severity = suggestion
 dotnet_diagnostic.CA1708.severity = suggestion
-dotnet_diagnostic.CA5350.severity = suggestion
+dotnet_diagnostic.CA5350.severity = none
 dotnet_diagnostic.CA1416.severity = suggestion
-dotnet_diagnostic.CA1846.severity = suggestion
-dotnet_diagnostic.CA1710.severity = suggestion
+dotnet_diagnostic.CA1846.severity = none
+dotnet_diagnostic.CA1710.severity = none
 dotnet_diagnostic.CA2200.severity = none
 dotnet_diagnostic.CA1852.severity = none
-dotnet_diagnostic.CA1311.severity = suggestion
-dotnet_diagnostic.CA1854.severity = suggestion
+dotnet_diagnostic.CA1311.severity = none
+dotnet_diagnostic.CA1854.severity = none
 
 dotnet_diagnostic.CS4014.severity = error
 
 dotnet_diagnostic.CS1998.severity = none
 
-dotnet_diagnostic.EF1001.severity = suggestion
+dotnet_diagnostic.EF1001.severity = none
 
 # SYSLIB1045: Convert to 'GeneratedRegexAttribute'.
 dotnet_diagnostic.SYSLIB1045.severity = none
@@ -539,7 +539,7 @@ dotnet_diagnostic.S112.severity = none
 dotnet_diagnostic.S1125.severity = none
 
 # S3925: "ISerializable" should be implemented correctly
-dotnet_diagnostic.S3925.severity = suggestion
+dotnet_diagnostic.S3925.severity = none
 
 # S3442: "abstract" classes should not have "public" constructors
 dotnet_diagnostic.S3442.severity = none
@@ -560,10 +560,10 @@ dotnet_diagnostic.S2184.severity = suggestion
 dotnet_diagnostic.S1135.severity = warning
 
 # S1168: Empty arrays and collections should be returned instead of null
-dotnet_diagnostic.S1168.severity = suggestion
+dotnet_diagnostic.S1168.severity = none
 
 # S3060: "is" should not be used with "this"
-dotnet_diagnostic.S3060.severity = suggestion
+dotnet_diagnostic.S3060.severity = none
 
 # S2326: Unused type parameters should be removed
 dotnet_diagnostic.S2326.severity = suggestion
@@ -572,7 +572,7 @@ dotnet_diagnostic.S2326.severity = suggestion
 dotnet_diagnostic.S125.severity = suggestion
 
 # S1939: Inheritance list should not be redundant
-dotnet_diagnostic.S1939.severity = suggestion
+dotnet_diagnostic.S1939.severity = none
 
 # S1117: Local variables should not shadow class fields
 dotnet_diagnostic.S1117.severity = suggestion
@@ -605,7 +605,7 @@ dotnet_diagnostic.S101.severity = none
 dotnet_diagnostic.S5547.severity = suggestion
 
 # S1075: URIs should not be hardcoded
-dotnet_diagnostic.S1075.severity = suggestion
+dotnet_diagnostic.S1075.severity = none
 
 # S1215: "GC.Collect" should not be called
 dotnet_diagnostic.S1215.severity = suggestion
@@ -656,7 +656,7 @@ dotnet_diagnostic.S2234.severity = suggestion
 dotnet_diagnostic.S2328.severity = suggestion
 
 # S1206: "Equals(Object)" and "GetHashCode()" should be overridden in pairs
-dotnet_diagnostic.S1206.severity = suggestion
+dotnet_diagnostic.S1206.severity = none
 
 # S2372: Exceptions should not be thrown from property getters
 dotnet_diagnostic.S2372.severity = suggestion
