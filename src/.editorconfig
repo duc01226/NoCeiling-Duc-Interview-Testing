@@ -470,7 +470,7 @@ dotnet_diagnostic.CA1041.severity = suggestion
 dotnet_diagnostic.CA1309.severity = suggestion
 dotnet_diagnostic.CA2208.severity = suggestion
 dotnet_diagnostic.CA1711.severity = suggestion
-dotnet_diagnostic.CA1727.severity = suggestion
+dotnet_diagnostic.CA1727.severity = error
 dotnet_diagnostic.CA1000.severity = none
 dotnet_diagnostic.CA1806.severity = none
 dotnet_diagnostic.CA1826.severity = none
@@ -660,3 +660,6 @@ dotnet_diagnostic.S1206.severity = suggestion
 
 # S2372: Exceptions should not be thrown from property getters
 dotnet_diagnostic.S2372.severity = warning
+
+# S2365: Properties should not make collection or array copies
+dotnet_diagnostic.S2365.severity = none
