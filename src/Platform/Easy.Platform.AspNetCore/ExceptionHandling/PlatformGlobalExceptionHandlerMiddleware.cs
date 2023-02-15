@@ -87,7 +87,7 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
                 {
                     Logger.LogError(
                         exception,
-                        "[UnexpectedRequestError] There is an unexpected exception during the processing of the request. RequestId: {requestId}. UserContext: {UserContext}",
+                        "[UnexpectedRequestError] There is an unexpected exception during the processing of the request. RequestId: {RequestId}. UserContext: {UserContext}",
                         context.TraceIdentifier,
                         userContextAccessor.Current.GetAllKeyValues().AsJson());
 
@@ -113,7 +113,7 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
     {
         Logger.LogWarning(
             exception,
-            "[KnownRequestWarning] There is a {exceptionType} during the processing of the request. RequestId: {requestId}",
+            "[KnownRequestWarning] There is a {ExceptionType} during the processing of the request. RequestId: {RequestId}",
             exception.GetType(),
             context.TraceIdentifier);
     }

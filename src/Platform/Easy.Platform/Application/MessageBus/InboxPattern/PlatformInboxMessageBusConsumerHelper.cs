@@ -84,7 +84,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                     // inbox hosted service
                     logger.LogError(
                         e,
-                        "TriggerHandleWaitingProcessingInboxMessageConsumer [ConsumerType:{consumerType}] failed. InboxMessage will be retried later.",
+                        "TriggerHandleWaitingProcessingInboxMessageConsumer [ConsumerType:{ConsumerType}] failed. InboxMessage will be retried later.",
                         consumerType.Name);
                 }
             });

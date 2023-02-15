@@ -70,7 +70,7 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
 
                     logger.LogWarning(
                         exception,
-                        "[StartBackgroundJobProcessing] Exception {ExceptionType} with message {Message} detected on attempt StartBackgroundJobProcessing {retry} of {retries}",
+                        "[StartBackgroundJobProcessing] Exception {ExceptionType} with message {Message} detected on attempt StartBackgroundJobProcessing {Retry} of {Retries}",
                         exception.GetType().Name,
                         exception.Message,
                         currentRetry,

@@ -95,7 +95,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             {
                 Logger.LogWarning(
                     exception,
-                    "Exception {ExceptionType} with message [{Message}] detected on attempt SeedData {retry}",
+                    "Exception {ExceptionType} with message [{Message}] detected on attempt SeedData {Retry}",
                     exception.GetType().Name,
                     exception.Message,
                     retry);
@@ -170,7 +170,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             {
                 Logger.LogWarning(
                     exception,
-                    "Exception {ExceptionType} with message [{Message}] detected on attempt ClearDistributedCache {retry}",
+                    "Exception {ExceptionType} with message [{Message}] detected on attempt ClearDistributedCache {Retry}",
                     exception.GetType().Name,
                     exception.Message,
                     retry);

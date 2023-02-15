@@ -190,7 +190,7 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
             {
                 Logger.LogWarning(
                     exception,
-                    "[{DbContext}] Exception {ExceptionType} with message {Message} detected on attempt MigrateApplicationDataAsync {retry} of {retries}",
+                    "[{DbContext}] Exception {ExceptionType} with message {Message} detected on attempt MigrateApplicationDataAsync {Retry} of {Retries}",
                     typeof(TDbContext).Name,
                     exception.GetType().Name,
                     exception.Message,
@@ -216,7 +216,7 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
             {
                 Logger.LogWarning(
                     exception,
-                    "[{DbContext}] Exception {ExceptionType} with message {Message} detected on attempt Initialize {retry} of {retries}",
+                    "[{DbContext}] Exception {ExceptionType} with message {Message} detected on attempt Initialize {Retry} of {Retries}",
                     typeof(TDbContext).Name,
                     exception.GetType().Name,
                     exception.Message,

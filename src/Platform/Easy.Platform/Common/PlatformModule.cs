@@ -163,7 +163,7 @@ public abstract class PlatformModule : IPlatformModule
             if (Initiated)
                 return;
 
-            Logger.LogInformation("[PlatformModule] {module} start initiating", GetType().Name);
+            Logger.LogInformation("[PlatformModule] {Module} start initiating", GetType().Name);
 
             // Because PlatformModule is singleton => ServiceProvider of it is the root ServiceProvider
             PlatformApplicationGlobal.RootServiceProvider = ServiceProvider;
@@ -177,7 +177,7 @@ public abstract class PlatformModule : IPlatformModule
 
             Initiated = true;
 
-            Logger.LogInformation("[PlatformModule] {module} initiated", GetType().Name);
+            Logger.LogInformation("[PlatformModule] {Module} initiated", GetType().Name);
         }
     }
 
