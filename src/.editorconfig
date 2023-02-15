@@ -416,7 +416,7 @@ dotnet_diagnostic.IDE0056.severity = suggestion
 dotnet_diagnostic.IDE0057.severity = none
 dotnet_diagnostic.IDE0059.severity = suggestion
 dotnet_diagnostic.IDE0060.severity = suggestion
-dotnet_diagnostic.IDE0061.severity = suggestion
+dotnet_diagnostic.IDE0061.severity = none
 dotnet_diagnostic.IDE0072.severity = suggestion
 dotnet_diagnostic.IDE0090.severity = none
 dotnet_diagnostic.IDE0037.severity = suggestion
@@ -474,9 +474,9 @@ dotnet_diagnostic.CA1727.severity = error
 dotnet_diagnostic.CA1000.severity = none
 dotnet_diagnostic.CA1806.severity = none
 dotnet_diagnostic.CA1826.severity = none
-dotnet_diagnostic.CA1842.severity = suggestion
+dotnet_diagnostic.CA1842.severity = none
 dotnet_diagnostic.CA1708.severity = suggestion
-dotnet_diagnostic.CA5350.severity = none
+dotnet_diagnostic.CA5350.severity = suggestion
 dotnet_diagnostic.CA1416.severity = suggestion
 dotnet_diagnostic.CA1846.severity = none
 dotnet_diagnostic.CA1710.severity = none
@@ -551,7 +551,7 @@ dotnet_diagnostic.S3358.severity = suggestion
 dotnet_diagnostic.S1118.severity = none
 
 # S4136: Method overloads should be grouped together
-dotnet_diagnostic.S4136.severity = suggestion
+dotnet_diagnostic.S4136.severity = none
 
 # S2184: Results of integer division should not be assigned to floating point variables
 dotnet_diagnostic.S2184.severity = suggestion
@@ -569,7 +569,7 @@ dotnet_diagnostic.S3060.severity = none
 dotnet_diagnostic.S2326.severity = suggestion
 
 # S125: Sections of code should not be commented out
-dotnet_diagnostic.S125.severity = suggestion
+dotnet_diagnostic.S125.severity = none
 
 # S1939: Inheritance list should not be redundant
 dotnet_diagnostic.S1939.severity = none
@@ -608,10 +608,10 @@ dotnet_diagnostic.S5547.severity = suggestion
 dotnet_diagnostic.S1075.severity = none
 
 # S1215: "GC.Collect" should not be called
-dotnet_diagnostic.S1215.severity = suggestion
+dotnet_diagnostic.S1215.severity = none
 
 # S3237: "value" parameters should be used
-dotnet_diagnostic.S3237.severity = suggestion
+dotnet_diagnostic.S3237.severity = none
 
 # S108: Nested blocks of code should not be left empty
 dotnet_diagnostic.S108.severity = suggestion
@@ -626,7 +626,7 @@ dotnet_diagnostic.S3011.severity = none
 dotnet_diagnostic.S3928.severity = suggestion
 
 # S1643: Strings should not be concatenated using '+' in a loop
-dotnet_diagnostic.S1643.severity = suggestion
+dotnet_diagnostic.S1643.severity = none
 
 # S3260: Non-derived "private" classes and records should be "sealed"
 dotnet_diagnostic.S3260.severity = none
@@ -659,7 +659,34 @@ dotnet_diagnostic.S2328.severity = suggestion
 dotnet_diagnostic.S1206.severity = none
 
 # S2372: Exceptions should not be thrown from property getters
-dotnet_diagnostic.S2372.severity = suggestion
+dotnet_diagnostic.S2372.severity = warning
 
 # S2365: Properties should not make collection or array copies
 dotnet_diagnostic.S2365.severity = none
+
+# S4792: Make sure that this logger's configuration is safe.
+dotnet_diagnostic.S4792.severity = none
+
+# S3330: Make sure creating this cookie without the "HttpOnly" flag is safe.
+dotnet_diagnostic.S3330.severity = none
+
+# S4507: Make sure this debug feature is deactivated before delivering the code in production.
+dotnet_diagnostic.S4507.severity = none
+
+# S5332: Using http protocol is insecure. Use https instead.
+dotnet_diagnostic.S5332.severity = none
+
+# S2245: Pseudorandom number generators (PRNGs) should not be used in secure contexts
+dotnet_diagnostic.S2245.severity = none
+
+# S6444: Pass a timeout to limit the execution time.
+dotnet_diagnostic.S6444.severity = none
+
+# S2068: Hard-coded credentials are security-sensitive
+dotnet_diagnostic.S2068.severity = none
+
+# S2092: Make sure creating this cookie without setting the 'Secure' property is safe here.
+dotnet_diagnostic.S2092.severity = none
+
+# S2436: Types and methods should not have too many generic parameters
+dotnet_diagnostic.S2436.severity = none
