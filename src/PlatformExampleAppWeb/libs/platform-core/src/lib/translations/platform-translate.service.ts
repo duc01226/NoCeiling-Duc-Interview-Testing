@@ -27,7 +27,7 @@ export class PlatformTranslateService {
   public getList(keys: string[], params?: Dictionary<string>): Observable<string[]> {
     return this.ngxTranslate.get(keys, params).pipe(
       map(value => {
-        if (typeof value == 'object') return Object.keys(<any>value).map(key => (<any>value)[key]);
+        if (typeof value == 'object') return Object.keys(value).map(key => value[key]);
         if (value == undefined) return [];
         return [value];
       })
@@ -64,7 +64,7 @@ export class PlatformTranslateService {
 export class PlatformLanguageItem {
   public title: string;
   public value: string;
-  public shortTitle?: string | undefined;
+  public shortTitle?: string;
 
   constructor(title: string, value: string, shortTitle?: string) {
     this.title = title;

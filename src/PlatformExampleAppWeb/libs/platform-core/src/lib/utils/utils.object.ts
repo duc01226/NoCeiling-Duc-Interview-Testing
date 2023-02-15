@@ -81,12 +81,12 @@ export function toPlainObj<T>(source: T, ignorePrivate: boolean = true): any {
 export function clone<T>(value: T, updateClonedValueAction?: (clonedValue: T) => undefined | T | void): T {
   if (value == undefined) return value;
 
-  let clonedValue = <T>lodashClone(value);
+  let clonedValue = lodashClone(value);
 
   if (updateClonedValueAction != undefined) {
     const updatedClonedValue = updateClonedValueAction(clonedValue);
     if (updatedClonedValue != undefined) {
-      clonedValue = updatedClonedValue as T;
+      clonedValue = updatedClonedValue as NonNullable<T>;
     }
   }
   return clonedValue;
@@ -127,7 +127,7 @@ export function immutableUpdate<TObject extends object>(
 
 export function cloneWithNewValues<T extends object>(value: T, newValues: T | Partial<T>): T {
   if (value == undefined) return value;
-  const clonedValue = <T>lodashClone(value);
+  const clonedValue = lodashClone(value);
   Object.keys(newValues).forEach(newValueKey => {
     (<any>clonedValue)[newValueKey] = (<any>newValues)[newValueKey];
   });
@@ -269,16 +269,16 @@ export function getPropertyDescriptor(obj: object, prop: string): PropertyDescri
 }
 
 export function removeNullProps<T>(obj: T): T {
-  if (obj == null || typeof obj !== 'object') {
-    return obj;
-  }
-  const objKeys = Object.keys(obj);
-  for (const key of objKeys) {
-    if ((<any>obj)[key] == null) {
-      // eslint-disable-next-line no-param-reassign
-      delete (<any>obj)[key];
+  if (obj != null && typeof obj == 'object') {
+    const objKeys = Object.keys(obj);
+    for (const key of objKeys) {
+      if ((<any>obj)[key] == null) {
+        // eslint-disable-next-line no-param-reassign
+        delete (<any>obj)[key];
+      }
     }
   }
+
   return obj;
 }
 

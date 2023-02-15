@@ -59,8 +59,8 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
     const refreshDataFn = () => {
       apiRequestFn(true)
         .pipe(takeUntil(stopRefreshNotifier$))
-        .subscribe(
-          apiResult => {
+        .subscribe({
+          next: apiResult => {
             this.updateNewRequestData<TModel, TApiResult>({
               requestId,
               apiResult,
@@ -77,10 +77,10 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
               );
             }
           },
-          error => {
+          error: error => {
             this.handleApiError(error, requestName, requestPayload);
           }
-        );
+        });
     };
     const returnDataObsFn = () =>
       defer(() => {
@@ -160,7 +160,7 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
     requestPayload: PlatformQueryDto | PlatformCommandDto
   ) {
     this.handleApiError(error, requestName, requestPayload);
-    return throwError(error);
+    return throwError(() => error);
   }
 
   /**

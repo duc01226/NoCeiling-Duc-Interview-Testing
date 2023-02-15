@@ -73,7 +73,7 @@ export abstract class PlatformHttpService {
     const formData = new URLSearchParams();
     if (data == undefined) return '';
     if (typeof data == 'object') {
-      keys(data).map(key => formData.append(<string>key, data[key]));
+      keys(data).forEach(key => formData.append(key, data[key]));
     } else {
       formData.append('value', data);
     }

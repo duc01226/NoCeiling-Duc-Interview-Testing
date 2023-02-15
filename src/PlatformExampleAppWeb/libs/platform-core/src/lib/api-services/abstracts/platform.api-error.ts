@@ -20,7 +20,7 @@ export class PlatformApiServiceErrorResponse {
   public requestId: string;
 
   public static getDefaultFormattedMessage(errorResponse: PlatformApiServiceErrorResponse | Error): string {
-    return errorResponse instanceof Error ? (<Error>errorResponse).message : errorResponse.getDefaultFormattedMessage();
+    return errorResponse instanceof Error ? errorResponse.message : errorResponse.getDefaultFormattedMessage();
   }
 
   public getDefaultFormattedMessage(): string {
