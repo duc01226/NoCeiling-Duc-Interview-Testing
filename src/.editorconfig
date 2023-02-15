@@ -495,7 +495,7 @@ dotnet_diagnostic.EF1001.severity = none
 dotnet_diagnostic.SYSLIB1045.severity = none
 
 # ASP0014: Suggest using top level route registrations
-dotnet_diagnostic.ASP0014.severity = suggestion
+dotnet_diagnostic.ASP0014.severity = none
 
 ##########################################
 # License
