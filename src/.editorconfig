@@ -659,7 +659,7 @@ dotnet_diagnostic.S2328.severity = suggestion
 dotnet_diagnostic.S1206.severity = suggestion
 
 # S2372: Exceptions should not be thrown from property getters
-dotnet_diagnostic.S2372.severity = warning
+dotnet_diagnostic.S2372.severity = suggestion
 
 # S2365: Properties should not make collection or array copies
 dotnet_diagnostic.S2365.severity = none
