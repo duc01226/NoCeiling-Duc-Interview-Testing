@@ -533,22 +533,22 @@ dotnet_diagnostic.ASP0014.severity = suggestion
 ##########################################
 
 # S112: General exceptions should never be thrown
-dotnet_diagnostic.S112.severity = suggestion
+dotnet_diagnostic.S112.severity = none
 
 # S1125: Boolean literals should not be redundant
-dotnet_diagnostic.S1125.severity = suggestion
+dotnet_diagnostic.S1125.severity = none
 
 # S3925: "ISerializable" should be implemented correctly
 dotnet_diagnostic.S3925.severity = suggestion
 
 # S3442: "abstract" classes should not have "public" constructors
-dotnet_diagnostic.S3442.severity = suggestion
+dotnet_diagnostic.S3442.severity = none
 
 # S3358: Ternary operators should not be nested
 dotnet_diagnostic.S3358.severity = suggestion
 
 # S1118: Utility classes should not have public constructors
-dotnet_diagnostic.S1118.severity = suggestion
+dotnet_diagnostic.S1118.severity = none
 
 # S4136: Method overloads should be grouped together
 dotnet_diagnostic.S4136.severity = suggestion
@@ -593,13 +593,13 @@ dotnet_diagnostic.S4035.severity = suggestion
 dotnet_diagnostic.S3241.severity = suggestion
 
 # S3887: Mutable, non-private fields should not be "readonly"
-dotnet_diagnostic.S3887.severity = suggestion
+dotnet_diagnostic.S3887.severity = none
 
 # S2386: Mutable fields should not be "public static"
-dotnet_diagnostic.S2386.severity = suggestion
+dotnet_diagnostic.S2386.severity = none
 
 # S101: Types should be named in PascalCase
-dotnet_diagnostic.S101.severity = suggestion
+dotnet_diagnostic.S101.severity = none
 
 # S5547: Cipher algorithms should be robust
 dotnet_diagnostic.S5547.severity = suggestion
@@ -610,9 +610,6 @@ dotnet_diagnostic.S1075.severity = suggestion
 # S1215: "GC.Collect" should not be called
 dotnet_diagnostic.S1215.severity = suggestion
 
-# S2365: Properties should not make collection or array copies
-dotnet_diagnostic.S2365.severity = suggestion
-
 # S3237: "value" parameters should be used
 dotnet_diagnostic.S3237.severity = suggestion
 
@@ -620,10 +617,10 @@ dotnet_diagnostic.S3237.severity = suggestion
 dotnet_diagnostic.S108.severity = suggestion
 
 # S3875: "operator==" should not be overloaded on reference types
-dotnet_diagnostic.S3875.severity = suggestion
+dotnet_diagnostic.S3875.severity = none
 
 # S3011: Reflection should not be used to increase accessibility of classes, methods, or fields
-dotnet_diagnostic.S3011.severity = suggestion
+dotnet_diagnostic.S3011.severity = none
 
 # S3928: Parameter names used into ArgumentException constructors should match an existing one
 dotnet_diagnostic.S3928.severity = suggestion
@@ -632,7 +629,7 @@ dotnet_diagnostic.S3928.severity = suggestion
 dotnet_diagnostic.S1643.severity = suggestion
 
 # S3260: Non-derived "private" classes and records should be "sealed"
-dotnet_diagnostic.S3260.severity = suggestion
+dotnet_diagnostic.S3260.severity = none
 
 # S1123: "Obsolete" attributes should include explanations
 dotnet_diagnostic.S1123.severity = suggestion
@@ -644,7 +641,7 @@ dotnet_diagnostic.S1172.severity = suggestion
 dotnet_diagnostic.S3267.severity = suggestion
 
 # S3604: Member initializer values should not be redundant
-dotnet_diagnostic.S3604.severity = suggestion
+dotnet_diagnostic.S3604.severity = none
 
 # S1481: Unused local variables should be removed
 dotnet_diagnostic.S1481.severity = suggestion
