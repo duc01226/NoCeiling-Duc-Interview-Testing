@@ -166,7 +166,7 @@ public abstract class PlatformModule : IPlatformModule
             Logger.LogInformation("[PlatformModule] {Module} start initiating", GetType().Name);
 
             // Because PlatformModule is singleton => ServiceProvider of it is the root ServiceProvider
-            PlatformApplicationGlobal.RootServiceProvider = ServiceProvider;
+            PlatformApplicationGlobal.SetRootServiceProvider(ServiceProvider);
 
             InitAllModuleDependencies().WaitResult();
 

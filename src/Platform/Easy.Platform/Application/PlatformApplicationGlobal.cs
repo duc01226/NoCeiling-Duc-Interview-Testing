@@ -24,7 +24,7 @@ namespace Easy.Platform.Application;
 /// </summary>
 public static class PlatformApplicationGlobal
 {
-    public static IServiceProvider RootServiceProvider { get; set; }
+    public static IServiceProvider RootServiceProvider { get; private set; }
 
     public static IPlatformApplicationUserContextAccessor UserContextAccessor => RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>();
 
@@ -33,4 +33,9 @@ public static class PlatformApplicationGlobal
     public static ILoggerFactory LoggerFactory => RootServiceProvider.GetRequiredService<ILoggerFactory>();
 
     public static IConfiguration Configuration => RootServiceProvider.GetRequiredService<IConfiguration>();
+
+    public static void SetRootServiceProvider(IServiceProvider rootServiceProvider)
+    {
+        RootServiceProvider = rootServiceProvider;
+    }
 }

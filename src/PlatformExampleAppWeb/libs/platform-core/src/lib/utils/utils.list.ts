@@ -61,9 +61,9 @@ export function list_maxBy<T>(collection: ArrayLike<T> | undefined, iteratee: (i
 
 export function list_toDictionary<T>(
   collection: ArrayLike<T> | undefined,
-  dictionaryKeySelector: (item: T) => string | number
+  keySelector: (item: T) => string | number
 ): Dictionary<T> {
-  return lodashKeyBy(collection, dictionaryKeySelector) as Dictionary<T>;
+  return lodashKeyBy(collection, keySelector) as Dictionary<T>;
 }
 
 export function list_toDictionarySelect<T, TSelect>(
