@@ -17,16 +17,15 @@ export class AppUiStateData extends PlatformVm {
   }
 
   // Demo get/set using platform watch decorator
-  // Another way to use
-  // @Watch<PlatformPagedQueryDto>(function (value, change) {
+  // Shorthand execute a target function doing something directly if on change only do this logic
+  // @Watch('updatePageInfo')
+  // public pagedResult?: PlatformPagedResultDto<LeaveType>;
+
+  // // Full syntax execute a NORMAL FUNCTION
+  // @Watch<PlatformPagedQueryDto>(function (this: LeaveTypesState, value, change) {
   //   this.updatePageInfo();
   // })
-  // @Watch('pagedQueryWatch')
   // public pagedQuery: PlatformPagedQueryDto = new PlatformPagedQueryDto();
-
-  // public pagedQueryWatch: WatchCallBackFunction<PlatformPagedQueryDto> = (value, change) => {
-  //   this.updatePageInfo();
-  // };
 
   // public updatePageInfo(): void {
   //   this.pagedInfo = {
@@ -35,9 +34,6 @@ export class AppUiStateData extends PlatformVm {
   //     totalItems: this.pagedResult?.totalCount
   //   };
   // }
-  // Shorthand execute a target function doing something directly if on change only do this logic
-  // @Watch('updatePageInfo')
-  // public pagedResult?: PlatformPagedResultDto<LeaveType>;
 
   // Demo using validation object
   /** 
