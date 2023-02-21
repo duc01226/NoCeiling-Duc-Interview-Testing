@@ -38,7 +38,9 @@ export function Watch<T = object>(callback: WatchCallBackFunction<T> | string) {
       },
       get: function () {
         return this[cachedValueKey];
-      }
+      },
+      enumerable: true,
+      configurable: true
     });
   };
 }
