@@ -8,16 +8,11 @@ export interface SimpleChange<T> {
 
 export type WatchCallBackFunction<T> = (value: T, change?: SimpleChange<T>) => void;
 
-export function Watch<T = object>(callback: WatchCallBackFunction<T> | string) {
+export function Watch<T = object>(callbackFnOrName: WatchCallBackFunction<T> | string) {
   const cachedValueKey = Symbol();
   const isFirstChangeKey = Symbol();
 
   return (target: object, key: PropertyKey) => {
-    const callBackFn: WatchCallBackFunction<T> = typeof callback === 'string' ? (target as any)[callback] : callback;
-    if (!callBackFn) {
-      throw new Error(`Cannot find method ${callback} in class ${target.constructor.name}`);
-    }
-
     Object.defineProperty(target, key, {
       set: function (value: object) {
         this[isFirstChangeKey] = this[isFirstChangeKey] === undefined;
@@ -33,6 +28,12 @@ export function Watch<T = object>(callback: WatchCallBackFunction<T> | string) {
           currentValue: this[cachedValueKey],
           isFirstChange: () => this[isFirstChangeKey]
         };
+
+        const callBackFn: WatchCallBackFunction<T> =
+          typeof callbackFnOrName === 'string' ? (target as any)[callbackFnOrName] : callbackFnOrName;
+        if (!callBackFn) {
+          throw new Error(`Cannot find method ${callbackFnOrName} in class ${target.constructor.name}`);
+        }
 
         callBackFn.call(this, this[cachedValueKey], simpleChange);
       },
