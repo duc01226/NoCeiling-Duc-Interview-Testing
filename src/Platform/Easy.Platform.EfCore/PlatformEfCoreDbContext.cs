@@ -378,11 +378,4 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     /// return Util.ListBuilder.New(typeof(Your Limited entity type for the db context to auto run entity configuration by scanning assembly));
     /// </summary>
     protected virtual List<Type> ApplyForLimitedEntityTypes() { return null; }
-
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        base.OnConfiguring(optionsBuilder);
-
-        optionsBuilder.UseLazyLoadingProxies();
-    }
 }

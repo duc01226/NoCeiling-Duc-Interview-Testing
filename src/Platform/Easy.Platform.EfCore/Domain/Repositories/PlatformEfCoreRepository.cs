@@ -79,6 +79,10 @@ public abstract class PlatformEfCoreRootRepository<TEntity, TPrimaryKey, TDbCont
 
     public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        return GetTable(uow).Pipe(p => loadRelatedEntities.ForEach(loadWithEntityPropPath => p.Include(loadWithEntityPropPath))).AsQueryable();
+        return GetTable(uow)
+            .PipeIf(
+                loadRelatedEntities.Any(),
+                p => loadRelatedEntities.Aggregate(p.AsQueryable(), (query, loadRelatedEntityFn) => query.Include(loadRelatedEntityFn)))
+            .AsQueryable();
     }
 }
