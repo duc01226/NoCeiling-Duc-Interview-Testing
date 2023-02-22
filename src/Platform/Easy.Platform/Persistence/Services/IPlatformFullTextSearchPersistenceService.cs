@@ -52,13 +52,13 @@ public abstract class PlatformFullTextSearchPersistenceService : IPlatformFullTe
         out IQueryable<T> newQuery,
         Expression<Func<T, object>>[] includeStartWithProps = null) where T : class
     {
-        var otherSupportHelpers = ServiceProvider
+        var otherSupportHelper = ServiceProvider?
             .GetServices<IPlatformFullTextSearchPersistenceService>()
             .FirstOrDefault(p => p.IsSupportQuery(query));
 
-        if (otherSupportHelpers != null)
+        if (otherSupportHelper != null)
         {
-            newQuery = otherSupportHelpers.Search(
+            newQuery = otherSupportHelper.Search(
                 query,
                 searchText,
                 inFullTextSearchProps,

@@ -27,6 +27,13 @@ public static class QueryableExtension
         return Expression.Lambda<T>(merge(firstExpr.Body, secondExprBody), firstExpr.Parameters);
     }
 
+    public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> query, Expression<Func<T, object>> keySelector, OrderDirection orderDirection)
+    {
+        return orderDirection == OrderDirection.Desc
+            ? query.OrderByDescending(keySelector)
+            : query.OrderBy(keySelector);
+    }
+
     public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> query, string propertyName, OrderDirection orderDirection = OrderDirection.Asc)
     {
         return orderDirection == OrderDirection.Desc

@@ -54,4 +54,10 @@ public class TextSnippetPostgreSqlEfCorePlatformFullTextSearchPersistenceService
     {
         return BuildPostgreSqlFullTextSearchPropPredicate<TEntity>(fullTextSearchPropName, searchWord);
     }
+
+    // Override support search case insensitive for start with by using ILike
+    protected override Expression<Func<T, bool>> BuildStartWithPropPredicate<T>(string searchText, string startWithPropName)
+    {
+        return entity => EF.Functions.ILike(EF.Property<string>(entity, startWithPropName), $"{searchText}%");
+    }
 }

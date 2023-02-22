@@ -68,6 +68,17 @@ public static class EnsureThrowCommonExceptionExtension
         return notFoundObjects.Any() ? throw new PlatformNotFoundException(errorMsg(notFoundObjects), typeof(T)) : objects;
     }
 
+    public static List<T> EnsureFoundAllBy<T, TFoundBy>(
+        this List<T> objects,
+        Func<T, TFoundBy> foundBy,
+        List<TFoundBy> toFoundByObjects,
+        Func<List<TFoundBy>, string> errorMsg)
+    {
+        var notFoundByObjects = toFoundByObjects.Except(objects.Select(foundBy) ?? new List<TFoundBy>()).ToList();
+
+        return notFoundByObjects.Any() ? throw new PlatformNotFoundException(errorMsg(notFoundByObjects), typeof(T)) : objects;
+    }
+
     public static ICollection<T> EnsureFound<T>(this ICollection<T> objects, string errorMsg = null)
     {
         var objectsList = objects?.ToList();

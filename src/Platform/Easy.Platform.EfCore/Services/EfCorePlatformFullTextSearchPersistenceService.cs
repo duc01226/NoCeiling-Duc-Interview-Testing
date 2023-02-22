@@ -60,7 +60,7 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
     /// Build query for all search prop. Example: Search by PropA, PropB for text "hello word" will generate query with predicate:
     /// (propA.Contains("hello") AND propA.Contains("word")) OR (propB.Contains("hello") AND propB.Contains("word")).
     /// </summary>
-    public static IQueryable<T> BuildSearchQuery<T>(
+    public IQueryable<T> BuildSearchQuery<T>(
         IQueryable<T> query,
         string searchText,
         List<string> searchWords,
@@ -103,7 +103,7 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
         return searchWords;
     }
 
-    public static IQueryable<T> DoSearch<T>(
+    public IQueryable<T> DoSearch<T>(
         IQueryable<T> query,
         string searchText,
         Expression<Func<T, object>>[] inFullTextSearchProps,
@@ -141,7 +141,7 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
     /// <param name="exactMatch"></param>
     /// <param name="buildFullTextSearchPropPredicate">(string fullTextSearchPropName, string searchWord) => Expression<Func<TEntity, bool>> BuildFullTextSearchPropPredicate<TEntity></param>
     /// <returns></returns>
-    private static Expression<Func<T, bool>> BuildFullTextSearchPropsPredicate<T>(
+    protected Expression<Func<T, bool>> BuildFullTextSearchPropsPredicate<T>(
         List<string> searchWords,
         List<string> fullTextSearchPropNames,
         bool exactMatch,
@@ -163,20 +163,21 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
         return fullTextSearchPropsPredicate;
     }
 
-    private static Expression<Func<T, bool>> BuildStartWithPropsPredicate<T>(
+    protected Expression<Func<T, bool>> BuildStartWithPropsPredicate<T>(
         string searchText,
         List<string> startWithPropNames)
     {
         var startWithPropsPredicate = startWithPropNames
-            .Select(
-                startWithPropName =>
-                {
-                    Expression<Func<T, bool>> singlePropPredicate =
-                        entity => EF.Functions.Like(EF.Property<string>(entity, startWithPropName), $"{searchText}%");
-                    return singlePropPredicate;
-                })
+            .Select(startWithPropName => BuildStartWithPropPredicate<T>(searchText, startWithPropName))
             .Aggregate((resultPredicate, nextPredicate) => resultPredicate.Or(nextPredicate));
         return startWithPropsPredicate;
+    }
+
+    protected virtual Expression<Func<T, bool>> BuildStartWithPropPredicate<T>(
+        string searchText,
+        string startWithPropName)
+    {
+        return entity => EF.Functions.Like(EF.Property<string>(entity, startWithPropName), $"{searchText}%");
     }
 }
 
