@@ -11,6 +11,7 @@ COPY tsconfig.base.json .
 COPY nx.json .
 COPY angular.json .
 COPY .eslintrc.json .
+COPY .prettierrc .
 COPY decorate-angular-cli.js .
 COPY libs libs
 COPY typings typings

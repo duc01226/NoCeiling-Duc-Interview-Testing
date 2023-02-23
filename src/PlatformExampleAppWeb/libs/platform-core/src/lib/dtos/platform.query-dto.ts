@@ -9,13 +9,13 @@ export class PlatformQueryDto implements IPlatformQueryDto {}
 export interface IPlatformRepositoryPagedQuery extends IPlatformQueryDto {
   skipCount: number;
   maxResultCount: number;
-  orderBy: string | null;
-  orderDirection: OrderDirection | null;
+  orderBy?: string;
+  orderDirection?: OrderDirection;
 }
 
 export class PlatformPagedQueryDto extends PlatformQueryDto implements IPlatformRepositoryPagedQuery {
-  public orderDirection: OrderDirection | null = null;
-  public orderBy: string | null = null;
+  public orderDirection?: OrderDirection;
+  public orderBy?: string;
 
   public constructor(data?: Partial<IPlatformRepositoryPagedQuery>) {
     super();
