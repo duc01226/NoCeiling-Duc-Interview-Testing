@@ -18,6 +18,6 @@ REM Do up/kill/up again because up the first time to create volume. It may have 
 docker-compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example up --remove-orphans --detach
 docker-compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example kill
 REM Waiting for the volume i/o stable
-timeout 15
+timeout 10
 docker-compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example up --remove-orphans --detach
 pause
