@@ -11,7 +11,7 @@ import {
   PlatformCoreModuleConfig,
   PlatformPagedQueryDto,
   PlatformPagedResultDto,
-  PlatformResultDto,
+  PlatformResultDto
 } from '@libs/platform-core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
