@@ -25,10 +25,11 @@ RUN npm run ng build playground-text-snippet -- --configuration=${configuration}
 # BUILDER END
 
 # Build static web app
-FROM nginx:1.15.1-alpine as app
+FROM nginx:1.19.9-alpine as app
 EXPOSE 80
-RUN apk --update add bash && \
-    apk add dos2unix
+RUN apk add --update nodejs npm moreutils
+RUN apk --update add bash
+RUN apk add dos2unix
 
 RUN rm -rf /usr/share/nginx/html/*
 COPY nginx.conf /etc/nginx/conf.d/default.conf

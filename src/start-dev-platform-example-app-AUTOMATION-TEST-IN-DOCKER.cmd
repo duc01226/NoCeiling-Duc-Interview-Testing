@@ -1,9 +1,9 @@
 docker network create platform-example-app-network
 
 set ASPNETCORE_ENVIRONMENT=Development.Docker
-set textSnippetApiHost=http://text-snippet-api
-set textSnippetApiHost=http://host.docker.internal:5001
-set textSnippetApiHost=http://localhost:5001
+set __TEXT_SNIPPET_API_HOST__=http://text-snippet-api
+set __TEXT_SNIPPET_API_HOST__=http://host.docker.internal:5001
+set __TEXT_SNIPPET_API_HOST__=http://localhost:5001
 set AppNameToOrigin__TextSnippetApp=http://text-snippet-webspa
 set AppNameToOrigin__TextSnippetApp=http://host.docker.internal:4001
 set AppNameToOrigin__TextSnippetApp=http://localhost:4001

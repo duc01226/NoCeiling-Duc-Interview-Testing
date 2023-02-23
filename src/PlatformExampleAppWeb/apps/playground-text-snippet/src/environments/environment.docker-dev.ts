@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  textSnippetApiHost: '__text_Snippet_Api_Host__'
+  textSnippetApiHost: '$__TEXT_SNIPPET_API_HOST__'
 };

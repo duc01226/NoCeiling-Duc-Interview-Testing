@@ -85,7 +85,7 @@ services:
       args:
         configuration: "docker-dev"
     environment:
-      - textSnippetApiHost=${textSnippetApiHost:-http://localhost:5001}
+      - __TEXT_SNIPPET_API_HOST__=${__TEXT_SNIPPET_API_HOST__:-http://localhost:5001}
     ports:
       - "4001:80"
 
