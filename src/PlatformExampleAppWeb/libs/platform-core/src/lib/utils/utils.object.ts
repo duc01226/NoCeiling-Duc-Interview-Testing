@@ -13,7 +13,7 @@ import { any } from './_common-functions';
 import { list_distinct } from './utils.list';
 
 export function keys<T extends object>(source: T, ignorePrivate: boolean = true): (keyof T & string)[] {
-  if (typeof source != 'object') return [];
+  if (typeof source != 'object' || source == null) return [];
 
   const objectOwnProps: (keyof T & string)[] = [];
   for (const key in source) {
@@ -291,33 +291,78 @@ function mapObject<T extends object>(
   deepItemInArray: boolean = false
 ): boolean {
   let hasDataChanged = false;
+  // create plainObjTarget to checkDiff, not use the target directly because when target is updated
+  // other prop my be updated to via setter of the object, then the check diff will not be correct
+  // clone toPlainObj to keep original target value
+  const cloneOrPlainObjTarget =
+    checkDiff === true ? clone(target) : checkDiff == 'deepCheck' ? toPlainObj(target) : null;
 
   if (target instanceof Array && source instanceof Array) {
     return mapArray(target, source, cloneSource, makeTargetValuesSameSourceValues, checkDiff);
   } else {
     if (makeTargetValuesSameSourceValues) removeTargetKeysNotInSource(target, source);
-    const sourceKeys = Object.keys(source);
+
+    const sourceKeys = keys(source);
+
     sourceKeys.forEach(key => {
       if (
         getPropertyDescriptor(target, key)?.writable == false ||
         (getPropertyDescriptor(target, key)?.get != null && getPropertyDescriptor(target, key)?.set == null)
       )
         return;
-      if (checkDiff === true && (<any>target)[key] == (<any>source)[key]) return;
-      if (checkDiff === 'deepCheck' && !isDifferent((<any>target)[key], (<any>source)[key])) return;
+
+      if (checkDiff === true && cloneOrPlainObjTarget[key] == (<any>source)[key]) return;
+      if (checkDiff === 'deepCheck' && !isDifferent(cloneOrPlainObjTarget[key], (<any>source)[key])) return;
+
+      let hasPropKeyDataChanged = false;
 
       if (
         mapObjectCheckTwoValueCanSetDirectly((<any>target)[key], (<any>source)[key]) ||
         getPropertyDescriptor(target, key)?.set != null
       ) {
-        (<any>target)[key] = cloneSource ? cloneDeep((<any>source)[key]) : (<any>source)[key];
-        hasDataChanged = true;
+        if (
+          (<any>target)[key] != null &&
+          (<any>source)[key] != null &&
+          getPropertyDescriptor(target, key)?.set != null
+        ) {
+          // Case having set, set directly to trigger setter for this prop. But still mapArray to assign deep each item
+          // in the array to trigger setter of the item
+          const clonedDeepTargetCurrentPropValue = cloneDeep((<any>target)[key]);
+
+          if (
+            (<any>target)[key] instanceof Array &&
+            (<any>source)[key] instanceof Array &&
+            getPropertyDescriptor(target, key)?.set != null &&
+            deepItemInArray
+          ) {
+            hasPropKeyDataChanged = mapArray(
+              clonedDeepTargetCurrentPropValue,
+              (<any>source)[key],
+              cloneSource,
+              makeTargetValuesSameSourceValues,
+              checkDiff
+            );
+          } else {
+            hasPropKeyDataChanged = mapObject(
+              clonedDeepTargetCurrentPropValue,
+              (<any>source)[key],
+              cloneSource,
+              makeTargetValuesSameSourceValues,
+              checkDiff
+            );
+          }
+
+          (<any>target)[key] = clonedDeepTargetCurrentPropValue;
+        } else {
+          (<any>target)[key] = cloneSource ? cloneDeep((<any>source)[key]) : (<any>source)[key];
+          hasPropKeyDataChanged = true;
+        }
       } else {
         (<any>target)[key] = clone((<any>target)[key]);
 
         if ((<any>target)[key] instanceof Array && (<any>source)[key] instanceof Array) {
           if (deepItemInArray) {
-            hasDataChanged = mapArray(
+            hasPropKeyDataChanged = mapArray(
               (<any>target)[key],
               (<any>source)[key],
               cloneSource,
@@ -326,10 +371,10 @@ function mapObject<T extends object>(
             );
           } else {
             (<any>target)[key] = cloneSource ? cloneDeep((<any>source)[key]) : (<any>source)[key];
-            hasDataChanged = true;
+            hasPropKeyDataChanged = true;
           }
         } else {
-          hasDataChanged = mapObject(
+          hasPropKeyDataChanged = mapObject(
             (<any>target)[key],
             (<any>source)[key],
             cloneSource,
@@ -338,6 +383,8 @@ function mapObject<T extends object>(
           );
         }
       }
+
+      if (hasDataChanged == false) hasDataChanged = hasPropKeyDataChanged;
     });
   }
 
@@ -369,12 +416,15 @@ function mapObject<T extends object>(
     for (let i = 0; i < sourceArray.length; i++) {
       if (checkDiff === true && targetArray[i] == sourceArray[i]) continue;
       if (checkDiff === 'deepCheck' && !isDifferent(targetArray[i], sourceArray[i])) continue;
+
+      let hasItemDataChanged = false;
+
       if (mapObjectCheckTwoValueCanSetDirectly(targetArray[i], sourceArray[i])) {
         targetArray[i] = cloneSource ? cloneDeep(sourceArray[i]) : sourceArray[i];
-        hasDataChanged = true;
+        hasItemDataChanged = true;
       } else {
         targetArray[i] = clone(targetArray[i], newTargetArrayItem => {
-          hasDataChanged = mapObject(
+          hasItemDataChanged = mapObject(
             newTargetArrayItem,
             sourceArray[i],
             cloneSource,
@@ -383,6 +433,8 @@ function mapObject<T extends object>(
           );
         });
       }
+
+      if (hasDataChanged == false) hasDataChanged = hasItemDataChanged;
     }
 
     return hasDataChanged;

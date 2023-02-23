@@ -6,7 +6,7 @@ import { ArrayElement } from 'type-fest/source/exact';
 
 import { IPlatformFormValidationError } from '../../form-validators';
 import { FormHelpers } from '../../helpers';
-import { immutableUpdate, isDifferent, keys } from '../../utils';
+import { immutableUpdate, isDifferent, keys, toPlainObj } from '../../utils';
 import { IPlatformVm, PlatformFormMode } from '../../view-models';
 import { PlatformVmComponent } from './platform.vm-component';
 
@@ -210,7 +210,8 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
       (<any>vmFormValues)[formControlKey] = (<any>vm)[formControlKey];
     });
 
-    return vmFormValues;
+    // To toPlainObj to ensure removing getter/setter which help angular lib can read prop keys and apply data from vm to form
+    return toPlainObj(vmFormValues);
   }
 
   public formControls(key: string): FormControl {
