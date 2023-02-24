@@ -18,21 +18,20 @@ export class AppUiStateData extends PlatformVm {
 
   // Demo get/set using platform watch decorator
   // Shorthand execute a target function doing something directly if on change only do this logic
-  // @Watch('updatePageInfo')
+  // @Watch('pagedResultWatch')
   // public pagedResult?: PlatformPagedResultDto<LeaveType>;
 
   // // Full syntax execute a NORMAL FUNCTION
-  // @Watch<PlatformPagedQueryDto>(function (this: LeaveTypesState, value, change) {
-  //   this.updatePageInfo();
+  // @Watch<PlatformPagedQueryDto, LeaveTypesState>((value, change, targetObj) => {
+  //   targetObj.updatePageInfo();
   // })
   // public pagedQuery: PlatformPagedQueryDto = new PlatformPagedQueryDto();
 
-  // public updatePageInfo(): void {
-  //   this.pagedInfo = {
-  //     pageIndex: this.pagedQuery.pageIndex() ?? 0,
-  //     pageSize: this.pagedQuery.pageSize() ?? 0,
-  //     totalItems: this.pagedResult?.totalCount
-  //   };
+  // public pagedResultWatch(
+  //   value: PlatformPagedResultDto<LeaveType> | undefined,
+  //   change: SimpleChange<PlatformPagedResultDto<LeaveType> | undefined>
+  // ) {
+  //   this.updatePageInfo();
   // }
 
   // Demo using validation object
