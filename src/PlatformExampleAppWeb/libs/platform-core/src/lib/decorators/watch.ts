@@ -32,6 +32,8 @@ export function Watch<TProp = object, TTargetObj extends object = object>(
   callbackFnOrName: WatchCallBackFunction<TProp, TTargetObj> | string
 ) {
   return (target: TTargetObj, key: PropertyKey) => {
+    EnsureNotExistingSetterForKey(target, key);
+
     const privatePropKey = `_${key.toString()}`;
 
     Object.defineProperty(target, key, {
@@ -61,4 +63,13 @@ export function Watch<TProp = object, TTargetObj extends object = object>(
       configurable: true
     });
   };
+
+  function EnsureNotExistingSetterForKey<TTargetObj extends object>(target: TTargetObj, key: PropertyKey) {
+    const existingTargetKeyProp = Object.getOwnPropertyDescriptors(target)[key.toString()];
+
+    if (existingTargetKeyProp?.set != null || existingTargetKeyProp?.get != null)
+      throw Error(
+        'Could not use watch decorator on a existing get/set property. Should only use one solution, either get/set property or @Watch decorator'
+      );
+  }
 }
