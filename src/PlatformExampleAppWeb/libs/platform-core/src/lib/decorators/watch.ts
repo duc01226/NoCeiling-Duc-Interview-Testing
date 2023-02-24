@@ -1,9 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface SimpleChange<T> {
-  firstChange: boolean;
   previousValue: T;
   currentValue: T;
-  isFirstChange: () => boolean;
 }
 
 export type WatchCallBackFunction<T, TTargetObj> = (value: T, change: SimpleChange<T>, targetObj: TTargetObj) => void;
@@ -33,24 +31,16 @@ export type WatchCallBackFunction<T, TTargetObj> = (value: T, change: SimpleChan
 export function Watch<TProp = object, TTargetObj extends object = object>(
   callbackFnOrName: WatchCallBackFunction<TProp, TTargetObj> | string
 ) {
-  const cachedValueKey = Symbol();
-  const isFirstChangeKey = Symbol();
-
   return (target: TTargetObj, key: PropertyKey) => {
+    const privatePropKey = `_${key.toString()}`;
+
     Object.defineProperty(target, key, {
       set: function (value: object) {
-        this[isFirstChangeKey] = this[isFirstChangeKey] === undefined;
-        if (!this[isFirstChangeKey] && this[cachedValueKey] === value) {
-          return;
-        }
-
-        const oldValue = this[cachedValueKey];
-        this[cachedValueKey] = value;
+        const oldValue = this[privatePropKey];
+        this[privatePropKey] = value;
         const simpleChange: SimpleChange<TProp> = {
-          firstChange: this[isFirstChangeKey],
           previousValue: oldValue,
-          currentValue: this[cachedValueKey],
-          isFirstChange: () => this[isFirstChangeKey]
+          currentValue: this[privatePropKey]
         };
 
         if (typeof callbackFnOrName === 'string') {
@@ -59,13 +49,13 @@ export function Watch<TProp = object, TTargetObj extends object = object>(
             throw new Error(`Cannot find method ${callbackFnOrName} in class ${target.constructor.name}`);
           }
 
-          callBackMethod.call(this, this[cachedValueKey], simpleChange);
+          callBackMethod.call(this, this[privatePropKey], simpleChange, this);
         } else {
-          callbackFnOrName(this[cachedValueKey], simpleChange, this);
+          callbackFnOrName(this[privatePropKey], simpleChange, this);
         }
       },
       get: function () {
-        return this[cachedValueKey];
+        return this[privatePropKey];
       },
       enumerable: true,
       configurable: true
