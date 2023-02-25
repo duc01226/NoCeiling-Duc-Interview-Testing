@@ -57,5 +57,7 @@
   "eslint.alwaysShowStatus": true,
   "[typescript]": {
     "editor.formatOnSave": true
-  }
+  },
+  "importSorter.generalConfiguration.sortOnBeforeSave": true,
+  "importSorter.sortConfiguration.removeUnusedImports": true
 }

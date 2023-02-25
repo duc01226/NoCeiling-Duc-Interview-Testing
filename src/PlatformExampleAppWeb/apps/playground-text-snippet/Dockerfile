@@ -2,26 +2,41 @@
 FROM node:14-alpine AS builder
 WORKDIR /usr/src
 
+# https://stackoverflow.com/questions/52196518/could-not-get-uid-gid-when-building-node-docker
+# To handle 'not get uid/gid'
+RUN npm config set unsafe-perm true
+RUN npm install -g @angular/cli
+RUN npm install -g @nrwl/cli
+
 # npm install
+COPY decorate-angular-cli.js .
 COPY package.json .
+COPY nx.json .
 RUN npm install
 
 # Copy common files
 COPY tsconfig.base.json .
-COPY nx.json .
+COPY .editorconfig .
 COPY angular.json .
 COPY .eslintrc.json .
 COPY .prettierrc .
-COPY decorate-angular-cli.js .
-COPY libs libs
-COPY typings typings
+COPY .prettierignore .
+COPY jest.config.ts .
+COPY jest.preset.js .
+COPY migrations.json .
 COPY tools tools
+COPY scripts scripts
 
 # Build app files
+COPY typings typings
+COPY libs libs
 COPY apps/playground-text-snippet apps/playground-text-snippet
+# COPY . .
 ARG configuration=development
-RUN npm run ng lint playground-text-snippet
-RUN npm run ng build playground-text-snippet -- --configuration=${configuration}
+RUN node --max-old-space-size=4000 ./node_modules/@angular/cli/bin/ng lint platform-core --skip-nx-cache
+RUN node --max-old-space-size=4000 ./node_modules/@angular/cli/bin/ng lint apps-domains-text-snippet-domain --skip-nx-cache
+RUN node --max-old-space-size=4000 ./node_modules/@angular/cli/bin/ng lint playground-text-snippet --skip-nx-cache
+RUN node --max-old-space-size=4000 ./node_modules/@angular/cli/bin/ng build playground-text-snippet --configuration=${configuration} --skip-nx-cache
 # BUILDER END
 
 # Build static web app

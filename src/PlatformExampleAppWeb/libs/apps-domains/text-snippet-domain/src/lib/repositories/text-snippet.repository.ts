@@ -3,7 +3,7 @@ import {
   PlatformCoreModuleConfig,
   PlatformEventManager,
   PlatformPagedResultDto,
-  PlatformRepository,
+  PlatformRepository
 } from '@libs/platform-core';
 import { Observable } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
