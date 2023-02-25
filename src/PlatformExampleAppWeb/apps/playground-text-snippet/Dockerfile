@@ -30,8 +30,7 @@ COPY scripts scripts
 # Build app files
 COPY typings typings
 COPY libs libs
-COPY apps/playground-text-snippet apps/playground-text-snippet
-# COPY . .
+COPY apps apps
 ARG configuration=development
 RUN node --max-old-space-size=4000 ./node_modules/@angular/cli/bin/ng lint platform-core --skip-nx-cache
 RUN node --max-old-space-size=4000 ./node_modules/@angular/cli/bin/ng lint apps-domains-text-snippet-domain --skip-nx-cache
