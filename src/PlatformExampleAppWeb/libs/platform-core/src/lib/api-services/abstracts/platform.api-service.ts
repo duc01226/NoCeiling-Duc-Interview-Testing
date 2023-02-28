@@ -37,27 +37,58 @@ export abstract class PlatformApiService extends PlatformHttpService {
     return this.authHttpRequestOptionsAppender?.addAuthorization(options);
   }
 
-  protected get<T>(path: string, params: unknown): Observable<T> {
+  protected get<T>(
+    path: string,
+    params: unknown,
+    configureOptions?: (option: HttpClientOptions) => HttpClientOptions | void | undefined
+  ): Observable<T> {
+    const options = this.getHttpOptions(this.preprocessData(params));
+    const configuredOptions =
+      configureOptions != null ? <HttpClientOptions | undefined>configureOptions(options) : options;
+
     return super
-      .httpGet<T>(this.apiUrl + path, this.getHttpOptions(this.preprocessData(params)))
+      .httpGet<T>(this.apiUrl + path, configuredOptions ?? options)
       .pipe(catchError(err => this.catchHttpError<T>(err)));
   }
 
-  protected post<T>(path: string, body: unknown): Observable<T> {
+  protected post<T>(
+    path: string,
+    body: unknown,
+    configureOptions?: (option: HttpClientOptions) => HttpClientOptions | void | undefined
+  ): Observable<T> {
+    const options = this.getHttpOptions();
+    const configuredOptions =
+      configureOptions != null ? <HttpClientOptions | undefined>configureOptions(options) : options;
+
     return super
-      .httpPost<T>(this.apiUrl + path, this.preprocessData(body), this.getHttpOptions())
+      .httpPost<T>(this.apiUrl + path, this.preprocessData(body), configuredOptions ?? options)
       .pipe(catchError(err => this.catchHttpError<T>(err)));
   }
 
-  protected put<T>(path: string, body: T): Observable<T> {
+  protected put<T>(
+    path: string,
+    body: T,
+    configureOptions?: (option: HttpClientOptions) => HttpClientOptions | void | undefined
+  ): Observable<T> {
+    const options = this.getHttpOptions();
+    const configuredOptions =
+      configureOptions != null ? <HttpClientOptions | undefined>configureOptions(options) : options;
+
     return super
-      .httpPut<T>(this.apiUrl + path, <T>this.preprocessData(body), this.getHttpOptions())
+      .httpPut<T>(this.apiUrl + path, <T>this.preprocessData(body), configuredOptions ?? options)
       .pipe(catchError(err => this.catchHttpError<T>(err)));
   }
 
-  protected delete<T>(path: string): Observable<T> {
+  protected delete<T>(
+    path: string,
+    configureOptions?: (option: HttpClientOptions) => HttpClientOptions | void | undefined
+  ): Observable<T> {
+    const options = this.getHttpOptions();
+    const configuredOptions =
+      configureOptions != null ? <HttpClientOptions | undefined>configureOptions(options) : options;
+
     return super
-      .httpDelete<T>(this.apiUrl + path, this.getHttpOptions())
+      .httpDelete<T>(this.apiUrl + path, configuredOptions ?? options)
       .pipe(catchError(err => this.catchHttpError<T>(err)));
   }
 
@@ -128,7 +159,6 @@ export abstract class PlatformApiService extends PlatformHttpService {
     if (params == null) return this.defaultOptions;
     const finalOptions = this.defaultOptions;
     finalOptions.params = this.parseHttpGetParam(params);
-
     return finalOptions;
   }
 

@@ -37,6 +37,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
   public get mode(): PlatformFormMode {
     return this._mode;
   }
+
   @Input()
   public set mode(v: PlatformFormMode) {
     const prevMode = this._mode;
@@ -210,7 +211,8 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
       (<any>vmFormValues)[formControlKey] = (<any>vm)[formControlKey];
     });
 
-    // To toPlainObj to ensure removing getter/setter which help angular lib can read prop keys and apply data from vm to form
+    // To toPlainObj to ensure removing getter/setter which help angular lib can read prop keys and apply data from vm
+    // to form
     return toPlainObj(vmFormValues);
   }
 
@@ -253,7 +255,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
   }
 
   protected updateVmOnFormValuesChange(values: Partial<TViewModel>) {
-    const newUpdatedVm: TViewModel = immutableUpdate(this.vm, values, true);
+    const newUpdatedVm: TViewModel = immutableUpdate(this.vm, values);
 
     if (newUpdatedVm != this.vm) {
       this.internalSetVm(newUpdatedVm, false);
@@ -342,9 +344,10 @@ export type PlatformPartialFormGroupControls<TFormModel> = {
     : FormControl<TFormModel[P]>;
 };
 
-// Need to be code duplicated used in "export type PlatformFormGroupControls<TFormModel> = {", "export type PlatformPartialFormGroupControls<TFormModel> = {"
-// "[P in keyof TFormModel]: TFormModel[P] ..." should be equal to PlatformFormGroupControlProp<TFormModel[P]>
-// dont know why it will get type errors when using if TFormModel[P] is enum, boolean
+// Need to be code duplicated used in "export type PlatformFormGroupControls<TFormModel> = {", "export type
+// PlatformPartialFormGroupControls<TFormModel> = {" "[P in keyof TFormModel]: TFormModel[P] ..." should be equal to
+// PlatformFormGroupControlProp<TFormModel[P]> dont know why it will get type errors when using if TFormModel[P] is
+// enum, boolean
 export type PlatformFormGroupControlProp<TFormModelProp> = TFormModelProp extends readonly unknown[]
   ?
       | FormControl<TFormModelProp>

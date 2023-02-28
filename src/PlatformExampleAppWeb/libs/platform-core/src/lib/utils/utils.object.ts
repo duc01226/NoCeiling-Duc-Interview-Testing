@@ -100,14 +100,13 @@ export function immutableUpdate<TObject extends object>(
   partialStateOrUpdaterFn:
     | PartialDeep<TObject>
     | Partial<TObject>
-    | ((state: TObject) => void | PartialDeep<TObject> | Partial<TObject>),
-  deepItemInArray: boolean = false
+    | ((state: TObject) => void | PartialDeep<TObject> | Partial<TObject>)
 ): TObject {
   const clonedObj = clone(targetObj);
   let stateChanged = false;
 
   if (typeof partialStateOrUpdaterFn == 'object') {
-    stateChanged = assignDeep(clonedObj, <object>partialStateOrUpdaterFn, 'deepCheck', deepItemInArray);
+    stateChanged = assignDeep(clonedObj, <object>partialStateOrUpdaterFn, 'deepCheck');
   }
 
   if (typeof partialStateOrUpdaterFn == 'function') {
@@ -117,11 +116,11 @@ export function immutableUpdate<TObject extends object>(
 
     if (updatedStateResult != undefined) {
       // Case the partialStateOrUpdaterFn return partial updated props object
-      stateChanged = assignDeep(clonedObj, <object>updatedStateResult, 'deepCheck', deepItemInArray);
+      stateChanged = assignDeep(clonedObj, <object>updatedStateResult, 'deepCheck');
     } else {
       // Case the partialStateOrUpdaterFn edit the object state directly.
       // Then the clonnedDeepState is actual an updated result, use it to update the clonedState
-      stateChanged = assignDeep(clonedObj, <object>clonnedDeepState, 'deepCheck', deepItemInArray);
+      stateChanged = assignDeep(clonedObj, <object>clonnedDeepState, 'deepCheck');
     }
   }
 
@@ -234,19 +233,17 @@ export function extend<T extends object>(target: T, ...sources: Partial<T>[]): T
 export function assignDeep<T extends object>(
   target: T,
   source: T,
-  checkDiff: false | true | 'deepCheck' = false,
-  deepItemInArray: boolean = false
+  checkDiff: false | true | 'deepCheck' = false
 ): boolean {
-  return assignOrSetDeep(target, source, false, false, checkDiff, deepItemInArray);
+  return assignOrSetDeep(target, source, false, false, checkDiff);
 }
 
 export function setDeep<T extends object>(
   target: T,
   source: T,
-  checkDiff: false | true | 'deepCheck' = false,
-  deepItemInArray: boolean = false
+  checkDiff: false | true | 'deepCheck' = false
 ): boolean {
-  return assignOrSetDeep(target, source, false, true, checkDiff, deepItemInArray);
+  return assignOrSetDeep(target, source, false, true, checkDiff);
 }
 
 export function getCurrentMissingItems<T>(prevValue: Dictionary<T>, currentValue: Dictionary<T>): T[] {
@@ -296,8 +293,7 @@ function assignOrSetDeep<T extends object>(
   source: T,
   cloneSource: boolean = false,
   makeTargetValuesSameSourceValues: boolean = false,
-  checkDiff: false | true | 'deepCheck' = false,
-  deepItemInArray: boolean = false
+  checkDiff: false | true | 'deepCheck' = false
 ): boolean {
   let hasDataChanged = false;
 
@@ -314,7 +310,11 @@ function assignOrSetDeep<T extends object>(
 
     keys(source).forEach(key => {
       const targetKeyPropertyDescriptor = getPropertyDescriptor(target, key);
-      if (targetKeyPropertyDescriptor?.set == null && targetKeyPropertyDescriptor?.writable == false) return;
+      if (
+        (targetKeyPropertyDescriptor?.get != null && targetKeyPropertyDescriptor?.set == null) ||
+        targetKeyPropertyDescriptor?.writable == false
+      )
+        return;
 
       if (
         (checkDiff === true && cloneOrPlainObjTarget[key] == (<any>source)[key]) ||
@@ -343,7 +343,7 @@ function assignOrSetDeep<T extends object>(
       newValueToSetToTarget =
         getPropertyDescriptor(target, key)?.set != null ? cloneDeep((<any>target)[key]) : clone((<any>target)[key]);
 
-      if ((<any>target)[key] instanceof Array && (<any>source)[key] instanceof Array && deepItemInArray) {
+      if ((<any>target)[key] instanceof Array && (<any>source)[key] instanceof Array) {
         assignOrSetDeepArray(
           newValueToSetToTarget,
           (<any>source)[key],
@@ -386,7 +386,7 @@ function assignOrSetDeep<T extends object>(
   ): boolean {
     let hasDataChanged = false;
 
-    if (targetArray.length > sourceArray.length && makeTargetValuesSameSourceValues) {
+    if (targetArray.length > sourceArray.length) {
       targetArray.splice(sourceArray.length);
       hasDataChanged = true;
     }
