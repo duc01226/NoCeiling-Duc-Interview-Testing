@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Directive, Input, OnInit, QueryList } from '@angular/core';
 import { FormArray, FormControl, FormGroup } from '@angular/forms';
-import { filter } from 'rxjs';
+import { debounceTime, filter } from 'rxjs';
 import { ArrayElement } from 'type-fest/source/exact';
 
 import { IPlatformFormValidationError } from '../../form-validators';
@@ -101,10 +101,12 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 
     keys(this.form.controls).forEach(formControlKey => {
       this.storeAnonymousSubscription(
-        (<FormControl>(<any>this.form.controls)[formControlKey]).valueChanges.subscribe(value => {
-          this.updateVmOnFormValuesChange(<Partial<TViewModel>>{ [formControlKey]: value });
-          this.processGroupValidation(formControlKey);
-        })
+        (<FormControl>(<any>this.form.controls)[formControlKey]).valueChanges
+          .pipe(debounceTime(300))
+          .subscribe(value => {
+            this.updateVmOnFormValuesChange(<Partial<TViewModel>>{ [formControlKey]: value });
+            this.processGroupValidation(formControlKey);
+          })
       );
     });
 
