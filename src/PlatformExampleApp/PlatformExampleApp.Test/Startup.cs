@@ -13,6 +13,6 @@ public class Startup : BaseStartup
     {
         hostBuilder.ConfigureHostConfiguration(
             builder => builder.AddConfiguration(
-                PlatformConfigurationBuilder.GetConfigurationBuilder(fallbackAspCoreEnv: "Development.Docker").Build()));
+                PlatformConfigurationBuilder.GetConfigurationBuilder(fallbackAspCoreEnv: "Development").Build()));
     }
 }

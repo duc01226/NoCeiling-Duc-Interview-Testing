@@ -358,17 +358,19 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                     }
                     catch (DbException ex)
                     {
-                        if (PlatformEnvironment.IsDevelopment)
-                            Logger.LogWarning(
-                                ex,
-                                "MigrateApplicationDataAsync has errors. For dev environment it may happens if migrate cross db, when other service db is not initiated. Usually for dev environment migrate cross service db when run system in the first-time could be ignored." +
-                                Environment.NewLine +
-                                "Exception: {Exception}" +
-                                Environment.NewLine +
-                                "TrackTrace: {Exception}",
-                                ex.Message,
-                                ex.StackTrace);
-                        else throw;
+                        Logger.LogError(
+                            ex,
+                            "MigrateApplicationDataAsync for migration {DataMigrationName} has errors. If in dev environment it may happens if migrate cross db, when other service db is not initiated. Usually for dev environment migrate cross service db when run system in the first-time could be ignored." +
+                            Environment.NewLine +
+                            "Exception: {Exception}" +
+                            Environment.NewLine +
+                            "TrackTrace: {Exception}",
+                            migrationExecution.Name,
+                            ex.Message,
+                            ex.StackTrace);
+
+                        if (!PlatformEnvironment.IsDevelopment)
+                            throw new Exception($"MigrateApplicationDataAsync for migration {migrationExecution.Name} has errors", ex);
                     }
 
                     Logger.LogInformation($"Migration {migrationExecution.Name} finished.");
@@ -615,7 +617,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
 
     private void EnsureAllMigrationExecutorsHasUniqueName()
     {
-        var duplicatedMigrationNames = ScanAllMigrationExecutors().GroupBy(p => p.Name).ToDictionary(p => p.Key, p => p.Count()).Where(p => p.Value > 1)
+        var duplicatedMigrationNames = ScanAllMigrationExecutors()
+            .GroupBy(p => p.Name)
+            .ToDictionary(p => p.Key, p => p.Count())
+            .Where(p => p.Value > 1)
             .ToList();
 
         if (duplicatedMigrationNames.Any())

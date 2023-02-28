@@ -13,6 +13,8 @@ public abstract class PlatformMongoBaseEntityClassMapping<TEntity, TPrimaryKey> 
 
     public override bool AutoApplyEnumAsStringMappingConvention => true;
 
+    public override bool AutoApplyTimeOnlyAsStringMappingConvention => true;
+
     public override void RegisterClassMap()
     {
         RegisterClassMapIfNotRegistered<Entity<TEntity, TPrimaryKey>>(BaseEntityClassMapInitializer);
@@ -21,7 +23,11 @@ public abstract class PlatformMongoBaseEntityClassMapping<TEntity, TPrimaryKey> 
 
     public override void ClassMapInitializer(BsonClassMap<TEntity> cm)
     {
-        DefaultClassMapInitializer(cm, AutoApplyGuidAsStringMappingConvention, AutoApplyEnumAsStringMappingConvention);
+        DefaultClassMapInitializer(
+            cm,
+            AutoApplyGuidAsStringMappingConvention,
+            AutoApplyEnumAsStringMappingConvention,
+            AutoApplyTimeOnlyAsStringMappingConvention);
     }
 
     public virtual void BaseEntityClassMapInitializer(BsonClassMap<Entity<TEntity, TPrimaryKey>> cm)
@@ -29,6 +35,7 @@ public abstract class PlatformMongoBaseEntityClassMapping<TEntity, TPrimaryKey> 
         DefaultEntityClassMapInitializer<Entity<TEntity, TPrimaryKey>, TPrimaryKey>(
             cm,
             AutoApplyGuidAsStringMappingConvention,
-            AutoApplyEnumAsStringMappingConvention);
+            AutoApplyEnumAsStringMappingConvention,
+            AutoApplyTimeOnlyAsStringMappingConvention);
     }
 }

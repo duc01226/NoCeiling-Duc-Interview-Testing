@@ -22,6 +22,7 @@ public abstract class PlatformMongoBaseAuditedEntityClassMapping<TEntity, TPrima
         DefaultClassMapInitializer(
             cm,
             AutoApplyGuidAsStringMappingConvention,
-            AutoApplyEnumAsStringMappingConvention);
+            AutoApplyEnumAsStringMappingConvention,
+            AutoApplyTimeOnlyAsStringMappingConvention);
     }
 }

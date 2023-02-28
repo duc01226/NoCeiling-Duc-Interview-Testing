@@ -153,7 +153,7 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
 
         // STEP 2: Do validation and ensure that all logic is valid
         var validToSaveEntity = toSaveEntity
-            .With(toSaveEntity => toSaveEntity.SnippetText += " Update") //Demo Update Data By With Support Chaining
+            //.With(toSaveEntity => toSaveEntity.SnippetText += " Update") //Demo Update Data By With Support Chaining
             .ValidateSavePermission(userId: CurrentUser.UserId<Guid?>()) // Demo Permission Logic
             .And(entity => toSaveEntity.ValidateSomeSpecificIsXxxLogic()) // Demo domain business logic
             .And(entity => ValidateSomeThisCommandApplicationLogic(entity)) // Demo application business logic

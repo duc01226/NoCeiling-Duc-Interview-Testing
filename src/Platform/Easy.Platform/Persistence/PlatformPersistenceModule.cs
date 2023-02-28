@@ -196,7 +196,13 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
                     exception.Message,
                     currentRetry,
                     DefaultDbInitAndMigrationRetryCount);
-            });
+            },
+            onBeforeThrowFinalExceptionFn: exception => Logger.LogError(
+                exception,
+                "[{DbContext}] Exception {ExceptionType} with message {Message} detected on attempt MigrateApplicationDataAsync",
+                typeof(TDbContext).Name,
+                exception.GetType().Name,
+                exception.Message));
     }
 
     public override async Task InitializeDb(IServiceScope serviceScope)
