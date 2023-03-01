@@ -79,7 +79,13 @@
         "import/newline-after-import": "error",
         "import/no-duplicates": "error",
         "unused-imports/no-unused-imports": "error",
-        "@typescript-eslint/no-inferrable-types": "off"
+        "@typescript-eslint/no-inferrable-types": "off",
+        "@typescript-eslint/no-unused-vars": [
+          "error",
+          {
+            "args": "none"
+          }
+        ]
       }
     },
     {
