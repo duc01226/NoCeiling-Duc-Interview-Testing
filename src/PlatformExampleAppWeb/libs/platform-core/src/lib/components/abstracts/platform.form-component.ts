@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Directive, Input, OnInit, QueryList } from '@angular/core';
 import { FormArray, FormControl, FormGroup } from '@angular/forms';
-import { debounceTime, filter } from 'rxjs';
+import { asyncScheduler, filter, throttleTime } from 'rxjs';
 import { ArrayElement } from 'type-fest/source/exact';
 
 import { IPlatformFormValidationError } from '../../form-validators';
@@ -99,10 +99,24 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     this.formConfig = initialFormConfig;
     this.form = this.buildForm(this.formConfig);
 
+    /***
+     ThrottleTime explain: Delay to enhance performance when user typing fast do not need to emit
+     { leading: true, trailing: true } <=> emit the first item to ensure ui is not delay, but also ignore the sub-sequence,
+     and still emit the latest item to ensure data is latest
+
+     source_1:          --0--1-----2--3----4--5-6---7------------8-------9---------
+     throttle interval: --[~~~~~~~~~~~I~~~~~~~~~~~I~~~~~~~~~~~I~~~~~~~~~~~I~~~~~~~~
+     output:            --0-----------3-----------6-----------7-----------9--------
+
+     source_2:          --0--------1------------------2--------------3---4---------
+     throttle interval: --[~~~~~~~~~~~I~~~~~~~~~~~]---[~~~~~~~~~~~]--[~~~~~~~~~~~I~
+     output_2:          --0-----------1---------------2--------------3-----------4-
+
+     */
     keys(this.form.controls).forEach(formControlKey => {
       this.storeAnonymousSubscription(
         (<FormControl>(<any>this.form.controls)[formControlKey]).valueChanges
-          .pipe(debounceTime(300))
+          .pipe(throttleTime(300, asyncScheduler, { leading: true, trailing: true }))
           .subscribe(value => {
             this.updateVmOnFormValuesChange(<Partial<TViewModel>>{ [formControlKey]: value });
             this.processGroupValidation(formControlKey);
