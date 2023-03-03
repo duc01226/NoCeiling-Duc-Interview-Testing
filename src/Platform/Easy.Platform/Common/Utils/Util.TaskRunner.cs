@@ -270,6 +270,11 @@ public static partial class Util
             await Task.WhenAll(tasks);
         }
 
+        public static async Task WhenAll(IEnumerable<Task> tasks)
+        {
+            await Task.WhenAll(tasks);
+        }
+
         public static async Task<ValueTuple<T1, T2>> WhenAll<T1, T2>(Task<T1> task1, Task<T2> task2)
         {
             await Task.WhenAll(task1, task2);

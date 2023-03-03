@@ -62,7 +62,7 @@ public class TextSnippetSqlEfCorePlatformFullTextSearchPersistenceService : EfCo
         return entity => EF.Functions.Contains(EF.Property<string>(entity, fullTextSearchPropName), searchWord);
     }
 
-    protected override Expression<Func<TEntity, bool>> BuildFullTextSearchPropPredicate<TEntity>(string fullTextSearchPropName, string searchWord)
+    protected override Expression<Func<TEntity, bool>> BuildFullTextSearchSinglePropPredicatePerWord<TEntity>(string fullTextSearchPropName, string searchWord)
     {
         return BuildSqlFullTextSearchPropPredicate<TEntity>(fullTextSearchPropName, searchWord);
     }

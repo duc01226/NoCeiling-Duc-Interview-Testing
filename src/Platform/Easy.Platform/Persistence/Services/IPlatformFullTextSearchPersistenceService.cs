@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Easy.Platform.Common.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Easy.Platform.Persistence.Services;
@@ -24,6 +25,30 @@ public interface IPlatformFullTextSearchPersistenceService : IPersistenceService
         Expression<Func<T, object>>[] includeStartWithProps = null) where T : class;
 
     public bool IsSupportQuery<T>(IQueryable<T> query) where T : class;
+
+    public static List<string> BuildSearchWordsIgnoreSpecialCharacters(string searchText)
+    {
+        // Remove special not supported character for full text search
+        var removedSpecialCharactersSearchText = searchText
+            .Replace("\"", " ")
+            .Replace("~", " ")
+            .Replace("[", " ")
+            .Replace("]", " ")
+            .Replace("(", " ")
+            .Replace(")", " ")
+            .Replace("!", " ");
+
+        var searchWords = removedSpecialCharactersSearchText.Split(" ")
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .ToList();
+
+        return searchWords;
+    }
+
+    public static string BuildSearchTextIgnoreSpecialCharacters(string searchText)
+    {
+        return BuildSearchWordsIgnoreSpecialCharacters(searchText).JoinToString(" ");
+    }
 }
 
 public abstract class PlatformFullTextSearchPersistenceService : IPlatformFullTextSearchPersistenceService

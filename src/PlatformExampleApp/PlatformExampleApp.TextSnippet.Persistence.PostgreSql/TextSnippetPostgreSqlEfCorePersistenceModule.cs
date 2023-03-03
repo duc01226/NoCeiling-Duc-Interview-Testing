@@ -3,9 +3,8 @@ using Easy.Platform.EfCore;
 using Easy.Platform.EfCore.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using PlatformExampleApp.TextSnippet.Persistence.PostgreSql;
 
-namespace PlatformExampleApp.TextSnippet.Persistence;
+namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql;
 
 public class TextSnippetPostgreSqlEfCorePersistenceModule : PlatformEfCorePersistenceModule<TextSnippetDbContext>
 {
@@ -45,18 +44,23 @@ public class TextSnippetPostgreSqlEfCorePlatformFullTextSearchPersistenceService
     {
     }
 
-    public static Expression<Func<TEntity, bool>> BuildPostgreSqlFullTextSearchPropPredicate<TEntity>(string fullTextSearchPropName, string searchWord)
+    // https://www.npgsql.org/efcore/mapping/full-text-search.html#method-2-expression-index
+    protected override Expression<Func<T, bool>> BuildFullTextSearchPropsPredicate<T>(
+        string searchText,
+        List<string> removedSpecialCharacterSearchTextWords,
+        List<string> fullTextSearchPropNames,
+        bool exactMatch,
+        Func<string, string, Expression<Func<T, bool>>> buildFullTextSearchSinglePropPredicatePerWord)
     {
-        return entity => EF.Functions.ToTsVector(EF.Property<string>(entity, fullTextSearchPropName)).Matches(searchWord);
-    }
-
-    protected override Expression<Func<TEntity, bool>> BuildFullTextSearchPropPredicate<TEntity>(string fullTextSearchPropName, string searchWord)
-    {
-        return BuildPostgreSqlFullTextSearchPropPredicate<TEntity>(fullTextSearchPropName, searchWord);
+        return removedSpecialCharacterSearchTextWords
+            .Select<string, Expression<Func<T, bool>>>(
+                searchWord => p => EF.Functions.ToTsVector("english", fullTextSearchPropNames.JoinToString(" ")).Matches(searchWord))
+            .Aggregate(
+                (currentExpr, nextExpr) => exactMatch ? currentExpr.AndAlso(nextExpr) : currentExpr.Or(nextExpr));
     }
 
     // Override support search case insensitive for start with by using ILike
-    protected override Expression<Func<T, bool>> BuildStartWithPropPredicate<T>(string searchText, string startWithPropName)
+    protected override Expression<Func<T, bool>> BuildStartWithSinglePropPredicate<T>(string searchText, string startWithPropName)
     {
         return entity => EF.Functions.ILike(EF.Property<string>(entity, startWithPropName), $"{searchText}%");
     }

@@ -9,6 +9,7 @@ using PlatformExampleApp.TextSnippet.Infrastructure;
 using PlatformExampleApp.TextSnippet.Persistence;
 using PlatformExampleApp.TextSnippet.Persistence.Mongo;
 using PlatformExampleApp.TextSnippet.Persistence.MultiDbDemo.Mongo;
+using PlatformExampleApp.TextSnippet.Persistence.PostgreSql;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 

@@ -13,14 +13,16 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
     }
 
     /// <summary>
-    /// Example for SQL : entity => EF.Functions.Contains(EF.Property[string](entity, fullTextSearchPropName), searchWord); SqlServerMigrationUtil.CreateFullTextCatalogIfNotExists(migrationBuilder, $"FTS_EntityName"); SqlServerMigrationUtil.CreateFullTextIndexIfNotExists(columnNames: [fullTextSearchPropName1, fullTextSearchPropName2]) <br/>
-    /// Example for Postgres : entity => EF.Functions.ToTsVector(EF.Property[string](entity, fullTextSearchPropName)).Matches(searchWord); builder.HasIndex(p => new { p.fullTextSearchPropName1, p.fullTextSearchPropName2 }).HasMethod("GIN").IsTsVectorExpressionIndex("english") <br/>
+    /// Predicate search for single word in search text, default using EF.Functions.Like $"%{searchWord}%".
+    /// Override this if you want to modify predicate for search split word by word in search text
+    /// Example for SQL : entity => EF.Functions.Contains(EF.Property[string](entity, fullTextSearchPropName), searchWord); SqlServerMigrationUtil.CreateFullTextCatalogIfNotExists(migrationBuilder, $"FTS_EntityName"); SqlServerMigrationUtil.CreateFullTextIndexIfNotExists(columnNames: [fullTextSearchPropName1, fullTextSearchPropName2]) <br />
     /// </summary>
-    /// <typeparam name="TEntity"></typeparam>
-    /// <param name="fullTextSearchPropName"></param>
-    /// <param name="searchWord"></param>
-    /// <returns></returns>
-    protected abstract Expression<Func<TEntity, bool>> BuildFullTextSearchPropPredicate<TEntity>(string fullTextSearchPropName, string searchWord);
+    protected virtual Expression<Func<TEntity, bool>> BuildFullTextSearchSinglePropPredicatePerWord<TEntity>(
+        string fullTextSearchPropName,
+        string searchWord)
+    {
+        return entity => EF.Functions.Like(EF.Property<string>(entity, fullTextSearchPropName), $"%{searchWord}%");
+    }
 
     public override IQueryable<T> Search<T>(
         IQueryable<T> query,
@@ -44,7 +46,7 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
             searchText,
             inFullTextSearchProps,
             fullTextExactMatch,
-            (fullTextSearchPropName, searchWord) => BuildFullTextSearchPropPredicate<T>(fullTextSearchPropName, searchWord),
+            (fullTextSearchPropName, searchWord) => BuildFullTextSearchSinglePropPredicatePerWord<T>(fullTextSearchPropName, searchWord),
             includeStartWithProps);
     }
 
@@ -63,17 +65,18 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
     public IQueryable<T> BuildSearchQuery<T>(
         IQueryable<T> query,
         string searchText,
-        List<string> searchWords,
+        List<string> removedSpecialCharacterSearchTextWords,
         List<string> fullTextSearchPropNames,
-        Func<string, string, Expression<Func<T, bool>>> buildFullTextSearchPropPredicate,
+        Func<string, string, Expression<Func<T, bool>>> buildFullTextSearchSinglePropPredicatePerWord,
         bool exactMatch = false,
         List<string> startWithPropNames = null)
     {
         var fullTextSearchPropsPredicate = BuildFullTextSearchPropsPredicate(
-            searchWords,
+            searchText,
+            removedSpecialCharacterSearchTextWords,
             fullTextSearchPropNames,
             exactMatch,
-            buildFullTextSearchPropPredicate);
+            buildFullTextSearchSinglePropPredicatePerWord);
         var startWithPropsPredicate = startWithPropNames?.Any() == true
             ? BuildStartWithPropsPredicate<T>(searchText, startWithPropNames)
             : null;
@@ -84,37 +87,18 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
             .PipeIf(startWithPropsPredicate != null, p => p.Union(query.Where(startWithPropsPredicate!)));
     }
 
-    public static List<string> BuildSearchWords(string searchText)
-    {
-        // Remove special not supported character for full text search
-        var removedSpecialCharactersSearchText = searchText
-            .Replace("\"", " ")
-            .Replace("~", " ")
-            .Replace("[", " ")
-            .Replace("]", " ")
-            .Replace("(", " ")
-            .Replace(")", " ")
-            .Replace("!", " ");
-
-        var searchWords = removedSpecialCharactersSearchText.Split(" ")
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .ToList();
-
-        return searchWords;
-    }
-
     public IQueryable<T> DoSearch<T>(
         IQueryable<T> query,
         string searchText,
         Expression<Func<T, object>>[] inFullTextSearchProps,
         bool fullTextExactMatch,
-        Func<string, string, Expression<Func<T, bool>>> buildFullTextSearchPropPredicate,
+        Func<string, string, Expression<Func<T, bool>>> buildFullTextSearchSinglePropPredicatePerWord,
         Expression<Func<T, object>>[] includeStartWithProps = null)
     {
         if (string.IsNullOrWhiteSpace(searchText))
             return query;
 
-        var searchWords = BuildSearchWords(searchText.Trim());
+        var searchWords = IPlatformFullTextSearchPersistenceService.BuildSearchWordsIgnoreSpecialCharacters(searchText.Trim());
         var fullTextSearchPropNames =
             inFullTextSearchProps.Where(p => p != null).Select(ExpressionExtension.GetPropertyName).ToList();
         var includeStartWithPropNames =
@@ -125,7 +109,7 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
             searchText,
             searchWords,
             fullTextSearchPropNames,
-            buildFullTextSearchPropPredicate,
+            buildFullTextSearchSinglePropPredicatePerWord,
             fullTextExactMatch,
             includeStartWithPropNames);
 
@@ -133,26 +117,29 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
     }
 
     /// <summary>
-    /// BuildFullTextSearchPropsPredicate
+    /// BuildFullTextSearchPropsPredicate default.
+    /// Example: Search text "abc def". Expression: .Or(EF.Functions.Like('%abc%')).Or(EF.Functions.Like('%def%'))
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="searchWords"></param>
+    /// <param name="searchText"></param>
+    /// <param name="removedSpecialCharacterSearchTextWords"></param>
     /// <param name="fullTextSearchPropNames"></param>
     /// <param name="exactMatch"></param>
-    /// <param name="buildFullTextSearchPropPredicate">(string fullTextSearchPropName, string searchWord) => Expression<Func<TEntity, bool>> BuildFullTextSearchPropPredicate<TEntity></param>
+    /// <param name="buildFullTextSearchSinglePropPredicatePerWord">(string fullTextSearchPropName, string searchWord) => Expression<Func<TEntity, bool>> BuildFullTextSearchPropPredicate<TEntity></param>
     /// <returns></returns>
-    protected Expression<Func<T, bool>> BuildFullTextSearchPropsPredicate<T>(
-        List<string> searchWords,
+    protected virtual Expression<Func<T, bool>> BuildFullTextSearchPropsPredicate<T>(
+        string searchText,
+        List<string> removedSpecialCharacterSearchTextWords,
         List<string> fullTextSearchPropNames,
         bool exactMatch,
-        Func<string, string, Expression<Func<T, bool>>> buildFullTextSearchPropPredicate)
+        Func<string, string, Expression<Func<T, bool>>> buildFullTextSearchSinglePropPredicatePerWord)
     {
         var fullTextSearchPropsPredicate = fullTextSearchPropNames
             .Select(
                 fullTextSearchPropName =>
                 {
-                    return searchWords
-                        .Select(searchWord => buildFullTextSearchPropPredicate(fullTextSearchPropName, searchWord))
+                    return removedSpecialCharacterSearchTextWords
+                        .Select(searchWord => buildFullTextSearchSinglePropPredicatePerWord(fullTextSearchPropName, searchWord))
                         .Aggregate(
                             (resultPredicate, nextPredicate) =>
                                 exactMatch
@@ -163,17 +150,20 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
         return fullTextSearchPropsPredicate;
     }
 
-    protected Expression<Func<T, bool>> BuildStartWithPropsPredicate<T>(
+    protected virtual Expression<Func<T, bool>> BuildStartWithPropsPredicate<T>(
         string searchText,
         List<string> startWithPropNames)
     {
         var startWithPropsPredicate = startWithPropNames
-            .Select(startWithPropName => BuildStartWithPropPredicate<T>(searchText, startWithPropName))
+            .Select(startWithPropName => BuildStartWithSinglePropPredicate<T>(searchText, startWithPropName))
             .Aggregate((resultPredicate, nextPredicate) => resultPredicate.Or(nextPredicate));
         return startWithPropsPredicate;
     }
 
-    protected virtual Expression<Func<T, bool>> BuildStartWithPropPredicate<T>(
+    /// <summary>
+    /// Default use EF.Functions.Like for startWith
+    /// </summary>
+    protected virtual Expression<Func<T, bool>> BuildStartWithSinglePropPredicate<T>(
         string searchText,
         string startWithPropName)
     {
@@ -190,7 +180,7 @@ public class LikeOperationEfCorePlatformFullTextSearchPersistenceService : EfCor
     {
     }
 
-    protected override Expression<Func<TEntity, bool>> BuildFullTextSearchPropPredicate<TEntity>(string fullTextSearchPropName, string searchWord)
+    protected override Expression<Func<TEntity, bool>> BuildFullTextSearchSinglePropPredicatePerWord<TEntity>(string fullTextSearchPropName, string searchWord)
     {
         return entity => EF.Functions.Like(EF.Property<string>(entity, fullTextSearchPropName), $"%{searchWord}%");
     }

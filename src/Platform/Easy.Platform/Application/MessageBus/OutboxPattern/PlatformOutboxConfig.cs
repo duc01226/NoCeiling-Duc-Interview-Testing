@@ -9,9 +9,9 @@ public class PlatformOutboxConfig
     public double RetryProcessFailedMessageInSecondsUnit { get; set; } = PlatformOutboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit;
 
     /// <summary>
-    /// Set StandaloneUowForOutbox = true only when apply platform for old code/project have not open and complete uow. Remove it after finish refactoring
+    /// Set StandaloneScopeForOutbox = true only when apply platform for old code/project have not open and complete uow. Remove it after finish refactoring
     /// </summary>
-    public bool StandaloneUowForOutbox { get; set; }
+    public bool StandaloneScopeForOutbox { get; set; }
 
     /// <summary>
     /// To config how long a message can live in the database in seconds. Default is one week (7 day);
@@ -23,7 +23,7 @@ public class PlatformOutboxConfig
     /// </summary>
     public double DeleteExpiredFailedMessageInSeconds { get; set; } = TimeSpan.FromDays(14).TotalSeconds;
 
-    // <summary>
+    /// <summary>
     /// Default number messages is deleted in every process. Default is 10;
     /// </summary>
     public int NumberOfDeleteMessagesBatch { get; set; } = 10;
