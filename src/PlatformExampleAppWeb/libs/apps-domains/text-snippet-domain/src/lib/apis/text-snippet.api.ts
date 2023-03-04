@@ -6,9 +6,9 @@ import {
   IPlatformRepositoryPagedQuery,
   IPlatformResultDto,
   PlatformApiService,
-  PlatformAuthHttpRequestOptionsAppenderService,
   PlatformCommandDto,
   PlatformCoreModuleConfig,
+  PlatformHttpOptionsConfigService,
   PlatformPagedQueryDto,
   PlatformPagedResultDto,
   PlatformResultDto
@@ -24,10 +24,10 @@ export class TextSnippetApi extends PlatformApiService {
   public constructor(
     moduleConfig: PlatformCoreModuleConfig,
     http: HttpClient,
-    authHttpRequestOptionsAppender: PlatformAuthHttpRequestOptionsAppenderService,
+    httpOptionsConfigService: PlatformHttpOptionsConfigService,
     private domainModuleConfig: AppsTextSnippetDomainModuleConfig
   ) {
-    super(http, moduleConfig, authHttpRequestOptionsAppender);
+    super(http, moduleConfig, httpOptionsConfigService);
   }
   protected get apiUrl(): string {
     return `${this.domainModuleConfig.textSnippetApiHost}/api/TextSnippet`;

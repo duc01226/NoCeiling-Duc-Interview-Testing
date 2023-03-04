@@ -2,8 +2,16 @@
 import { AfterViewInit, ChangeDetectorRef, Directive, inject, OnDestroy, OnInit } from '@angular/core';
 import { tapResponse } from '@ngrx/component-store';
 import { ToastrService } from 'ngx-toastr';
-import { BehaviorSubject, defer, MonoTypeOperatorFunction, Observable, Subscription } from 'rxjs';
-import { filter, finalize, map, takeUntil, tap } from 'rxjs/operators';
+import {
+  asyncScheduler,
+  BehaviorSubject,
+  defer,
+  MonoTypeOperatorFunction,
+  Observable,
+  Subject,
+  Subscription
+} from 'rxjs';
+import { filter, finalize, map, takeUntil, tap, throttleTime } from 'rxjs/operators';
 
 import { PlatformApiServiceErrorResponse } from '../../api-services';
 import { PlatformTranslateService } from '../../translations';
@@ -25,7 +33,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
   public translateSrv: PlatformTranslateService = inject(PlatformTranslateService);
 
   public static get defaultDetectChangesDelay(): number {
-    return 100;
+    return 20;
   }
 
   public initiated$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
@@ -42,22 +50,33 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
   private cachedLoading$: Dictionary<Observable<boolean | null>> = {};
   private allErrorMsgs!: Observable<string | null>;
 
+  private detectChangesThrottleSource = new Subject<DetectChangesParams>();
+  private detectChangesThrottle$ = this.detectChangesThrottleSource.pipe(
+    throttleTime(300, asyncScheduler, { leading: true, trailing: true }),
+    tap(params => {
+      this.doDetectChanges(params);
+    })
+  );
+  private doDetectChanges(params: DetectChangesParams) {
+    if (this.canDetectChanges) {
+      this.changeDetector.detectChanges();
+      if (params.checkParentForHostBinding) this.changeDetector.markForCheck();
+      if (params.onDone != undefined) params.onDone();
+    }
+  }
   public detectChanges(delayTime?: number, onDone?: () => unknown, checkParentForHostBinding: boolean = false): void {
     this.cancelStoredSubscription('detectChangesDelaySubs');
 
     if (this.canDetectChanges) {
       const finalDelayTime = delayTime == null ? PlatformComponent.defaultDetectChangesDelay : delayTime;
-      const detectChangesDelaySubs = task_delay(() => {
-        if (this.canDetectChanges) {
-          this.changeDetector.detectChanges();
-          if (checkParentForHostBinding) {
-            this.changeDetector.markForCheck();
-          }
-          if (onDone != null) {
-            onDone();
-          }
-        }
-      }, finalDelayTime);
+      const detectChangesDelaySubs = task_delay(
+        () =>
+          this.detectChangesThrottleSource.next({
+            onDone: onDone,
+            checkParentForHostBinding: checkParentForHostBinding
+          }),
+        finalDelayTime
+      );
 
       this.storeSubscription('detectChangesDelaySubs', detectChangesDelaySubs);
     }
@@ -72,6 +91,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
   }
 
   public ngOnInit(): void {
+    this.detectChangesThrottle$.pipe(this.untilDestroyed()).subscribe();
     this.initiated$.next(true);
   }
 
@@ -294,4 +314,9 @@ export interface PlatformObserverLoadingStateOptions<T> {
   deferSetLoading?: boolean;
   onSuccess?: (value: T) => any;
   onError?: (err: PlatformApiServiceErrorResponse | Error) => any;
+}
+
+interface DetectChangesParams {
+  onDone?: () => any;
+  checkParentForHostBinding: boolean;
 }

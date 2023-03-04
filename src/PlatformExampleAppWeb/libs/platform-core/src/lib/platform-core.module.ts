@@ -6,12 +6,12 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { TranslateModule, TranslateModuleConfig } from '@ngx-translate/core';
 import { GlobalConfig, ToastrModule } from 'ngx-toastr';
 
-import { PlatformApiService } from './api-services';
-import { PlatformAppUiStateData, PlatformAppUiStateStore } from './app-ui-state';
 import {
-  DefaultPlatformAuthHttpRequestOptionsAppenderService,
-  PlatformAuthHttpRequestOptionsAppenderService
-} from './auth-services';
+  DefaultPlatformHttpOptionsConfigService,
+  PlatformApiService,
+  PlatformHttpOptionsConfigService
+} from './api-services';
+import { PlatformAppUiStateData, PlatformAppUiStateStore } from './app-ui-state';
 import {
   IPlatformEventManager,
   PlatformEvent,
@@ -43,7 +43,7 @@ export class PlatformCoreModule {
 
     appRootUiState?: Type<PlatformAppUiStateStore<TAppUiStateData>>;
     apiServices?: Type<PlatformApiService>[];
-    authHttpRequestOptionsAppender?: Type<PlatformAuthHttpRequestOptionsAppenderService>;
+    httpOptionsConfigService?: Type<PlatformHttpOptionsConfigService>;
     translate?: { platformConfig?: PlatformTranslateConfig; config?: TranslateModuleConfig };
     toastConfig?: Partial<GlobalConfig>;
   }): ModuleWithProviders<ForRootModules>[] {
@@ -84,7 +84,7 @@ export class PlatformCoreModule {
 
           ...this.buildCanBeInChildModuleProviders({
             apiServices: config.apiServices,
-            authHttpRequestOptionsAppender: config.authHttpRequestOptionsAppender,
+            httpOptionsConfigService: config.httpOptionsConfigService,
             moduleUiState: config.appRootUiState
           }),
           {
@@ -117,7 +117,7 @@ export class PlatformCoreModule {
   public static forChild<TAppUiStateData extends PlatformAppUiStateData>(config: {
     appModuleState?: Type<PlatformAppUiStateStore<TAppUiStateData>>;
     apiServices?: Type<PlatformApiService>[];
-    authHttpRequestOptionsAppender?: Type<PlatformAuthHttpRequestOptionsAppenderService>;
+    httpOptionsConfigService?: Type<PlatformHttpOptionsConfigService>;
   }): ModuleWithProviders<ForChildModules>[] {
     return [
       {
@@ -125,7 +125,7 @@ export class PlatformCoreModule {
         providers: [
           ...this.buildCanBeInChildModuleProviders({
             apiServices: config.apiServices,
-            authHttpRequestOptionsAppender: config.authHttpRequestOptionsAppender,
+            httpOptionsConfigService: config.httpOptionsConfigService,
             moduleUiState: config.appModuleState
           })
         ]
@@ -136,15 +136,15 @@ export class PlatformCoreModule {
   private static buildCanBeInChildModuleProviders<TAppUiStateData extends PlatformAppUiStateData>(config: {
     moduleUiState?: Type<PlatformAppUiStateStore<TAppUiStateData>>;
     apiServices?: Type<PlatformApiService>[];
-    authHttpRequestOptionsAppender?: Type<PlatformAuthHttpRequestOptionsAppenderService>;
+    httpOptionsConfigService?: Type<PlatformHttpOptionsConfigService>;
     pipes?: Type<PlatformPipe<unknown, unknown, unknown>>[];
   }): Provider[] {
     return [
-      DefaultPlatformAuthHttpRequestOptionsAppenderService,
-      ...(config.authHttpRequestOptionsAppender != null ? [config.authHttpRequestOptionsAppender] : []),
+      DefaultPlatformHttpOptionsConfigService,
+      ...(config.httpOptionsConfigService != null ? [config.httpOptionsConfigService] : []),
       {
-        provide: PlatformAuthHttpRequestOptionsAppenderService,
-        useExisting: config.authHttpRequestOptionsAppender ?? DefaultPlatformAuthHttpRequestOptionsAppenderService
+        provide: PlatformHttpOptionsConfigService,
+        useExisting: config.httpOptionsConfigService ?? DefaultPlatformHttpOptionsConfigService
       },
       ...(config.apiServices ?? []),
       ...(config.moduleUiState != null ? [config.moduleUiState] : []),

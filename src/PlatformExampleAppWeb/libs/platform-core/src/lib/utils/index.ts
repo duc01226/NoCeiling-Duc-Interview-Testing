@@ -4,3 +4,4 @@ export * from './utils.list';
 export * from './utils.number';
 export * from './utils.object';
 export * from './utils.task';
+export * from './utils.timezone';

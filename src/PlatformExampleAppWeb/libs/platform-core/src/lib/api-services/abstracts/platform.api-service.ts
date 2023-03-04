@@ -3,7 +3,6 @@ import { Injectable, Optional } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 
-import { PlatformAuthHttpRequestOptionsAppenderService } from '../../auth-services';
 import { HttpClientOptions, PlatformHttpService } from '../../http-services';
 import { PlatformCoreModuleConfig } from '../../platform-core.config';
 import { removeNullProps, toPlainObj } from '../../utils';
@@ -12,6 +11,7 @@ import {
   PlatformApiServiceErrorInfoCode,
   PlatformApiServiceErrorResponse
 } from './platform.api-error';
+import { PlatformHttpOptionsConfigService } from './platform.http-options-config-service';
 
 const ERR_CONNECTION_REFUSED_STATUSES: HttpStatusCode[] = [0, 504];
 const UNAUTHORIZATION_STATUSES: HttpStatusCode[] = [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden];
@@ -21,7 +21,7 @@ export abstract class PlatformApiService extends PlatformHttpService {
   public constructor(
     http: HttpClient,
     @Optional() moduleConfig: PlatformCoreModuleConfig,
-    @Optional() private authHttpRequestOptionsAppender: PlatformAuthHttpRequestOptionsAppenderService
+    @Optional() private httpOptionsConfigService: PlatformHttpOptionsConfigService
   ) {
     super(moduleConfig, http);
   }
@@ -30,11 +30,11 @@ export abstract class PlatformApiService extends PlatformHttpService {
 
   protected override get defaultOptions(): HttpClientOptions {
     const defaultOptions = super.defaultOptions;
-    return this.authHttpRequestOptionsAppender?.addAuthorization(defaultOptions) ?? defaultOptions;
+    return this.httpOptionsConfigService?.configOptions(defaultOptions) ?? defaultOptions;
   }
 
   protected appendAdditionalHttpOptions(options: HttpClientOptions): HttpClientOptions {
-    return this.authHttpRequestOptionsAppender?.addAuthorization(options);
+    return this.httpOptionsConfigService?.configOptions(options);
   }
 
   protected get<T>(

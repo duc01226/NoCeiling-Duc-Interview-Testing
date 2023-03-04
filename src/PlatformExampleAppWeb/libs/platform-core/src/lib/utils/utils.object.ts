@@ -340,8 +340,7 @@ function assignOrSetDeep<T extends object>(
       // If setter not exist, we could just shallow clone the target prop object so that when set deep,
       // we could just set deep the inner object values and combine if checkDiff, only inner prop of the target key object
       // has value changed will be set
-      newValueToSetToTarget =
-        getPropertyDescriptor(target, key)?.set != null ? cloneDeep((<any>target)[key]) : clone((<any>target)[key]);
+      newValueToSetToTarget = clone((<any>target)[key]);
 
       if ((<any>target)[key] instanceof Array && (<any>source)[key] instanceof Array) {
         assignOrSetDeepArray(

@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { NgModule } from '@angular/core';
+import { NgModule, NgZone } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -60,6 +60,13 @@ export function TranslateHttpLoaderFactory(http: HttpClient) {
     MatIconModule,
     MatDialogModule
   ],
-  bootstrap: [AppComponent]
+  bootstrap: [AppComponent],
+  providers: [
+    {
+      provide: NgZone,
+      // Performance checklist: https://github.com/mgechev/angular-performance-checklist#coalescing-event-change-detections
+      useValue: new NgZone({ shouldCoalesceEventChangeDetection: false, shouldCoalesceRunChangeDetection: true })
+    }
+  ]
 })
 export class AppModule {}
