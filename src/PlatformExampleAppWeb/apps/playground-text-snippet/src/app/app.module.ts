@@ -65,7 +65,7 @@ export function TranslateHttpLoaderFactory(http: HttpClient) {
     {
       provide: NgZone,
       // Performance checklist: https://github.com/mgechev/angular-performance-checklist#coalescing-event-change-detections
-      useValue: new NgZone({ shouldCoalesceEventChangeDetection: false, shouldCoalesceRunChangeDetection: true })
+      useValue: new NgZone({ shouldCoalesceEventChangeDetection: false, shouldCoalesceRunChangeDetection: false })
     }
   ]
 })
