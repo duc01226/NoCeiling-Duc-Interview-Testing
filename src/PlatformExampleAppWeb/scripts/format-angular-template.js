@@ -32,15 +32,15 @@ const attrSortOptions = {
     '\\[\\w+\\]',
     '\\(\\w+\\)',
     'let-.+',
-    '$unknown$',
-  ],
+    '$unknown$'
+  ]
 };
 const jsBeautyOptions = {
   indent_size: 2,
   eol: '\r\n',
   wrap_attributes: 'force-aligned',
   end_with_newline: false,
-  wrap_line_length: 140,
+  wrap_line_length: 140
 };
 
 const files = [];
@@ -50,24 +50,25 @@ if (argv.staged) {
 } else {
   files.push(
     ...glob.sync('**/*.component.html', {
-      ignore: ['**/node_modules/**'],
+      ignore: ['**/node_modules/**']
     })
   );
 }
 
-var promises = files
-  .filter((file) => file.endsWith('.component.html'))
-  .map((file) =>
-    Promise.resolve().then(() => {
-      const text = fs.readFileSync(file, 'utf8');
-      let result = posthtml()
-        .use(sorter(attrSortOptions))
-        .process(text, { sync: true }).html;
-      result = beautify.html(result, jsBeautyOptions);
-      result = result.replace(/\=\"\"/gi, '');
-      fs.writeFileSync(file, result + '\r\n', 'utf8');
-      console.log(`Formatted ${file}`);
-    })
-  );
+// Optional custom html style. Do not use but let it here for example
+// var promises = files
+//   .filter((file) => file.endsWith('.component.html'))
+//   .map((file) =>
+//     Promise.resolve().then(() => {
+//       const text = fs.readFileSync(file, 'utf8');
+//       let result = posthtml()
+//         .use(sorter(attrSortOptions))
+//         .process(text, { sync: true }).html;
+//       result = beautify.html(result, jsBeautyOptions);
+//       result = result.replace(/\=\"\"/gi, '');
+//       fs.writeFileSync(file, result + '\r\n', 'utf8');
+//       console.log(`Formatted ${file}`);
+//     })
+//   );
 
-Promise.all(promises).then(() => console.log('SUCCESS'));
+// Promise.all(promises).then(() => console.log('SUCCESS'));

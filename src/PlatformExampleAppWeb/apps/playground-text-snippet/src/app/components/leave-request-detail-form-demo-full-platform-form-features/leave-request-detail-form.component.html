@@ -4,20 +4,20 @@
       <h3 class="leave-request-detail-form__header-title">{{ 'Request Leave' | uppercase }}</h3>
 
       <div class="leave-request-detail-form__header-status">
-        <orient-leave-request-status *ngIf="vm?.leaveRequest"
-                                     [status]="vm.leaveRequest.status"></orient-leave-request-status>
+        <orient-leave-request-status
+          *ngIf="vm?.leaveRequest"
+          [status]="vm.leaveRequest.status"
+        ></orient-leave-request-status>
       </div>
 
-      <i class="svg-icon close-icon size-12 leave-request-detail-form__header-close-btn"
-         (click)="close()"></i>
+      <i class="svg-icon close-icon size-12 leave-request-detail-form__header-close-btn" (click)="close()"></i>
     </div>
 
     <div class="leave-request-detail-form__divider"></div>
 
     <ng-container *ngIf="getErrorMsg$() | async as errorMsg">
       <div class="leave-request-detail-form__body">
-        <bravo-alert class="leave-request-detail-form__top-error-alert"
-                     type="danger">
+        <bravo-alert class="leave-request-detail-form__top-error-alert" type="danger">
           {{ errorMsg }}
         </bravo-alert>
       </div>
@@ -27,16 +27,16 @@
 
     <ng-container *ngIf="(getLoading$() | async) == false && vm">
       <div class="leave-request-detail-form__body">
-        <bravo-alert *ngIf="getAllErrorMsgs$() | async as errorMsg"
-                     class="leave-request-detail-form__top-error-alert"
-                     type="danger"
-                     [canDismiss]="true">
+        <bravo-alert
+          *ngIf="getAllErrorMsgs$() | async as errorMsg"
+          class="leave-request-detail-form__top-error-alert"
+          type="danger"
+          [canDismiss]="true"
+        >
           {{ errorMsg }}
         </bravo-alert>
-        <div *ngIf="!isViewMode"
-             class="leave-request-detail-form__row-info">
-          <img class="leave-request-detail-form__info-icon"
-               src="assets/icons/info-4.svg">
+        <div *ngIf="!isViewMode" class="leave-request-detail-form__row-info">
+          <img class="leave-request-detail-form__info-icon" src="assets/icons/info-4.svg" />
           <div class="leave-request-detail-form__info-message">
             {{
               'You can only make leave request on continuous days. Please create separate requests if your leave dates are interrupted and not continuous.'
@@ -50,26 +50,26 @@
             <h4 class="leave-request-detail-form__field">Leave type</h4>
             <div class="leave-request-detail-form__content">
               <label *ngIf="isViewMode"> {{ vm.leaveRequest?.type | leaveTypeDisplay }}</label>
-              <bravo-select *ngIf="!isViewMode"
-                            class="leave-request-detail-form__dropdown-select"
-                            [clearable]="false"
-                            [disabled]="isViewMode"
-                            [dropdownSameWidth]="true"
-                            [hasTooltip]="false"
-                            [items]="leaveTypeSelectOptions"
-                            [maxDropdownHeight]="250"
-                            [searchable]="false"
-                            formControlName="type"
-                            valueField="value"
-                            labelField="label"
-                            customMarkedItemClass="bravo-select-marked-item"
-                            customSelectedItemClass="bravo-select-selected-item">
-                <ng-template let-item="item"
-                             bravoLabelTmp>
+              <bravo-select
+                *ngIf="!isViewMode"
+                class="leave-request-detail-form__dropdown-select"
+                [clearable]="false"
+                [disabled]="isViewMode"
+                [dropdownSameWidth]="true"
+                [hasTooltip]="false"
+                [items]="leaveTypeSelectOptions"
+                [maxDropdownHeight]="250"
+                [searchable]="false"
+                formControlName="type"
+                valueField="value"
+                labelField="label"
+                customMarkedItemClass="bravo-select-marked-item"
+                customSelectedItemClass="bravo-select-selected-item"
+              >
+                <ng-template let-item="item" bravoLabelTmp>
                   <div>{{ item.label | leaveTypeDisplay }}</div>
                 </ng-template>
-                <ng-template let-item="item"
-                             bravoOptionTmp>
+                <ng-template let-item="item" bravoOptionTmp>
                   <div [title]="item.text">{{ item.label | leaveTypeDisplay }}</div>
                 </ng-template>
               </bravo-select>
@@ -84,19 +84,18 @@
             <h4 class="leave-request-detail-form__field">From date</h4>
             <div class="leave-request-detail-form__content">
               <label *ngIf="isViewMode"> {{ vm.leaveRequest.fromDate | date: 'd MMMM, y' }} </label>
-              <div *ngIf="!isViewMode"
-                   class="date-picker">
-                <input class="date-picker__input"
-                       [matDatepicker]="fromDate"
-                       [matDatepickerFilter]="notWeekendDatesFilter"
-                       (click)="fromDate.open()"
-                       (keydown)="$event.preventDefault()"
-                       formControlName="fromDate">
+              <div *ngIf="!isViewMode" class="date-picker">
+                <input
+                  class="date-picker__input"
+                  [matDatepicker]="fromDate"
+                  [matDatepickerFilter]="notWeekendDatesFilter"
+                  (click)="fromDate.open()"
+                  (keydown)="$event.preventDefault()"
+                  formControlName="fromDate"
+                />
                 <mat-datepicker #fromDate></mat-datepicker>
-                <div class="date-picker__toggle-btn"
-                     (click)="fromDate.open()">
-                  <img class="mat-icon__calendar"
-                       src="assets/icons/calendar-icon.svg">
+                <div class="date-picker__toggle-btn" (click)="fromDate.open()">
+                  <img class="mat-icon__calendar" src="assets/icons/calendar-icon.svg" />
                 </div>
               </div>
             </div>
@@ -106,36 +105,37 @@
             <h4 class="leave-request-detail-form__field">To date</h4>
             <div class="leave-request-detail-form__content">
               <label *ngIf="isViewMode"> {{ vm.leaveRequest.fromDate | date: 'd MMMM, y' }} </label>
-              <div *ngIf="!isViewMode"
-                   class="date-picker">
-                <input class="date-picker__input"
-                       [matDatepicker]="toDate"
-                       [matDatepickerFilter]="notWeekendDatesFilter"
-                       (click)="toDate.open()"
-                       (keydown)="$event.preventDefault()"
-                       formControlName="toDate">
+              <div *ngIf="!isViewMode" class="date-picker">
+                <input
+                  class="date-picker__input"
+                  [matDatepicker]="toDate"
+                  [matDatepickerFilter]="notWeekendDatesFilter"
+                  (click)="toDate.open()"
+                  (keydown)="$event.preventDefault()"
+                  formControlName="toDate"
+                />
                 <mat-datepicker #toDate></mat-datepicker>
-                <div class="date-picker__toggle-btn"
-                     (click)="toDate.open()">
-                  <img class="mat-icon__calendar"
-                       src="assets/icons/calendar-icon.svg">
+                <div class="date-picker__toggle-btn" (click)="toDate.open()">
+                  <img class="mat-icon__calendar" src="assets/icons/calendar-icon.svg" />
                 </div>
               </div>
             </div>
           </div>
         </div>
-        <div *ngIf="formControlsError('fromDate', 'fromToDateRange') as error"
-             class="leave-request-detail-form__row">
-          <bravo-alert class="leave-request-detail-form__check-date-range-overlap-error-alert"
-                       type="danger">
+        <div *ngIf="formControlsError('fromDate', 'fromToDateRange') as error" class="leave-request-detail-form__row">
+          <bravo-alert class="leave-request-detail-form__check-date-range-overlap-error-alert" type="danger">
             {{ error.errorMsg }}
           </bravo-alert>
         </div>
-        <div *ngIf="formControlsError('fromDate', 'requestDateRangeOverlapped') as error"
-             class="leave-request-detail-form__row">
-          <bravo-alert class="leave-request-detail-form__check-date-range-overlap-error-alert"
-                       type="danger"
-                       (refresh)="validateForm()">
+        <div
+          *ngIf="formControlsError('fromDate', 'requestDateRangeOverlapped') as error"
+          class="leave-request-detail-form__row"
+        >
+          <bravo-alert
+            class="leave-request-detail-form__check-date-range-overlap-error-alert"
+            type="danger"
+            (refresh)="validateForm()"
+          >
             {{ error.errorMsg }}
           </bravo-alert>
         </div>
@@ -153,34 +153,38 @@
 
         <div class="leave-request-detail-form__panel-form">
           <ng-container *ngFor="let date of vm.leaveRequestDates; let first = first; let last = last; let i = index">
-            <div *ngIf="first || last"
-                 class="leave-request-detail-form__row">
+            <div *ngIf="first || last" class="leave-request-detail-form__row">
               <div class="leave-request-detail-form__inner-row">
                 <h4 class="leave-request-detail-form__field">{{ weekday[date.dayOfWeek] }}</h4>
                 <div class="leave-request-detail-form__content">{{ date.date | date: 'dd/MM/y' }}</div>
               </div>
               <div class="leave-request-detail-form__inner-row">
                 <label *ngIf="isViewMode"> {{ date.type }} </label>
-                <mat-radio-group *ngIf="!isViewMode"
-                                 class="leave-request-detail-form__section"
-                                 [(ngModel)]="date.type"
-                                 [disabled]="isViewMode"
-                                 [ngModelOptions]="{ standalone: true }"
-                                 (ngModelChange)="onLeaveRequestDateTypeChanged()">
-                  <mat-radio-button class="leave-request-detail-form__section-item"
-                                    [value]="'Full'">
+                <mat-radio-group
+                  *ngIf="!isViewMode"
+                  class="leave-request-detail-form__section"
+                  [(ngModel)]="date.type"
+                  [disabled]="isViewMode"
+                  [ngModelOptions]="{ standalone: true }"
+                  (ngModelChange)="onLeaveRequestDateTypeChanged()"
+                >
+                  <mat-radio-button class="leave-request-detail-form__section-item" [value]="'Full'">
                     {{ 'Full' }}
                   </mat-radio-button>
 
-                  <mat-radio-button *ngIf="(last && vm.leaveRequestDates.length >= 2) || vm.leaveRequestDates.length === 1"
-                                    class="leave-request-detail-form__section-item"
-                                    [value]="'FirstHalf'">
+                  <mat-radio-button
+                    *ngIf="(last && vm.leaveRequestDates.length >= 2) || vm.leaveRequestDates.length === 1"
+                    class="leave-request-detail-form__section-item"
+                    [value]="'FirstHalf'"
+                  >
                     {{ 'First Half' }}
                   </mat-radio-button>
 
-                  <mat-radio-button *ngIf="(first && vm.leaveRequestDates.length >= 2) || vm.leaveRequestDates.length === 1"
-                                    class="leave-request-detail-form__section-item"
-                                    [value]="'SecondHalf'">
+                  <mat-radio-button
+                    *ngIf="(first && vm.leaveRequestDates.length >= 2) || vm.leaveRequestDates.length === 1"
+                    class="leave-request-detail-form__section-item"
+                    [value]="'SecondHalf'"
+                  >
                     {{ 'Second Half' }}
                   </mat-radio-button>
                 </mat-radio-group>
@@ -191,15 +195,19 @@
 
         <div class="leave-request-detail-form__row">
           <div class="leave-request-detail-form__inner-row leave-request-detail-form__inner-row--title-top">
-            <h4 class="leave-request-detail-form__field">Reason<span class="leave-request-detail-form__field-required">*</span></h4>
+            <h4 class="leave-request-detail-form__field">
+              Reason<span class="leave-request-detail-form__field-required">*</span>
+            </h4>
             <div class="leave-request-detail-form__content leave-request-detail-form__content--full">
               <label *ngIf="isViewMode"> {{ vm.leaveRequest.reason }} </label>
-              <textarea *ngIf="!isViewMode"
-                        class="mat-text-area"
-                        placeholder="Type in reason"
-                        matInput
-                        formControlName="reason"
-                        rows="3"></textarea>
+              <textarea
+                *ngIf="!isViewMode"
+                class="mat-text-area"
+                placeholder="Type in reason"
+                matInput
+                formControlName="reason"
+                rows="3"
+              ></textarea>
             </div>
           </div>
         </div>
@@ -223,37 +231,48 @@
           <div class="leave-request-detail-form__row">
             <div>Child Form Components</div>
             <div>{{ vm.testPrimitivePropsForArrayControls | json }}</div>
-            <div *ngFor="
+            <div
+              *ngFor="
                 let item of vm.testFormArrayGroupLeaveRequests;
                 let index = index;
                 trackBy: ngForTrackByImmutableList(vm.testFormArrayGroupLeaveRequests)
               "
-                 class="leave-request-detail-form__inner-row">
-              <orient-cancel-leave-request [(vm)]="vm.testFormArrayGroupLeaveRequests[index]"></orient-cancel-leave-request>
+              class="leave-request-detail-form__inner-row"
+            >
+              <orient-cancel-leave-request
+                [(vm)]="vm.testFormArrayGroupLeaveRequests[index]"
+              ></orient-cancel-leave-request>
             </div>
           </div>
           <div class="leave-request-detail-form__row">
             <div>Form Group Array testFormArrayGroupLeaveRequests use list of form-components</div>
             <div>{{ vm.testFormArrayGroupLeaveRequests | json }}</div>
-            <div *ngFor="let item of form.controls.testFormArrayGroupLeaveRequests.controls; let index = index"
-                 class="leave-request-detail-form__inner-row">
-              <orient-cancel-leave-request [(vm)]="vm.testFormArrayGroupLeaveRequests[index]"
-                                           [form]="item"></orient-cancel-leave-request>
+            <div
+              *ngFor="let item of form.controls.testFormArrayGroupLeaveRequests.controls; let index = index"
+              class="leave-request-detail-form__inner-row"
+            >
+              <orient-cancel-leave-request
+                [(vm)]="vm.testFormArrayGroupLeaveRequests[index]"
+                [form]="item"
+              ></orient-cancel-leave-request>
             </div>
           </div>
           <div class="leave-request-detail-form__row">
             <div>Form Group Array testFormArrayGroupLeaveRequests use directly form group</div>
             <div>{{ vm.testFormArrayGroupLeaveRequests | json }}</div>
-            <div *ngFor="let item of form.controls.testFormArrayGroupLeaveRequests.controls; let index = index"
-                 class="leave-request-detail-form__inner-row">
-              <div class="cancel-leave-request"
-                   [formGroup]="item">
+            <div
+              *ngFor="let item of form.controls.testFormArrayGroupLeaveRequests.controls; let index = index"
+              class="leave-request-detail-form__inner-row"
+            >
+              <div class="cancel-leave-request" [formGroup]="item">
                 <div class="cancel-leave-request__reason">
-                  <textarea class="mat-text-area"
-                            placeholder="{{ 'Type in reason' | translate }}"
-                            matInput
-                            formControlName="reason"
-                            rows="3"></textarea>
+                  <textarea
+                    class="mat-text-area"
+                    placeholder="{{ 'Type in reason' | translate }}"
+                    matInput
+                    formControlName="reason"
+                    rows="3"
+                  ></textarea>
                 </div>
               </div>
             </div>
@@ -261,35 +280,36 @@
           <div class="leave-request-detail-form__row">
             <div>Form Control Array testPrimitivePropsForArrayControls</div>
             <div>{{ vm.testPrimitivePropsForArrayControls | json }}</div>
-            <div *ngFor="let item of form.controls.testPrimitivePropsForArrayControls.controls; let index = index"
-                 class="leave-request-detail-form__inner-row">
-              <input class="mat-text-area"
-                     type="number"
-                     [formControl]="item">
+            <div
+              *ngFor="let item of form.controls.testPrimitivePropsForArrayControls.controls; let index = index"
+              class="leave-request-detail-form__inner-row"
+            >
+              <input class="mat-text-area" type="number" [formControl]="item" />
             </div>
           </div>
         </div>
       </div>
 
       <div class="leave-request-detail-form__footer">
-        <div *ngIf="!isViewMode"
-             class="leave-request-detail-form__action-button leave-request-detail-form__row">
-          <bravo-button class="leave-request-detail-form__inner-row"
-                        [type]="'outline-primary'"
-                        (click)="cancelLeaveRequest()">Cancel
+        <div *ngIf="!isViewMode" class="leave-request-detail-form__action-button leave-request-detail-form__row">
+          <bravo-button
+            class="leave-request-detail-form__inner-row"
+            [type]="'outline-primary'"
+            (click)="cancelLeaveRequest()"
+            >Cancel
           </bravo-button>
-          <bravo-button class="leave-request-detail-form__inner-row"
-                        [enabled]="isFormValid()"
-                        [loading]="form.pending || (loadingState$ | async) == 'Loading'"
-                        [type]="'primary'"
-                        (click)="onClickSubmitLeaveRequest()">Submit</bravo-button>
+          <bravo-button
+            class="leave-request-detail-form__inner-row"
+            [enabled]="isFormValid()"
+            [loading]="form.pending || (loadingState$ | async) == 'Loading'"
+            [type]="'primary'"
+            (click)="onClickSubmitLeaveRequest()"
+            >Submit</bravo-button
+          >
         </div>
 
-        <button *ngIf="isViewMode"
-                class="leave-request-detail-form__cancel-btn"
-                mat-flat-button>
-          <img class="icon"
-               src="assets/icons/trash-danger.svg">
+        <button *ngIf="isViewMode" class="leave-request-detail-form__cancel-btn" mat-flat-button>
+          <img class="icon" src="assets/icons/trash-danger.svg" />
           Cancel Leave Request
         </button>
       </div>

@@ -53,6 +53,4 @@
 <div *ngIf="getLoading('saveTextSnippet')" class="platform-mat-mdc-spinner -with-backdrop">
   <mat-spinner></mat-spinner>
 </div>
-<div *ngIf="vm.error" class="platform-mat-mdc-spinner -with-backdrop">
-  <mat-error class="text-snippet-detail__error">{{ vm.error }}</mat-error>
-</div>
+<mat-error *ngIf="vm.error" class="text-snippet-detail__error">{{ vm.error }}</mat-error>
