@@ -2,7 +2,7 @@
   // Editor Options
   // When opening a file, `editor.tabSize` and `editor.insertSpaces` will NOT be detected based on the file contents.
   "editor.detectIndentation": false,
-  "editor.formatOnSave": false,
+  "editor.formatOnSave": true,
   "editor.fontLigatures": true,
   // Controls if the editor will insert spaces for tabs.
   "editor.insertSpaces": true,
@@ -42,7 +42,30 @@
   // Others
   "typescript.preferences.quoteStyle": "single",
   "workbench.iconTheme": "vscode-icons",
-  "cSpell.words": ["Appender", "Buildable", "dtos", "linebreak", "nonblock", "nrwl", "paren", "parens"],
+  "cSpell.words": [
+    "bravo",
+    "bravogrowth",
+    "bravosuite",
+    "bravotalents",
+    "buildable",
+    "devkit",
+    "firstname",
+    "highcharts",
+    "lastname",
+    "loginning",
+    "Navigations",
+    "ngcc",
+    "ngneat",
+    "ngrx",
+    "ngsw",
+    "nrwl",
+    "oidc",
+    "packagr",
+    "signout",
+    "sonarjs",
+    "systemtest",
+    "toastr"
+  ],
   "tslint.alwaysShowRuleFailuresAsWarnings": false,
   "emeraldwalk.runonsave": {
     "commands": [
@@ -58,6 +81,13 @@
   "[typescript]": {
     "editor.formatOnSave": true
   },
-  "importSorter.generalConfiguration.sortOnBeforeSave": true,
-  "importSorter.sortConfiguration.removeUnusedImports": true
+  "cSpell.ignorePaths": [
+    "package-lock.json",
+    "node_modules",
+    "vscode-extension",
+    ".git/objects",
+    ".vscode",
+    ".vscode-insiders",
+    "apps/playground-ui/src/app/app.component.ts"
+  ]
 }
