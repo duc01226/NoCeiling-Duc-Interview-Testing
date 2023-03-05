@@ -1,7 +1,6 @@
 using System.Linq.Expressions;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
-using Easy.Platform.Domain.Exceptions.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 
 namespace Easy.Platform.Domain.Repositories;
@@ -323,7 +322,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Func<IUnitOfWork, Task<TResult>> action)
     {
         if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
-            using (var uow = UnitOfWorkManager.Begin())
+            using (var uow = UnitOfWorkManager.CreateNewUow())
             {
                 var result = await action(uow);
                 await uow.CompleteAsync();
@@ -337,21 +336,11 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Func<IUnitOfWork, Task> action)
     {
         if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
-            using (var uow = UnitOfWorkManager.Begin())
+            using (var uow = UnitOfWorkManager.CreateNewUow())
             {
                 await action(uow);
                 await uow.CompleteAsync();
             }
         else await action(UnitOfWorkManager.CurrentActiveUow());
-    }
-
-    protected async Task EnsureEntityValid(TEntity entity, CancellationToken cancellationToken)
-    {
-        await entity.EnsureEntityValid<TEntity, TPrimaryKey>(AnyAsync, cancellationToken);
-    }
-
-    protected async Task EnsureEntitiesValid(List<TEntity> entities, CancellationToken cancellationToken)
-    {
-        await entities.EnsureEntitiesValid<TEntity, TPrimaryKey>(AnyAsync, cancellationToken);
     }
 }

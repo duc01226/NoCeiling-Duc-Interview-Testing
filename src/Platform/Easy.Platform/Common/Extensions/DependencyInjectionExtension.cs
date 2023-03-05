@@ -660,7 +660,7 @@ public static class DependencyInjectionExtension
         method.DynamicInvoke(parameters);
     }
 
-    /// <inheritdoc cref="ExecuteInject(IServiceProvider,Delegate)" />
+    /// <inheritdoc cref="ExecuteInject(IServiceProvider,Delegate,object[])" />
     public static TResult ExecuteInject<TResult>(this IServiceProvider serviceProvider, Delegate method, params object[] manuallyParams)
     {
         var parameters = serviceProvider.ResolveMethodParameters(method, manuallyParams);
@@ -670,7 +670,7 @@ public static class DependencyInjectionExtension
         return result;
     }
 
-    /// <inheritdoc cref="ExecuteInject(IServiceProvider,Delegate)" />
+    /// <inheritdoc cref="ExecuteInject(IServiceProvider,Delegate,object[])" />
     public static async Task ExecuteInjectAsync(this IServiceProvider serviceProvider, Delegate method, params object[] manuallyParams)
     {
         var parameters = serviceProvider.ResolveMethodParameters(method, manuallyParams);
@@ -680,7 +680,7 @@ public static class DependencyInjectionExtension
         if (result.As<Task>() != null) await result.As<Task>();
     }
 
-    /// <inheritdoc cref="ExecuteInject(IServiceProvider,Delegate)" />
+    /// <inheritdoc cref="ExecuteInject(IServiceProvider,Delegate,object[])" />
     public static async Task<TResult> ExecuteInjectAsync<TResult>(this IServiceProvider serviceProvider, Delegate method, params object[] manuallyParams)
     {
         var parameters = serviceProvider.ResolveMethodParameters(method, manuallyParams);
@@ -692,7 +692,7 @@ public static class DependencyInjectionExtension
         return result.Cast<TResult>();
     }
 
-    /// <inheritdoc cref="ExecuteInject(IServiceProvider,Delegate)" />
+    /// <inheritdoc cref="ExecuteInject(IServiceProvider,Delegate,object[])" />
     public static void ExecuteInject(this IServiceScope scope, Delegate method, params object[] manuallyParams)
     {
         var parameters = scope.ResolveMethodParameters(method, manuallyParams);
@@ -700,7 +700,7 @@ public static class DependencyInjectionExtension
         method.DynamicInvoke(parameters);
     }
 
-    /// <inheritdoc cref="ExecuteInject(IServiceProvider,Delegate)" />
+    /// <inheritdoc cref="ExecuteInject(IServiceProvider,Delegate,object[])" />
     public static TResult ExecuteInject<TResult>(this IServiceScope scope, Delegate method, params object[] manuallyParams)
     {
         var parameters = scope.ResolveMethodParameters(method, manuallyParams);
@@ -710,7 +710,7 @@ public static class DependencyInjectionExtension
         return result;
     }
 
-    /// <inheritdoc cref="ExecuteInject(IServiceProvider,Delegate)" />
+    /// <inheritdoc cref="ExecuteInject(IServiceProvider,Delegate,object[])" />
     public static async Task ExecuteInjectAsync(this IServiceScope scope, Delegate method, params object[] manuallyParams)
     {
         var parameters = scope.ResolveMethodParameters(method, manuallyParams);
@@ -720,7 +720,7 @@ public static class DependencyInjectionExtension
         if (result.As<Task>() != null) await result.As<Task>();
     }
 
-    /// <inheritdoc cref="ExecuteInject(IServiceProvider,Delegate)" />
+    /// <inheritdoc cref="ExecuteInject(IServiceProvider,Delegate,object[])" />
     public static async Task<TResult> ExecuteInjectAsync<TResult>(this IServiceScope scope, Delegate method, params object[] manuallyParams)
     {
         var parameters = scope.ResolveMethodParameters(method, manuallyParams);
