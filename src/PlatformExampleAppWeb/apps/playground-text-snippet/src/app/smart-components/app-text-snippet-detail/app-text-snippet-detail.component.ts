@@ -74,7 +74,9 @@ export class AppTextSnippetDetailComponent
       this.tapResponse(result => {
         this.updateVm({
           toSaveTextSnippet: result.savedData,
-          toSaveTextSnippetId: result.savedData.id
+          toSaveTextSnippetId: result.savedData.id,
+          hasSelectedSnippetItemChanged: false,
+          originalToSaveTextSnippet: cloneDeep(result.savedData)
         });
         if (this.appUiStateStore.currentVm.selectedSnippetTextId != this.vm.toSaveTextSnippetId) {
           this.appUiStateStore.updateState({

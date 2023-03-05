@@ -14,7 +14,7 @@ export class AppTextSnippetDetail extends PlatformVm implements IAppTextSnippetD
     this.toSaveTextSnippet = data?.toSaveTextSnippet
       ? new TextSnippetDataModel(data.toSaveTextSnippet)
       : new TextSnippetDataModel();
-    this.clonedSelectedSnippetItem = cloneDeep(this.toSaveTextSnippet);
+    this.originalToSaveTextSnippet = cloneDeep(this.toSaveTextSnippet);
     this.toSaveTextSnippetId = data?.toSaveTextSnippetId ?? undefined;
     this.hasSelectedSnippetItemChanged = data?.hasSelectedSnippetItemChanged ?? false;
     this.saveTextSnippetError = data?.saveTextSnippetError;
@@ -26,7 +26,7 @@ export class AppTextSnippetDetail extends PlatformVm implements IAppTextSnippetD
   }
   public set toSaveTextSnippet(v: TextSnippetDataModel) {
     this._toSaveTextSnippet = v;
-    this.clonedSelectedSnippetItem = cloneDeep(v);
+    this.originalToSaveTextSnippet = cloneDeep(v);
     this.updateHasSelectedSnippetItemChanged();
   }
 
@@ -44,7 +44,7 @@ export class AppTextSnippetDetail extends PlatformVm implements IAppTextSnippetD
   public hasSelectedSnippetItemChanged: boolean;
   public saveTextSnippetError?: string | null;
 
-  private clonedSelectedSnippetItem: TextSnippetDataModel;
+  public originalToSaveTextSnippet: TextSnippetDataModel;
 
   public get toSaveTextSnippetSnippetText(): string {
     return this.toSaveTextSnippet?.snippetText ?? '';
@@ -62,12 +62,12 @@ export class AppTextSnippetDetail extends PlatformVm implements IAppTextSnippetD
   }
 
   public updateHasSelectedSnippetItemChanged(): boolean {
-    this.hasSelectedSnippetItemChanged = isDifferent(this.toSaveTextSnippet, this.clonedSelectedSnippetItem);
+    this.hasSelectedSnippetItemChanged = isDifferent(this.toSaveTextSnippet, this.originalToSaveTextSnippet);
     return this.hasSelectedSnippetItemChanged;
   }
 
   public resetSelectedSnippetItem() {
-    this.toSaveTextSnippet = cloneDeep(this.clonedSelectedSnippetItem);
+    this.toSaveTextSnippet = cloneDeep(this.originalToSaveTextSnippet);
   }
 
   public isCreateNew(): boolean {
