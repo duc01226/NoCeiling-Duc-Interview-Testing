@@ -300,6 +300,7 @@ public abstract class PlatformModule : IPlatformModule
     {
         serviceCollection.RegisterIfServiceNotExist(typeof(ILoggerFactory), typeof(LoggerFactory));
         serviceCollection.RegisterIfServiceNotExist(typeof(ILogger<>), typeof(Logger<>));
+        serviceCollection.RegisterIfServiceNotExist(typeof(ILogger), sp => sp.GetRequiredService<ILoggerFactory>().CreateLogger("DefaultLogger"));
     }
 
     private void RegisterCqrs(IServiceCollection serviceCollection)
