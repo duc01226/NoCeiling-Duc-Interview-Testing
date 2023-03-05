@@ -22,6 +22,8 @@ public static partial class Util
             {
                 await executeFn(currentSkipItems, pageSize);
                 currentSkipItems += pageSize;
+
+                GC.Collect();
             } while (currentSkipItems < maxItemCounts);
         }
 
@@ -31,7 +33,7 @@ public static partial class Util
         /// <typeparam name="TItem">The item type to be processed</typeparam>
         /// <param name="getItemsPackageFn">Get a partial/page/package items</param>
         /// <param name="executeFn">Execute function async. Input is: items.</param>
-        /// <param name="maxExecutionCount">Max execution count. Default is <see cref="ulong.MaxValue"/></param>
+        /// <param name="maxExecutionCount">Max execution count. Default is <see cref="ulong.MaxValue" /></param>
         /// <returns></returns>
         public static async Task ExecuteScrollingPagingAsync<TItem>(
             Func<Task<IEnumerable<TItem>>> getItemsPackageFn,
@@ -48,12 +50,12 @@ public static partial class Util
                 totalExecutionCount += 1;
                 if (totalExecutionCount < maxExecutionCount)
                     currentPackageItems = (await getItemsPackageFn()).ToList();
+
+                GC.Collect();
             }
         }
 
-        /// <summary>
-        /// <see cref="ExecuteScrollingPagingAsync{TItem}(Func{Task{IEnumerable{TItem}}},Func{IEnumerable{TItem},Task},ulong)"/>
-        /// </summary>
+        /// <see cref="ExecuteScrollingPagingAsync{TItem}(Func{Task{IEnumerable{TItem}}},Func{IEnumerable{TItem},Task},ulong)" />
         public static Task ExecuteScrollingPagingAsync<TItem>(
             Func<Task<List<TItem>>> getItemsPackageFn,
             Func<List<TItem>, Task> executeFn,
