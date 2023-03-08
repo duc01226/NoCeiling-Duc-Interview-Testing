@@ -14,6 +14,7 @@ using Easy.Platform.Persistence.DataMigration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
 using OpenTelemetry.Trace;
 
 namespace Easy.Platform.MongoDB;
@@ -100,8 +101,7 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
                                  p.GetGenericTypeDefinition() == typeof(IPlatformMongoAutoRegisterBaseSerializer<>))
                         .GetGenericArguments()[0];
 
-                    if (!PlatformMongoDbPersistenceModuleCache.RegisteredSerializerTypes.Contains(
-                        serializerHandleValueType))
+                    if (!PlatformMongoDbPersistenceModuleCache.RegisteredSerializerTypes.Contains(serializerHandleValueType))
                     {
                         BsonSerializer.RegisterSerializer(
                             serializerHandleValueType,
