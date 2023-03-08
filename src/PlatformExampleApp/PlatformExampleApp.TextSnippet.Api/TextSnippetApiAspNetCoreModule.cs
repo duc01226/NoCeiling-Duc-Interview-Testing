@@ -23,7 +23,7 @@ public class TextSnippetApiAspNetCoreModule : PlatformAspNetCoreModule
     {
     }
 
-    protected override List<Func<IConfiguration, Type>> ModuleTypeDependencies()
+    public override List<Func<IConfiguration, Type>> ModuleTypeDependencies()
     {
         var result = new List<Func<IConfiguration, Type>>
         {

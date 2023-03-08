@@ -47,6 +47,9 @@ public class PlatformCacheEntryOptions
     }
 }
 
+/// <summary>
+/// Extend from this class to define CacheEntryOptions which read from IConfiguration. This will be register and replace the default PlatformCacheEntryOptions
+/// </summary>
 public abstract class PlatformConfigurationCacheEntryOptions : PlatformCacheEntryOptions
 {
     protected readonly IConfiguration Configuration;

@@ -48,6 +48,12 @@ public interface IPlatformModule
         return !module.IsDependencyModule;
     }
 
+    public void RegisterServices(IServiceCollection serviceCollection);
+
+    public Task Init();
+
+    public List<Func<IConfiguration, Type>> ModuleTypeDependencies();
+
     /// <summary>
     /// Override this to call every time a new platform module is registered
     /// </summary>
@@ -57,10 +63,6 @@ public interface IPlatformModule
 
     public void RegisterRuntimeModuleDependencies<TModule>(
         IServiceCollection serviceCollection) where TModule : PlatformModule;
-
-    public void RegisterServices(IServiceCollection serviceCollection);
-
-    public Task Init();
 
     public string[] TracingSources();
 }
@@ -264,7 +266,7 @@ public abstract class PlatformModule : IPlatformModule
     /// Example code : return new { config => typeof(XXXPlatformApplicationModule), config =>
     /// typeof(XXXPlatformPersistenceModule) };
     /// </summary>
-    protected virtual List<Func<IConfiguration, Type>> ModuleTypeDependencies()
+    public virtual List<Func<IConfiguration, Type>> ModuleTypeDependencies()
     {
         return new List<Func<IConfiguration, Type>>();
     }

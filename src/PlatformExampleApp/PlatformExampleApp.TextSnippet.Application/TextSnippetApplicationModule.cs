@@ -20,7 +20,7 @@ public class TextSnippetApplicationModule : PlatformApplicationModule
     /// </summary>
     protected override bool AutoRegisterDefaultCaching => false;
 
-    protected override List<Func<IConfiguration, Type>> ModuleTypeDependencies()
+    public override List<Func<IConfiguration, Type>> ModuleTypeDependencies()
     {
         var result = new List<Func<IConfiguration, Type>>
         {

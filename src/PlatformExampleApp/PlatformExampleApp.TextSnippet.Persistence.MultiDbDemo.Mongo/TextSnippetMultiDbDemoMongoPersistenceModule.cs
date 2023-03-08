@@ -32,7 +32,7 @@ public class TextSnippetMultiDbDemoMongoPersistenceModule : PlatformMongoDbPersi
         };
     }
 
-    protected override List<Func<IConfiguration, Type>> ModuleTypeDependencies()
+    public override List<Func<IConfiguration, Type>> ModuleTypeDependencies()
     {
         return new List<Func<IConfiguration, Type>>
         {
