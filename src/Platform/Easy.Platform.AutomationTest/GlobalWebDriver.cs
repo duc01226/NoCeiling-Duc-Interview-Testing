@@ -8,7 +8,7 @@ namespace Easy.Platform.AutomationTest;
 /// </summary>
 public class GlobalWebDriver : IDisposable
 {
-    public GlobalWebDriver(TestSettings settings)
+    public GlobalWebDriver(AutomationTestSettings settings)
     {
         LazyDriver = new Lazy<IWebDriver>(() => WebDriverManager.New(settings).CreateWebDriver());
     }

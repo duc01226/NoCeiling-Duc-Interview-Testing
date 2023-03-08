@@ -9,12 +9,12 @@ public static partial class TextSnippetApp
         public const string AppName = "TextSnippetApp";
     }
 
-    public abstract class BasePage<TPage> : Page<TPage, TestSettings>
+    public abstract class BasePage<TPage> : Page<TPage, AutomationTestSettings>
         where TPage : BasePage<TPage>
     {
         public const int DefaultMaxRequestWaitSeconds = 5;
 
-        public BasePage(IWebDriver webDriver, TestSettings settings) : base(webDriver, settings)
+        public BasePage(IWebDriver webDriver, AutomationTestSettings settings) : base(webDriver, settings)
         {
             GlobalSpinner = new SpinnerUiComponent(webDriver, null, this);
         }

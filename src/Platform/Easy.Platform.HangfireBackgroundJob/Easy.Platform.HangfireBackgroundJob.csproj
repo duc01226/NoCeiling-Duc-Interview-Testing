@@ -9,13 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Hangfire.AspNetCore" Version="1.7.32" />
-    <PackageReference Include="Hangfire.Core" Version="1.7.32" />
-    <PackageReference Include="Hangfire.InMemory" Version="0.3.5" />
-    <PackageReference Include="Hangfire.Mongo" Version="1.7.3" />
-    <PackageReference Include="Hangfire.SqlServer" Version="1.7.32" />
-    <PackageReference Include="Hangfire.PostgreSql" Version="1.9.9" />
-    <PackageReference Include="SonarAnalyzer.CSharp" Version="8.52.0.60960">
+    <PackageReference Include="Hangfire.AspNetCore" Version="1.7.33" />
+    <PackageReference Include="Hangfire.Core" Version="1.7.33" />
+    <PackageReference Include="Hangfire.InMemory" Version="0.3.6" />
+    <PackageReference Include="Hangfire.Mongo" Version="1.9.2" />
+    <PackageReference Include="Hangfire.SqlServer" Version="1.7.33" />
+    <PackageReference Include="Hangfire.PostgreSql" Version="1.9.10" />
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="8.54.0.64047">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

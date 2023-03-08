@@ -15,9 +15,9 @@ public sealed class SearchSnippetTextTestCases_IDisposableDisposeObjectDemo : Te
 
     public SearchSnippetTextTestCases_IDisposableDisposeObjectDemo(
         IWebDriverManager driverManager,
-        TestSettings settings,
-        WebDriverLazyInitializer driverLazyInitializer,
-        GlobalWebDriver globalWebDriver) : base(driverManager, settings, driverLazyInitializer, globalWebDriver)
+        AutomationTestSettings settings,
+        WebDriverLazyInitializer lazyWebDriver,
+        GlobalWebDriver globalLazyWebDriver) : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver)
     {
         manuallyCreateDriverLazyInitializer = new WebDriverLazyInitializer(settings);
     }
@@ -49,7 +49,7 @@ public sealed class SearchSnippetTextTestCases_IDisposableDisposeObjectDemo : Te
         // THEN: At least one item matched with the search test displayed
         loadedHomePage.WaitUntilAssertSuccess(
             waitForSuccess: _ => _.AssertHasMatchingItemsForSearchText(firstItemSnippetText),
-            stopIfFail: _ => _.AssertNoErrors());
+            stopWaitOnExceptionOrAssertFailed: _ => _.AssertNoErrors());
     }
 
     [Fact]
@@ -66,6 +66,6 @@ public sealed class SearchSnippetTextTestCases_IDisposableDisposeObjectDemo : Te
         // THEN: No item is displayed
         loadedHomePage.WaitUntilAssertSuccess(
             waitForSuccess: _ => _.AssertNotHasMatchingItemsForSearchText(searchText),
-            stopIfFail: _ => _.AssertNoErrors());
+            stopWaitOnExceptionOrAssertFailed: _ => _.AssertNoErrors());
     }
 }

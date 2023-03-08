@@ -11,7 +11,7 @@ public static partial class TextSnippetApp
         public const int TextSnippetItemsGridPageSize = 10;
         public static readonly string GripSnippetTextColName = "SnippetText";
 
-        public HomePage(IWebDriver webDriver, TestSettings settings) : base(webDriver, settings)
+        public HomePage(IWebDriver webDriver, AutomationTestSettings settings) : base(webDriver, settings)
         {
             SearchTextSnippetTxt = new FormFieldUiComponent(webDriver, null, this)
                 .WithIdentifierSelector(".app__search-input");
@@ -108,7 +108,7 @@ public static partial class TextSnippetApp
                     _ => _.SaveSnippetFormSnippetTextTxt.Value == selectedItemSnippetText,
                     expected: $"SaveSnippetFormSnippetTextTxt.Value must be '{selectedItemSnippetText}'",
                     actual: $"{_.SaveSnippetFormSnippetTextTxt.Value}"),
-                stopIfFail: _ => _.AssertNoErrors());
+                stopWaitOnExceptionOrAssertFailed: _ => _.AssertNoErrors());
 
             return selectedItemSnippetText;
         }

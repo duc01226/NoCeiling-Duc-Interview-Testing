@@ -4,7 +4,7 @@ namespace Easy.Platform.AutomationTest;
 
 public sealed class WebDriverLazyInitializer : IDisposable
 {
-    public WebDriverLazyInitializer(TestSettings settings)
+    public WebDriverLazyInitializer(AutomationTestSettings settings)
     {
         LazyDriver = new Lazy<IWebDriver>(() => WebDriverManager.New(settings).CreateWebDriver());
     }

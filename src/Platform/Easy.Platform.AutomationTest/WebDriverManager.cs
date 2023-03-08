@@ -27,18 +27,20 @@ public interface IWebDriverManager
 
 public class WebDriverManager : IWebDriverManager
 {
-    public WebDriverManager(TestSettings settings)
+    public WebDriverManager(AutomationTestSettings settings)
     {
         Settings = settings;
     }
 
-    protected TestSettings Settings { get; }
+    public AutomationTestSettings Settings { get; }
+
+    public Action<IOptions>? ConfigWebDriverOptions { get; set; }
 
     public IWebDriver CreateWebDriver()
     {
         return Settings.UseRemoteWebDriver
-            ? CreateRemoteWebDriver()
-            : CreateLocalMachineWebDriver();
+            ? CreateRemoteWebDriver().WithIf(ConfigWebDriverOptions != null, p => ConfigWebDriverOptions!(p.Manage()))
+            : CreateLocalMachineWebDriver().WithIf(ConfigWebDriverOptions != null, p => ConfigWebDriverOptions!(p.Manage()));
     }
 
     public IWebDriver CreateRemoteWebDriver()
@@ -63,25 +65,25 @@ public class WebDriverManager : IWebDriverManager
         return new ChromeDriver().Pipe(DefaultConfigDriver);
     }
 
-    public static DriverOptions BuildDefaultDriverOptions(TestSettings settings)
+    public DriverOptions BuildDefaultDriverOptions(AutomationTestSettings settings)
     {
         return settings.WebDriverType
-            .WhenValue(TestSettings.WebDriverTypes.Chrome, _ => new ChromeOptions().Pipe(_ => _.AddArgument("no-sandbox")).As<DriverOptions>())
-            .WhenValue(TestSettings.WebDriverTypes.Firefox, _ => new FirefoxOptions().As<DriverOptions>())
-            .WhenValue(TestSettings.WebDriverTypes.Edge, _ => new EdgeOptions().As<DriverOptions>())
+            .WhenValue(AutomationTestSettings.WebDriverTypes.Chrome, _ => new ChromeOptions().Pipe(_ => _.AddArgument("no-sandbox")).As<DriverOptions>())
+            .WhenValue(AutomationTestSettings.WebDriverTypes.Firefox, _ => new FirefoxOptions().As<DriverOptions>())
+            .WhenValue(AutomationTestSettings.WebDriverTypes.Edge, _ => new EdgeOptions().As<DriverOptions>())
             .Execute();
     }
 
-    public static IDriverConfig BuildDefaultDriverConfig(TestSettings settings)
+    public static IDriverConfig BuildDefaultDriverConfig(AutomationTestSettings settings)
     {
         return settings.WebDriverType
-            .WhenValue(TestSettings.WebDriverTypes.Chrome, _ => new ChromeConfig().As<IDriverConfig>())
-            .WhenValue(TestSettings.WebDriverTypes.Firefox, _ => new FirefoxConfig().As<IDriverConfig>())
-            .WhenValue(TestSettings.WebDriverTypes.Edge, _ => new EdgeConfig().As<IDriverConfig>())
+            .WhenValue(AutomationTestSettings.WebDriverTypes.Chrome, _ => new ChromeConfig().As<IDriverConfig>())
+            .WhenValue(AutomationTestSettings.WebDriverTypes.Firefox, _ => new FirefoxConfig().As<IDriverConfig>())
+            .WhenValue(AutomationTestSettings.WebDriverTypes.Edge, _ => new EdgeConfig().As<IDriverConfig>())
             .Execute();
     }
 
-    public static WebDriverManager New(TestSettings settings)
+    public static WebDriverManager New(AutomationTestSettings settings)
     {
         return new WebDriverManager(settings);
     }

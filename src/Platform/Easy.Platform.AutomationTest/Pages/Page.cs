@@ -6,7 +6,7 @@ using OpenQA.Selenium;
 
 namespace Easy.Platform.AutomationTest.Pages;
 
-public interface IPage<TPage, out TSettings> : IUiComponent where TPage : IPage<TPage, TSettings> where TSettings : TestSettings
+public interface IPage<TPage, out TSettings> : IUiComponent where TPage : IPage<TPage, TSettings> where TSettings : AutomationTestSettings
 {
     public string AppName { get; }
     public string Origin { get; }
@@ -51,12 +51,12 @@ public interface IPage<TPage, out TSettings> : IUiComponent where TPage : IPage<
 
     public TResult WaitUntilAssertSuccess<TResult>(
         Func<TPage, TResult> waitForSuccess,
-        Action<TPage> stopIfFail,
+        Action<TPage> stopWaitOnExceptionOrAssertFailed,
         double? maxWaitSeconds = null);
 
     public TResult WaitUntilAssertSuccess<TResult, TStopIfFailResult>(
         Func<TPage, TResult> waitForSuccess,
-        Func<TPage, TStopIfFailResult> stopIfFail,
+        Func<TPage, TStopIfFailResult> stopWaitOnExceptionOrAssertFailed,
         double? maxWaitSeconds = null);
 
     public static string BuildQueryParamsUrlPart(TPage page)
@@ -128,7 +128,7 @@ public interface IPage<TPage, out TSettings> : IUiComponent where TPage : IPage<
 
 public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, TSettings>
     where TPage : Page<TPage, TSettings>
-    where TSettings : TestSettings
+    where TSettings : AutomationTestSettings
 {
     public Page(IWebDriver webDriver, TSettings settings) : base(webDriver, fixedRootElement: null)
     {
@@ -205,15 +205,15 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
 
     public virtual TResult WaitUntilAssertSuccess<TResult>(
         Func<TPage, TResult> waitForSuccess,
-        Action<TPage> stopIfFail,
+        Action<TPage> stopWaitOnExceptionOrAssertFailed,
         double? maxWaitSeconds = null)
     {
         return this.As<TPage>()
             .WaitUntilNoException(
                 waitForSuccess,
-                stopIfFail: _ =>
+                stopWaitOnExceptionOrAssertFailed: _ =>
                 {
-                    stopIfFail(_);
+                    stopWaitOnExceptionOrAssertFailed(_);
                     return default(TResult);
                 },
                 maxWaitSeconds ?? DefaultWaitUntilMaxSeconds);
@@ -221,10 +221,10 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
 
     public virtual TResult WaitUntilAssertSuccess<TResult, TStopIfFailResult>(
         Func<TPage, TResult> waitForSuccess,
-        Func<TPage, TStopIfFailResult> stopIfFail,
+        Func<TPage, TStopIfFailResult> stopWaitOnExceptionOrAssertFailed,
         double? maxWaitSeconds = null)
     {
-        return this.As<TPage>().WaitUntilNoException(waitForSuccess, stopIfFail, maxWaitSeconds ?? DefaultWaitUntilMaxSeconds);
+        return this.As<TPage>().WaitUntilNoException(waitForSuccess, stopWaitOnExceptionOrAssertFailed, maxWaitSeconds ?? DefaultWaitUntilMaxSeconds);
     }
 
     public virtual TPage WaitGlobalSpinnerStopped(

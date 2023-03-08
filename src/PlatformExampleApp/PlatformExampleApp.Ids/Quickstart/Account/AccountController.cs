@@ -242,9 +242,7 @@ namespace PlatformExampleApp.Ids.Quickstart.Account
         }
 
 
-        /*****************************************/
         /* helper APIs for the AccountController */
-        /*****************************************/
         private async Task<LoginViewModel> BuildLoginViewModelAsync(string returnUrl)
         {
             var context = await interaction.GetAuthorizationContextAsync(returnUrl);

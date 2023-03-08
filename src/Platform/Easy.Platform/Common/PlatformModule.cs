@@ -232,8 +232,7 @@ public abstract class PlatformModule : IPlatformModule
                                 _ => allDependencyModules
                                     .Where(dependencyModule => dependencyModule.AdditionalTracingConfigure != null)
                                     .Select(dependencyModule => dependencyModule.AdditionalTracingConfigure)
-                                    .ForEach(dependencyModuleAdditionalTracingConfigure => dependencyModuleAdditionalTracingConfigure(_))))
-                    .StartWithHost();
+                                    .ForEach(dependencyModuleAdditionalTracingConfigure => dependencyModuleAdditionalTracingConfigure(_))));
             }
         }
     }
@@ -310,7 +309,7 @@ public abstract class PlatformModule : IPlatformModule
         ExecuteRegisterByAssemblyOnlyOnce(
             assembly =>
             {
-                serviceCollection.AddMediatR(assembly);
+                serviceCollection.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
 
                 serviceCollection.Register<IPlatformCqrs, PlatformCqrs>();
                 serviceCollection.RegisterAllFromType(conventionalType: typeof(IPipelineBehavior<,>), assembly);

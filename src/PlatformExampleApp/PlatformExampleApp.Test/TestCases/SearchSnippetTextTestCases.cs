@@ -8,9 +8,9 @@ public class SearchSnippetTextTestCases : TestCase
 {
     public SearchSnippetTextTestCases(
         IWebDriverManager driverManager,
-        TestSettings settings,
-        WebDriverLazyInitializer driverLazyInitializer,
-        GlobalWebDriver globalWebDriver) : base(driverManager, settings, driverLazyInitializer, globalWebDriver)
+        AutomationTestSettings settings,
+        WebDriverLazyInitializer lazyWebDriver,
+        GlobalWebDriver globalLazyWebDriver) : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver)
     {
     }
 
@@ -19,7 +19,7 @@ public class SearchSnippetTextTestCases : TestCase
     public void WHEN_SearchSnippetText_BY_CopyFirstItemTextAsSearchText()
     {
         // GIVEN: loadedHomePage
-        var loadedHomePage = GlobalWebDriver.Value.NavigatePage<TextSnippetApp.HomePage>(Settings)
+        var loadedHomePage = GlobalLazyWebDriver.Value.NavigatePage<TextSnippetApp.HomePage>(Settings)
             .WaitInitLoadingDataSuccessWithFullPagingData(
                 maxWaitForLoadingDataSeconds: Util.Random.ReturnByChanceOrDefault(
                     percentChance: 20, // random 20 percent test failed waiting timeout error by only one second
@@ -36,7 +36,7 @@ public class SearchSnippetTextTestCases : TestCase
         // THEN: At least one item matched with the search test displayed
         loadedHomePage.WaitUntilAssertSuccess(
             waitForSuccess: _ => _.AssertHasMatchingItemsForSearchText(firstItemSnippetText),
-            stopIfFail: _ => _.AssertNoErrors());
+            stopWaitOnExceptionOrAssertFailed: _ => _.AssertNoErrors());
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public class SearchSnippetTextTestCases : TestCase
     public void WHEN_SearchSnippetText_BY_NotExistingItemSearchText()
     {
         // GIVEN: loadedHomePage
-        var loadedHomePage = GlobalWebDriver.Value.GetLoadingDataFinishedWithFullPagingDataHomePage(Settings);
+        var loadedHomePage = GlobalLazyWebDriver.Value.GetLoadingDataFinishedWithFullPagingDataHomePage(Settings);
 
         // WHEN: Search with random guid + "NotExistingItemSearchText"
         var searchText = "NotExistingItemSearchText" + Guid.NewGuid();
@@ -53,6 +53,6 @@ public class SearchSnippetTextTestCases : TestCase
         // THEN: No item is displayed
         loadedHomePage.WaitUntilAssertSuccess(
             waitForSuccess: _ => _.AssertNotHasMatchingItemsForSearchText(searchText),
-            stopIfFail: _ => _.AssertNoErrors());
+            stopWaitOnExceptionOrAssertFailed: _ => _.AssertNoErrors());
     }
 }

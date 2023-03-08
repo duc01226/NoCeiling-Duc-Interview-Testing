@@ -15,4 +15,10 @@ public class Startup : BaseStartup
             builder => builder.AddConfiguration(
                 PlatformConfigurationBuilder.GetConfigurationBuilder(fallbackAspCoreEnv: "Development").Build()));
     }
+
+    // Optional override to config WebDriverManager DriverOptions
+    public override void ConfigWebDriverOptions(IOptions options)
+    {
+        options.Timeouts().PageLoad = 1.Minutes();
+    }
 }

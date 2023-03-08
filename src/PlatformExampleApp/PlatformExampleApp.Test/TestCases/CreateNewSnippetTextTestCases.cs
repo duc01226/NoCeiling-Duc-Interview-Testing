@@ -8,9 +8,9 @@ public class CreateNewSnippetTextTestCases : TestCase
 {
     public CreateNewSnippetTextTestCases(
         IWebDriverManager driverManager,
-        TestSettings settings,
-        WebDriverLazyInitializer driverLazyInitializer,
-        GlobalWebDriver globalWebDriver) : base(driverManager, settings, driverLazyInitializer, globalWebDriver)
+        AutomationTestSettings settings,
+        WebDriverLazyInitializer lazyWebDriver,
+        GlobalWebDriver globalLazyWebDriver) : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver)
     {
     }
 
@@ -19,7 +19,7 @@ public class CreateNewSnippetTextTestCases : TestCase
     public void WHEN_CreateNewSnippetText_BY_DifferentValidUniqueName()
     {
         // GIVEN: loadedHomePage
-        var loadedHomePage = DriverInitializer.Value.NavigatePage<TextSnippetApp.HomePage>(Settings)
+        var loadedHomePage = LazyWebDriver.Value.NavigatePage<TextSnippetApp.HomePage>(Settings)
             .WaitInitLoadingDataSuccessWithFullPagingData(
                 maxWaitForLoadingDataSeconds: Util.Random.ReturnByChanceOrDefault(
                     percentChance: 20, // random 20 percent test failed waiting timeout error by only one second
@@ -35,6 +35,6 @@ public class CreateNewSnippetTextTestCases : TestCase
         loadedHomePage.DoSearchTextSnippet(newSnippetText)
             .WaitUntilAssertSuccess(
                 waitForSuccess: _ => _.AssertHasExactMatchItemForSearchText(newSnippetText),
-                stopIfFail: _ => _.AssertNoErrors());
+                stopWaitOnExceptionOrAssertFailed: _ => _.AssertNoErrors());
     }
 }

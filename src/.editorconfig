@@ -692,3 +692,12 @@ dotnet_diagnostic.S2092.severity = none
 
 # S2436: Types and methods should not have too many generic parameters
 dotnet_diagnostic.S2436.severity = none
+
+# S2094: Remove empty class
+dotnet_diagnostic.S2094.severity = none
+
+# S1133: Remove deprecated code some day
+dotnet_diagnostic.S1133.severity = warning
+
+# S3878: Remove array creation and simply pass element for params parameter
+dotnet_diagnostic.S3878.severity = suggestion

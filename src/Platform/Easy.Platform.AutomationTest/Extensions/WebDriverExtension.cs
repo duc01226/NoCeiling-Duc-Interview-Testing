@@ -11,7 +11,7 @@ public static class WebDriverExtension
         TSettings settings,
         Dictionary<string, string?>? queryParams = null)
         where TPage : class, IPage<TPage, TSettings>
-        where TSettings : TestSettings
+        where TSettings : AutomationTestSettings
     {
         var page = Util.CreateInstance<TPage>(webDriver, settings)
             .With(_ => _.QueryParams = queryParams);
@@ -25,7 +25,7 @@ public static class WebDriverExtension
         this IWebDriver webDriver,
         TSettings settings)
         where TPage : class, IPage<TPage, TSettings>
-        where TSettings : TestSettings
+        where TSettings : AutomationTestSettings
     {
         var page = Util.CreateInstance<TPage>(webDriver, settings)
             .With(page => page.QueryParams = webDriver.Url.ToUri().QueryParams());
@@ -35,19 +35,19 @@ public static class WebDriverExtension
 
     public static TPage NavigatePage<TPage>(
         this IWebDriver webDriver,
-        TestSettings settings,
+        AutomationTestSettings settings,
         Dictionary<string, string?>? queryParams = null)
-        where TPage : class, IPage<TPage, TestSettings>
+        where TPage : class, IPage<TPage, AutomationTestSettings>
     {
-        return NavigatePage<TPage, TestSettings>(webDriver, settings, queryParams);
+        return NavigatePage<TPage, AutomationTestSettings>(webDriver, settings, queryParams);
     }
 
     public static TPage? TryGetCurrentActivePage<TPage>(
         this IWebDriver webDriver,
-        TestSettings settings)
-        where TPage : class, IPage<TPage, TestSettings>
+        AutomationTestSettings settings)
+        where TPage : class, IPage<TPage, AutomationTestSettings>
     {
-        return TryGetCurrentActivePage<TPage, TestSettings>(webDriver, settings);
+        return TryGetCurrentActivePage<TPage, AutomationTestSettings>(webDriver, settings);
     }
 
     public static IWebElement FindElement(this IWebDriver webDriver, string cssSelector)

@@ -590,7 +590,7 @@ public static partial class Util
         public static T WaitUntil<T, TStopIfFailResult>(
             T t,
             Func<bool> condition,
-            Func<T, TStopIfFailResult> stopIfFail,
+            Func<T, TStopIfFailResult> stopWaitOnExceptionOrAssertFailed,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {
@@ -600,7 +600,7 @@ public static partial class Util
             Thread.Sleep((int)(DefaultMinimumDelayWaitSeconds * 1000));
             while (!condition())
             {
-                stopIfFail(t);
+                stopWaitOnExceptionOrAssertFailed(t);
 
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     Thread.Sleep((int)(DefaultMinimumDelayWaitSeconds * 1000));
@@ -617,7 +617,7 @@ public static partial class Util
             T t,
             Func<T, TResult> getResult,
             Func<TResult, bool> condition,
-            Func<T, TStopIfFailResult> stopIfFail,
+            Func<T, TStopIfFailResult> stopWaitOnExceptionOrAssertFailed,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {
@@ -628,7 +628,7 @@ public static partial class Util
 
             while (!condition(getResult(t)))
             {
-                stopIfFail(t);
+                stopWaitOnExceptionOrAssertFailed(t);
 
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     Thread.Sleep((int)(DefaultMinimumDelayWaitSeconds * 1000));
@@ -652,7 +652,7 @@ public static partial class Util
         public static TResult WaitUntilNoException<T, TResult, TStopIfFailResult>(
             T t,
             Func<T, TResult> getResult,
-            Func<T, TStopIfFailResult> stopIfFail,
+            Func<T, TStopIfFailResult> stopWaitOnExceptionOrAssertFailed,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds)
         {
             var startWaitTime = DateTime.UtcNow;
@@ -662,7 +662,7 @@ public static partial class Util
 
             while (true)
             {
-                stopIfFail(t);
+                stopWaitOnExceptionOrAssertFailed(t);
 
                 try
                 {
