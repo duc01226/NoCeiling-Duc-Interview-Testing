@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Easy.Platform.Common.Cqrs;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.UnitOfWork;
 
@@ -265,33 +266,20 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default);
 
-    protected virtual async Task ExecuteAutoOpenUowUsingOnceTime(
-        Func<IQueryable<TEntity>, Task> executeAsync,
-        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
-    {
-        if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
-            using (var uow = UnitOfWorkManager.CreateNewUow())
-            {
-                await executeAsync(GetQuery(uow, loadRelatedEntities));
-            }
-        else
-            await executeAsync(GetQuery(UnitOfWorkManager.CurrentActiveUow(), loadRelatedEntities));
-    }
-
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(
         Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> readDataFn,
         Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
-            using (var uow = UnitOfWorkManager.CreateNewUow())
-            {
-                var result = await readDataFn(uow, GetQuery(uow, loadRelatedEntities));
+        {
+            var uow = UnitOfWorkManager.CreateNewUow();
 
-                if (result is IQueryable)
-                    throw new Exception("Do not allow to return out IQueryable. Please as Enumerable or ToList in the query builder");
+            var result = await readDataFn(uow, GetQuery(uow, loadRelatedEntities));
 
-                return result;
-            }
+            if (!DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result)) uow.Dispose();
+
+            return result;
+        }
 
         return await readDataFn(
             UnitOfWorkManager.CurrentActiveUow(),
@@ -302,32 +290,28 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Func<IUnitOfWork, IQueryable<TEntity>, TResult> readDataFn,
         Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
-            using (var uow = UnitOfWorkManager.CreateNewUow())
-            {
-                var result = readDataFn(uow, GetQuery(uow, loadRelatedEntities));
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(ReadDataFnAsync, loadRelatedEntities);
 
-                if (result is IQueryable)
-                    throw new Exception("Do not allow to return out IQueryable. Please as Enumerable or ToList in the query builder");
-
-                return result;
-            }
-
-        return readDataFn(
-            UnitOfWorkManager.CurrentActiveUow(),
-            GetQuery(UnitOfWorkManager.CurrentActiveUow(), loadRelatedEntities));
+        Task<TResult> ReadDataFnAsync(IUnitOfWork unitOfWork, IQueryable<TEntity> entities)
+        {
+            return readDataFn(unitOfWork, entities).AsTask();
+        }
     }
 
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForWrite<TResult>(
         Func<IUnitOfWork, Task<TResult>> action)
     {
         if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
-            using (var uow = UnitOfWorkManager.CreateNewUow())
-            {
-                var result = await action(uow);
-                await uow.CompleteAsync();
-                return result;
-            }
+        {
+            var uow = UnitOfWorkManager.CreateNewUow();
+
+            var result = await action(uow);
+            await uow.CompleteAsync();
+
+            if (!DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result)) uow.Dispose();
+
+            return result;
+        }
 
         return await action(UnitOfWorkManager.CurrentActiveUow());
     }
@@ -335,12 +319,24 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     protected async Task ExecuteAutoOpenUowUsingOnceTimeForWrite(
         Func<IUnitOfWork, Task> action)
     {
-        if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
-            using (var uow = UnitOfWorkManager.CreateNewUow())
-            {
-                await action(uow);
-                await uow.CompleteAsync();
-            }
-        else await action(UnitOfWorkManager.CurrentActiveUow());
+        await ExecuteAutoOpenUowUsingOnceTimeForWrite(ActionWithResult);
+
+        async Task<object> ActionWithResult(IUnitOfWork unitOfWork)
+        {
+            await action(unitOfWork);
+
+            return null;
+        }
+    }
+
+    private static bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result)
+    {
+        return result != null &&
+               (result.GetType().IsAssignableToGenericType(typeof(IQueryable<>)) ||
+                (result.GetType().IsAssignableToGenericType(typeof(IEnumerable<>)) &&
+                 !(result.GetType().IsAssignableToGenericType(typeof(IList<>)) ||
+                   result.GetType().IsArray ||
+                   result.GetType().IsAssignableToGenericType(typeof(IDictionary<,>)) ||
+                   result.GetType().IsAssignableToGenericType(typeof(ISet<>)))));
     }
 }

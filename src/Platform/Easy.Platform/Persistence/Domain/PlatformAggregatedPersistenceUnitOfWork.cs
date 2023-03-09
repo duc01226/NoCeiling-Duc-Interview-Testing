@@ -25,8 +25,6 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
         this.associatedServiceScope = associatedServiceScope;
     }
 
-    public Guid Id { get; } = Guid.NewGuid();
-
     public override bool IsNoTransactionUow()
     {
         return InnerUnitOfWorks.All(p => p.IsNoTransactionUow());

@@ -47,11 +47,6 @@ public readonly struct Option<T> : IEquatable<Option.None>, IEquatable<Option<T>
         return new Option<T>(some.Value);
     }
 
-    public static implicit operator Option<T>(T value)
-    {
-        return value == null ? F.None : F.Some(value);
-    }
-
     public static bool operator ==(Option<T> @this, Option<T> other)
     {
         return @this.Equals(other);
@@ -191,5 +186,15 @@ public static class OptionExt
     public static Option<T> Lookup<TK, T>(this IDictionary<TK, T> dict, TK key)
     {
         return dict.TryGetValue(key, out var value) ? F.Some(value) : F.None;
+    }
+
+    public static Option<T> AsOption<T>(this T value)
+    {
+        return value == null ? F.None : F.Some(value);
+    }
+
+    public static Option<T> AsOption<T>(this T? value) where T : struct
+    {
+        return value == null ? F.None : F.Some(value.Value);
     }
 }

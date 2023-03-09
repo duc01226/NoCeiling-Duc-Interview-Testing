@@ -30,7 +30,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
 
     public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        return GetTable(uow).Pipe(p => loadRelatedEntities.ForEach(loadWithEntityPropPath => p.Include(loadWithEntityPropPath))).AsNoTracking().AsQueryable();
+        return GetTable(uow).Pipe(p => loadRelatedEntities?.ForEach(loadWithEntityPropPath => p.Include(loadWithEntityPropPath))).AsNoTracking().AsQueryable();
     }
 
     public override Task<List<TSource>> ToListAsync<TSource>(

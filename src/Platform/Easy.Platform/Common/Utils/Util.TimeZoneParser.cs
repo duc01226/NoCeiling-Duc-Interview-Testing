@@ -4,13 +4,13 @@ public static partial class Util
 {
     public static class TimeZoneParser
     {
-        public static TimeZoneInfo? TryGetTimeZoneById(string timezoneString)
+        public static TimeZoneInfo TryGetTimeZoneById(string timezoneString)
         {
             try
             {
                 return TimeZoneInfo.FindSystemTimeZoneById(timezoneString);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return null;
             }

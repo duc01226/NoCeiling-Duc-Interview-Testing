@@ -56,7 +56,7 @@ public static class DateTimeExtension
         return dateTime.ToUniversalTime().AddHours(hours);
     }
 
-    public static DateTime ConvertToTimeZone(this DateTime dateTime, TimeZoneInfo? timeZoneInfo)
+    public static DateTime ConvertToTimeZone(this DateTime dateTime, TimeZoneInfo timeZoneInfo)
     {
         if (timeZoneInfo is null)
             return dateTime;
@@ -64,7 +64,7 @@ public static class DateTimeExtension
         return TimeZoneInfo.ConvertTimeFromUtc(dateTime.ToUniversalTime(), timeZoneInfo);
     }
 
-    public static DateTime ConvertToTimeZone(this DateTime dateTime, string? ianaTimeZone)
+    public static DateTime ConvertToTimeZone(this DateTime dateTime, string ianaTimeZone)
     {
         if (ianaTimeZone is null || !TZConvert.TryGetTimeZoneInfo(ianaTimeZone, out var timeZoneInfo))
             return dateTime;

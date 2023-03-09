@@ -6,20 +6,21 @@ public static class TypeExtension
 {
     public static bool IsAssignableToGenericType(this Type givenType, Type genericType)
     {
-        var interfaceTypes = givenType.GetInterfaces();
+        while (true)
+        {
+            var givenInterfaceTypes = givenType.GetInterfaces();
 
-        foreach (var it in interfaceTypes)
-            if (it.IsGenericType && it.GetGenericTypeDefinition() == genericType)
-                return true;
+            foreach (var givenInterfaceType in givenInterfaceTypes)
+                if (givenInterfaceType.IsGenericType && givenInterfaceType.GetGenericTypeDefinition() == genericType)
+                    return true;
 
-        if (givenType.IsGenericType && givenType.GetGenericTypeDefinition() == genericType)
-            return true;
+            if (givenType.IsGenericType && givenType.GetGenericTypeDefinition() == genericType) return true;
 
-        var baseType = givenType.BaseType;
-        if (baseType == null)
-            return false;
+            var baseType = givenType.BaseType;
+            if (baseType == null) return false;
 
-        return IsAssignableToGenericType(baseType, genericType);
+            givenType = baseType;
+        }
     }
 
     public static string GetNameOrGenericTypeName(this Type t)
@@ -85,21 +86,21 @@ public static class TypeExtension
 
     public static Type FindMatchedGenericType(this Type givenType, Type genericType)
     {
-        var interfaceTypes = givenType.GetInterfaces();
+        while (true)
+        {
+            var givenInterfaceTypes = givenType.GetInterfaces();
 
-        foreach (var interfaceType in interfaceTypes)
-            if (interfaceType.IsGenericType &&
-                interfaceType.GetGenericTypeDefinition() == genericType.GetGenericTypeDefinition())
-                return interfaceType;
+            foreach (var givenInterfaceType in givenInterfaceTypes)
+                if (givenInterfaceType.IsGenericType && givenInterfaceType.GetGenericTypeDefinition() == genericType.GetGenericTypeDefinition())
+                    return givenInterfaceType;
 
-        if (givenType.IsGenericType && givenType.GetGenericTypeDefinition() == genericType.GetGenericTypeDefinition())
-            return givenType;
+            if (givenType.IsGenericType && givenType.GetGenericTypeDefinition() == genericType.GetGenericTypeDefinition()) return givenType;
 
-        var baseType = givenType.BaseType;
-        if (baseType == null)
-            return null;
+            var baseType = givenType.BaseType;
+            if (baseType == null) return null;
 
-        return FindMatchedGenericType(baseType, genericType);
+            givenType = baseType;
+        }
     }
 
     public static object GetDefaultValue(this Type type)
