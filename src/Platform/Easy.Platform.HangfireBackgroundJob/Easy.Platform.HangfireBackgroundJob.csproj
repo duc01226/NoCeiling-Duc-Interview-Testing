@@ -12,7 +12,7 @@
     <PackageReference Include="Hangfire.AspNetCore" Version="1.7.33" />
     <PackageReference Include="Hangfire.Core" Version="1.7.33" />
     <PackageReference Include="Hangfire.InMemory" Version="0.3.6" />
-    <PackageReference Include="Hangfire.Mongo" Version="1.9.2" />
+    <PackageReference Include="Hangfire.Mongo" Version="1.9.1" />
     <PackageReference Include="Hangfire.SqlServer" Version="1.7.33" />
     <PackageReference Include="Hangfire.PostgreSql" Version="1.9.10" />
     <PackageReference Include="SonarAnalyzer.CSharp" Version="8.54.0.64047">
