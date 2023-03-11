@@ -38,9 +38,13 @@ public class WebDriverManager : IWebDriverManager
 
     public IWebDriver CreateWebDriver()
     {
-        return Settings.UseRemoteWebDriver
-            ? CreateRemoteWebDriver().WithIf(ConfigWebDriverOptions != null, p => ConfigWebDriverOptions!(p.Manage()))
-            : CreateLocalMachineWebDriver().WithIf(ConfigWebDriverOptions != null, p => ConfigWebDriverOptions!(p.Manage()));
+        var initialWebDriver = Settings.UseRemoteWebDriver
+            ? CreateRemoteWebDriver()
+            : CreateLocalMachineWebDriver();
+
+        return initialWebDriver
+            .WithIf(Settings.PageLoadTimeoutSeconds > 0, p => p.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(Settings.PageLoadTimeoutSeconds!.Value))
+            .WithIf(ConfigWebDriverOptions != null, p => ConfigWebDriverOptions!(p.Manage()));
     }
 
     public IWebDriver CreateRemoteWebDriver()

@@ -7,8 +7,8 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
 {
     public HtmlTableUiComponent(
         IWebDriver webDriver,
-        Func<IWebElement>? fixedRootElement,
-        IUiComponent? parent = null) : base(webDriver, fixedRootElement, parent)
+        Func<IWebElement>? directReferenceRootElement,
+        IUiComponent? parent = null) : base(webDriver, directReferenceRootElement, parent)
     {
         Columns = ReadColumns();
         Rows = ReadRows();
@@ -16,8 +16,8 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
 
     public HtmlTableUiComponent(
         IWebDriver webDriver,
-        string rootElementSelector,
-        IUiComponent? parent = null) : base(webDriver, rootElementSelector, parent)
+        string rootElementClassSelector,
+        IUiComponent? parent = null) : base(webDriver, rootElementClassSelector, parent)
     {
         Columns = ReadColumns();
         Rows = ReadRows();
@@ -33,7 +33,7 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
             : RootElement!.FindElements(By.XPath("./tr")).ToList();
 
         return rows
-            .Select((rowElement, rowIndex) => new Row(WebDriver, rowIndex, Columns, fixedRootElement: () => rowElement, this))
+            .Select((rowElement, rowIndex) => new Row(WebDriver, rowIndex, Columns, directReferenceRootElement: () => rowElement, this))
             .ToList();
     }
 
@@ -63,7 +63,10 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
 
     public class Cell : UiComponent<Cell>
     {
-        public Cell(IWebDriver webDriver, Func<IWebElement>? fixedRootElement, IUiComponent? parent = null) : base(webDriver, fixedRootElement, parent)
+        public Cell(IWebDriver webDriver, Func<IWebElement>? directReferenceRootElement, IUiComponent? parent = null) : base(
+            webDriver,
+            directReferenceRootElement,
+            parent)
         {
         }
 
@@ -79,8 +82,8 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
             IWebDriver webDriver,
             int rowIndex,
             List<IWebElement> columns,
-            Func<IWebElement>? fixedRootElement,
-            IUiComponent? parent = null) : base(webDriver, fixedRootElement, parent)
+            Func<IWebElement>? directReferenceRootElement,
+            IUiComponent? parent = null) : base(webDriver, directReferenceRootElement, parent)
         {
             RowIndex = rowIndex;
             Cells = ReadCells(columns);
@@ -90,8 +93,8 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
             IWebDriver webDriver,
             int rowIndex,
             List<IWebElement> columns,
-            string rootElementSelector,
-            IUiComponent? parent = null) : base(webDriver, rootElementSelector, parent)
+            string rootElementClassSelector,
+            IUiComponent? parent = null) : base(webDriver, rootElementClassSelector, parent)
         {
             RowIndex = rowIndex;
             Cells = ReadCells(columns);

@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Repositories;
@@ -6,6 +7,7 @@ using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.MongoDB.Domain.UnitOfWork;
 using Easy.Platform.Persistence.Domain;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Misc;
 using MongoDB.Driver.Linq;
 
 namespace Easy.Platform.MongoDB.Domain.Repositories;
@@ -38,7 +40,28 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default)
     {
-        return source.As<IMongoQueryable<TSource>>().ToListAsync(cancellationToken);
+        // Use ToAsyncEnumerable behind the scene to support true enumerable like ef-core. Then can select anything and it will work.
+        // Default as Enumerable from IQueryable still like Queryable which cause error query could not be translated for free select using constructor map for example
+        return ToAsyncEnumerable(source.As<IMongoQueryable<TSource>>(), cancellationToken).ToListAsync(cancellationToken).AsTask();
+    }
+
+    public override async IAsyncEnumerable<TSource> ToAsyncEnumerable<TSource>(
+        IQueryable<TSource> source,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        using (var cursor = await source.As<IMongoQueryable<TSource>>().ToCursorAsync(cancellationToken).ConfigureAwait(false))
+        {
+            Ensure.IsNotNull(cursor, nameof(source));
+            while (await cursor.MoveNextAsync(cancellationToken))
+            {
+                foreach (var item in cursor.Current)
+                {
+                    yield return item;
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+        }
     }
 
     public override Task<TSource> FirstOrDefaultAsync<TSource>(

@@ -12,11 +12,18 @@ namespace PlatformExampleApp.TextSnippet.Application.UseCaseQueries;
 /// <summary>
 /// // Test get very big data stream to see data downloading streaming by return IEnumerable. Return data as stream using IEnumerable do not load all data into memory
 /// </summary>
-public class TestGetAllDataAsStreamQuery : PlatformCqrsQuery<IEnumerable<TextSnippetEntityDto>>
+public class TestGetAllDataAsStreamQuery : PlatformCqrsQuery<TestGetAllDataAsStreamQueryResult>
 {
 }
 
-public class TestGetAllDataAsStreamQueryHandler : PlatformCqrsQueryApplicationHandler<TestGetAllDataAsStreamQuery, IEnumerable<TextSnippetEntityDto>>
+public class TestGetAllDataAsStreamQueryResult
+{
+    public IAsyncEnumerable<TextSnippetEntityDto> AsyncEnumerableResult { get; set; }
+    public IEnumerable<TextSnippetEntityDto> EnumerableResult { get; set; }
+    public IEnumerable<TextSnippetEntityDto> EnumerableResultFromAsyncEnumerable { get; set; }
+}
+
+public class TestGetAllDataAsStreamQueryHandler : PlatformCqrsQueryApplicationHandler<TestGetAllDataAsStreamQuery, TestGetAllDataAsStreamQueryResult>
 {
     private readonly ITextSnippetRepository<TextSnippetEntity> textSnippetRepository;
 
@@ -29,25 +36,42 @@ public class TestGetAllDataAsStreamQueryHandler : PlatformCqrsQueryApplicationHa
     }
 
     [SuppressMessage("Minor Code Smell", "S1481:Unused local variables should be removed", Justification = "<Pending>")]
-    protected override async Task<IEnumerable<TextSnippetEntityDto>> HandleAsync(TestGetAllDataAsStreamQuery request, CancellationToken cancellationToken)
+    protected override async Task<TestGetAllDataAsStreamQueryResult> HandleAsync(TestGetAllDataAsStreamQuery request, CancellationToken cancellationToken)
     {
-        var result = Enumerable.Range(0, 10000).Aggregate(GetDataFn(), (items, i) => items.Concat(GetDataFn()));
+        // Test get very big data stream to see data downloading streaming by return IAsyncEnumerable.
+        // Return data as stream using IAsyncEnumerable do not load all data or sub list of data into memory, it stream each item async
+        var asyncEnumerableResult = Enumerable.Range(0, 10000)
+            .SelectManyAsync(
+                p => textSnippetRepository.GetAllAsyncEnumerable(queryBuilder: query => query).Select(p => new TextSnippetEntityDto(p)));
 
-        // GetGlobalUowQuery use it's own UOW. Could call it in parallel with others
-        // normal get data. Couldn't run more than two GetGlobalUowQuery().ToList() or First() get data in parallel
-        // because they run in on the same uow
+        // Test use enumerable to see the memory different
+        var enumerableResult = GetEnumerableResult();
+        var enumerableResultFromAsyncEnumerable = GetEnumerableResultFromAsyncEnumerable();
+
         var (demoOtherNormalParallelRequestUsingOnceTimeUow1, demoOtherNormalParallelRequestUsingOnceTimeUow2, demoOtherNormalParallelRequestUsingOnceTimeUow3) =
             await Util.TaskRunner.WhenAll(
                 textSnippetRepository.CountAsync(cancellationToken: cancellationToken),
                 textSnippetRepository.CountAsync(cancellationToken: cancellationToken),
-                textSnippetRepository.FirstOrDefaultAsync(textSnippetRepository.GetGlobalUowQuery(), cancellationToken));
+                textSnippetRepository.FirstOrDefaultAsync(cancellationToken: cancellationToken));
 
-        return result;
-
-        // Test get very big data stream to see data downloading streaming by return IEnumerable. Return data as stream using IEnumerable do not load all data into memory
-        IEnumerable<TextSnippetEntityDto> GetDataFn()
+        return new TestGetAllDataAsStreamQueryResult()
         {
-            return textSnippetRepository.GetGlobalUowQuery().AsEnumerable().Select(p => new TextSnippetEntityDto(p));
-        }
+            AsyncEnumerableResult = asyncEnumerableResult,
+            EnumerableResult = enumerableResult,
+            EnumerableResultFromAsyncEnumerable = enumerableResultFromAsyncEnumerable
+        };
+    }
+
+    private IEnumerable<TextSnippetEntityDto> GetEnumerableResult()
+    {
+        return Enumerable.Range(0, 10000).SelectMany(i => textSnippetRepository.GetAllEnumerable().Select(p => new TextSnippetEntityDto(p)));
+    }
+
+    private IEnumerable<TextSnippetEntityDto> GetEnumerableResultFromAsyncEnumerable()
+    {
+        return Enumerable.Range(0, 10000)
+            .SelectManyAsync(
+                p => textSnippetRepository.GetAllAsyncEnumerable(queryBuilder: query => query).Select(p => new TextSnippetEntityDto(p)))
+            .ToEnumerable();
     }
 }

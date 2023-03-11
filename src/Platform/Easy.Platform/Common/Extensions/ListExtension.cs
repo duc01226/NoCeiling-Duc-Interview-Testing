@@ -337,4 +337,17 @@ public static class ListExtension
     {
         return source.SelectMany(p => selector(p) ?? new List<TResult>());
     }
+
+    public static async IAsyncEnumerable<TResult> SelectManyAsync<TSource, TResult>(
+        this IEnumerable<TSource> source,
+        Func<TSource, IAsyncEnumerable<TResult>> selector)
+    {
+        foreach (var i in source)
+        {
+            await foreach (var item in selector(i))
+            {
+                yield return item;
+            }
+        }
+    }
 }

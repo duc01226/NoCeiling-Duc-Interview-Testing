@@ -331,15 +331,15 @@ public static partial class Util
         /// <param name="onBeforeThrowFinalExceptionFn"></param>
         /// <param name="onRetry">onRetry: (exception,timeSpan,currentRetry,context)</param>
         /// <returns></returns>
-        public static Task WaitRetryThrowFinalExceptionAsync(
+        public static Task WaitRetryThrowFinalExceptionAsync<TException>(
             Func<Task> executeFunc,
             Func<int, TimeSpan> sleepDurationProvider = null,
             int retryCount = 1,
             Action<Exception> onBeforeThrowFinalExceptionFn = null,
-            Action<Exception, TimeSpan, int, Context> onRetry = null)
+            Action<Exception, TimeSpan, int, Context> onRetry = null) where TException : Exception
         {
             return Policy
-                .Handle<Exception>()
+                .Handle<TException>()
                 .WaitAndRetryAsync(
                     retryCount,
                     sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultMinimumDelayWaitSeconds)),
@@ -347,6 +347,47 @@ public static partial class Util
                 .ExecuteAndThrowFinalExceptionAsync(
                     executeFunc,
                     onBeforeThrowFinalExceptionFn ?? (exception => { }));
+        }
+
+        /// <inheritdoc cref="WaitRetryThrowFinalExceptionAsync{TException}(Func{Task},Func{int,TimeSpan},int,Action{Exception},Action{Exception,TimeSpan,int,Context})" />
+        public static Task<T> WaitRetryThrowFinalExceptionAsync<T, TException>(
+            Func<Task<T>> executeFunc,
+            Func<int, TimeSpan> sleepDurationProvider = null,
+            int retryCount = 1,
+            Action<Exception> onBeforeThrowFinalExceptionFn = null,
+            Action<Exception, TimeSpan, int, Context> onRetry = null) where TException : Exception
+        {
+            return Policy
+                .Handle<TException>()
+                .WaitAndRetryAsync(
+                    retryCount,
+                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultMinimumDelayWaitSeconds)),
+                    onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
+                .ExecuteAndThrowFinalExceptionAsync(
+                    executeFunc,
+                    onBeforeThrowFinalExceptionFn ?? (exception => { }));
+        }
+
+        /// <inheritdoc cref="WaitRetryThrowFinalExceptionAsync{TException}(Func{Task},Func{int,TimeSpan},int,Action{Exception},Action{Exception,TimeSpan,int,Context})" />
+        public static Task WaitRetryThrowFinalExceptionAsync(
+            Func<Task> executeFunc,
+            Func<int, TimeSpan> sleepDurationProvider = null,
+            int retryCount = 1,
+            Action<Exception> onBeforeThrowFinalExceptionFn = null,
+            Action<Exception, TimeSpan, int, Context> onRetry = null)
+        {
+            return WaitRetryThrowFinalExceptionAsync<Exception>(executeFunc, sleepDurationProvider, retryCount, onBeforeThrowFinalExceptionFn, onRetry);
+        }
+
+        /// <inheritdoc cref="WaitRetryThrowFinalExceptionAsync{TException}(Func{Task},Func{int,TimeSpan},int,Action{Exception},Action{Exception,TimeSpan,int,Context})" />
+        public static Task<T> WaitRetryThrowFinalExceptionAsync<T>(
+            Func<Task<T>> executeFunc,
+            Func<int, TimeSpan> sleepDurationProvider = null,
+            int retryCount = 1,
+            Action<Exception> onBeforeThrowFinalExceptionFn = null,
+            Action<Exception, TimeSpan, int, Context> onRetry = null)
+        {
+            return WaitRetryThrowFinalExceptionAsync<T, Exception>(executeFunc, sleepDurationProvider, retryCount, onBeforeThrowFinalExceptionFn, onRetry);
         }
 
         public static Task<PolicyResult> WaitRetryAsync(
@@ -363,25 +404,6 @@ public static partial class Util
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndCaptureAsync(
                     executeFunc);
-        }
-
-        /// <inheritdoc cref="WaitRetryThrowFinalExceptionAsync" />
-        public static Task<T> WaitRetryThrowFinalExceptionAsync<T>(
-            Func<Task<T>> executeFunc,
-            Func<int, TimeSpan> sleepDurationProvider = null,
-            int retryCount = 1,
-            Action<Exception> onBeforeThrowFinalExceptionFn = null,
-            Action<Exception, TimeSpan, int, Context> onRetry = null)
-        {
-            return Policy
-                .Handle<Exception>()
-                .WaitAndRetryAsync(
-                    retryCount,
-                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultMinimumDelayWaitSeconds)),
-                    onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
-                .ExecuteAndThrowFinalExceptionAsync(
-                    executeFunc,
-                    onBeforeThrowFinalExceptionFn ?? (exception => { }));
         }
 
         public static Task<PolicyResult<T>> WaitRetryAsync<T>(
@@ -590,7 +612,7 @@ public static partial class Util
         public static T WaitUntil<T, TStopIfFailResult>(
             T t,
             Func<bool> condition,
-            Func<T, TStopIfFailResult> stopWaitOnExceptionOrAssertFailed,
+            Func<T, TStopIfFailResult> stopWaitOnAssertError,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {
@@ -600,7 +622,7 @@ public static partial class Util
             Thread.Sleep((int)(DefaultMinimumDelayWaitSeconds * 1000));
             while (!condition())
             {
-                stopWaitOnExceptionOrAssertFailed(t);
+                stopWaitOnAssertError(t);
 
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     Thread.Sleep((int)(DefaultMinimumDelayWaitSeconds * 1000));
@@ -617,7 +639,7 @@ public static partial class Util
             T t,
             Func<T, TResult> getResult,
             Func<TResult, bool> condition,
-            Func<T, TStopIfFailResult> stopWaitOnExceptionOrAssertFailed,
+            Func<T, TStopIfFailResult> stopWaitOnAssertError,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {
@@ -628,7 +650,7 @@ public static partial class Util
 
             while (!condition(getResult(t)))
             {
-                stopWaitOnExceptionOrAssertFailed(t);
+                stopWaitOnAssertError(t);
 
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     Thread.Sleep((int)(DefaultMinimumDelayWaitSeconds * 1000));
@@ -652,7 +674,7 @@ public static partial class Util
         public static TResult WaitUntilNoException<T, TResult, TStopIfFailResult>(
             T t,
             Func<T, TResult> getResult,
-            Func<T, TStopIfFailResult> stopWaitOnExceptionOrAssertFailed,
+            Func<T, TStopIfFailResult> stopWaitOnAssertError,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds)
         {
             var startWaitTime = DateTime.UtcNow;
@@ -662,7 +684,7 @@ public static partial class Util
 
             while (true)
             {
-                stopWaitOnExceptionOrAssertFailed(t);
+                stopWaitOnAssertError(t);
 
                 try
                 {

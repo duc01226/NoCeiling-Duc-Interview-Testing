@@ -19,22 +19,32 @@
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5001"
     },
-    "PlatformExampleApp.TextSnippet.Api.UseMongoDb": {
-      "commandName": "Project",
-      "launchBrowser": true,
-      "launchUrl": "swagger",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development.UseMongoDb"
-      },
-      "dotnetRunMessages": true,
-      "applicationUrl": "http://localhost:5001"
-    },
     "PlatformExampleApp.TextSnippet.Api.UsePostgres": {
       "commandName": "Project",
       "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development.UsePostgres"
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl": "http://localhost:5001"
+    },
+    "PlatformExampleApp.TextSnippet.Api.UseSql": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development.UseSql"
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl": "http://localhost:5001"
+    },
+    "PlatformExampleApp.TextSnippet.Api.UseMongoDb": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development.UseMongoDb"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5001"

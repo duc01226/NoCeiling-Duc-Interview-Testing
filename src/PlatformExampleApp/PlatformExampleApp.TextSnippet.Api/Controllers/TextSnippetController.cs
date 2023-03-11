@@ -1,5 +1,6 @@
 using Easy.Platform.AspNetCore.Controllers;
 using Easy.Platform.Common.Cqrs;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Infrastructures.Caching;
 using Microsoft.AspNetCore.Mvc;
@@ -112,13 +113,36 @@ public class TextSnippetController : PlatformBaseController
     }
 
     /// <summary>
-    /// // Test get very big data stream to see data downloading streaming by return IEnumerable. Return data as stream using IEnumerable do not load all data into memory
+    /// Test get very big data stream to see data downloading streaming by return IAsyncEnumerable. Return data as stream using IAsyncEnumerable do not load all data into memory
     /// </summary>
     [HttpGet]
-    [Route("testGetAllDataAsStream")]
-    public async Task<IEnumerable<TextSnippetEntityDto>> TestGetAllDataAsStream()
+    [Route("testGetAllDataAsIAsyncEnumerableStream")]
+    public async Task<IActionResult> TestGetAllDataAsIAsyncEnumerableStream()
     {
-        return await Cqrs.SendQuery(new TestGetAllDataAsStreamQuery());
+        var result = await Cqrs.SendQuery(new TestGetAllDataAsStreamQuery()).Then(p => p.AsyncEnumerableResult);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// // Test get very big data as IEnumerable to see memory issues compared to IAsyncEnumerable
+    /// </summary>
+    [HttpGet]
+    [Route("testGetAllDataAsIEnumerableStream")]
+    public async Task<IActionResult> TestGetAllDataAsIEnumerableStream()
+    {
+        var result = await Cqrs.SendQuery(new TestGetAllDataAsStreamQuery()).Then(p => p.EnumerableResult);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// // Test get very big data as IEnumerable to see memory issues compared to IAsyncEnumerable
+    /// </summary>
+    [HttpGet]
+    [Route("testGetAllDataAsIEnumerableFromAsyncEnumerableStream")]
+    public async Task<IActionResult> TestGetAllDataAsIEnumerableFromAsyncEnumerableStream()
+    {
+        var result = await Cqrs.SendQuery(new TestGetAllDataAsStreamQuery()).Then(p => p.EnumerableResultFromAsyncEnumerable);
+        return Ok(result);
     }
 
     [HttpPost]

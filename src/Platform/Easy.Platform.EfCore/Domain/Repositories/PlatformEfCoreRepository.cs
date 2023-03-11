@@ -30,7 +30,12 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
 
     public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        return GetTable(uow).Pipe(p => loadRelatedEntities?.ForEach(loadWithEntityPropPath => p.Include(loadWithEntityPropPath))).AsNoTracking().AsQueryable();
+        return GetTable(uow)
+            .PipeIf(
+                loadRelatedEntities.Any(),
+                p => loadRelatedEntities.Aggregate(p.AsQueryable(), (query, loadRelatedEntityFn) => query.Include(loadRelatedEntityFn)))
+            .AsQueryable()
+            .AsNoTracking();
     }
 
     public override Task<List<TSource>> ToListAsync<TSource>(
@@ -38,6 +43,11 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         CancellationToken cancellationToken = default)
     {
         return source.ToListAsync(cancellationToken);
+    }
+
+    public override IAsyncEnumerable<TSource> ToAsyncEnumerable<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    {
+        return source.AsAsyncEnumerable();
     }
 
     public override Task<TSource> FirstOrDefaultAsync<TSource>(

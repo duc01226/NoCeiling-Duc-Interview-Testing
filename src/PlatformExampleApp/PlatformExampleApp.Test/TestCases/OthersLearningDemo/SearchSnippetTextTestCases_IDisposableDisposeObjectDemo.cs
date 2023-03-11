@@ -49,7 +49,7 @@ public sealed class SearchSnippetTextTestCases_IDisposableDisposeObjectDemo : Te
         // THEN: At least one item matched with the search test displayed
         loadedHomePage.WaitUntilAssertSuccess(
             waitForSuccess: _ => _.AssertHasMatchingItemsForSearchText(firstItemSnippetText),
-            stopWaitOnExceptionOrAssertFailed: _ => _.AssertNoErrors());
+            stopWaitOnAssertError: _ => _.AssertNoErrors());
     }
 
     [Fact]
@@ -66,6 +66,6 @@ public sealed class SearchSnippetTextTestCases_IDisposableDisposeObjectDemo : Te
         // THEN: No item is displayed
         loadedHomePage.WaitUntilAssertSuccess(
             waitForSuccess: _ => _.AssertNotHasMatchingItemsForSearchText(searchText),
-            stopWaitOnExceptionOrAssertFailed: _ => _.AssertNoErrors());
+            stopWaitOnAssertError: _ => _.AssertNoErrors());
     }
 }

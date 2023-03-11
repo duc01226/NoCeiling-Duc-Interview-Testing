@@ -48,6 +48,11 @@ public interface IPlatformRepository<TEntity, TPrimaryKey> : IPlatformBasicRepos
     public Task<bool> AnyAsync(
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default);
+
+    public IEnumerable<TEntity> GetAllEnumerable(
+        Expression<Func<TEntity, bool>> predicate = null,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 }
 
 public interface IPlatformBasicRootRepository<TEntity, TPrimaryKey> : IPlatformBasicRepository<TEntity, TPrimaryKey>
@@ -130,7 +135,7 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
     /// Return enumerable from query belong to <see cref="IUnitOfWorkManager.GlobalUow" />. <br />
     /// A single separated global uow in current scoped is used by repository for read data using query, usually when need to return data
     /// as enumerable to help download data like streaming data (not load all big data into ram) <br />
-    /// or any other purpose that just want to using query directly without think about uow of the query. <br />
+    /// or any other purpose that just want to using query directly without affecting the current active uow. <br />
     /// This uow is auto created once per scope when access it. <br />
     /// This won't affect the normal current uow queue list when Begin a new uow.
     /// </summary>
@@ -139,17 +144,19 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
     /// <summary>
     /// Return query of <see cref="IUnitOfWorkManager.CurrentActiveUow" />
     /// </summary>
-    public IQueryable<TEntity> GetQuery(params Expression<Func<TEntity, object>>[] loadRelatedEntities);
+    public IQueryable<TEntity> GetCurrentUowQuery(params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
-    public IQueryable<TResult> GetQuery<TResult>(
+    /// <see cref="GetCurrentUowQuery"/>
+    public IQueryable<TResult> GetCurrentUowQuery<TResult>(
         Func<IQueryable<TEntity>, IQueryable<TResult>> queryBuilder,
         params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        return queryBuilder(GetQuery(loadRelatedEntities));
+        return queryBuilder(GetCurrentUowQuery(loadRelatedEntities));
     }
 
-    public IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object>>[] loadRelatedEntities);
-
+    /// <summary>
+    /// Build and get query from a given uow
+    /// </summary>
     public IQueryable<TResult> GetQuery<TResult>(
         IUnitOfWork uow,
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TResult>> queryBuilder,
@@ -158,25 +165,62 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
         return queryBuilder(uow, GetQuery(uow, loadRelatedEntities));
     }
 
+    /// <summary>
+    /// Get query from a given uow
+    /// </summary>
+    public IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object>>[] loadRelatedEntities);
+
     public Task<TResult> GetAsync<TResult>(
-        Func<IQueryable<TEntity>, TResult> queryToResultBuilder,
+        Func<IQueryable<TEntity>, TResult> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public Task<TResult> GetAsync<TResult>(
-        Func<IQueryable<TEntity>, Task<TResult>> queryToResultBuilder,
+        Func<IQueryable<TEntity>, Task<TResult>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public Task<TResult> GetAsync<TResult>(
-        Func<IUnitOfWork, IQueryable<TEntity>, TResult> queryToResultBuilder,
+        Func<IUnitOfWork, IQueryable<TEntity>, TResult> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public Task<TResult> GetAsync<TResult>(
-        Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> queryToResultBuilder,
+        Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object>>[] loadRelatedEntities);
+
+    public TResult Get<TResult>(
+        Func<IQueryable<TEntity>, TResult> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+    {
+        return GetAsync(queryBuilder, cancellationToken, loadRelatedEntities).Result;
+    }
+
+    public TResult Get<TResult>(
+        Func<IQueryable<TEntity>, Task<TResult>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+    {
+        return GetAsync(queryBuilder, cancellationToken, loadRelatedEntities).Result;
+    }
+
+    public TResult Get<TResult>(
+        Func<IUnitOfWork, IQueryable<TEntity>, TResult> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+    {
+        return GetAsync(queryBuilder, cancellationToken, loadRelatedEntities).Result;
+    }
+
+    public TResult Get<TResult>(
+        Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+    {
+        return GetAsync(queryBuilder, cancellationToken, loadRelatedEntities).Result;
+    }
 
     public Task<List<TEntity>> GetAllAsync(
         Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
@@ -189,6 +233,20 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
         params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public Task<List<TEntity>> GetAllAsync(
+        IQueryable<TEntity> query,
+        CancellationToken cancellationToken = default);
+
+    public IAsyncEnumerable<TEntity> GetAllAsyncEnumerable(
+        Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
+
+    public IAsyncEnumerable<TEntity> GetAllAsyncEnumerable(
+        Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
+
+    public IAsyncEnumerable<TEntity> GetAllAsyncEnumerable(
         IQueryable<TEntity> query,
         CancellationToken cancellationToken = default);
 
@@ -208,19 +266,33 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
 
     public Task<List<TSelector>> GetAllAsync<TSelector>(
         Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public Task<List<TSelector>> GetAllAsync<TSelector>(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
+
+    public IAsyncEnumerable<TSelector> GetAllAsyncEnumerable<TSelector>(
+        Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
+
+    public IAsyncEnumerable<TSelector> GetAllAsyncEnumerable<TSelector>(
+        Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public Task<TSelector> FirstOrDefaultAsync<TSelector>(
         Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public Task<TSelector> FirstOrDefaultAsync<TSelector>(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public Task<int> CountAsync<TQueryItemResult>(Func<IQueryable<TEntity>, IQueryable<TQueryItemResult>> queryBuilder, CancellationToken cancellationToken = default);
 
@@ -268,7 +340,7 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
     /// fullItemsQueryBuilder(query).PageBy(request.SkipCount, request.MaxResultCount));<br />
     /// var totalCount = await repository.CountAsync(fullItemsQueryBuilder, cancellationToken);
     /// </summary>
-    public Func<IQueryable<TEntity>, IQueryable<TEntity>> GetQueryBuilder(Expression<Func<TEntity, bool>> queryExpression);
+    public Func<IQueryable<TEntity>, IQueryable<TEntity>> GetQueryBuilder(Expression<Func<TEntity, bool>> predicate);
 }
 
 public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>

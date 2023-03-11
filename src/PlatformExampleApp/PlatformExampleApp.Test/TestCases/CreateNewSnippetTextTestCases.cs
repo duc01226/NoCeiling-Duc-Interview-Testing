@@ -35,6 +35,6 @@ public class CreateNewSnippetTextTestCases : TestCase
         loadedHomePage.DoSearchTextSnippet(newSnippetText)
             .WaitUntilAssertSuccess(
                 waitForSuccess: _ => _.AssertHasExactMatchItemForSearchText(newSnippetText),
-                stopWaitOnExceptionOrAssertFailed: _ => _.AssertNoErrors());
+                stopWaitOnAssertError: _ => _.AssertNoErrors());
     }
 }

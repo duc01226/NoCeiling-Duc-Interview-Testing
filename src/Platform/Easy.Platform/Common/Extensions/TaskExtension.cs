@@ -206,35 +206,35 @@ public static class TaskExtension
     public static T WaitUntil<T, TStopIfFailResult>(
         this T t,
         Func<T, bool> condition,
-        Func<T, TStopIfFailResult> stopWaitOnExceptionOrAssertFailed,
+        Func<T, TStopIfFailResult> stopWaitOnAssertError,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return Util.TaskRunner.WaitUntil(t, () => condition(t), stopWaitOnExceptionOrAssertFailed, maxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntil(t, () => condition(t), stopWaitOnAssertError, maxWaitSeconds, waitForMsg);
     }
 
     public static TResult WaitUntilGetResult<T, TResult, TStopIfFailResult>(
         this T t,
         Func<T, TResult> getResult,
         Func<TResult, bool> condition,
-        Func<T, TStopIfFailResult> stopWaitOnExceptionOrAssertFailed,
+        Func<T, TStopIfFailResult> stopWaitOnAssertError,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return Util.TaskRunner.WaitUntilGetResult(t, getResult, condition, stopWaitOnExceptionOrAssertFailed, maxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntilGetResult(t, getResult, condition, stopWaitOnAssertError, maxWaitSeconds, waitForMsg);
     }
 
     public static TResult TryWaitUntilGetResult<T, TResult, TStopIfFailResult>(
         this T t,
         Func<T, TResult> getResult,
         Func<TResult, bool> condition,
-        Func<T, TStopIfFailResult> stopWaitOnExceptionOrAssertFailed,
+        Func<T, TStopIfFailResult> stopWaitOnAssertError,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
         try
         {
-            return Util.TaskRunner.WaitUntilGetResult(t, getResult, condition, stopWaitOnExceptionOrAssertFailed, maxWaitSeconds, waitForMsg);
+            return Util.TaskRunner.WaitUntilGetResult(t, getResult, condition, stopWaitOnAssertError, maxWaitSeconds, waitForMsg);
         }
         catch (Exception)
         {
@@ -262,10 +262,10 @@ public static class TaskExtension
     public static TResult WaitUntilNoException<T, TResult, TStopIfFailResult>(
         this T t,
         Func<T, TResult> getResult,
-        Func<T, TStopIfFailResult> stopWaitOnExceptionOrAssertFailed,
+        Func<T, TStopIfFailResult> stopWaitOnAssertError,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds)
     {
-        return Util.TaskRunner.WaitUntilNoException(t, getResult, stopWaitOnExceptionOrAssertFailed, maxWaitSeconds);
+        return Util.TaskRunner.WaitUntilNoException(t, getResult, stopWaitOnAssertError, maxWaitSeconds);
     }
 
     public static T WaitUntilThen<T>(

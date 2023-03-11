@@ -1,5 +1,6 @@
 using Easy.Platform.Common;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace PlatformExampleApp.Test;
@@ -21,4 +22,10 @@ public class Startup : BaseStartup
     {
         options.Timeouts().PageLoad = 1.Minutes();
     }
+
+    // Default register AutomationTestSettings via IConfiguration first level binding. Override this to custom
+    //public override AutomationTestSettings AutomationTestSettingsProvider(IServiceProvider sp)
+    //{
+    //    return sp.GetRequiredService<IConfiguration>().Get<AutomationTestSettings>()!;
+    //}
 }

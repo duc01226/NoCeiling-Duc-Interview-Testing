@@ -9,6 +9,11 @@
   <PropertyGroup>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
+  <!--https://learn.microsoft.com/en-us/aspnet/core/performance/memory?view=aspnetcore-7.0#gc-using-docker-and-small-containers-->
+  <!--GC using Docker and small containers-->
+  <PropertyGroup>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.3" />

@@ -58,6 +58,30 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         IQueryable<TEntity> query,
         CancellationToken cancellationToken = default);
 
+    public IAsyncEnumerable<TEntity> GetAllAsyncEnumerable(
+        Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+    {
+        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+                (uow, query) => GetAllAsyncEnumerable(queryBuilder(query), cancellationToken),
+                loadRelatedEntities)
+            .Result;
+    }
+
+    public IAsyncEnumerable<TEntity> GetAllAsyncEnumerable(
+        Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+    {
+        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+                (uow, query) => GetAllAsyncEnumerable(queryBuilder(uow, query), cancellationToken),
+                loadRelatedEntities)
+            .Result;
+    }
+
+    public abstract IAsyncEnumerable<TEntity> GetAllAsyncEnumerable(IQueryable<TEntity> query, CancellationToken cancellationToken = default);
+
     public abstract Task<TEntity> FirstAsync(
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default,
@@ -80,36 +104,41 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default);
 
+    public abstract IEnumerable<TEntity> GetAllEnumerable(
+        Expression<Func<TEntity, bool>> predicate = null,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
+
     public async Task<TResult> GetAsync<TResult>(
-        Func<IQueryable<TEntity>, TResult> queryToResultBuilder,
+        Func<IQueryable<TEntity>, TResult> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryToResultBuilder(query), loadRelatedEntities);
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryBuilder(query), loadRelatedEntities);
     }
 
     public async Task<TResult> GetAsync<TResult>(
-        Func<IQueryable<TEntity>, Task<TResult>> queryToResultBuilder,
+        Func<IQueryable<TEntity>, Task<TResult>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryToResultBuilder(query), loadRelatedEntities);
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryBuilder(query), loadRelatedEntities);
     }
 
     public async Task<TResult> GetAsync<TResult>(
-        Func<IUnitOfWork, IQueryable<TEntity>, TResult> queryToResultBuilder,
+        Func<IUnitOfWork, IQueryable<TEntity>, TResult> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryToResultBuilder(uow, query), loadRelatedEntities);
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryBuilder(uow, query), loadRelatedEntities);
     }
 
     public async Task<TResult> GetAsync<TResult>(
-        Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> queryToResultBuilder,
+        Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryToResultBuilder(uow, query), loadRelatedEntities);
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryBuilder(uow, query), loadRelatedEntities);
     }
 
     public async Task<List<TEntity>> GetAllAsync(
@@ -144,19 +173,33 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
     public abstract Task<List<TSelector>> GetAllAsync<TSelector>(
         Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public abstract Task<List<TSelector>> GetAllAsync<TSelector>(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
+
+    public abstract IAsyncEnumerable<TSelector> GetAllAsyncEnumerable<TSelector>(
+        Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
+
+    public abstract IAsyncEnumerable<TSelector> GetAllAsyncEnumerable<TSelector>(
+        Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public abstract Task<TSelector> FirstOrDefaultAsync<TSelector>(
         Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public abstract Task<TSelector> FirstOrDefaultAsync<TSelector>(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
     public abstract Task<int> CountAsync<TQueryItemResult>(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TQueryItemResult>> queryBuilder,
@@ -183,14 +226,14 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         return builderFn;
     }
 
-    public Func<IQueryable<TEntity>, IQueryable<TEntity>> GetQueryBuilder(Expression<Func<TEntity, bool>> queryExpression)
+    public Func<IQueryable<TEntity>, IQueryable<TEntity>> GetQueryBuilder(Expression<Func<TEntity, bool>> predicate)
     {
-        return query => query.Where(queryExpression);
+        return query => query.Where(predicate);
     }
 
     public abstract IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
-    public IQueryable<TEntity> GetQuery(params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+    public IQueryable<TEntity> GetCurrentUowQuery(params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return GetQuery(CurrentActiveUow(), loadRelatedEntities);
     }
@@ -276,7 +319,8 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
             var result = await readDataFn(uow, GetQuery(uow, loadRelatedEntities));
 
-            if (!DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result)) uow.Dispose();
+            if (!DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result))
+                uow.Dispose();
 
             return result;
         }
@@ -333,6 +377,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     {
         return result != null &&
                (result.GetType().IsAssignableToGenericType(typeof(IQueryable<>)) ||
+                result.GetType().IsAssignableToGenericType(typeof(IAsyncEnumerable<>)) ||
                 (result.GetType().IsAssignableToGenericType(typeof(IEnumerable<>)) &&
                  !(result.GetType().IsAssignableToGenericType(typeof(IList<>)) ||
                    result.GetType().IsArray ||

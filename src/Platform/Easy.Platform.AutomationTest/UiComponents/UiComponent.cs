@@ -5,6 +5,9 @@ namespace Easy.Platform.AutomationTest.UiComponents;
 
 public interface IUiComponent
 {
+    /// <summary>
+    /// Given direct reference to direct parent component of the current component
+    /// </summary>
     public IUiComponent? Parent { get; set; }
 
     /// <summary>
@@ -22,15 +25,22 @@ public interface IUiComponent
     public string? IdentifierSelector { get; set; }
 
     public IWebDriver WebDriver { get; set; }
+
+    /// <summary>
+    /// Combine the <see cref="IdentifierSelector"/> and <see cref="RootElementClassSelector"/> to return a unique component selector of current instance on page
+    /// </summary>
     public string? FullPathRootElementSelector { get; }
 
     /// <summary>
-    /// Find and Get RootElement from ComponentTypeSelector and IdentifierSelector
+    /// Given directly element reference as root element
     /// </summary>
-    public IWebElement? RootElementBySelector { get; }
+    public Func<IWebElement>? DirectReferenceRootElement { get; set; }
 
-    public Func<IWebElement>? FixedRootElement { get; set; }
+    /// <summary>
+    /// Find and Get RootElement from <see cref="FullPathRootElementSelector"/> OR from <see cref="DirectReferenceRootElement"/>
+    /// </summary>
     public IWebElement? RootElement { get; }
+
     public bool IsClickable();
     public IUiComponent WaitUntilClickable(double maxWaitSeconds, string? waitForMsg = null);
     public IUiComponent Clear(string? childElementSelector = null);
@@ -65,8 +75,8 @@ public interface IUiComponent
 
     public static string? GetIdentifierSelector(IUiComponent component)
     {
-        return component.FixedRootElement != null
-            ? component.FixedRootElement().ElementClassSelector()
+        return component.DirectReferenceRootElement != null
+            ? component.DirectReferenceRootElement().ElementClassSelector()
             : $"{component.IdentifierSelector ?? ""}{component.RootElementClassSelector ?? ""}".Trim();
     }
 
@@ -101,20 +111,22 @@ public interface IUiComponent<out TComponent> : IUiComponent
 public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
     where TComponent : UiComponent<TComponent>
 {
-    public UiComponent(IWebDriver webDriver, Func<IWebElement>? fixedRootElement, IUiComponent? parent = null)
+    public const double DefaultMinimumDelayWaitSeconds = 0.3;
+
+    public UiComponent(IWebDriver webDriver, Func<IWebElement>? directReferenceRootElement, IUiComponent? parent = null)
     {
         WebDriver = webDriver;
-        FixedRootElement = fixedRootElement;
+        DirectReferenceRootElement = directReferenceRootElement;
         Parent = parent;
     }
 
     public UiComponent(
         IWebDriver webDriver,
-        string rootElementSelector,
-        IUiComponent? parent = null) : this(webDriver, fixedRootElement: null, parent)
+        string rootElementClassSelector,
+        IUiComponent? parent = null) : this(webDriver, directReferenceRootElement: null, parent)
     {
         WebDriver = webDriver;
-        RootElementClassSelector = rootElementSelector;
+        RootElementClassSelector = rootElementClassSelector;
         Parent = parent;
     }
 
@@ -122,16 +134,14 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
     public string? IdentifierSelector { get; set; }
     public IWebDriver WebDriver { get; set; }
     public IUiComponent? Parent { get; set; }
-
-    public IWebElement? RootElementBySelector => IUiComponent.FindRootElementBySelector(this);
-    public Func<IWebElement>? FixedRootElement { get; set; }
+    public Func<IWebElement>? DirectReferenceRootElement { get; set; }
 
     /// <summary>
     /// Get Component RootElement. Retry in case of the element get "stale element reference" exception.
     /// </summary>
     public IWebElement? RootElement =>
         Util.TaskRunner.WaitRetryThrowFinalException<IWebElement?, StaleElementReferenceException>(
-            () => FixedRootElement?.Invoke() ?? RootElementBySelector);
+            () => DirectReferenceRootElement?.Invoke() ?? IUiComponent.FindRootElementBySelector(this));
 
     public bool IsClickable()
     {
@@ -269,7 +279,7 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
         return (TComponent)this.With(_ => _.IdentifierSelector = appSearchInput);
     }
 
-    public TComponent HumanDelay(double waitSeconds = Util.TaskRunner.DefaultMinimumDelayWaitSeconds)
+    public TComponent HumanDelay(double waitSeconds = DefaultMinimumDelayWaitSeconds)
     {
         Util.TaskRunner.Wait((int)(waitSeconds * 1000));
         return (TComponent)this;

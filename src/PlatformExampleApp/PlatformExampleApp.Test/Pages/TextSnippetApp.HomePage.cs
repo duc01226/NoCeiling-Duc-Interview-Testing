@@ -108,7 +108,7 @@ public static partial class TextSnippetApp
                     _ => _.SaveSnippetFormSnippetTextTxt.Value == selectedItemSnippetText,
                     expected: $"SaveSnippetFormSnippetTextTxt.Value must be '{selectedItemSnippetText}'",
                     actual: $"{_.SaveSnippetFormSnippetTextTxt.Value}"),
-                stopWaitOnExceptionOrAssertFailed: _ => _.AssertNoErrors());
+                stopWaitOnAssertError: _ => _.AssertNoErrors());
 
             return selectedItemSnippetText;
         }

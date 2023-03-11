@@ -32,7 +32,19 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         return uow.UowOfType<TUow>().DbContext;
     }
 
-    public abstract Task<List<TSource>> ToListAsync<TSource>(
+    public virtual Task<List<TSource>> ToListAsync<TSource>(
+        IQueryable<TSource> source,
+        CancellationToken cancellationToken = default)
+    {
+        return ToAsyncEnumerable(source, cancellationToken).ToListAsync(cancellationToken).AsTask();
+    }
+
+    /// <summary>
+    /// Use ToAsyncEnumerable to convert IQueryable to IAsyncEnumerable to help return data like a stream. Also help
+    /// using it as a true IEnumerable which Then can select anything and it will work.
+    /// Default as Enumerable from IQueryable still like Queryable which cause error query could not be translated for free select using constructor map for example
+    /// </summary>
+    public abstract IAsyncEnumerable<TSource> ToAsyncEnumerable<TSource>(
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default);
 
@@ -52,7 +64,10 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default);
 
-    public override Task<TEntity> GetByIdAsync(TPrimaryKey id, CancellationToken cancellationToken = default, params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+    public override Task<TEntity> GetByIdAsync(
+        TPrimaryKey id,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstAsync(query.Where(p => p.Id.Equals(id)), cancellationToken),
@@ -82,6 +97,44 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<List<TEntity>> GetAllAsync(IQueryable<TEntity> query, CancellationToken cancellationToken = default)
     {
         return ToListAsync(query, cancellationToken);
+    }
+
+    public override IEnumerable<TEntity> GetAllEnumerable(
+        Expression<Func<TEntity, bool>> predicate = null,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+    {
+        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+                (uow, query) => ToAsyncEnumerable(query.WhereIf(predicate != null, predicate), cancellationToken).ToEnumerable(),
+                loadRelatedEntities)
+            .Result;
+    }
+
+    public override IAsyncEnumerable<TEntity> GetAllAsyncEnumerable(IQueryable<TEntity> query, CancellationToken cancellationToken = default)
+    {
+        return ToAsyncEnumerable(query, cancellationToken);
+    }
+
+    public override IAsyncEnumerable<TSelector> GetAllAsyncEnumerable<TSelector>(
+        Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+    {
+        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+                (uow, query) => ToAsyncEnumerable(queryBuilder(query), cancellationToken),
+                loadRelatedEntities)
+            .Result;
+    }
+
+    public override IAsyncEnumerable<TSelector> GetAllAsyncEnumerable<TSelector>(
+        Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+    {
+        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+                (uow, query) => ToAsyncEnumerable(queryBuilder(uow, query), cancellationToken),
+                loadRelatedEntities)
+            .Result;
     }
 
     public override Task<TEntity> FirstOrDefaultAsync(
@@ -154,38 +207,42 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
 
     public override Task<List<TSelector>> GetAllAsync<TSelector>(
         Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => ToListAsync(queryBuilder(query), cancellationToken),
-            Array.Empty<Expression<Func<TEntity, object>>>());
+            loadRelatedEntities);
     }
 
     public override Task<List<TSelector>> GetAllAsync<TSelector>(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => ToListAsync(queryBuilder(uow, query), cancellationToken),
-            Array.Empty<Expression<Func<TEntity, object>>>());
+            loadRelatedEntities);
     }
 
     public override Task<TSelector> FirstOrDefaultAsync<TSelector>(
         Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(queryBuilder(query), cancellationToken),
-            Array.Empty<Expression<Func<TEntity, object>>>());
+            loadRelatedEntities);
     }
 
     public override Task<TSelector> FirstOrDefaultAsync<TSelector>(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(queryBuilder(uow, query), cancellationToken),
-            Array.Empty<Expression<Func<TEntity, object>>>());
+            loadRelatedEntities);
     }
 
     public override async Task<TEntity> CreateAsync(
