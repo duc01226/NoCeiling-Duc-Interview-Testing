@@ -1,9 +1,10 @@
+using AutoFixture.Xunit2;
 using PlatformExampleApp.Test.Apps.TextSnippet.Pages;
 using PlatformExampleApp.Test.DataModels;
 
 namespace PlatformExampleApp.Test.Apps.TextSnippet.TestCases;
 
-[Trait("App", "TextSnippet")]
+[Trait(name: "App", value: "TextSnippet")]
 public class CreateNewSnippetTextTestCases : TestCase
 {
     public CreateNewSnippetTextTestCases(
@@ -14,9 +15,11 @@ public class CreateNewSnippetTextTestCases : TestCase
     {
     }
 
-    [Fact]
-    [Trait("Category", "Smoke")]
-    public void WHEN_CreateNewSnippetText_BY_DifferentValidUniqueName()
+    // autoRandomTextSnippetData is auto generated from AutoData attribute
+    [Theory]
+    [AutoData]
+    [Trait(name: "Category", value: "Smoke")]
+    public void WHEN_CreateNewSnippetText_BY_DifferentValidUniqueName(TextSnippetEntityData autoRandomTextSnippetEntityData)
     {
         // GIVEN: loadedHomePage
         var loadedHomePage = LazyWebDriver.Value.NavigatePage<TextSnippetApp.HomePage>(Settings)
@@ -24,17 +27,18 @@ public class CreateNewSnippetTextTestCases : TestCase
                 maxWaitForLoadingDataSeconds: Util.Random.ReturnByChanceOrDefault(
                     percentChance: 20, // random 20 percent test failed waiting timeout error by only one second
                     chanceReturnValue: 1,
-                    defaultReturnValue: TextSnippetApp.HomePage.DefaultMaxRequestWaitSeconds));
+                    TextSnippetApp.HomePage.DefaultMaxRequestWaitSeconds));
 
-        // WHEN: Update first item snippet text by different unique name
-        var newSnippetText = "WHEN_CreateNewSnippetText " + Guid.NewGuid();
-        loadedHomePage.DoFillInAndSubmitSaveSnippetTextForm(new TextSnippetData(newSnippetText, newSnippetText + " FullText"));
+        // WHEN: Create new item snippet text by different unique name
+        var newSnippetText = autoRandomTextSnippetEntityData.SnippetText;
+        loadedHomePage.DoFillInAndSubmitSaveSnippetTextForm(autoRandomTextSnippetEntityData);
 
         // THEN: SnippetText item is created with no errors and item could be searched
-        loadedHomePage.AssertNoErrors();
+        loadedHomePage.AssertPageNoErrors();
         loadedHomePage.DoSearchTextSnippet(newSnippetText)
             .WaitUntilAssertSuccess(
                 waitForSuccess: _ => _.AssertHasExactMatchItemForSearchText(newSnippetText),
-                stopWaitOnAssertError: _ => _.AssertNoErrors());
+                stopWaitOnAssertError: _ => _.AssertPageNoErrors());
+        loadedHomePage.GetTextSnippetDataTableItems().First().Should().BeEquivalentTo(autoRandomTextSnippetEntityData);
     }
 }

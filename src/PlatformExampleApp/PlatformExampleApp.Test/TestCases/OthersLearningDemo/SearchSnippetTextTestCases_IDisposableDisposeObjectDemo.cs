@@ -8,7 +8,7 @@ namespace PlatformExampleApp.Test.TestCases.OthersLearningDemo;
 /// If you do not dispose in this case, the browser driver is not closed after test <br/>
 /// THIS IS ONLY FOR LEARNING PURPOSE. USING DEPENDENCY INJECTION ALREADY DISPOSE DISPOSABLE OBJECT FOR US
 /// </summary>
-[Trait("App", "TextSnippet")]
+[Trait(name: "App", value: "TextSnippet")]
 public sealed class SearchSnippetTextTestCases_IDisposableDisposeObjectDemo : TestCase, IDisposable
 {
     private readonly WebDriverLazyInitializer manuallyCreateDriverLazyInitializer;
@@ -28,7 +28,7 @@ public sealed class SearchSnippetTextTestCases_IDisposableDisposeObjectDemo : Te
     }
 
     [Fact]
-    [Trait("Category", "Smoke")]
+    [Trait(name: "Category", value: "Smoke")]
     public void WHEN_SearchSnippetText_BY_CopyFirstItemTextAsSearchText()
     {
         // GIVEN: loadedHomePage
@@ -37,23 +37,23 @@ public sealed class SearchSnippetTextTestCases_IDisposableDisposeObjectDemo : Te
                 maxWaitForLoadingDataSeconds: Util.Random.ReturnByChanceOrDefault(
                     percentChance: 20, // random 20 percent test failed waiting timeout error by only one second
                     chanceReturnValue: 1,
-                    defaultReturnValue: TextSnippetApp.HomePage.DefaultMaxRequestWaitSeconds));
+                    TextSnippetApp.HomePage.DefaultMaxRequestWaitSeconds));
 
         // WHEN: Copy snippet text in first grid row to search box
         var firstItemSnippetText = loadedHomePage
-            .TextSnippetItemsGrid
-            .GetCell(rowIndex: 0, colName: TextSnippetApp.HomePage.GripSnippetTextColName)!.RootElement!
+            .TextSnippetItemsTable
+            .GetCell(rowIndex: 0, TextSnippetApp.HomePage.SnippetTextColName)!.RootElement!
             .Text;
-        loadedHomePage.DoSearchTextSnippet(searchText: firstItemSnippetText);
+        loadedHomePage.DoSearchTextSnippet(firstItemSnippetText);
 
         // THEN: At least one item matched with the search test displayed
         loadedHomePage.WaitUntilAssertSuccess(
             waitForSuccess: _ => _.AssertHasMatchingItemsForSearchText(firstItemSnippetText),
-            stopWaitOnAssertError: _ => _.AssertNoErrors());
+            stopWaitOnAssertError: _ => _.AssertPageNoErrors());
     }
 
     [Fact]
-    [Trait("Category", "Smoke")]
+    [Trait(name: "Category", value: "Smoke")]
     public void WHEN_SearchSnippetText_BY_NotExistingItemSearchText()
     {
         // GIVEN: loadedHomePage
@@ -61,11 +61,11 @@ public sealed class SearchSnippetTextTestCases_IDisposableDisposeObjectDemo : Te
 
         // WHEN: Search with random guid + "NotExistingItemSearchText"
         var searchText = "NotExistingItemSearchText" + Guid.NewGuid();
-        loadedHomePage.DoSearchTextSnippet("NotExistingItemSearchText" + Guid.NewGuid());
+        loadedHomePage.DoSearchTextSnippet(searchText: "NotExistingItemSearchText" + Guid.NewGuid());
 
         // THEN: No item is displayed
         loadedHomePage.WaitUntilAssertSuccess(
             waitForSuccess: _ => _.AssertNotHasMatchingItemsForSearchText(searchText),
-            stopWaitOnAssertError: _ => _.AssertNoErrors());
+            stopWaitOnAssertError: _ => _.AssertPageNoErrors());
     }
 }

@@ -1,4 +1,5 @@
 using System.IO;
+using System.Reflection;
 
 namespace Easy.Platform.Common.Utils;
 
@@ -35,6 +36,14 @@ public static partial class Util
         public static Stream ReadAsStreamFromBase64(string base64)
         {
             return new MemoryStream(Convert.FromBase64String(base64));
+        }
+
+        public static string ReadCurrentDirectoryFileAsString(string filePathFromCurrentExecutingDirectory)
+        {
+            return ReadFileAsString(
+                Path.ConcatRelativePath(
+                    System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+                    filePathFromCurrentExecutingDirectory));
         }
     }
 }

@@ -6,7 +6,7 @@ using OpenQA.Selenium;
 
 namespace Easy.Platform.AutomationTest.Pages;
 
-public interface IPage<TPage, out TSettings> : IUiComponent where TPage : IPage<TPage, TSettings> where TSettings : AutomationTestSettings
+public interface IPage<TPage, TSettings> : IUiComponent where TPage : IPage<TPage, TSettings> where TSettings : AutomationTestSettings
 {
     public string AppName { get; }
     public string Origin { get; }
@@ -43,7 +43,11 @@ public interface IPage<TPage, out TSettings> : IUiComponent where TPage : IPage<
 
     public PlatformValidationResult<TPage> ValidateNoErrors();
 
-    public TPage AssertNoErrors();
+    public PlatformValidationResult<TPage> ValidatePageMustHasErrors(string errorMsg);
+
+    public TPage AssertPageNoErrors();
+
+    public TPage AssertPageMustHasErrors(string errorMsg);
 
     public TResult WaitUntilAssertSuccess<TResult>(
         Func<TPage, TResult> waitForSuccess,
@@ -59,12 +63,14 @@ public interface IPage<TPage, out TSettings> : IUiComponent where TPage : IPage<
         Func<TPage, TStopIfFailResult> stopWaitOnAssertError,
         double? maxWaitSeconds = null);
 
+    public TCurrentActivePage? TryGetCurrentActivePage<TCurrentActivePage>() where TCurrentActivePage : class, IPage<TCurrentActivePage, TSettings>;
+
     public static string BuildQueryParamsUrlPart(TPage page)
     {
         return page.QueryParams.PipeIfOrDefault(
-            page.QueryParams?.Any() == true,
-            _ => page.QueryParams.ToQueryString(),
-            "");
+            when: page.QueryParams?.Any() == true,
+            thenPipe: _ => page.QueryParams.ToQueryString(),
+            defaultValue: "");
     }
 
     public static string BuildBaseUrl(TPage page)
@@ -113,14 +119,26 @@ public interface IPage<TPage, out TSettings> : IUiComponent where TPage : IPage<
             .ToList();
     }
 
-    public static PlatformValidationResult<TPage> ValidateHasNoErrors(TPage page)
+    public static PlatformValidationResult<TPage> ValidatePageHasNoErrors(TPage page)
     {
         return page.AllErrors()
             .Validate(
                 must: errors => !errors.Any(),
                 errors => Helper.AssertMsgBuilder.Failed(
-                    "Has Errors displayed on Page",
-                    expected: "No Errors displayed on Page",
+                    "Has errors displayed on Page",
+                    expected: "No errors displayed on Page",
+                    actual: errors.Select(p => p.Text).JoinToString(Environment.NewLine)))
+            .Of(page);
+    }
+
+    public static PlatformValidationResult<TPage> ValidatePageMustHasErrors(TPage page, string errorMsg)
+    {
+        return page.AllErrors()
+            .Validate(
+                must: errors => errors.Any(p => p.Text.Contains(errorMsg, StringComparison.InvariantCultureIgnoreCase)),
+                errors => Helper.AssertMsgBuilder.Failed(
+                    "Has no errors displayed on Page",
+                    expected: $"Must has error \"{errorMsg}\" displayed on Page",
                     actual: errors.Select(p => p.Text).JoinToString(Environment.NewLine)))
             .Of(page);
     }
@@ -143,9 +161,22 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
     public override string RootElementClassSelector => "body";
     public abstract string Title { get; }
     public abstract IWebElement? GlobalSpinnerElement { get; }
+
+    /// <summary>
+    /// Used to map from app name to the origin host url of the app. Used for <see cref="Origin"/>
+    /// </summary>
     public abstract string AppName { get; }
+
+    /// <summary>
+    /// Origin host url of the application, not including path
+    /// </summary>
     public string Origin => Settings.AppNameToOrigin[AppName];
+
+    /// <summary>
+    /// The path of the page after the origin. The full url is: {Origin}/{Path}{QueryParamsUrlPart}. See <see cref="IPage{TPage,TSettings}.BuildFullUrl"/>
+    /// </summary>
     public abstract string Path { get; }
+
     public string BaseUrl => IPage<TPage, TSettings>.BuildBaseUrl(this.As<TPage>());
     public Dictionary<string, string?>? QueryParams { get; set; }
     public string QueryParamsUrlPart => IPage<TPage, TSettings>.BuildQueryParamsUrlPart(this.As<TPage>());
@@ -183,12 +214,22 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
 
     public PlatformValidationResult<TPage> ValidateNoErrors()
     {
-        return IPage<TPage, TSettings>.ValidateHasNoErrors(this.As<TPage>());
+        return IPage<TPage, TSettings>.ValidatePageHasNoErrors(this.As<TPage>());
     }
 
-    public TPage AssertNoErrors()
+    public PlatformValidationResult<TPage> ValidatePageMustHasErrors(string errorMsg)
+    {
+        return IPage<TPage, TSettings>.ValidatePageMustHasErrors(this.As<TPage>(), errorMsg);
+    }
+
+    public TPage AssertPageNoErrors()
     {
         return ValidateNoErrors().AssertValid();
+    }
+
+    public TPage AssertPageMustHasErrors(string errorMsg)
+    {
+        return ValidatePageMustHasErrors(errorMsg).AssertValid();
     }
 
     public TPage AssertPageDocumentLoaded()
@@ -225,6 +266,11 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         double? maxWaitSeconds = null)
     {
         return this.As<TPage>().WaitUntilNoException(waitForSuccess, stopWaitOnAssertError, maxWaitSeconds ?? DefaultWaitUntilMaxSeconds);
+    }
+
+    public TCurrentActivePage? TryGetCurrentActivePage<TCurrentActivePage>() where TCurrentActivePage : class, IPage<TCurrentActivePage, TSettings>
+    {
+        return WebDriver.TryGetCurrentActivePage<TCurrentActivePage, TSettings>(Settings);
     }
 
     public virtual TPage WaitGlobalSpinnerStopped(

@@ -16,7 +16,7 @@ public static partial class TextSnippetApp
 
         public BasePage(IWebDriver webDriver, AutomationTestSettings settings) : base(webDriver, settings)
         {
-            GlobalSpinner = new SpinnerUiComponent(webDriver, null, this);
+            GlobalSpinner = new SpinnerUiComponent(webDriver, directReferenceRootElement: null, parent: this);
         }
 
         public SpinnerUiComponent GlobalSpinner { get; set; }

@@ -3,7 +3,7 @@ using PlatformExampleApp.Test.TestCases.Helpers;
 
 namespace PlatformExampleApp.Test.Apps.TextSnippet.TestCases;
 
-[Trait("App", "TextSnippet")]
+[Trait(name: "App", value: "TextSnippet")]
 public class SearchSnippetTextTestCases : TestCase
 {
     public SearchSnippetTextTestCases(
@@ -15,7 +15,7 @@ public class SearchSnippetTextTestCases : TestCase
     }
 
     [Fact]
-    [Trait("Category", "Smoke")]
+    [Trait(name: "Category", value: "Smoke")]
     public void WHEN_SearchSnippetText_BY_CopyFirstItemTextAsSearchText()
     {
         // GIVEN: loadedHomePage
@@ -24,23 +24,23 @@ public class SearchSnippetTextTestCases : TestCase
                 maxWaitForLoadingDataSeconds: Util.Random.ReturnByChanceOrDefault(
                     percentChance: 20, // random 20 percent test failed waiting timeout error by only one second
                     chanceReturnValue: 1,
-                    defaultReturnValue: TextSnippetApp.HomePage.DefaultMaxRequestWaitSeconds));
+                    TextSnippetApp.HomePage.DefaultMaxRequestWaitSeconds));
 
         // WHEN: Copy snippet text in first grid row to search box
         var firstItemSnippetText = loadedHomePage
-            .TextSnippetItemsGrid
-            .GetCell(rowIndex: 0, colName: TextSnippetApp.HomePage.GripSnippetTextColName)!.RootElement!
+            .TextSnippetItemsTable
+            .GetCell(rowIndex: 0, TextSnippetApp.HomePage.SnippetTextColName)!.RootElement!
             .Text;
-        loadedHomePage.DoSearchTextSnippet(searchText: firstItemSnippetText);
+        loadedHomePage.DoSearchTextSnippet(firstItemSnippetText);
 
         // THEN: At least one item matched with the search test displayed
         loadedHomePage.WaitUntilAssertSuccess(
             waitForSuccess: _ => _.AssertHasMatchingItemsForSearchText(firstItemSnippetText),
-            stopWaitOnAssertError: _ => _.AssertNoErrors());
+            stopWaitOnAssertError: _ => _.AssertPageNoErrors());
     }
 
     [Fact]
-    [Trait("Category", "Smoke")]
+    [Trait(name: "Category", value: "Smoke")]
     public void WHEN_SearchSnippetText_BY_NotExistingItemSearchText()
     {
         // GIVEN: loadedHomePage
@@ -48,11 +48,11 @@ public class SearchSnippetTextTestCases : TestCase
 
         // WHEN: Search with random guid + "NotExistingItemSearchText"
         var searchText = "NotExistingItemSearchText" + Guid.NewGuid();
-        loadedHomePage.DoSearchTextSnippet("NotExistingItemSearchText" + Guid.NewGuid());
+        loadedHomePage.DoSearchTextSnippet(searchText: "NotExistingItemSearchText" + Guid.NewGuid());
 
         // THEN: No item is displayed
         loadedHomePage.WaitUntilAssertSuccess(
             waitForSuccess: _ => _.AssertNotHasMatchingItemsForSearchText(searchText),
-            stopWaitOnAssertError: _ => _.AssertNoErrors());
+            stopWaitOnAssertError: _ => _.AssertPageNoErrors());
     }
 }

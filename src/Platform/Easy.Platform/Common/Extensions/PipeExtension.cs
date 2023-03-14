@@ -50,6 +50,17 @@ public static class PipeExtension
     /// <summary>
     /// Pipe if the value is not null,  or else return default value of return pipe type
     /// </summary>
+    public static TResult PipeIfNotNull<TTarget, TResult>(
+        this TTarget? target,
+        Func<TTarget, TResult> thenPipe,
+        TResult defaultValue = default) where TTarget : struct
+    {
+        return target != null ? thenPipe(target.Value) : defaultValue;
+    }
+
+    /// <summary>
+    /// Pipe if the value is not null,  or else return default value of return pipe type
+    /// </summary>
     public static async Task<TResult> PipeIfNotNull<TTarget, TResult>(
         this TTarget target,
         Func<TTarget, Task<TResult>> thenPipe,

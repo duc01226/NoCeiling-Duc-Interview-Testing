@@ -193,9 +193,9 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development.Docker}
       - UseDbType=${BRAVOSUITE_TEXTSNIPPET_USEDBTYPE:-MongoDb}
-      - AppNameToOrigin__TextSnippetApp=${AppNameToOrigin__TextSnippetApp:-http://localhost:4001}
-      - RemoteWebDriverUrl=${RemoteWebDriverUrl:-http://localhost:4444/wd/hub}
-      - WebDriverType=${WebDriverType:-Firefox}
+      - AutomationTestSettings__AppNameToOrigin__TextSnippetApp=${AutomationTestSettings__AppNameToOrigin__TextSnippetApp:-http://localhost:4001}
+      - AutomationTestSettings__RemoteWebDriverUrl=${AutomationTestSettings__RemoteWebDriverUrl:-http://localhost:4444/wd/hub}
+      - AutomationTestSettings__WebDriverType=${AutomationTestSettings__WebDriverType:-Firefox}
     extra_hosts:
       - "host.docker.internal:host-gateway"
       - "localhost:host-gateway"

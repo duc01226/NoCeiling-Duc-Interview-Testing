@@ -67,23 +67,27 @@ export class AppTextSnippetDetailComponent
     this.updateVm({ saveTextSnippetError: null });
 
     return this.snippetTextRepo.save(new SaveTextSnippetCommand({ data: this.vm.toSaveTextSnippet })).pipe(
-      this.observerLoadingState('saveTextSnippet', {
-        onError: err =>
-          this.updateVm({ saveTextSnippetError: PlatformApiServiceErrorResponse.getDefaultFormattedMessage(err) })
-      }),
-      this.tapResponse(result => {
-        this.updateVm({
-          toSaveTextSnippet: result.savedData,
-          toSaveTextSnippetId: result.savedData.id,
-          hasSelectedSnippetItemChanged: false,
-          originalToSaveTextSnippet: cloneDeep(result.savedData)
-        });
-        if (this.appUiStateStore.currentVm.selectedSnippetTextId != this.vm.toSaveTextSnippetId) {
-          this.appUiStateStore.updateState({
-            selectedSnippetTextId: this.vm.toSaveTextSnippetId
-          });
-        }
-      })
+      this.observerLoadingState('saveTextSnippet'),
+      this.tapResponse(
+        result => {
+          if (this.vm.isCreateNew()) {
+            this.updateVm(vm => vm.resetSelectedSnippetItem());
+          } else {
+            this.updateVm({
+              toSaveTextSnippet: result.savedData,
+              toSaveTextSnippetId: result.savedData.id,
+              hasSelectedSnippetItemChanged: false,
+              originalToSaveTextSnippet: cloneDeep(result.savedData)
+            });
+            if (this.appUiStateStore.currentVm.selectedSnippetTextId != this.vm.toSaveTextSnippetId) {
+              this.appUiStateStore.updateState({
+                selectedSnippetTextId: this.vm.toSaveTextSnippetId
+              });
+            }
+          }
+        },
+        err => this.updateVm({ saveTextSnippetError: PlatformApiServiceErrorResponse.getDefaultFormattedMessage(err) })
+      )
     );
   });
 

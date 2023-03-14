@@ -350,4 +350,11 @@ public static class ListExtension
             }
         }
     }
+
+    public static IEnumerable<T> PageBy<T>(this IEnumerable<T> query, int? skipCount, int? maxResultCount)
+    {
+        return query
+            .PipeIf(skipCount >= 0, _ => _.Skip(skipCount!.Value))
+            .PipeIf(maxResultCount >= 0, _ => _.Take(maxResultCount!.Value));
+    }
 }

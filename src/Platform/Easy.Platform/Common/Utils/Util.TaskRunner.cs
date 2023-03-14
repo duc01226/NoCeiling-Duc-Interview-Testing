@@ -588,7 +588,7 @@ public static partial class Util
 
         public static TResult WaitUntilGetResult<T, TResult>(
             T t,
-            Func<T, TResult> getResult,
+            Func<T, TResult> waitResult,
             Func<TResult, bool> condition,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
@@ -598,7 +598,7 @@ public static partial class Util
 
             Thread.Sleep((int)(DefaultMinimumDelayWaitSeconds * 1000));
 
-            while (!condition(getResult(t)))
+            while (!condition(waitResult(t)))
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     Thread.Sleep((int)(DefaultMinimumDelayWaitSeconds * 1000));
                 else
@@ -606,7 +606,7 @@ public static partial class Util
                         $"WaitUntilGetResult is timed out (Max: {maxWaitSeconds} seconds)." +
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
 
-            return getResult(t);
+            return waitResult(t);
         }
 
         public static T WaitUntil<T, TStopIfFailResult>(

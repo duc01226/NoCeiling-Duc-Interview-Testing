@@ -1,5 +1,4 @@
-#pragma warning disable IDE0005 // Using directive is unnecessary.
-global using System;
+﻿global using System;
 global using System.Collections.Generic;
 global using System.Threading;
 global using System.Threading.Tasks;
@@ -18,8 +17,6 @@ global using Easy.Platform.AutomationTest.Pages;
 global using Easy.Platform.AutomationTest.TestCases;
 global using Easy.Platform.AutomationTest.TestFrameworks.Xunit;
 global using Easy.Platform.AutomationTest.Helpers;
+global using TechTalk.SpecFlow;
 global using Xunit;
 global using FluentAssertions;
-global using OpenQA.Selenium;
-global using OpenQA.Selenium.Support.UI;
-global using OpenQA.Selenium.Chrome;

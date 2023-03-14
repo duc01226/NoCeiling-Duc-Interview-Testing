@@ -3,11 +3,19 @@ using Easy.Platform.Common;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using OpenQA.Selenium;
+using SolidToken.SpecFlow.DependencyInjection;
 
 namespace PlatformExampleApp.Test;
 
 internal class Startup : BaseStartup
 {
+    [ScenarioDependencies]
+    public static IServiceCollection SpecFlowConfigureServices()
+    {
+        return SpecFlowConfigureServices(() => new Startup());
+    }
+
     // Uncomment this code, change the example "fallbackAspCoreEnv: "Development.Docker"" to the specific environment to run test in visual studio
     // Because when you click run in visual studio, ASPNETCORE_ENVIRONMENT is missing which
     // will fallback to fallbackAspCoreEnv value

@@ -42,14 +42,6 @@ public static class WebDriverExtension
         return NavigatePage<TPage, AutomationTestSettings>(webDriver, settings, queryParams);
     }
 
-    public static TPage? TryGetCurrentActivePage<TPage>(
-        this IWebDriver webDriver,
-        AutomationTestSettings settings)
-        where TPage : class, IPage<TPage, AutomationTestSettings>
-    {
-        return TryGetCurrentActivePage<TPage, AutomationTestSettings>(webDriver, settings);
-    }
-
     public static IWebElement FindElement(this IWebDriver webDriver, string cssSelector)
     {
         return webDriver.FindElement(By.CssSelector(cssSelector));

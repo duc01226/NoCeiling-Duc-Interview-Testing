@@ -1,5 +1,10 @@
 namespace Easy.Platform.AutomationTest;
 
+/// <summary>
+/// Default AutomationTestSettings for the framework. You could define class extend from this AutomationTestSettings.
+/// It will be auto registered via IConfiguration by default or you could override <see cref="BaseStartup.AutomationTestSettingsProvider"/> to register
+/// by yourself
+/// </summary>
 public class AutomationTestSettings
 {
     private const int DefaultPageLoadTimeoutSeconds = 300;

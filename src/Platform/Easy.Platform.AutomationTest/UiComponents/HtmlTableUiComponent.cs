@@ -8,23 +8,32 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
     public HtmlTableUiComponent(
         IWebDriver webDriver,
         Func<IWebElement>? directReferenceRootElement,
-        IUiComponent? parent = null) : base(webDriver, directReferenceRootElement, parent)
+        IUiComponent? parent = null,
+        Func<IWebElement, string>? getHeaderName = null) : base(webDriver, directReferenceRootElement, parent)
     {
-        Columns = ReadColumns();
+        Headers = ReadHeaders();
         Rows = ReadRows();
+        if (getHeaderName != null) GetHeaderName = getHeaderName;
     }
 
     public HtmlTableUiComponent(
         IWebDriver webDriver,
         string rootElementClassSelector,
-        IUiComponent? parent = null) : base(webDriver, rootElementClassSelector, parent)
+        IUiComponent? parent = null,
+        Func<IWebElement, string>? getHeaderName = null) : base(webDriver, rootElementClassSelector, parent)
     {
-        Columns = ReadColumns();
+        Headers = ReadHeaders();
         Rows = ReadRows();
+        if (getHeaderName != null) GetHeaderName = getHeaderName;
     }
 
+    /// <summary>
+    /// GetHeaderName from Headers elements. Default get Element Text
+    /// </summary>
+    public Func<IWebElement, string>? GetHeaderName { get; set; }
+
     public List<Row> Rows { get; set; }
-    public List<IWebElement> Columns { get; set; }
+    public List<IWebElement> Headers { get; set; }
 
     public List<Row> ReadRows()
     {
@@ -33,11 +42,11 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
             : RootElement!.FindElements(By.XPath("./tr")).ToList();
 
         return rows
-            .Select((rowElement, rowIndex) => new Row(WebDriver, rowIndex, Columns, directReferenceRootElement: () => rowElement, this))
+            .Select((rowElement, rowIndex) => new Row(WebDriver, rowIndex, Headers, directReferenceRootElement: () => rowElement, this))
             .ToList();
     }
 
-    public List<IWebElement> ReadColumns()
+    public List<IWebElement> ReadHeaders()
     {
         return RootElement!.FindElements(By.TagName("th")).ToList();
     }
@@ -83,10 +92,12 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
             int rowIndex,
             List<IWebElement> columns,
             Func<IWebElement>? directReferenceRootElement,
-            IUiComponent? parent = null) : base(webDriver, directReferenceRootElement, parent)
+            IUiComponent? parent = null,
+            Func<IWebElement, string>? getHeaderName = null) : base(webDriver, directReferenceRootElement, parent)
         {
             RowIndex = rowIndex;
             Cells = ReadCells(columns);
+            GetHeaderName = getHeaderName ?? GetHeaderName;
         }
 
         public Row(
@@ -94,14 +105,21 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
             int rowIndex,
             List<IWebElement> columns,
             string rootElementClassSelector,
-            IUiComponent? parent = null) : base(webDriver, rootElementClassSelector, parent)
+            IUiComponent? parent = null,
+            Func<IWebElement, string>? getHeaderName = null) : base(webDriver, rootElementClassSelector, parent)
         {
             RowIndex = rowIndex;
             Cells = ReadCells(columns);
+            GetHeaderName = getHeaderName ?? GetHeaderName;
         }
 
         public List<Cell> Cells { get; set; }
         public int RowIndex { get; set; }
+
+        /// <summary>
+        /// GetHeaderName from Headers elements. Default get Element Text
+        /// </summary>
+        public Func<IWebElement, string> GetHeaderName { get; set; } = headerElement => headerElement.Text;
 
         public List<Cell> ReadCells(List<IWebElement> columns)
         {
@@ -113,7 +131,7 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
                     {
                         ColIndex = cellIndex,
                         RowIndex = RowIndex,
-                        ColName = columns.ElementAtOrDefault(cellIndex)?.Text,
+                        ColName = columns.ElementAtOrDefault(cellIndex).PipeIfNotNull(p => GetHeaderName(p!)),
                         Value = cellElement.Text
                     })
                 .ToList();
