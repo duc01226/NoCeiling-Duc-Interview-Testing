@@ -93,6 +93,7 @@ public abstract class PlatformEfCoreRootRepository<TEntity, TPrimaryKey, TDbCont
             .PipeIf(
                 loadRelatedEntities.Any(),
                 p => loadRelatedEntities.Aggregate(p.AsQueryable(), (query, loadRelatedEntityFn) => query.Include(loadRelatedEntityFn)))
-            .AsQueryable();
+            .AsQueryable()
+            .PipeIf(UnitOfWorkManager.TryGetCurrentActiveUow() == null, p => p.AsNoTracking());
     }
 }
