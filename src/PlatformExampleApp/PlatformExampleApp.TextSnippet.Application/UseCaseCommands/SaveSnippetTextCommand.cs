@@ -135,13 +135,20 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
         //    .EnsureFound();
         var demoSingleValueToListOrArray = request.AsInArray().Concat(request.AsInList()); // return [request].Concat(List<>{request}) => [request, request]
 
-        // THIS IS NOT RELATED to SaveSnippetText logic. Test support suppress uow works
-        using (var uow = UnitOfWorkManager.Begin())
+        try
         {
-            await textSnippetEntityRepository.UpdateAsync(
-                await textSnippetEntityRepository.FirstOrDefaultAsync(cancellationToken: cancellationToken),
-                cancellationToken: cancellationToken);
-            await uow.CompleteAsync(cancellationToken);
+            // THIS IS NOT RELATED to SaveSnippetText logic. Test support suppress uow works
+            using (var uow = UnitOfWorkManager.Begin())
+            {
+                await textSnippetEntityRepository.UpdateAsync(
+                    await textSnippetEntityRepository.FirstOrDefaultAsync(cancellationToken: cancellationToken),
+                    cancellationToken: cancellationToken);
+                await uow.CompleteAsync(cancellationToken);
+            }
+        }
+        catch (Exception e)
+        {
+            logger.LogWarning(e, "THIS IS NOT RELATED to SaveSnippetText logic. Test support suppress uow works failed.");
         }
 
         // STEP 1: Build saving entity data from request. Throw not found if update (when id is not null)
