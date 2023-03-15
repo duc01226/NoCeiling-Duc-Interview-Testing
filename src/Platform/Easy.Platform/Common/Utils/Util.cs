@@ -13,4 +13,9 @@ public static partial class Util
     {
         return (T)Activator.CreateInstance(typeof(T), args: paramArray);
     }
+
+    public static object CreateInstance(Type type, params object[] paramArray)
+    {
+        return Activator.CreateInstance(type, args: paramArray);
+    }
 }

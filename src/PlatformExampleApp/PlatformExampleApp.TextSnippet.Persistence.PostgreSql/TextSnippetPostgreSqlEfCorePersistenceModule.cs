@@ -33,8 +33,9 @@ public class TextSnippetPostgreSqlEfCorePersistenceModule : PlatformEfCorePersis
     protected override Action<DbContextOptionsBuilder> DbContextOptionsBuilderActionProvider(
         IServiceProvider serviceProvider)
     {
+        // UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery) for best practice increase performance
         return options =>
-            options.UseNpgsql(Configuration.GetConnectionString("PostgreSqlConnection"));
+            options.UseNpgsql(Configuration.GetConnectionString("PostgreSqlConnection"), options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
     }
 }
 

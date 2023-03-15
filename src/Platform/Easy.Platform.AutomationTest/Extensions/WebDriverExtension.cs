@@ -1,3 +1,4 @@
+using System.Reflection;
 using Easy.Platform.AutomationTest.Pages;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Interactions;
@@ -13,12 +14,40 @@ public static class WebDriverExtension
         where TPage : class, IPage<TPage, TSettings>
         where TSettings : AutomationTestSettings
     {
-        var page = Util.CreateInstance<TPage>(webDriver, settings)
+        var page = IPage.CreateInstance<TPage, TSettings>(webDriver, settings)
             .With(_ => _.QueryParams = queryParams);
 
         webDriver.Navigate().GoToUrl(page.FullUrl);
 
         return page;
+    }
+
+    public static IPage NavigatePageByFullUrl<TSettings>(
+        this IWebDriver webDriver,
+        Assembly pageAssembly,
+        TSettings settings,
+        string url)
+        where TSettings : AutomationTestSettings
+    {
+        var page = IPage.CreateInstanceByMatchingUrl(pageAssembly, url, webDriver, settings);
+
+        if (page != null)
+            webDriver.Navigate().GoToUrl(page.FullUrl);
+        else throw new Exception($"Not found any defined page class which match the given url {url}");
+
+        return page;
+    }
+
+    public static IPage NavigatePageByUrlInfo<TSettings>(
+        this IWebDriver webDriver,
+        Assembly pageAssembly,
+        TSettings settings,
+        string fromPageAppName,
+        string fromPagePath,
+        string? queryParams = null)
+        where TSettings : AutomationTestSettings
+    {
+        return NavigatePageByFullUrl(webDriver, pageAssembly, settings, IPage.BuildFullUrl(settings, fromPageAppName, fromPagePath, queryParams).AbsoluteUri);
     }
 
     public static TPage? TryGetCurrentActivePage<TPage, TSettings>(
@@ -27,7 +56,7 @@ public static class WebDriverExtension
         where TPage : class, IPage<TPage, TSettings>
         where TSettings : AutomationTestSettings
     {
-        var page = Util.CreateInstance<TPage>(webDriver, settings)
+        var page = IPage.CreateInstance<TPage, TSettings>(webDriver, settings)
             .With(page => page.QueryParams = webDriver.Url.ToUri().QueryParams());
 
         return page.ValidateCurrentPageDocumentMatched() ? page : null;

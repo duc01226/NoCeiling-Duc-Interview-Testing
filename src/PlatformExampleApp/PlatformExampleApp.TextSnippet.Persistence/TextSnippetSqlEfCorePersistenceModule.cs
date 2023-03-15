@@ -46,8 +46,9 @@ public class TextSnippetSqlEfCorePersistenceModule : PlatformEfCorePersistenceMo
     protected override Action<DbContextOptionsBuilder> DbContextOptionsBuilderActionProvider(
         IServiceProvider serviceProvider)
     {
+        // UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery) for best practice increase performance
         return options =>
-            options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
+            options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"), options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
     }
 }
 

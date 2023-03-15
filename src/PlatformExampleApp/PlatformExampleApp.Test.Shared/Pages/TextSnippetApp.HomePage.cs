@@ -43,9 +43,9 @@ public static partial class TextSnippetApp
         public GeneralUiComponent SaveSnippetFormSubmitBtn => new(WebDriver, rootElementClassSelector: ".text-snippet-detail__main-form-submit-btn", parent: this);
         public GeneralUiComponent SaveSnippetFormResetBtn => new(WebDriver, rootElementClassSelector: ".text-snippet-detail__main-form-reset-btn", parent: this);
 
-        public override List<IWebElement> AllErrors()
+        public override List<IWebElement> AllErrorElements()
         {
-            return base.AllErrors().ConcatIf(@if: GlobalError != null, GlobalError!).Concat(SaveSnippetTextDetailErrors).ToList();
+            return base.AllErrorElements().ConcatIf(@if: GlobalError != null, GlobalError!).Concat(SaveSnippetTextDetailErrors).ToList();
         }
 
         public HomePage AssertTextSnippetItemsDisplayFullPage()
@@ -198,7 +198,7 @@ public static partial class TextSnippetApp
 
         public HomePage AssertPageMustHasCreateDuplicatedSnippetTextError()
         {
-            return AssertPageMustHasErrors(TextSnippetEntityData.Errors.DuplicatedSnippetTextErrorMsg);
+            return AssertPageMustHasError(TextSnippetEntityData.Errors.DuplicatedSnippetTextErrorMsg);
         }
     }
 }
