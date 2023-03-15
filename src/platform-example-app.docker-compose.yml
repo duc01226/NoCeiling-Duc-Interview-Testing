@@ -74,6 +74,75 @@ services:
       edge:
         condition: service_started
 
+  text-snippet-automation-test-bdd-chrome:
+    image: ${REGISTRY:-duc01226}/easy-platform-example-app-text-snippet-automation-test-bdd:${PLATFORM:-linux}-${TAG:-latest}
+    build:
+      context: .
+      dockerfile: PlatformExampleApp/PlatformExampleApp.Test.BDD/Dockerfile
+    environment:
+      - AutomationTestSettings__WebDriverType=${AutomationTestSettings__WebDriverType:-Chrome}
+    depends_on:
+      text-snippet-api:
+        condition: service_healthy
+      text-snippet-webspa:
+        condition: service_started
+      selenium-hub:
+        condition: service_started
+      chrome1:
+        condition: service_started
+      chrome2:
+        condition: service_started
+      firefox:
+        condition: service_started
+      edge:
+        condition: service_started
+
+  text-snippet-automation-test-bdd-edge:
+    image: ${REGISTRY:-duc01226}/easy-platform-example-app-text-snippet-automation-test-bdd:${PLATFORM:-linux}-${TAG:-latest}
+    build:
+      context: .
+      dockerfile: PlatformExampleApp/PlatformExampleApp.Test.BDD/Dockerfile
+    environment:
+      - AutomationTestSettings__WebDriverType=${AutomationTestSettings__WebDriverType:-edge}
+    depends_on:
+      text-snippet-api:
+        condition: service_healthy
+      text-snippet-webspa:
+        condition: service_started
+      selenium-hub:
+        condition: service_started
+      chrome1:
+        condition: service_started
+      chrome2:
+        condition: service_started
+      firefox:
+        condition: service_started
+      edge:
+        condition: service_started
+
+  text-snippet-automation-test-bdd-firefox:
+    image: ${REGISTRY:-duc01226}/easy-platform-example-app-text-snippet-automation-test-bdd:${PLATFORM:-linux}-${TAG:-latest}
+    build:
+      context: .
+      dockerfile: PlatformExampleApp/PlatformExampleApp.Test.BDD/Dockerfile
+    environment:
+      - AutomationTestSettings__WebDriverType=${AutomationTestSettings__WebDriverType:-Firefox}
+    depends_on:
+      text-snippet-api:
+        condition: service_healthy
+      text-snippet-webspa:
+        condition: service_started
+      selenium-hub:
+        condition: service_started
+      chrome1:
+        condition: service_started
+      chrome2:
+        condition: service_started
+      firefox:
+        condition: service_started
+      edge:
+        condition: service_started
+
 networks:
   default:
     name: platform-example-app-network

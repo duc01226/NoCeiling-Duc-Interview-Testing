@@ -1,7 +1,7 @@
-using PlatformExampleApp.Test.DataModels;
+using PlatformExampleApp.Test.Shared.EntityData;
 using PlatformExampleApp.Test.TestCases.Helpers;
 
-namespace PlatformExampleApp.Test.Apps.TextSnippet.TestCases;
+namespace PlatformExampleApp.Test.TestCases;
 
 [Trait(name: "App", value: "TextSnippet")]
 public class UpdateSnippetTextTestCases : TestCase

@@ -2,7 +2,7 @@ namespace Easy.Platform.AutomationTest;
 
 /// <summary>
 /// Default AutomationTestSettings for the framework. You could define class extend from this AutomationTestSettings.
-/// It will be auto registered via IConfiguration by default or you could override <see cref="BaseStartup.AutomationTestSettingsProvider"/> to register
+/// It will be auto registered via IConfiguration by default or you could override <see cref="BaseStartup.AutomationTestSettingsProvider" /> to register
 /// by yourself
 /// </summary>
 public class AutomationTestSettings
@@ -14,6 +14,7 @@ public class AutomationTestSettings
     public string? RemoteWebDriverUrl { get; set; }
     public WebDriverTypes WebDriverType { get; set; }
     public int? PageLoadTimeoutSeconds { get; set; } = DefaultPageLoadTimeoutSeconds;
+    public double RemoteWebDriverCommandTimeoutSeconds { get; set; } = 300;
 
     public enum WebDriverTypes
     {

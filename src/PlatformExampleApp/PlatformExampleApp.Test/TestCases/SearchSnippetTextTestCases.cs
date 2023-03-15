@@ -1,7 +1,7 @@
-using PlatformExampleApp.Test.Apps.TextSnippet.Pages;
+using PlatformExampleApp.Test.Shared.Pages;
 using PlatformExampleApp.Test.TestCases.Helpers;
 
-namespace PlatformExampleApp.Test.Apps.TextSnippet.TestCases;
+namespace PlatformExampleApp.Test.TestCases;
 
 [Trait(name: "App", value: "TextSnippet")]
 public class SearchSnippetTextTestCases : TestCase

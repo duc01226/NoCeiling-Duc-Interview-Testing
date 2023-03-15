@@ -29,10 +29,10 @@ RUN dotnet restore ./Platform/Easy.Platform.AzureFileStorage/Easy.Platform.Azure
 RUN dotnet restore ./Platform/Easy.Platform.AutomationTest/Easy.Platform.AutomationTest.csproj
 
 COPY PlatformExampleApp/PlatformExampleApp.Test.Shared/PlatformExampleApp.Test.Shared.csproj PlatformExampleApp/PlatformExampleApp.Test.Shared/
-COPY PlatformExampleApp/PlatformExampleApp.Test/PlatformExampleApp.Test.csproj PlatformExampleApp/PlatformExampleApp.Test/
-RUN dotnet restore ./PlatformExampleApp/PlatformExampleApp.Test/PlatformExampleApp.Test.csproj
+COPY PlatformExampleApp/PlatformExampleApp.Test.BDD/PlatformExampleApp.Test.BDD.csproj PlatformExampleApp/PlatformExampleApp.Test.BDD/
+RUN dotnet restore ./PlatformExampleApp/PlatformExampleApp.Test.BDD/PlatformExampleApp.Test.BDD.csproj
 
 COPY Platform Platform
 COPY PlatformExampleApp/PlatformExampleApp.Test.Shared PlatformExampleApp/PlatformExampleApp.Test.Shared
-COPY PlatformExampleApp/PlatformExampleApp.Test PlatformExampleApp/PlatformExampleApp.Test
-ENTRYPOINT ["/bin/sh", "-c" , "dotnet test /app/PlatformExampleApp/PlatformExampleApp.Test/PlatformExampleApp.Test.csproj --no-restore"]
+COPY PlatformExampleApp/PlatformExampleApp.Test.BDD PlatformExampleApp/PlatformExampleApp.Test.BDD
+ENTRYPOINT ["/bin/sh", "-c" , "dotnet test /app/PlatformExampleApp/PlatformExampleApp.Test.BDD/PlatformExampleApp.Test.BDD.csproj --no-restore"]

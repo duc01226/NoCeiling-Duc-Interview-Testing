@@ -62,23 +62,25 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development.Docker
       - ASPNETCORE_URLS=http://0.0.0.0:80
-      - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection:-Server=sql-data,1433;Database=TextSnippedDb;User Id=sa;Password=123456Abc}
-      - RedisCacheOptions__Connection=${RedisCacheOptions__Connection:-redis-cache:6379,ConnectTimeout=5000,abortConnect=false}
-      - MongoDB__ConnectionString=${MongoDB__ConnectionString:-mongodb://root:rootPassXXX@mongo-data:27017?authSource=admin}
+      - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection:-Server=localhost,14330;Database=TextSnippedDb;User Id=sa;Password=123456Abc}
+      - ConnectionStrings__PostgreSqlConnection=${ConnectionStrings__PostgreSqlConnection:-Host=localhost;Port=54320;Username=postgres;Password=postgres;Database=TextSnippedDb}
+      - RedisCacheOptions__Connection=${RedisCacheOptions__Connection:-localhost:6379,ConnectTimeout=5000,abortConnect=false}
+      - MongoDB__ConnectionString=${MongoDB__ConnectionString:-mongodb://root:rootPassXXX@localhost:27017?authSource=admin}
       - UseDbType=${UseDbType:-Postgres}
       - RabbitMqOptions__HostNames=rabbitmq
+      - RandomThrowExceptionForTesting=${RandomThrowExceptionForTesting:-true}
     ports:
       - "5001:80"
     healthcheck:
       test: curl --fail http://0.0.0.0:80 || exit 1
       interval: 5s
       timeout: 10s #This property specifies the number of seconds Docker awaits for your health check command to return an exit code before declaring it as failed.
-      retries: 10 #This property specifies the number of consecutive health check failures required to declare the container as unhealthy.
+      retries: 20 #This property specifies the number of consecutive health check failures required to declare the container as unhealthy.
       start_period: 10s #provides initialization time for containers that need time to bootstrap
     extra_hosts:
       - "host.docker.internal:host-gateway"
       - "localhost:host-gateway"
-    mem_limit: 150m
+    mem_limit: 300m
 
   text-snippet-webspa:
     build:
@@ -192,14 +194,46 @@ services:
   text-snippet-automation-test:
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development.Docker}
-      - UseDbType=${BRAVOSUITE_TEXTSNIPPET_USEDBTYPE:-MongoDb}
+      - AutomationTestSettings__AppNameToOrigin__TextSnippetApp=${AutomationTestSettings__AppNameToOrigin__TextSnippetApp:-http://localhost:4001}
+      - AutomationTestSettings__RemoteWebDriverUrl=${AutomationTestSettings__RemoteWebDriverUrl:-http://localhost:4444/wd/hub}
+      - AutomationTestSettings__WebDriverType=${AutomationTestSettings__WebDriverType:-Chrome}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "localhost:host-gateway"
+    command: bash -c "echo 'Sleep 60s waiting for other app started to run automation test' && sleep 60s && /opt/bin/entry_point.sh"
+
+  text-snippet-automation-test-bdd-chrome:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development.Docker}
+      - AutomationTestSettings__AppNameToOrigin__TextSnippetApp=${AutomationTestSettings__AppNameToOrigin__TextSnippetApp:-http://localhost:4001}
+      - AutomationTestSettings__RemoteWebDriverUrl=${AutomationTestSettings__RemoteWebDriverUrl:-http://localhost:4444/wd/hub}
+      - AutomationTestSettings__WebDriverType=${AutomationTestSettings__WebDriverType:-Chrome}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "localhost:host-gateway"
+    command: bash -c "echo 'Sleep 60s waiting for other app started to run automation test' && sleep 60s && /opt/bin/entry_point.sh"
+
+  text-snippet-automation-test-bdd-edge:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development.Docker}
+      - AutomationTestSettings__AppNameToOrigin__TextSnippetApp=${AutomationTestSettings__AppNameToOrigin__TextSnippetApp:-http://localhost:4001}
+      - AutomationTestSettings__RemoteWebDriverUrl=${AutomationTestSettings__RemoteWebDriverUrl:-http://localhost:4444/wd/hub}
+      - AutomationTestSettings__WebDriverType=${AutomationTestSettings__WebDriverType:-Edge}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "localhost:host-gateway"
+    command: bash -c "echo 'Sleep 60s waiting for other app started to run automation test' && sleep 60s && /opt/bin/entry_point.sh"
+
+  text-snippet-automation-test-bdd-firefox:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development.Docker}
       - AutomationTestSettings__AppNameToOrigin__TextSnippetApp=${AutomationTestSettings__AppNameToOrigin__TextSnippetApp:-http://localhost:4001}
       - AutomationTestSettings__RemoteWebDriverUrl=${AutomationTestSettings__RemoteWebDriverUrl:-http://localhost:4444/wd/hub}
       - AutomationTestSettings__WebDriverType=${AutomationTestSettings__WebDriverType:-Firefox}
     extra_hosts:
       - "host.docker.internal:host-gateway"
       - "localhost:host-gateway"
-    # command: bash -c "echo 'Sleep 60s waiting for other app started to run automation test' && sleep 60s && /opt/bin/entry_point.sh"
+    command: bash -c "echo 'Sleep 60s waiting for other app started to run automation test' && sleep 60s && /opt/bin/entry_point.sh"
 
 volumes:
   Easy.Platform-sqldata:

@@ -1,4 +1,4 @@
-namespace PlatformExampleApp.Test.CommonUiComponents;
+namespace PlatformExampleApp.Test.Shared.CommonUiComponents;
 
 public class FormFieldUiComponent : UiComponent<FormFieldUiComponent>
 {

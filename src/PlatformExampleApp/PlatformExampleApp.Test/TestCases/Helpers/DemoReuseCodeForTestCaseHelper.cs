@@ -1,4 +1,4 @@
-using PlatformExampleApp.Test.Apps.TextSnippet.Pages;
+using PlatformExampleApp.Test.Shared.Pages;
 
 namespace PlatformExampleApp.Test.TestCases.Helpers;
 

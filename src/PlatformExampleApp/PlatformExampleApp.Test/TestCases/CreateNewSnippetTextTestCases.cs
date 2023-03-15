@@ -1,15 +1,15 @@
 using AutoFixture.Xunit2;
-using PlatformExampleApp.Test.Apps.TextSnippet.Pages;
-using PlatformExampleApp.Test.DataModels;
+using PlatformExampleApp.Test.Shared.EntityData;
+using PlatformExampleApp.Test.Shared.Pages;
 
-namespace PlatformExampleApp.Test.Apps.TextSnippet.TestCases;
+namespace PlatformExampleApp.Test.TestCases;
 
 [Trait(name: "App", value: "TextSnippet")]
-public class CreateNewSnippetTextTestCases : TestCase
+public class CreateNewSnippetTextTestCases : TestCase<TextSnippetAutomationTestSettings>
 {
     public CreateNewSnippetTextTestCases(
         IWebDriverManager driverManager,
-        AutomationTestSettings settings,
+        TextSnippetAutomationTestSettings settings,
         WebDriverLazyInitializer lazyWebDriver,
         GlobalWebDriver globalLazyWebDriver) : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver)
     {
@@ -24,10 +24,12 @@ public class CreateNewSnippetTextTestCases : TestCase
         // GIVEN: loadedHomePage
         var loadedHomePage = LazyWebDriver.Value.NavigatePage<TextSnippetApp.HomePage>(Settings)
             .WaitInitLoadingDataSuccessWithFullPagingData(
-                maxWaitForLoadingDataSeconds: Util.Random.ReturnByChanceOrDefault(
-                    percentChance: 20, // random 20 percent test failed waiting timeout error by only one second
-                    chanceReturnValue: 1,
-                    TextSnippetApp.HomePage.DefaultMaxRequestWaitSeconds));
+                maxWaitForLoadingDataSeconds: Settings.RandomTestShortWaitingFailed == true
+                    ? Util.Random.ReturnByChanceOrDefault(
+                        percentChance: 20, // random 20 percent test failed waiting timeout error by only one second
+                        chanceReturnValue: 1,
+                        TextSnippetApp.HomePage.DefaultMaxRequestWaitSeconds)
+                    : TextSnippetApp.HomePage.DefaultMaxRequestWaitSeconds);
 
         // WHEN: Create new item snippet text by different unique name
         var newSnippetText = autoRandomTextSnippetEntityData.SnippetText;

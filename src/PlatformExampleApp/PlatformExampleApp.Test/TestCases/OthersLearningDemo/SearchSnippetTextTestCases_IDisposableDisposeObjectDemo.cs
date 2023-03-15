@@ -1,11 +1,11 @@
-using PlatformExampleApp.Test.Apps.TextSnippet.Pages;
+using PlatformExampleApp.Test.Shared.Pages;
 using PlatformExampleApp.Test.TestCases.Helpers;
 
 namespace PlatformExampleApp.Test.TestCases.OthersLearningDemo;
 
 /// <summary>
-/// You could implement IDisposable for test case to dispose driver in dispose method and other disposable things <br/>
-/// If you do not dispose in this case, the browser driver is not closed after test <br/>
+/// You could implement IDisposable for test case to dispose driver in dispose method and other disposable things <br />
+/// If you do not dispose in this case, the browser driver is not closed after test <br />
 /// THIS IS ONLY FOR LEARNING PURPOSE. USING DEPENDENCY INJECTION ALREADY DISPOSE DISPOSABLE OBJECT FOR US
 /// </summary>
 [Trait(name: "App", value: "TextSnippet")]

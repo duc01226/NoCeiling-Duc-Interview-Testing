@@ -193,7 +193,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
 
   protected tapResponse<T>(
     nextFn: (next: T) => void,
-    errorFn?: (error: any) => void,
+    errorFn?: (err: PlatformApiServiceErrorResponse | Error) => any,
     completeFn?: () => void
   ): (source: Observable<T>) => Observable<T> {
     // eslint-disable-next-line @typescript-eslint/no-empty-function

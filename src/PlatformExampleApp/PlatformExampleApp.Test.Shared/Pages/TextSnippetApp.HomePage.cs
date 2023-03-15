@@ -1,7 +1,7 @@
-using PlatformExampleApp.Test.CommonUiComponents;
-using PlatformExampleApp.Test.DataModels;
+using PlatformExampleApp.Test.Shared.CommonUiComponents;
+using PlatformExampleApp.Test.Shared.EntityData;
 
-namespace PlatformExampleApp.Test.Apps.TextSnippet.Pages;
+namespace PlatformExampleApp.Test.Shared.Pages;
 
 public static partial class TextSnippetApp
 {

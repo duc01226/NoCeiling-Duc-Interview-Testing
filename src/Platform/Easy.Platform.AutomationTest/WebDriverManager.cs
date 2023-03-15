@@ -49,13 +49,15 @@ public class WebDriverManager : IWebDriverManager
 
     public IWebDriver CreateRemoteWebDriver()
     {
-        // AddArgument("no-sandbox") to fix https://stackoverflow.com/questions/22322596/selenium-error-the-http-request-to-the-remote-webdriver-timed-out-after-60-sec
         return CreateRemoteWebDriver(BuildDefaultDriverOptions(Settings));
     }
 
     public IWebDriver CreateRemoteWebDriver(DriverOptions driverOptions)
     {
-        return new RemoteWebDriver(new Uri(Settings.RemoteWebDriverUrl!), driverOptions).Pipe(DefaultConfigDriver);
+        return new RemoteWebDriver(
+            new Uri(Settings.RemoteWebDriverUrl!),
+            driverOptions.ToCapabilities(),
+            TimeSpan.FromSeconds(Settings.RemoteWebDriverCommandTimeoutSeconds)).Pipe(DefaultConfigDriver);
     }
 
     public IWebDriver CreateLocalMachineWebDriver(string version = "Latest", Architecture architecture = Architecture.Auto)
@@ -71,10 +73,11 @@ public class WebDriverManager : IWebDriverManager
 
     public DriverOptions BuildDefaultDriverOptions(AutomationTestSettings settings)
     {
+        // AddArgument("no-sandbox") to fix https://stackoverflow.com/questions/22322596/selenium-error-the-http-request-to-the-remote-webdriver-timed-out-after-60-sec
         return settings.WebDriverType
             .WhenValue(AutomationTestSettings.WebDriverTypes.Chrome, _ => new ChromeOptions().Pipe(_ => _.AddArgument("no-sandbox")).As<DriverOptions>())
             .WhenValue(AutomationTestSettings.WebDriverTypes.Firefox, _ => new FirefoxOptions().As<DriverOptions>())
-            .WhenValue(AutomationTestSettings.WebDriverTypes.Edge, _ => new EdgeOptions().As<DriverOptions>())
+            .WhenValue(AutomationTestSettings.WebDriverTypes.Edge, _ => new EdgeOptions().Pipe(_ => _.AddArgument("no-sandbox")).As<DriverOptions>())
             .Execute();
     }
 

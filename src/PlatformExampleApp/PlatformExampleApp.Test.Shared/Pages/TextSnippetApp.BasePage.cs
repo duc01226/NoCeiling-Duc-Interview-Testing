@@ -1,6 +1,6 @@
-using PlatformExampleApp.Test.CommonUiComponents;
+using PlatformExampleApp.Test.Shared.CommonUiComponents;
 
-namespace PlatformExampleApp.Test.Apps.TextSnippet.Pages;
+namespace PlatformExampleApp.Test.Shared.Pages;
 
 public static partial class TextSnippetApp
 {
@@ -19,12 +19,12 @@ public static partial class TextSnippetApp
             GlobalSpinner = new SpinnerUiComponent(webDriver, directReferenceRootElement: null, parent: this);
         }
 
-        public SpinnerUiComponent GlobalSpinner { get; set; }
-
         public override string AppName => Const.AppName;
         public override string ErrorElementCssSelector => ".mat-mdc-error";
         public override IWebElement? GlobalSpinnerElement => GlobalSpinner.RootElement;
 
         protected override int DefaultWaitUntilMaxSeconds => DefaultMaxRequestWaitSeconds;
+
+        public SpinnerUiComponent GlobalSpinner { get; set; }
     }
 }

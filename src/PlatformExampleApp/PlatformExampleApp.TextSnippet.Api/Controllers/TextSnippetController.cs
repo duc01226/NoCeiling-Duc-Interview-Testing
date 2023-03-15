@@ -1,3 +1,4 @@
+using Easy.Platform.Application;
 using Easy.Platform.AspNetCore.Controllers;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
@@ -161,8 +162,9 @@ public class TextSnippetController : PlatformBaseController
 
     private static void RandomThrowToTestHandleInternalException(int percentChance = 5)
     {
-        Util.Random.DoByChance(
-            percentChance,
-            () => throw new Exception("Random Test Throw Exception"));
+        if (PlatformApplicationGlobal.Configuration.GetSection("RandomThrowExceptionForTesting").Get<bool?>() == true)
+            Util.Random.DoByChance(
+                percentChance,
+                () => throw new Exception("Random Test Throw Exception"));
     }
 }

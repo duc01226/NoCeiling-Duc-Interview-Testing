@@ -1,12 +1,13 @@
 namespace Easy.Platform.AutomationTest.TestCases;
 
-public interface ISpecFlowStepDefinitionsContext
+public abstract class SpecFlowStepDefinitionsContext
 {
+    public Guid InstanceId { get; } = Guid.NewGuid();
 }
 
 public abstract class SpecFlowStepDefinitions<TSettings, TContext> : TestCase<TSettings>
     where TSettings : AutomationTestSettings
-    where TContext : ISpecFlowStepDefinitionsContext
+    where TContext : SpecFlowStepDefinitionsContext
 {
     protected SpecFlowStepDefinitions(
         IWebDriverManager driverManager,
@@ -22,7 +23,7 @@ public abstract class SpecFlowStepDefinitions<TSettings, TContext> : TestCase<TS
 }
 
 public abstract class SpecFlowStepDefinitions<TContext> : SpecFlowStepDefinitions<AutomationTestSettings, TContext>
-    where TContext : ISpecFlowStepDefinitionsContext
+    where TContext : SpecFlowStepDefinitionsContext
 {
     protected SpecFlowStepDefinitions(
         IWebDriverManager driverManager,

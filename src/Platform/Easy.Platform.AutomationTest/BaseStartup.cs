@@ -63,7 +63,7 @@ public abstract class BaseStartup
 
         services.AddScoped<WebDriverLazyInitializer, WebDriverLazyInitializer>();
         services.AddSingleton<GlobalWebDriver, GlobalWebDriver>();
-        services.RegisterAllFromType(typeof(ISpecFlowStepDefinitionsContext), GetType().Assembly, ServiceLifeTime.Scoped);
+        services.RegisterAllFromType(typeof(SpecFlowStepDefinitionsContext), GetType().Assembly, ServiceLifeTime.Scoped);
     }
 
     /// <summary>
@@ -72,7 +72,7 @@ public abstract class BaseStartup
     public virtual void ConfigWebDriverOptions(IOptions options) { }
 
     /// <summary>
-    /// Default register AutomationTestSettings via IConfiguration first level binding using section key <see cref="DefaultAutomationTestSettingsConfigurationSection"/>. Override this to custom
+    /// Default register AutomationTestSettings via IConfiguration first level binding using section key <see cref="DefaultAutomationTestSettingsConfigurationSection" />. Override this to custom
     /// </summary>
     public virtual AutomationTestSettings AutomationTestSettingsProvider(IServiceProvider sp)
     {

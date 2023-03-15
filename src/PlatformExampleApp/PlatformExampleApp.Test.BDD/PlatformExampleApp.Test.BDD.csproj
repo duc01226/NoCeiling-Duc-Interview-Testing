@@ -27,7 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Platform\Easy.Platform.AutomationTest\Easy.Platform.AutomationTest.csproj" />
-    <ProjectReference Include="..\PlatformExampleApp.Test\PlatformExampleApp.Test.csproj" />
+    <ProjectReference Include="..\PlatformExampleApp.Test.Shared\PlatformExampleApp.Test.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

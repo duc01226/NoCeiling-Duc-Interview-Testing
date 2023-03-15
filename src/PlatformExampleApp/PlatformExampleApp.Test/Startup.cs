@@ -30,9 +30,9 @@ internal class Startup : BaseStartup
         //// Example you could define class extend from AutomationTestSettings to auto register custom Settings for your app
         //// It will be auto registered via IConfiguration by default or you could override AutomationTestSettingsProvider to register
         //// by yourself
-        //services.Register(
-        //    typeof(TextSnippetAutomationTestSettings),
-        //    sp => sp.GetRequiredService<IConfiguration>().GetSection(DefaultAutomationTestSettingsConfigurationSection).Get<TextSnippetAutomationTestSettings>()!);
+        services.Register(
+            typeof(TextSnippetAutomationTestSettings),
+            sp => sp.GetRequiredService<IConfiguration>().GetSection(DefaultAutomationTestSettingsConfigurationSection).Get<TextSnippetAutomationTestSettings>()!);
     }
 
     // Optional override to config WebDriverManager DriverOptions
@@ -52,13 +52,10 @@ internal class Startup : BaseStartup
 // Example you could define class extend from AutomationTestSettings to auto register custom Settings for your app
 // It will be auto registered via IConfiguration by default or you could override AutomationTestSettingsProvider to register
 // by yourself
-//public class TextSnippetAutomationTestSettings : AutomationTestSettings
-//{
-//    public UserAccount DefaultAccount { get; set; } = new();
-
-//    public class UserAccount
-//    {
-//        public string UserName { get; set; } = "";
-//        public string Password { get; set; } = "";
-//    }
-//}
+// Example you could define class extend from AutomationTestSettings to auto register custom Settings for your app
+// It will be auto registered via IConfiguration by default or you could override AutomationTestSettingsProvider to register
+// by yourself
+public class TextSnippetAutomationTestSettings : AutomationTestSettings
+{
+    public bool? RandomTestShortWaitingFailed { get; set; }
+}

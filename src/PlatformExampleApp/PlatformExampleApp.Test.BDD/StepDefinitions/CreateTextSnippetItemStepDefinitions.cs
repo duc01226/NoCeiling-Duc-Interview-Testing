@@ -1,20 +1,20 @@
-using PlatformExampleApp.Test.Apps.TextSnippet.Pages;
-using PlatformExampleApp.Test.DataModels;
+using PlatformExampleApp.Test.Shared.EntityData;
+using PlatformExampleApp.Test.Shared.Pages;
 
 namespace PlatformExampleApp.Test.BDD.StepDefinitions;
 
-public class CreateTestSnippetItemStepDefinitionsContext : ISpecFlowStepDefinitionsContext
+public class CreateTestSnippetItemStepDefinitionsContext : SpecFlowStepDefinitionsContext
 {
     public TextSnippetApp.HomePage? GivenALoadSuccessHomePageResult { get; set; }
     public TextSnippetEntityData? WhenDoFillInAndSubmitRandomUniqueSaveSnippetTextFormResult { get; set; }
 }
 
 [Binding]
-public class CreateTestSnippetItemStepDefinitions : SpecFlowStepDefinitions<CreateTestSnippetItemStepDefinitionsContext>
+public class CreateTestSnippetItemStepDefinitions : SpecFlowStepDefinitions<TextSnippetAutomationTestSettings, CreateTestSnippetItemStepDefinitionsContext>
 {
     public CreateTestSnippetItemStepDefinitions(
         IWebDriverManager driverManager,
-        AutomationTestSettings settings,
+        TextSnippetAutomationTestSettings settings,
         WebDriverLazyInitializer lazyWebDriver,
         GlobalWebDriver globalLazyWebDriver,
         CreateTestSnippetItemStepDefinitionsContext context) : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver, context)
@@ -27,10 +27,12 @@ public class CreateTestSnippetItemStepDefinitions : SpecFlowStepDefinitions<Crea
         // GIVEN: loadedHomePage
         Context.GivenALoadSuccessHomePageResult = LazyWebDriver.Value.NavigatePage<TextSnippetApp.HomePage>(Settings)
             .WaitInitLoadingDataSuccessWithFullPagingData(
-                maxWaitForLoadingDataSeconds: Util.Random.ReturnByChanceOrDefault(
-                    percentChance: 20, // random 20 percent test failed waiting timeout error by only one second
-                    chanceReturnValue: 1,
-                    TextSnippetApp.HomePage.DefaultMaxRequestWaitSeconds));
+                maxWaitForLoadingDataSeconds: Settings.RandomTestShortWaitingFailed == true
+                    ? Util.Random.ReturnByChanceOrDefault(
+                        percentChance: 20, // random 20 percent test failed waiting timeout error by only one second
+                        chanceReturnValue: 1,
+                        TextSnippetApp.HomePage.DefaultMaxRequestWaitSeconds)
+                    : TextSnippetApp.HomePage.DefaultMaxRequestWaitSeconds);
     }
 
     [When(

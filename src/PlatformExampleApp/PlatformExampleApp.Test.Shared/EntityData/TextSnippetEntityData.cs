@@ -1,6 +1,6 @@
 using Easy.Platform.AutomationTest.EntityData;
 
-namespace PlatformExampleApp.Test.DataModels;
+namespace PlatformExampleApp.Test.Shared.EntityData;
 
 public class TextSnippetEntityData : AutomationTestEntityData
 {
