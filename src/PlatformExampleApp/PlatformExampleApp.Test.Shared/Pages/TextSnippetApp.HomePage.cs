@@ -14,15 +14,15 @@ public static partial class TextSnippetApp
 
         public HomePage(IWebDriver webDriver, AutomationTestSettings settings) : base(webDriver, settings)
         {
-            SearchTextSnippetTxt = new FormFieldUiComponent(webDriver, directReferenceRootElement: null, parent: this)
+            SearchTextSnippetTxt = new FormFieldUiComponent(webDriver, parent: this)
                 .WithIdentifierSelector(appSearchInput: ".app__search-input");
-            SaveSnippetFormSnippetTextTxt = new FormFieldUiComponent(webDriver, directReferenceRootElement: null, parent: this)
+            SaveSnippetFormSnippetTextTxt = new FormFieldUiComponent(webDriver, parent: this)
                 .WithIdentifierSelector(appSearchInput: ".text-snippet-detail__snippet-text-form-field");
-            SaveSnippetFormFullTextTxt = new FormFieldUiComponent(webDriver, directReferenceRootElement: null, parent: this)
+            SaveSnippetFormFullTextTxt = new FormFieldUiComponent(webDriver, parent: this)
                 .WithIdentifierSelector(appSearchInput: ".text-snippet-detail__full-text-form-field");
         }
 
-        public override string Path => "";
+        public override string Path => "/";
         public override string Title => DefaultTitle;
 
         public IWebElement? Header => WebDriver.TryFindElement(cssSelector: ".app__header > h1");
@@ -191,8 +191,8 @@ public static partial class TextSnippetApp
             return TextSnippetItemsTable.Rows
                 .Select(
                     p => new TextSnippetEntityData(
-                        snippetText: p.GetCell(SnippetTextColName)!.RootElement!.Text,
-                        fulltext: p.GetCell(FullTextColName)!.RootElement!.Text))
+                        snippetText: p.GetCell(SnippetTextColName)!.Text,
+                        fulltext: p.GetCell(FullTextColName)!.Text))
                 .ToList();
         }
 

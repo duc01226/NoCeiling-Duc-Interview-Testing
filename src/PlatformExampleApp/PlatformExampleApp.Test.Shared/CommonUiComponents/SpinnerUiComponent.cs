@@ -2,9 +2,9 @@ namespace PlatformExampleApp.Test.Shared.CommonUiComponents;
 
 public class SpinnerUiComponent : UiComponent<SpinnerUiComponent>
 {
-    public SpinnerUiComponent(IWebDriver webDriver, Func<IWebElement>? directReferenceRootElement, IUiComponent? parent = null) : base(
+    public SpinnerUiComponent(IWebDriver webDriver, IUiComponent? parent = null) : base(
         webDriver,
-        directReferenceRootElement,
+        directReferenceRootElement: null,
         parent)
     {
     }

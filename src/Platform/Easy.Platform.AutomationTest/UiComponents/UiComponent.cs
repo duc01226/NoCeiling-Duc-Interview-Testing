@@ -27,7 +27,7 @@ public interface IUiComponent
     public IWebDriver WebDriver { get; set; }
 
     /// <summary>
-    /// Combine the <see cref="IdentifierSelector"/> and <see cref="RootElementClassSelector"/> to return a unique component selector of current instance on page
+    /// Combine the <see cref="IdentifierSelector" /> and <see cref="RootElementClassSelector" /> to return a unique component selector of current instance on page
     /// </summary>
     public string? FullPathRootElementSelector { get; }
 
@@ -37,9 +37,11 @@ public interface IUiComponent
     public Func<IWebElement>? DirectReferenceRootElement { get; set; }
 
     /// <summary>
-    /// Find and Get RootElement from <see cref="FullPathRootElementSelector"/> OR from <see cref="DirectReferenceRootElement"/>
+    /// Find and Get RootElement from <see cref="FullPathRootElementSelector" /> OR from <see cref="DirectReferenceRootElement" />
     /// </summary>
     public IWebElement? RootElement { get; }
+
+    public string Text { get; }
 
     public bool IsClickable();
     public IUiComponent WaitUntilClickable(double maxWaitSeconds, string? waitForMsg = null);
@@ -142,6 +144,8 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
     public IWebElement? RootElement =>
         Util.TaskRunner.WaitRetryThrowFinalException<IWebElement?, StaleElementReferenceException>(
             executeFunc: () => DirectReferenceRootElement?.Invoke() ?? IUiComponent.FindRootElementBySelector(component: this));
+
+    public virtual string Text => RootElement?.Text ?? "";
 
     public bool IsClickable()
     {

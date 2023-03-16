@@ -19,7 +19,7 @@ namespace PlatformExampleApp.Test.BDD.Features
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("TechTalk.SpecFlow", "3.9.0.0")]
     [System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    public partial class CreateTextSnippetItemFeature : object, Xunit.IClassFixture<CreateTextSnippetItemFeature.FixtureData>, System.IDisposable
+    public partial class CreateTTextSnippetFeatureFeature : object, Xunit.IClassFixture<CreateTTextSnippetFeatureFeature.FixtureData>, System.IDisposable
     {
         
         private static TechTalk.SpecFlow.ITestRunner testRunner;
@@ -28,10 +28,10 @@ namespace PlatformExampleApp.Test.BDD.Features
         
         private Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         
-#line 1 "CreatTextSnippet.feature"
+#line 1 "CreateTextSnippet.feature"
 #line hidden
         
-        public CreateTextSnippetItemFeature(CreateTextSnippetItemFeature.FixtureData fixtureData, PlatformExampleApp_Test_BDD_XUnitAssemblyFixture assemblyFixture, Xunit.Abstractions.ITestOutputHelper testOutputHelper)
+        public CreateTTextSnippetFeatureFeature(CreateTTextSnippetFeatureFeature.FixtureData fixtureData, PlatformExampleApp_Test_BDD_XUnitAssemblyFixture assemblyFixture, Xunit.Abstractions.ITestOutputHelper testOutputHelper)
         {
             this._testOutputHelper = testOutputHelper;
             this.TestInitialize();
@@ -40,7 +40,7 @@ namespace PlatformExampleApp.Test.BDD.Features
         public static void FeatureSetup()
         {
             testRunner = TechTalk.SpecFlow.TestRunnerManager.GetTestRunner();
-            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Create text snippet item", null, ProgrammingLanguage.CSharp, featureTags);
+            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Create tText Snippet Feature", null, ProgrammingLanguage.CSharp, featureTags);
             testRunner.OnFeatureStart(featureInfo);
         }
         
@@ -81,7 +81,7 @@ namespace PlatformExampleApp.Test.BDD.Features
         }
         
         [Xunit.SkippableFactAttribute(DisplayName="Create a new random unique snippet text item should be successful")]
-        [Xunit.TraitAttribute("FeatureTitle", "Create text snippet item")]
+        [Xunit.TraitAttribute("FeatureTitle", "Create tText Snippet Feature")]
         [Xunit.TraitAttribute("Description", "Create a new random unique snippet text item should be successful")]
         public void CreateANewRandomUniqueSnippetTextItemShouldBeSuccessful()
         {
@@ -99,14 +99,14 @@ this.ScenarioInitialize(scenarioInfo);
             {
                 this.ScenarioStart();
 #line 4
-    testRunner.Given("a load success home page", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+    testRunner.Given("Loaded success home page", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
 #line 5
     testRunner.When("Fill in a new random unique value snippet text item data (snippet text and full t" +
                         "ext) and submit a new text snippet item, wait for submit request finished", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 6
-    testRunner.Then("Page show no errors", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+    testRunner.Then("Current page has no errors", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
 #line 7
     testRunner.And("Do search text snippet item with the snippet text that has just being created suc" +
@@ -121,7 +121,7 @@ this.ScenarioInitialize(scenarioInfo);
         }
         
         [Xunit.SkippableFactAttribute(DisplayName="Create two new duplicated snippet text item should be failed")]
-        [Xunit.TraitAttribute("FeatureTitle", "Create text snippet item")]
+        [Xunit.TraitAttribute("FeatureTitle", "Create tText Snippet Feature")]
         [Xunit.TraitAttribute("Description", "Create two new duplicated snippet text item should be failed")]
         public void CreateTwoNewDuplicatedSnippetTextItemShouldBeFailed()
         {
@@ -139,7 +139,7 @@ this.ScenarioInitialize(scenarioInfo);
             {
                 this.ScenarioStart();
 #line 11
-    testRunner.Given("a load success home page", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
+    testRunner.Given("Loaded success home page", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
 #line 12
     testRunner.When("Create a new random unique snippet text item successful and try create the same p" +
@@ -159,12 +159,12 @@ this.ScenarioInitialize(scenarioInfo);
             
             public FixtureData()
             {
-                CreateTextSnippetItemFeature.FeatureSetup();
+                CreateTTextSnippetFeatureFeature.FeatureSetup();
             }
             
             void System.IDisposable.Dispose()
             {
-                CreateTextSnippetItemFeature.FeatureTearDown();
+                CreateTTextSnippetFeatureFeature.FeatureTearDown();
             }
         }
     }

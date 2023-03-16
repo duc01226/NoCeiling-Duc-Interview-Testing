@@ -2,9 +2,9 @@ namespace PlatformExampleApp.Test.Shared.CommonUiComponents;
 
 public class FormFieldUiComponent : UiComponent<FormFieldUiComponent>
 {
-    public FormFieldUiComponent(IWebDriver webDriver, Func<IWebElement>? directReferenceRootElement, IUiComponent? parent = null) : base(
+    public FormFieldUiComponent(IWebDriver webDriver, IUiComponent? parent = null) : base(
         webDriver,
-        directReferenceRootElement,
+        directReferenceRootElement: null,
         parent)
     {
     }
