@@ -15,8 +15,8 @@ public class HomePageSteps : BddStepDefinitions<TextSnippetAutomationTestSetting
     public HomePageSteps(
         IWebDriverManager driverManager,
         TextSnippetAutomationTestSettings settings,
-        WebDriverLazyInitializer lazyWebDriver,
-        GlobalWebDriver globalLazyWebDriver,
+        IScopedLazyWebDriver lazyWebDriver,
+        ISingletonLazyWebDriver globalLazyWebDriver,
         HomePageStepsContext context) : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver, context)
     {
     }
@@ -24,7 +24,7 @@ public class HomePageSteps : BddStepDefinitions<TextSnippetAutomationTestSetting
     [Given(@"Loaded success home page")]
     public void GivenALoadedSuccessHomePage()
     {
-        Context.LoadedSuccessHomePage = LazyWebDriver.Value.NavigatePage<TextSnippetApp.HomePage>(Settings)
+        Context.LoadedSuccessHomePage = WebDriver.NavigatePage<TextSnippetApp.HomePage>(Settings)
             .WaitInitLoadingDataSuccessWithFullPagingData(
                 maxWaitForLoadingDataSeconds: Settings.RandomTestShortWaitingFailed == true
                     ? Util.Random.ReturnByChanceOrDefault(

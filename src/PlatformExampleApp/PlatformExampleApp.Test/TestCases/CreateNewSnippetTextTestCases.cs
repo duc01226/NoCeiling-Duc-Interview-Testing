@@ -10,8 +10,8 @@ public class CreateNewSnippetTextTestCases : TestCase<TextSnippetAutomationTestS
     public CreateNewSnippetTextTestCases(
         IWebDriverManager driverManager,
         TextSnippetAutomationTestSettings settings,
-        WebDriverLazyInitializer lazyWebDriver,
-        GlobalWebDriver globalLazyWebDriver) : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver)
+        IScopedLazyWebDriver lazyWebDriver,
+        ISingletonLazyWebDriver globalLazyWebDriver) : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver)
     {
     }
 
@@ -22,7 +22,7 @@ public class CreateNewSnippetTextTestCases : TestCase<TextSnippetAutomationTestS
     public void WHEN_CreateNewSnippetText_BY_DifferentValidUniqueName(TextSnippetEntityData autoRandomTextSnippetEntityData)
     {
         // GIVEN: loadedHomePage
-        var loadedHomePage = LazyWebDriver.Value.NavigatePage<TextSnippetApp.HomePage>(Settings)
+        var loadedHomePage = WebDriver.NavigatePage<TextSnippetApp.HomePage>(Settings)
             .WaitInitLoadingDataSuccessWithFullPagingData(
                 maxWaitForLoadingDataSeconds: Settings.RandomTestShortWaitingFailed == true
                     ? Util.Random.ReturnByChanceOrDefault(

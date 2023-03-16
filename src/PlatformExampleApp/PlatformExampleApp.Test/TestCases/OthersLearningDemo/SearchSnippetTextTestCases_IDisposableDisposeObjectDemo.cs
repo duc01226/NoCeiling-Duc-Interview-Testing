@@ -11,15 +11,15 @@ namespace PlatformExampleApp.Test.TestCases.OthersLearningDemo;
 [Trait(name: "App", value: "TextSnippet")]
 public sealed class SearchSnippetTextTestCases_IDisposableDisposeObjectDemo : TestCase, IDisposable
 {
-    private readonly WebDriverLazyInitializer manuallyCreateDriverLazyInitializer;
+    private readonly ILazyWebDriver manuallyCreateDriverLazyInitializer;
 
     public SearchSnippetTextTestCases_IDisposableDisposeObjectDemo(
         IWebDriverManager driverManager,
         AutomationTestSettings settings,
-        WebDriverLazyInitializer lazyWebDriver,
-        GlobalWebDriver globalLazyWebDriver) : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver)
+        IScopedLazyWebDriver lazyWebDriver,
+        ISingletonLazyWebDriver globalLazyWebDriver) : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver)
     {
-        manuallyCreateDriverLazyInitializer = new WebDriverLazyInitializer(settings);
+        manuallyCreateDriverLazyInitializer = new LazyWebDriver(settings);
     }
 
     public void Dispose()

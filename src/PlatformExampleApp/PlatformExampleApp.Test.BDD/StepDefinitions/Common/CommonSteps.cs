@@ -12,8 +12,8 @@ public class CommonSteps : BddStepDefinitions<TextSnippetAutomationTestSettings,
     public CommonSteps(
         IWebDriverManager driverManager,
         TextSnippetAutomationTestSettings settings,
-        WebDriverLazyInitializer lazyWebDriver,
-        GlobalWebDriver globalLazyWebDriver,
+        IScopedLazyWebDriver lazyWebDriver,
+        ISingletonLazyWebDriver globalLazyWebDriver,
         CommonStepsContext context)
         : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver, context)
     {

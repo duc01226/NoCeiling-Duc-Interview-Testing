@@ -51,9 +51,9 @@ public static partial class TextSnippetApp
         public HomePage AssertTextSnippetItemsDisplayFullPage()
         {
             return this.AssertMust(
-                must: _ => TextSnippetItemsTable.Rows.Count == TextSnippetItemsTablePageSize,
+                must: _ => TextSnippetItemsTable.Rows.Count() == TextSnippetItemsTablePageSize,
                 expected: $"TextSnippetItemsTable.Rows.Count: {TextSnippetItemsTablePageSize}",
-                actual: $"TextSnippetItemsTable.Rows.Count: {TextSnippetItemsTable.Rows.Count}");
+                actual: $"TextSnippetItemsTable.Rows.Count: {TextSnippetItemsTable.Rows.Count()}");
         }
 
         public HomePage WaitInitLoadingDataSuccessWithFullPagingData(
@@ -79,8 +79,7 @@ public static partial class TextSnippetApp
             // when it's checking the element matching
             this.WaitUntil(
                 condition: _ => ValidatePageHasNoErrors() == false ||
-                                Util.TaskRunner.WaitRetryThrowFinalException<bool, StaleElementReferenceException>(
-                                    executeFunc: () => CheckAllTextSnippetGrowsMatchSearchText(searchText)),
+                                CheckAllTextSnippetGrowsMatchSearchText(searchText),
                 maxWaitForLoadingDataSeconds,
                 waitForMsg: "TextSnippetItemsTable search items data is finished.");
 
@@ -92,7 +91,7 @@ public static partial class TextSnippetApp
             AssertPageHasNoErrors();
 
             this.AssertMust(
-                must: _ => TextSnippetItemsTable.Rows.Count == 1 &&
+                must: _ => TextSnippetItemsTable.Rows.Count() == 1 &&
                            TextSnippetItemsTable.Rows.Any(predicate: row => row.GetCell(SnippetTextColName)!.RootElement!.Text == searchText),
                 expected: $"GridRowSnippetTextValues contains at least one item equal '{searchText}'",
                 actual: $"GridRowSnippetTextValues: {GetTextSnippetDataTableItems().Select(p => p.SnippetText).AsFormattedJson()}");
@@ -102,9 +101,9 @@ public static partial class TextSnippetApp
 
         public string DoSelectTextSnippetItemToEditInForm(int itemIndex)
         {
-            TextSnippetItemsTable.Rows[itemIndex].Click();
+            TextSnippetItemsTable.Rows.ElementAt(itemIndex).Click();
 
-            var selectedItemSnippetText = TextSnippetItemsTable.Rows[itemIndex].GetCell(SnippetTextColName)!.RootElement!.Text;
+            var selectedItemSnippetText = TextSnippetItemsTable.Rows.ElementAt(itemIndex).GetCell(SnippetTextColName)!.RootElement!.Text;
 
             // Wait for data is loaded into SaveSnippetText form
             WaitUntilAssertSuccess(
@@ -122,7 +121,7 @@ public static partial class TextSnippetApp
             AssertPageHasNoErrors();
 
             this.AssertMust(
-                must: _ => TextSnippetItemsTable.Rows.Count == 0,
+                must: _ => !TextSnippetItemsTable.Rows.Any(),
                 expected: $"TextSnippetItemsTable.Rows.Count must equal 0 for searchText '{searchText}'",
                 actual: $"GridRowSnippetTextValues: {GetTextSnippetDataTableItems().Select(p => p.SnippetText).AsFormattedJson()}");
 
@@ -134,7 +133,7 @@ public static partial class TextSnippetApp
             AssertPageHasNoErrors();
 
             this.AssertMust(
-                must: _ => TextSnippetItemsTable.Rows.Count >= 1 &&
+                must: _ => TextSnippetItemsTable.Rows.Any() &&
                            CheckAllTextSnippetGrowsMatchSearchText(searchText),
                 expected: $"GridRowSnippetTextValues contains at least one item match '{searchText}'",
                 actual: $"GridRowSnippetTextValues: {GetTextSnippetDataTableItems().Select(p => p.SnippetText).AsFormattedJson()}");
@@ -160,9 +159,7 @@ public static partial class TextSnippetApp
 
             return GetTextSnippetDataTableItems()
                 .Select(p => p.SnippetText)
-                .All(
-                    predicate: rowSnippetTextValue => searchWords.Any(
-                        predicate: searchWord => rowSnippetTextValue.Contains(searchWord, StringComparison.InvariantCultureIgnoreCase)));
+                .All(rowSnippetTextValue => searchWords.Any(searchWord => rowSnippetTextValue.ContainsIgnoreCase(searchWord)));
         }
 
         public HomePage DoFillInAndSubmitSaveSnippetTextForm(TextSnippetEntityData textSnippetEntityData)
@@ -186,14 +183,13 @@ public static partial class TextSnippetApp
             return this;
         }
 
-        public List<TextSnippetEntityData> GetTextSnippetDataTableItems()
+        public IEnumerable<TextSnippetEntityData> GetTextSnippetDataTableItems()
         {
             return TextSnippetItemsTable.Rows
                 .Select(
                     p => new TextSnippetEntityData(
-                        snippetText: p.GetCell(SnippetTextColName)!.Text,
-                        fulltext: p.GetCell(FullTextColName)!.Text))
-                .ToList();
+                        snippetText: p.GetCell(SnippetTextColName)?.Text,
+                        fulltext: p.GetCell(FullTextColName)?.Text));
         }
 
         public HomePage AssertPageMustHasCreateDuplicatedSnippetTextError()

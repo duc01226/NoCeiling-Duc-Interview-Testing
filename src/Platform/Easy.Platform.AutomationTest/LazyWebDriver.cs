@@ -2,21 +2,23 @@ using OpenQA.Selenium;
 
 namespace Easy.Platform.AutomationTest;
 
-/// <summary>
-/// This web driver is only created once during all test cases. Could reuse this if you want to save init new web driver resource. <br />
-/// Should only use this for test cases which is not affected by other test cases if it's running in the same browser
-/// </summary>
-public class GlobalWebDriver : IDisposable
+public interface ILazyWebDriver : IDisposable
 {
-    public GlobalWebDriver(AutomationTestSettings settings)
+    IWebDriver Value { get; }
+    bool Disposed { get; set; }
+}
+
+public class LazyWebDriver : ILazyWebDriver, IScopedLazyWebDriver, ISingletonLazyWebDriver
+{
+    public LazyWebDriver(AutomationTestSettings settings)
     {
         LazyDriver = new Lazy<IWebDriver>(valueFactory: () => WebDriverManager.New(settings).CreateWebDriver());
     }
 
+    private Lazy<IWebDriver> LazyDriver { get; }
+
     public IWebDriver Value => LazyDriver.Value;
     public bool Disposed { get; set; }
-
-    private Lazy<IWebDriver> LazyDriver { get; }
 
     public void Dispose()
     {
@@ -41,4 +43,12 @@ public class GlobalWebDriver : IDisposable
 
         Disposed = true;
     }
+}
+
+public interface IScopedLazyWebDriver : ILazyWebDriver
+{
+}
+
+public interface ISingletonLazyWebDriver : ILazyWebDriver
+{
 }

@@ -9,8 +9,8 @@ public class SearchSnippetTextTestCases : TestCase
     public SearchSnippetTextTestCases(
         IWebDriverManager driverManager,
         AutomationTestSettings settings,
-        WebDriverLazyInitializer lazyWebDriver,
-        GlobalWebDriver globalLazyWebDriver) : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver)
+        IScopedLazyWebDriver lazyWebDriver,
+        ISingletonLazyWebDriver globalLazyWebDriver) : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver)
     {
     }
 
@@ -19,7 +19,7 @@ public class SearchSnippetTextTestCases : TestCase
     public void WHEN_SearchSnippetText_BY_CopyFirstItemTextAsSearchText()
     {
         // GIVEN: loadedHomePage
-        var loadedHomePage = GlobalLazyWebDriver.Value.NavigatePage<TextSnippetApp.HomePage>(Settings)
+        var loadedHomePage = GlobalWebDriver.NavigatePage<TextSnippetApp.HomePage>(Settings)
             .WaitInitLoadingDataSuccessWithFullPagingData(
                 maxWaitForLoadingDataSeconds: Util.Random.ReturnByChanceOrDefault(
                     percentChance: 20, // random 20 percent test failed waiting timeout error by only one second
@@ -44,7 +44,7 @@ public class SearchSnippetTextTestCases : TestCase
     public void WHEN_SearchSnippetText_BY_NotExistingItemSearchText()
     {
         // GIVEN: loadedHomePage
-        var loadedHomePage = GlobalLazyWebDriver.Value.GetLoadingDataFinishedWithFullPagingDataHomePage(Settings);
+        var loadedHomePage = GlobalWebDriver.GetLoadingDataFinishedWithFullPagingDataHomePage(Settings);
 
         // WHEN: Search with random guid + "NotExistingItemSearchText"
         var searchText = "NotExistingItemSearchText" + Guid.NewGuid();

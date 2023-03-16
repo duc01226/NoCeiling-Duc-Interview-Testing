@@ -105,4 +105,9 @@ public static class StringExtension
             return str;
         }
     }
+
+    public static bool ContainsIgnoreCase(this string str, string value)
+    {
+        return str?.Contains(value, StringComparison.InvariantCultureIgnoreCase) == true;
+    }
 }

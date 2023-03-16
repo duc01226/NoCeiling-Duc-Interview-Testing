@@ -7,8 +7,8 @@ public abstract class BddStepDefinitions<TSettings, TContext> : TestCase<TSettin
     protected BddStepDefinitions(
         IWebDriverManager driverManager,
         TSettings settings,
-        WebDriverLazyInitializer lazyWebDriver,
-        GlobalWebDriver globalLazyWebDriver,
+        IScopedLazyWebDriver lazyWebDriver,
+        ISingletonLazyWebDriver globalLazyWebDriver,
         TContext context) : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver)
     {
         Context = context;
@@ -23,8 +23,8 @@ public abstract class BddStepDefinitions<TContext> : BddStepDefinitions<Automati
     protected BddStepDefinitions(
         IWebDriverManager driverManager,
         AutomationTestSettings settings,
-        WebDriverLazyInitializer lazyWebDriver,
-        GlobalWebDriver globalLazyWebDriver,
+        IScopedLazyWebDriver lazyWebDriver,
+        ISingletonLazyWebDriver globalLazyWebDriver,
         TContext context) : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver, context)
     {
     }

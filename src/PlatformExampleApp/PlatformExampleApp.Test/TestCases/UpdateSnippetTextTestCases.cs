@@ -9,8 +9,8 @@ public class UpdateSnippetTextTestCases : TestCase
     public UpdateSnippetTextTestCases(
         IWebDriverManager driverManager,
         AutomationTestSettings settings,
-        WebDriverLazyInitializer lazyWebDriver,
-        GlobalWebDriver globalLazyWebDriver) : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver)
+        IScopedLazyWebDriver lazyWebDriver,
+        ISingletonLazyWebDriver globalLazyWebDriver) : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver)
     {
     }
 
@@ -19,7 +19,7 @@ public class UpdateSnippetTextTestCases : TestCase
     public void WHEN_UpdateSnippetText_BY_DifferentValidUniqueName()
     {
         // GIVEN: loadedHomePage
-        var loadedHomePage = LazyWebDriver.Value.GetLoadingDataFinishedWithFullPagingDataHomePage(Settings);
+        var loadedHomePage = WebDriver.GetLoadingDataFinishedWithFullPagingDataHomePage(Settings);
 
         // WHEN: Update first item snippet text by different valid unique name
         var beforeUpdateFirstItemSnippetText = loadedHomePage.DoSelectTextSnippetItemToEditInForm(itemIndex: 0);

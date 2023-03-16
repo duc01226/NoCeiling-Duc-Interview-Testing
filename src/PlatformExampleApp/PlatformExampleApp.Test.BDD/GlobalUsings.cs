@@ -17,5 +17,7 @@ global using Easy.Platform.AutomationTest.Pages;
 global using Easy.Platform.AutomationTest.TestCases;
 global using Easy.Platform.AutomationTest.Helpers;
 global using TechTalk.SpecFlow;
+global using TechTalk.SpecFlow.Assist;
 global using Xunit;
 global using FluentAssertions;
+global using PlatformExampleApp.Test.Shared;

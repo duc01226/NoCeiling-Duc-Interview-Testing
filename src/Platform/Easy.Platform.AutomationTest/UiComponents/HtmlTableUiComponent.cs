@@ -11,8 +11,6 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
         IUiComponent? parent = null,
         Func<IWebElement, string>? getHeaderName = null) : base(webDriver, directReferenceRootElement, parent)
     {
-        Headers = ReadHeaders();
-        Rows = ReadRows();
         if (getHeaderName != null) GetHeaderName = getHeaderName;
     }
 
@@ -22,8 +20,6 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
         IUiComponent? parent = null,
         Func<IWebElement, string>? getHeaderName = null) : base(webDriver, rootElementClassSelector, parent)
     {
-        Headers = ReadHeaders();
-        Rows = ReadRows();
         if (getHeaderName != null) GetHeaderName = getHeaderName;
     }
 
@@ -32,23 +28,22 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
     /// </summary>
     public Func<IWebElement, string>? GetHeaderName { get; set; }
 
-    public List<Row> Rows { get; set; }
-    public List<IWebElement> Headers { get; set; }
+    public IEnumerable<Row> Rows => ReadRows();
+    public IEnumerable<IWebElement> Headers => ReadHeaders();
 
-    public List<Row> ReadRows()
+    public IEnumerable<Row> ReadRows()
     {
         var rows = RootElement!.TryFindElement(cssSelector: "tbody") != null
             ? RootElement!.FindElements(by: By.CssSelector(cssSelectorToFind: "tbody > tr")).ToList()
             : RootElement!.FindElements(by: By.XPath(xpathToFind: "./tr")).ToList();
 
         return rows
-            .Select(selector: (rowElement, rowIndex) => new Row(WebDriver, rowIndex, Headers, directReferenceRootElement: () => rowElement, parent: this))
-            .ToList();
+            .Select(selector: (rowElement, rowIndex) => new Row(WebDriver, rowIndex, ReadHeaders, directReferenceRootElement: () => rowElement, parent: this));
     }
 
-    public List<IWebElement> ReadHeaders()
+    public IEnumerable<IWebElement> ReadHeaders()
     {
-        return RootElement!.FindElements(by: By.TagName(tagNameToFind: "th")).ToList();
+        return RootElement!.FindElements(by: By.TagName(tagNameToFind: "th"));
     }
 
     public Cell? GetCell(int rowIndex, int colIndex)
@@ -90,51 +85,73 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
         public Row(
             IWebDriver webDriver,
             int rowIndex,
-            List<IWebElement> columns,
+            Func<IEnumerable<IWebElement>> headers,
             Func<IWebElement>? directReferenceRootElement,
             IUiComponent? parent = null,
             Func<IWebElement, string>? getHeaderName = null) : base(webDriver, directReferenceRootElement, parent)
         {
             RowIndex = rowIndex;
-            Cells = ReadCells(columns);
+            Headers = headers;
             GetHeaderName = getHeaderName ?? GetHeaderName;
         }
 
         public Row(
             IWebDriver webDriver,
             int rowIndex,
-            List<IWebElement> columns,
+            Func<IEnumerable<IWebElement>> headers,
             string rootElementClassSelector,
             IUiComponent? parent = null,
             Func<IWebElement, string>? getHeaderName = null) : base(webDriver, rootElementClassSelector, parent)
         {
             RowIndex = rowIndex;
-            Cells = ReadCells(columns);
+            Headers = headers;
             GetHeaderName = getHeaderName ?? GetHeaderName;
         }
 
-        public List<Cell> Cells { get; set; }
+        public IEnumerable<Cell> Cells => ReadCells(Headers);
         public int RowIndex { get; set; }
+        public Func<IEnumerable<IWebElement>> Headers { get; }
 
         /// <summary>
         /// GetHeaderName from Headers elements. Default get Element Text
         /// </summary>
         public Func<IWebElement, string> GetHeaderName { get; set; } = headerElement => headerElement.Text;
 
-        public List<Cell> ReadCells(List<IWebElement> columns)
+        public IEnumerable<Cell> ReadCells(Func<IEnumerable<IWebElement>> headers)
         {
-            var rowCells = RootElement!.FindElements(by: By.TagName(tagNameToFind: "td"));
+            try
+            {
+                var rowCells = RootElement!.FindElements(by: By.TagName(tagNameToFind: "td"));
 
-            return rowCells
-                .Select(
-                    selector: (cellElement, cellIndex) => new Cell(WebDriver, directReferenceRootElement: () => cellElement, parent: this)
-                    {
-                        ColIndex = cellIndex,
-                        RowIndex = RowIndex,
-                        ColName = columns.ElementAtOrDefault(cellIndex).PipeIfNotNull(thenPipe: p => GetHeaderName(arg: p!)),
-                        Value = cellElement.Text
-                    })
-                .ToList();
+                return rowCells
+                    .Select((cellElement, cellIndex) => TryBuildCell(headers, cellElement, cellIndex))
+                    .Where(p => p != null)
+                    .As<IEnumerable<Cell>>();
+            }
+            // catch StaleElementReferenceException when if table has been updated and render again then just consider that row is empty no cell
+            catch (StaleElementReferenceException e)
+            {
+                return Enumerable.Empty<Cell>();
+            }
+        }
+
+        protected Cell? TryBuildCell(Func<IEnumerable<IWebElement>> headers, IWebElement cellElement, int cellIndex)
+        {
+            try
+            {
+                return new Cell(WebDriver, directReferenceRootElement: () => cellElement, parent: this)
+                {
+                    ColIndex = cellIndex,
+                    RowIndex = RowIndex,
+                    ColName = headers().ElementAtOrDefault(cellIndex).PipeIfNotNull(thenPipe: p => GetHeaderName(arg: p!)),
+                    Value = cellElement.Text
+                };
+            }
+            // catch StaleElementReferenceException when if table has been updated and render again then just consider that row is empty no cell
+            catch (StaleElementReferenceException e)
+            {
+                return null;
+            }
         }
 
         public Cell? GetCell(int colIndex)

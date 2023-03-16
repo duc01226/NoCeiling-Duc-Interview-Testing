@@ -61,8 +61,8 @@ public abstract class BaseStartup
 
         services.AddTransient(serviceType: typeof(AutomationTestSettings), AutomationTestSettingsProvider);
 
-        services.AddScoped<WebDriverLazyInitializer, WebDriverLazyInitializer>();
-        services.AddSingleton<GlobalWebDriver, GlobalWebDriver>();
+        services.AddScoped<IScopedLazyWebDriver, LazyWebDriver>();
+        services.AddSingleton<ISingletonLazyWebDriver, LazyWebDriver>();
         services.RegisterAllFromType(conventionalType: typeof(IBddStepsContext), GetType().Assembly, ServiceLifeTime.Scoped);
     }
 

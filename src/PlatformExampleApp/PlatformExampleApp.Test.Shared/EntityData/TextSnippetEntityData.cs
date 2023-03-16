@@ -8,10 +8,10 @@ public class TextSnippetEntityData : AutomationTestEntityData
     {
     }
 
-    public TextSnippetEntityData(string snippetText, string fulltext)
+    public TextSnippetEntityData(string? snippetText, string? fulltext)
     {
-        SnippetText = snippetText;
-        FullText = fulltext;
+        SnippetText = snippetText ?? "";
+        FullText = fulltext ?? "";
     }
 
     public string SnippetText { get; set; } = "";

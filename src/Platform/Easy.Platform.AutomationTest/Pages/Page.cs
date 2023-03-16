@@ -3,6 +3,7 @@ using Easy.Platform.AutomationTest.Extensions;
 using Easy.Platform.AutomationTest.Helpers;
 using Easy.Platform.AutomationTest.UiComponents;
 using OpenQA.Selenium;
+using OpenQA.Selenium.Support.UI;
 
 namespace Easy.Platform.AutomationTest.Pages;
 
@@ -351,6 +352,8 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
     where TPage : Page<TPage, TSettings>, IPage<TPage, TSettings>
     where TSettings : AutomationTestSettings
 {
+    private WebDriverWait? webDriverWait;
+
     public Page(IWebDriver webDriver, TSettings settings) : base(webDriver, directReferenceRootElement: null)
     {
         Settings = settings;
@@ -359,6 +362,8 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
     public abstract string ErrorElementCssSelector { get; }
 
     public virtual int DefaultWaitUntilMaxSeconds => Util.TaskRunner.DefaultWaitUntilMaxSeconds;
+    protected WebDriverWait WebDriverWait => webDriverWait ??= CreateDefaultWebDriverWait(WebDriver);
+    protected virtual int DefaultWebDriverWaitTimeoutSeconds => 60;
 
     public TSettings Settings { get; }
 
@@ -495,6 +500,12 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
     public TCurrentActivePage? TryGetCurrentActiveDefinedPage<TCurrentActivePage>() where TCurrentActivePage : class, IPage<TCurrentActivePage, TSettings>
     {
         return WebDriver.TryGetCurrentActiveDefinedPage<TCurrentActivePage, TSettings>(Settings);
+    }
+
+    protected virtual WebDriverWait CreateDefaultWebDriverWait(IWebDriver webDriver)
+    {
+        return new WebDriverWait(webDriver, DefaultWebDriverWaitTimeoutSeconds.Seconds())
+            .With(p => p.PollingInterval = TimeSpan.FromMilliseconds(300));
     }
 
     public virtual TPage WaitGlobalSpinnerStopped(
