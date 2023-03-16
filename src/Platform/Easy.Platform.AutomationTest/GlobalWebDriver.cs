@@ -10,7 +10,7 @@ public class GlobalWebDriver : IDisposable
 {
     public GlobalWebDriver(AutomationTestSettings settings)
     {
-        LazyDriver = new Lazy<IWebDriver>(() => WebDriverManager.New(settings).CreateWebDriver());
+        LazyDriver = new Lazy<IWebDriver>(valueFactory: () => WebDriverManager.New(settings).CreateWebDriver());
     }
 
     public IWebDriver Value => LazyDriver.Value;
@@ -21,10 +21,10 @@ public class GlobalWebDriver : IDisposable
     public void Dispose()
     {
         // Dispose of unmanaged resources.
-        Dispose(true);
+        Dispose(disposing: true);
 
         // Suppress finalization.
-        GC.SuppressFinalize(this);
+        GC.SuppressFinalize(obj: this);
     }
 
     // Protected implementation of Dispose pattern.

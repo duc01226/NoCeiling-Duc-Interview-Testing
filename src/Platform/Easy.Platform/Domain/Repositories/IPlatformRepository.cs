@@ -126,6 +126,19 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey>
         Expression<Func<TEntity, bool>> customCheckExistingPredicate = null,
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default);
+
+    public async Task<TEntity> CreateIfNotExistAsync(
+        TEntity entity,
+        Expression<Func<TEntity, bool>> predicate,
+        bool dismissSendEvent = false,
+        CancellationToken cancellationToken = default)
+    {
+        var isExisted = await AnyAsync(predicate, cancellationToken: cancellationToken);
+        if (isExisted)
+            return entity;
+
+        return await CreateAsync(entity, dismissSendEvent, cancellationToken);
+    }
 }
 
 public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformRepository<TEntity, TPrimaryKey>

@@ -37,18 +37,18 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
 
     public List<Row> ReadRows()
     {
-        var rows = RootElement!.TryFindElement("tbody") != null
-            ? RootElement!.FindElements(By.CssSelector("tbody > tr")).ToList()
-            : RootElement!.FindElements(By.XPath("./tr")).ToList();
+        var rows = RootElement!.TryFindElement(cssSelector: "tbody") != null
+            ? RootElement!.FindElements(by: By.CssSelector(cssSelectorToFind: "tbody > tr")).ToList()
+            : RootElement!.FindElements(by: By.XPath(xpathToFind: "./tr")).ToList();
 
         return rows
-            .Select((rowElement, rowIndex) => new Row(WebDriver, rowIndex, Headers, directReferenceRootElement: () => rowElement, this))
+            .Select(selector: (rowElement, rowIndex) => new Row(WebDriver, rowIndex, Headers, directReferenceRootElement: () => rowElement, parent: this))
             .ToList();
     }
 
     public List<IWebElement> ReadHeaders()
     {
-        return RootElement!.FindElements(By.TagName("th")).ToList();
+        return RootElement!.FindElements(by: By.TagName(tagNameToFind: "th")).ToList();
     }
 
     public Cell? GetCell(int rowIndex, int colIndex)
@@ -123,15 +123,15 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
 
         public List<Cell> ReadCells(List<IWebElement> columns)
         {
-            var rowCells = RootElement!.FindElements(By.TagName("td"));
+            var rowCells = RootElement!.FindElements(by: By.TagName(tagNameToFind: "td"));
 
             return rowCells
                 .Select(
-                    (cellElement, cellIndex) => new Cell(WebDriver, () => cellElement, this)
+                    selector: (cellElement, cellIndex) => new Cell(WebDriver, directReferenceRootElement: () => cellElement, parent: this)
                     {
                         ColIndex = cellIndex,
                         RowIndex = RowIndex,
-                        ColName = columns.ElementAtOrDefault(cellIndex).PipeIfNotNull(p => GetHeaderName(p!)),
+                        ColName = columns.ElementAtOrDefault(cellIndex).PipeIfNotNull(thenPipe: p => GetHeaderName(arg: p!)),
                         Value = cellElement.Text
                     })
                 .ToList();
@@ -144,7 +144,7 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
 
         public Cell? GetCell(string colName)
         {
-            return Cells.FirstOrDefault(p => p.ColName == colName);
+            return Cells.FirstOrDefault(predicate: p => p.ColName == colName);
         }
     }
 }

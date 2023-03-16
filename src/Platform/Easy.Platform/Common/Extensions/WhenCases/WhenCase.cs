@@ -353,7 +353,7 @@ public class WhenCase<TSource, TTarget> : WhenCase
     #endregion
 }
 
-public class WhenCase<TSource> : WhenCase<TSource, ValueTuple>
+public class WhenCase<TSource> : WhenCase<TSource, object>
 {
     public WhenCase(TSource source, params CaseItem[] cases) : base(source, cases)
     {
@@ -363,7 +363,7 @@ public class WhenCase<TSource> : WhenCase<TSource, ValueTuple>
     {
     }
 
-    public WhenCase(TSource source, Func<TSource, bool> @case, Func<TSource, ValueTuple> then) : base(source, @case, then)
+    public WhenCase(TSource source, Func<TSource, bool> @case, Func<TSource, object> then) : base(source, @case, then)
     {
     }
 
@@ -375,7 +375,7 @@ public class WhenCase<TSource> : WhenCase<TSource, ValueTuple>
     {
     }
 
-    public WhenCase(TSource source, bool @case, Func<TSource, ValueTuple> then) : base(source, @case, then)
+    public WhenCase(TSource source, bool @case, Func<TSource, object> then) : base(source, @case, then)
     {
     }
 

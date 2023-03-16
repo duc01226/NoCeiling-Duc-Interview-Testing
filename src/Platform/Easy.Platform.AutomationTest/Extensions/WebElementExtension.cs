@@ -7,24 +7,24 @@ public static class WebElementExtension
 {
     public static IWebElement FindElement(this IWebElement webElement, string cssSelector)
     {
-        return webElement.FindElement(By.CssSelector(cssSelector));
+        return webElement.FindElement(by: By.CssSelector(cssSelector));
     }
 
     public static IWebElement? TryFindElement(this IWebElement webElement, string cssSelector)
     {
-        return Util.TaskRunner.CatchException(() => webElement.FindElement(By.CssSelector(cssSelector)), fallbackValue: null);
+        return Util.TaskRunner.CatchException(func: () => webElement.FindElement(by: By.CssSelector(cssSelector)), fallbackValue: null);
     }
 
     public static List<IWebElement> FindElements(this IWebElement webElement, string cssSelector)
     {
-        return webElement.FindElements(By.CssSelector(cssSelector)).ToList();
+        return webElement.FindElements(by: By.CssSelector(cssSelector)).ToList();
     }
 
-    public static bool? IsClickable(this IWebElement? element)
+    public static bool IsClickable(this IWebElement? element)
     {
         try
         {
-            return element?.Pipe(_ => _ is { Displayed: true, Enabled: true });
+            return element?.Pipe(fn: _ => _ is { Displayed: true, Enabled: true }) ?? false;
         }
         catch (StaleElementReferenceException)
         {
@@ -37,23 +37,22 @@ public static class WebElementExtension
         IWebDriver webDriver,
         params IWebElement[] focusOutToOtherElements)
     {
-        if (element != null)
-            element.WaitAndRetryUntil(
-                action: _ =>
-                {
-                    webDriver.TryFindElement("body")?.Click();
+        element?.WaitAndRetryUntil(
+            action: _ =>
+            {
+                webDriver.TryFindElement(cssSelector: "body")?.Click();
 
-                    Util.ListBuilder.New("body div:visible", "header", "footer", "h1", "h2", "h3")
-                        .Select<string, Action>(elementSelector => () => webDriver.TryFindElement(elementSelector)?.Click())
-                        .Concat(focusOutToOtherElements.Select<IWebElement, Action>(element => () => element.Click()))
-                        .ForEach(
-                            action =>
-                            {
-                                if (element.ToStaleElementWrapper().Get(_ => _.Selected)) action();
-                            });
-                },
-                until: _ => !element.ToStaleElementWrapper().Get(_ => _.Selected),
-                maxWaitSeconds: 2);
+                Util.ListBuilder.New("body div:visible", "header", "footer", "h1", "h2", "h3")
+                    .Select<string, Action>(selector: elementSelector => () => webDriver.TryFindElement(elementSelector)?.Click())
+                    .Concat(second: focusOutToOtherElements.Select<IWebElement, Action>(selector: element => () => element.Click()))
+                    .ForEach(
+                        action: action =>
+                        {
+                            if (element.ToStaleElementWrapper().Get(_ => _.Selected)) action();
+                        });
+            },
+            until: _ => !element.ToStaleElementWrapper().Get(_ => _.Selected),
+            maxWaitSeconds: 2);
 
         return element;
     }
@@ -65,7 +64,7 @@ public static class WebElementExtension
 
     public static string? Value(this IWebElement? element)
     {
-        return element?.GetAttribute("value");
+        return element?.GetAttribute(attributeName: "value");
     }
 
     /// <summary>
@@ -73,7 +72,9 @@ public static class WebElementExtension
     /// </summary>
     public static string? ElementClassSelector(this IWebElement? element)
     {
-        return element?.PipeIfNotNull(_ => element.TagName + element.GetCssValue("class").Split(" ").Select(className => $".{className}").JoinToString());
+        return element?.PipeIfNotNull(
+            thenPipe: _ => element.TagName +
+                           element.GetCssValue(propertyName: "class").Split(separator: " ").Select(selector: className => $".{className}").JoinToString());
     }
 
     public static IWebElement SelectDropdownByText(this IWebElement element, string text)
@@ -119,7 +120,7 @@ public static class WebElementExtension
 
         public T Get<T>(Func<IWebElement, T> getFn)
         {
-            return Util.TaskRunner.CatchException<StaleElementReferenceException, T>(() => getFn(element));
+            return Util.TaskRunner.CatchException<StaleElementReferenceException, T>(func: () => getFn(element));
         }
     }
 }

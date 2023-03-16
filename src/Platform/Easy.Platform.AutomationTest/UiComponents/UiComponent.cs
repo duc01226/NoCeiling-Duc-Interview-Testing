@@ -59,7 +59,7 @@ public interface IUiComponent
     public static IWebElement? FindRootElementBySelector(IUiComponent component)
     {
         return component.FullPathRootElementSelector
-            .PipeIfNotNullOrDefault(selector => component.WebDriver.TryFindElement(selector!));
+            .PipeIfNotNullOrDefault(thenPipe: selector => component.WebDriver.TryFindElement(cssSelector: selector!));
     }
 
     public static string? GetFullPathInPageElementSelector(IUiComponent component, IUiComponent? parent = null)
@@ -84,13 +84,13 @@ public interface IUiComponent
     {
         return childElementSelector
             .PipeIfNotNull(
-                childElementSelector => component.RootElement?.FindElement(By.CssSelector(childElementSelector)),
+                thenPipe: childElementSelector => component.RootElement?.FindElement(by: By.CssSelector(childElementSelector)),
                 component.RootElement);
     }
 
     public static List<IWebElement> FindChildElements(IUiComponent component, string childElementSelector)
     {
-        return component.RootElement?.FindElements(By.CssSelector(childElementSelector)).ToList() ?? new List<IWebElement>();
+        return component.RootElement?.FindElements(by: By.CssSelector(childElementSelector)).ToList() ?? new List<IWebElement>();
     }
 }
 
@@ -141,7 +141,7 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
     /// </summary>
     public IWebElement? RootElement =>
         Util.TaskRunner.WaitRetryThrowFinalException<IWebElement?, StaleElementReferenceException>(
-            () => DirectReferenceRootElement?.Invoke() ?? IUiComponent.FindRootElementBySelector(this));
+            executeFunc: () => DirectReferenceRootElement?.Invoke() ?? IUiComponent.FindRootElementBySelector(component: this));
 
     public bool IsClickable()
     {
@@ -150,7 +150,7 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
 
     public TComponent WaitUntilClickable(double maxWaitSeconds, string? waitForMsg = null)
     {
-        return (TComponent)this.WaitUntil(_ => _.IsClickable(), maxWaitSeconds, waitForMsg: waitForMsg);
+        return (TComponent)this.WaitUntil(condition: _ => _.IsClickable(), maxWaitSeconds, waitForMsg: waitForMsg);
     }
 
     public TComponent ReplaceText(string text, string? childElementSelector = null)
@@ -160,7 +160,7 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
 
     public TComponent ReplaceTextAndEnter(string text, string? childElementSelector = null)
     {
-        return InternalReplaceText(text, childElementSelector, true);
+        return InternalReplaceText(text, childElementSelector, enterBeforeFocusOut: true);
     }
 
     IUiComponent IUiComponent.WaitUntilClickable(double maxWaitSeconds, string? waitForMsg)
@@ -262,16 +262,16 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
         return (TComponent)this;
     }
 
-    public string? FullPathRootElementSelector => IUiComponent.GetFullPathInPageElementSelector(this, Parent);
+    public string? FullPathRootElementSelector => IUiComponent.GetFullPathInPageElementSelector(component: this, Parent);
 
     public IWebElement? FindChildOrRootElement(string? childElementSelector)
     {
-        return IUiComponent.FindChildOrRootElement(this, childElementSelector);
+        return IUiComponent.FindChildOrRootElement(component: this, childElementSelector);
     }
 
     public List<IWebElement> FindChildElements(string childElementSelector)
     {
-        return IUiComponent.FindChildElements(this, childElementSelector);
+        return IUiComponent.FindChildElements(component: this, childElementSelector);
     }
 
     public TComponent WithIdentifierSelector(string appSearchInput)
@@ -281,7 +281,7 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
 
     public TComponent HumanDelay(double waitSeconds = DefaultMinimumDelayWaitSeconds)
     {
-        Util.TaskRunner.Wait((int)(waitSeconds * 1000));
+        Util.TaskRunner.Wait(millisecondsToWait: (int)(waitSeconds * 1000));
         return (TComponent)this;
     }
 

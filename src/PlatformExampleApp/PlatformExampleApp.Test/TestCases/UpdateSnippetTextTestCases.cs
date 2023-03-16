@@ -28,14 +28,14 @@ public class UpdateSnippetTextTestCases : TestCase
             textSnippetEntityData: new TextSnippetEntityData(toUpdateSnippetText, fulltext: toUpdateSnippetText + " FullText"));
 
         // THEN: SnippetText item is updated with no errors, old value couldn't be searched and new updated value could be searched
-        loadedHomePage.AssertPageNoErrors();
+        loadedHomePage.AssertPageHasNoErrors();
         loadedHomePage.DoSearchTextSnippet(beforeUpdateFirstItemSnippetText)
             .WaitUntilAssertSuccess(
                 waitForSuccess: _ => _.AssertNotHasExactMatchItemForSearchText(beforeUpdateFirstItemSnippetText),
-                stopWaitOnAssertError: _ => _.AssertPageNoErrors());
+                continueWaitOnlyWhen: _ => _.AssertPageHasNoErrors());
         loadedHomePage.DoSearchTextSnippet(toUpdateSnippetText)
             .WaitUntilAssertSuccess(
                 waitForSuccess: _ => _.AssertHasExactMatchItemForSearchText(toUpdateSnippetText),
-                stopWaitOnAssertError: _ => _.AssertPageNoErrors());
+                continueWaitOnlyWhen: _ => _.AssertPageHasNoErrors());
     }
 }

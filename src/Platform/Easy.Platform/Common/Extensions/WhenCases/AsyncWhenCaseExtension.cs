@@ -47,7 +47,7 @@ public static class AsyncWhenCaseExtension
 
     public static Task<WhenCase<TSource>> When<TSource>(
         this Task<WhenCase<TSource>> sourceWhenCaseTask,
-        params WhenCase<TSource, ValueTuple>.CaseItem[] cases)
+        params WhenCase<TSource, object>.CaseItem[] cases)
     {
         return sourceWhenCaseTask.Then(
             sourceWhenCase => cases.Aggregate(

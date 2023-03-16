@@ -43,26 +43,26 @@ public class WebDriverManager : IWebDriverManager
             : CreateLocalMachineWebDriver();
 
         return initialWebDriver
-            .WithIf(Settings.PageLoadTimeoutSeconds > 0, p => p.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(Settings.PageLoadTimeoutSeconds!.Value))
-            .WithIf(ConfigWebDriverOptions != null, p => ConfigWebDriverOptions!(p.Manage()));
+            .WithIf(when: Settings.PageLoadTimeoutSeconds > 0, p => p.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(Settings.PageLoadTimeoutSeconds!.Value))
+            .WithIf(when: ConfigWebDriverOptions != null, p => ConfigWebDriverOptions!(obj: p.Manage()));
     }
 
     public IWebDriver CreateRemoteWebDriver()
     {
-        return CreateRemoteWebDriver(BuildDefaultDriverOptions(Settings));
+        return CreateRemoteWebDriver(driverOptions: BuildDefaultDriverOptions(Settings));
     }
 
     public IWebDriver CreateRemoteWebDriver(DriverOptions driverOptions)
     {
         return new RemoteWebDriver(
-            new Uri(Settings.RemoteWebDriverUrl!),
-            driverOptions.ToCapabilities(),
-            TimeSpan.FromSeconds(Settings.RemoteWebDriverCommandTimeoutSeconds)).Pipe(DefaultConfigDriver);
+            remoteAddress: new Uri(uriString: Settings.RemoteWebDriverUrl!),
+            desiredCapabilities: driverOptions.ToCapabilities(),
+            commandTimeout: TimeSpan.FromSeconds(Settings.RemoteWebDriverCommandTimeoutSeconds)).Pipe(DefaultConfigDriver);
     }
 
     public IWebDriver CreateLocalMachineWebDriver(string version = "Latest", Architecture architecture = Architecture.Auto)
     {
-        return CreateLocalMachineWebDriver(BuildDefaultDriverConfig(Settings), version, architecture);
+        return CreateLocalMachineWebDriver(config: BuildDefaultDriverConfig(Settings), version, architecture);
     }
 
     public IWebDriver CreateLocalMachineWebDriver(IDriverConfig config, string version = "Latest", Architecture architecture = Architecture.Auto)
@@ -75,18 +75,20 @@ public class WebDriverManager : IWebDriverManager
     {
         // AddArgument("no-sandbox") to fix https://stackoverflow.com/questions/22322596/selenium-error-the-http-request-to-the-remote-webdriver-timed-out-after-60-sec
         return settings.WebDriverType
-            .WhenValue(AutomationTestSettings.WebDriverTypes.Chrome, _ => new ChromeOptions().Pipe(_ => _.AddArgument("no-sandbox")).As<DriverOptions>())
-            .WhenValue(AutomationTestSettings.WebDriverTypes.Firefox, _ => new FirefoxOptions().As<DriverOptions>())
-            .WhenValue(AutomationTestSettings.WebDriverTypes.Edge, _ => new EdgeOptions().Pipe(_ => _.AddArgument("no-sandbox")).As<DriverOptions>())
+            .WhenValue(
+                AutomationTestSettings.WebDriverTypes.Chrome,
+                then: _ => new ChromeOptions().Pipe(fn: _ => _.AddArgument(argument: "no-sandbox")).As<DriverOptions>())
+            .WhenValue(AutomationTestSettings.WebDriverTypes.Firefox, then: _ => new FirefoxOptions().As<DriverOptions>())
+            .WhenValue(AutomationTestSettings.WebDriverTypes.Edge, then: _ => new EdgeOptions().Pipe(fn: _ => _.AddArgument(argument: "no-sandbox")).As<DriverOptions>())
             .Execute();
     }
 
     public static IDriverConfig BuildDefaultDriverConfig(AutomationTestSettings settings)
     {
         return settings.WebDriverType
-            .WhenValue(AutomationTestSettings.WebDriverTypes.Chrome, _ => new ChromeConfig().As<IDriverConfig>())
-            .WhenValue(AutomationTestSettings.WebDriverTypes.Firefox, _ => new FirefoxConfig().As<IDriverConfig>())
-            .WhenValue(AutomationTestSettings.WebDriverTypes.Edge, _ => new EdgeConfig().As<IDriverConfig>())
+            .WhenValue(AutomationTestSettings.WebDriverTypes.Chrome, then: _ => new ChromeConfig().As<IDriverConfig>())
+            .WhenValue(AutomationTestSettings.WebDriverTypes.Firefox, then: _ => new FirefoxConfig().As<IDriverConfig>())
+            .WhenValue(AutomationTestSettings.WebDriverTypes.Edge, then: _ => new EdgeConfig().As<IDriverConfig>())
             .Execute();
     }
 

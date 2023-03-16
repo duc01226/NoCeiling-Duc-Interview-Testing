@@ -1,15 +1,10 @@
 namespace Easy.Platform.AutomationTest.TestCases;
 
-public abstract class SpecFlowStepDefinitionsContext
-{
-    public Guid InstanceId { get; } = Guid.NewGuid();
-}
-
-public abstract class SpecFlowStepDefinitions<TSettings, TContext> : TestCase<TSettings>
+public abstract class BddStepDefinitions<TSettings, TContext> : TestCase<TSettings>
     where TSettings : AutomationTestSettings
-    where TContext : SpecFlowStepDefinitionsContext
+    where TContext : IBddStepsContext
 {
-    protected SpecFlowStepDefinitions(
+    protected BddStepDefinitions(
         IWebDriverManager driverManager,
         TSettings settings,
         WebDriverLazyInitializer lazyWebDriver,
@@ -22,10 +17,10 @@ public abstract class SpecFlowStepDefinitions<TSettings, TContext> : TestCase<TS
     public TContext Context { get; }
 }
 
-public abstract class SpecFlowStepDefinitions<TContext> : SpecFlowStepDefinitions<AutomationTestSettings, TContext>
-    where TContext : SpecFlowStepDefinitionsContext
+public abstract class BddStepDefinitions<TContext> : BddStepDefinitions<AutomationTestSettings, TContext>
+    where TContext : IBddStepsContext
 {
-    protected SpecFlowStepDefinitions(
+    protected BddStepDefinitions(
         IWebDriverManager driverManager,
         AutomationTestSettings settings,
         WebDriverLazyInitializer lazyWebDriver,
@@ -33,4 +28,8 @@ public abstract class SpecFlowStepDefinitions<TContext> : SpecFlowStepDefinition
         TContext context) : base(driverManager, settings, lazyWebDriver, globalLazyWebDriver, context)
     {
     }
+}
+
+public interface IBddStepsContext
+{
 }

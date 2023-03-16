@@ -16,7 +16,6 @@ global using Easy.Platform.AutomationTest.Extensions;
 global using Easy.Platform.AutomationTest.UiComponents;
 global using Easy.Platform.AutomationTest.Pages;
 global using Easy.Platform.AutomationTest.TestCases;
-global using Easy.Platform.AutomationTest.TestFrameworks.Xunit;
 global using Easy.Platform.AutomationTest.Helpers;
 global using Xunit;
 global using FluentAssertions;

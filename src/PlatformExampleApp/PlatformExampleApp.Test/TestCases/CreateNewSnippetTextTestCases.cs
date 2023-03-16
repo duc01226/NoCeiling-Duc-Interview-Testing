@@ -36,11 +36,11 @@ public class CreateNewSnippetTextTestCases : TestCase<TextSnippetAutomationTestS
         loadedHomePage.DoFillInAndSubmitSaveSnippetTextForm(autoRandomTextSnippetEntityData);
 
         // THEN: SnippetText item is created with no errors and item could be searched
-        loadedHomePage.AssertPageNoErrors();
+        loadedHomePage.AssertPageHasNoErrors();
         loadedHomePage.DoSearchTextSnippet(newSnippetText)
             .WaitUntilAssertSuccess(
                 waitForSuccess: _ => _.AssertHasExactMatchItemForSearchText(newSnippetText),
-                stopWaitOnAssertError: _ => _.AssertPageNoErrors());
+                continueWaitOnlyWhen: _ => _.AssertPageHasNoErrors());
         loadedHomePage.GetTextSnippetDataTableItems().First().Should().BeEquivalentTo(autoRandomTextSnippetEntityData);
     }
 }

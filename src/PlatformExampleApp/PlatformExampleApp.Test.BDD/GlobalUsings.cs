@@ -1,4 +1,4 @@
-﻿global using System;
+global using System;
 global using System.Collections.Generic;
 global using System.Threading;
 global using System.Threading.Tasks;
@@ -15,7 +15,6 @@ global using Easy.Platform.AutomationTest.Extensions;
 global using Easy.Platform.AutomationTest.UiComponents;
 global using Easy.Platform.AutomationTest.Pages;
 global using Easy.Platform.AutomationTest.TestCases;
-global using Easy.Platform.AutomationTest.TestFrameworks.Xunit;
 global using Easy.Platform.AutomationTest.Helpers;
 global using TechTalk.SpecFlow;
 global using Xunit;

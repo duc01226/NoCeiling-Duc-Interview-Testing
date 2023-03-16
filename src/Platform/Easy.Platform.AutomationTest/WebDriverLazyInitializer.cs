@@ -6,7 +6,7 @@ public sealed class WebDriverLazyInitializer : IDisposable
 {
     public WebDriverLazyInitializer(AutomationTestSettings settings)
     {
-        LazyDriver = new Lazy<IWebDriver>(() => WebDriverManager.New(settings).CreateWebDriver());
+        LazyDriver = new Lazy<IWebDriver>(valueFactory: () => WebDriverManager.New(settings).CreateWebDriver());
     }
 
 

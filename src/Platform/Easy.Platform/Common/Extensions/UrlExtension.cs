@@ -37,4 +37,9 @@ public static class UrlExtension
     {
         return $"?{queryParams.Select(keyValuePair => WebUtility.UrlEncode($"{keyValuePair.Key}={keyValuePair.Value}")).JoinToString('&')}";
     }
+
+    public static string Path(this Uri uri)
+    {
+        return uri.PathAndQuery.Substring(0, uri.PathAndQuery.Length - uri.Query.Length).TrimEnd('/');
+    }
 }

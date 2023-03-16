@@ -1,3 +1,6 @@
+using System.Reflection;
+using Easy.Platform.AutomationTest.Extensions;
+
 namespace Easy.Platform.AutomationTest.TestCases;
 
 public abstract class TestCase<TSettings> where TSettings : AutomationTestSettings
@@ -14,6 +17,11 @@ public abstract class TestCase<TSettings> where TSettings : AutomationTestSettin
     protected TSettings Settings { get; set; }
     protected WebDriverLazyInitializer LazyWebDriver { get; set; }
     protected GlobalWebDriver GlobalLazyWebDriver { get; }
+
+    public void AssertCurrentActiveDefinedPageHasNoErrors(Assembly definedPageAssembly)
+    {
+        LazyWebDriver.Value.TryGetCurrentActiveDefinedPage(Settings, definedPageAssembly)?.AssertPageHasNoErrors();
+    }
 }
 
 public abstract class TestCase : TestCase<AutomationTestSettings>

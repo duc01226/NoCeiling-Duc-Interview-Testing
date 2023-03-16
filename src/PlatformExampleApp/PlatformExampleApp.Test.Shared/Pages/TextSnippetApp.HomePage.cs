@@ -59,11 +59,11 @@ public static partial class TextSnippetApp
         public HomePage WaitInitLoadingDataSuccessWithFullPagingData(
             int maxWaitForLoadingDataSeconds = DefaultMaxRequestWaitSeconds)
         {
-            AssertPageDocumentLoaded();
+            AssertIsCurrentActivePage();
 
             WaitGlobalSpinnerStopped(maxWaitForLoadingDataSeconds);
 
-            AssertPageNoErrors().AssertTextSnippetItemsDisplayFullPage();
+            AssertPageHasNoErrors().AssertTextSnippetItemsDisplayFullPage();
 
             return this;
         }
@@ -78,7 +78,7 @@ public static partial class TextSnippetApp
             // it access list element from filter, which could be stale because data is filtered, element lost
             // when it's checking the element matching
             this.WaitUntil(
-                condition: _ => ValidateNoErrors() == false ||
+                condition: _ => ValidatePageHasNoErrors() == false ||
                                 Util.TaskRunner.WaitRetryThrowFinalException<bool, StaleElementReferenceException>(
                                     executeFunc: () => CheckAllTextSnippetGrowsMatchSearchText(searchText)),
                 maxWaitForLoadingDataSeconds,
@@ -89,7 +89,7 @@ public static partial class TextSnippetApp
 
         public HomePage AssertHasExactMatchItemForSearchText(string searchText)
         {
-            AssertPageNoErrors();
+            AssertPageHasNoErrors();
 
             this.AssertMust(
                 must: _ => TextSnippetItemsTable.Rows.Count == 1 &&
@@ -112,14 +112,14 @@ public static partial class TextSnippetApp
                     must: _ => _.SaveSnippetFormSnippetTextTxt.Value == selectedItemSnippetText,
                     expected: $"SaveSnippetFormSnippetTextTxt.Value must be '{selectedItemSnippetText}'",
                     actual: $"{_.SaveSnippetFormSnippetTextTxt.Value}"),
-                stopWaitOnAssertError: _ => _.AssertPageNoErrors());
+                continueWaitOnlyWhen: _ => _.AssertPageHasNoErrors());
 
             return selectedItemSnippetText;
         }
 
         public HomePage AssertNotHasMatchingItemsForSearchText(string searchText)
         {
-            AssertPageNoErrors();
+            AssertPageHasNoErrors();
 
             this.AssertMust(
                 must: _ => TextSnippetItemsTable.Rows.Count == 0,
@@ -131,7 +131,7 @@ public static partial class TextSnippetApp
 
         public HomePage AssertHasMatchingItemsForSearchText(string searchText)
         {
-            AssertPageNoErrors();
+            AssertPageHasNoErrors();
 
             this.AssertMust(
                 must: _ => TextSnippetItemsTable.Rows.Count >= 1 &&
@@ -144,7 +144,7 @@ public static partial class TextSnippetApp
 
         public HomePage AssertNotHasExactMatchItemForSearchText(string searchText)
         {
-            AssertPageNoErrors();
+            AssertPageHasNoErrors();
 
             this.AssertMust(
                 must: _ => GetTextSnippetDataTableItems().Select(p => p.SnippetText).All(predicate: rowSnippetTextValue => rowSnippetTextValue != searchText),

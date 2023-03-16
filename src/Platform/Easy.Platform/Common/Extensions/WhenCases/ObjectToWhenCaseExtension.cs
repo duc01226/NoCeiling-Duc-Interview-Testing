@@ -43,7 +43,7 @@ public static class ObjectToWhenCaseExtension
 
     public static WhenCase<TSource> When<TSource>(
         this TSource source,
-        params WhenCase<TSource, ValueTuple>.CaseItem[] cases)
+        params WhenCase<TSource, object>.CaseItem[] cases)
     {
         return new WhenCase<TSource>(source, cases);
     }

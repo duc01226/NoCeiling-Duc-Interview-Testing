@@ -33,7 +33,7 @@ public abstract class BaseStartup
         var startUp = startupFactory();
 
         startUp.ConfigureHostConfiguration(hostBuilder);
-        hostBuilder.ConfigureServices(services => startUp.ConfigureServices(services));
+        hostBuilder.ConfigureServices(configureDelegate: services => startUp.ConfigureServices(services));
 
         // Populate ServiceCollection to ExposeServiceCollectionFactory through UseServiceProviderFactory
         // and hostBuilder.Build() => trigger CreateBuilder => expose ServiceCollection
@@ -63,7 +63,7 @@ public abstract class BaseStartup
 
         services.AddScoped<WebDriverLazyInitializer, WebDriverLazyInitializer>();
         services.AddSingleton<GlobalWebDriver, GlobalWebDriver>();
-        services.RegisterAllFromType(typeof(SpecFlowStepDefinitionsContext), GetType().Assembly, ServiceLifeTime.Scoped);
+        services.RegisterAllFromType(conventionalType: typeof(IBddStepsContext), GetType().Assembly, ServiceLifeTime.Scoped);
     }
 
     /// <summary>

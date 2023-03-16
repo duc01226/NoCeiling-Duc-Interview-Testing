@@ -23,7 +23,7 @@ public static partial class TextSnippetApp
         public override string ErrorElementCssSelector => ".mat-mdc-error";
         public override IWebElement? GlobalSpinnerElement => GlobalSpinner.RootElement;
 
-        protected override int DefaultWaitUntilMaxSeconds => DefaultMaxRequestWaitSeconds;
+        public override int DefaultWaitUntilMaxSeconds => DefaultMaxRequestWaitSeconds;
 
         public SpinnerUiComponent GlobalSpinner { get; set; }
     }
