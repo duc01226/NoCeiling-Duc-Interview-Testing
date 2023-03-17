@@ -48,7 +48,7 @@ public static partial class TextSnippetApp
         }
 
         public HomePage WaitInitLoadingDataSuccessWithFullPagingData(
-            int maxWaitForLoadingDataSeconds = DefaultMaxRequestWaitSeconds)
+            int maxWaitForLoadingDataSeconds = Const.DefaultMaxWaitSeconds)
         {
             AssertIsCurrentActivePage();
 
@@ -61,7 +61,7 @@ public static partial class TextSnippetApp
 
         public HomePage DoSearchTextSnippet(
             string searchText,
-            int maxWaitForLoadingDataSeconds = DefaultMaxRequestWaitSeconds)
+            int maxWaitForLoadingDataSeconds = Const.DefaultMaxWaitSeconds)
         {
             SearchTextSnippetTxt.ReplaceTextAndEnter(searchText);
 
@@ -168,7 +168,7 @@ public static partial class TextSnippetApp
                 .Click();
 
             WaitGlobalSpinnerStopped(
-                DefaultMaxRequestWaitSeconds,
+                DefaultMaxWaitSeconds,
                 waitForMsg: "Wait for saving snippet text successfully");
 
             return this;

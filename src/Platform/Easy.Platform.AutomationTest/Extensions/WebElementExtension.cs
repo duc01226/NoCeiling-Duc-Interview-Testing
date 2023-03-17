@@ -57,6 +57,9 @@ public static class WebElementExtension
         return element;
     }
 
+    /// <summary>
+    /// To StaleWebElementWrapper help to get any thing from an element and return default value if the element get staled
+    /// </summary>
     public static StaleWebElementWrapper ToStaleElementWrapper(this IWebElement element)
     {
         return new StaleWebElementWrapper(element);
@@ -109,6 +112,38 @@ public static class WebElementExtension
         return new SelectElement(element).SelectedOption.Text;
     }
 
+    public static bool ContainsText(
+        this IWebElement element,
+        string text)
+    {
+        try
+        {
+            return element.Text.Contains(text);
+        }
+        catch (StaleElementReferenceException)
+        {
+            return false;
+        }
+    }
+
+    public static bool ContainsValue(
+        this IWebElement element,
+        string value)
+    {
+        try
+        {
+            var attribute = element.GetAttribute("value");
+            return attribute != null && attribute.Contains(value);
+        }
+        catch (StaleElementReferenceException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// StaleWebElementWrapper help to get any thing from an element and return default value if the element get staled
+    /// </summary>
     public class StaleWebElementWrapper
     {
         private readonly IWebElement element;
@@ -118,6 +153,9 @@ public static class WebElementExtension
             this.element = element;
         }
 
+        /// <summary>
+        /// Get any thing from an element and return default value if the element get staled
+        /// </summary>
         public T Get<T>(Func<IWebElement, T> getFn)
         {
             return Util.TaskRunner.CatchException<StaleElementReferenceException, T>(func: () => getFn(element));

@@ -10,7 +10,7 @@ set AutomationTestSettings__AppNameToOrigin__TextSnippetApp=http://localhost:400
 set AutomationTestSettings__RemoteWebDriverUrl=http://selenium-hub:4444/wd/hub
 set AutomationTestSettings__RemoteWebDriverUrl=http://host.docker.internal:4444/wd/hub
 set AutomationTestSettings__RemoteWebDriverUrl=http://localhost:4444/wd/hub
-set RandomThrowExceptionForTesting=false
+set RandomThrowExceptionForTesting=true
 
 docker-compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example kill
 docker-compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example rm -f

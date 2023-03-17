@@ -67,7 +67,7 @@ public static class WebDriverExtension
 
 
     /// <summary>
-    /// Try <see cref="GetCurrentActiveDefinedPage{TPage,TSettings}"/> or return null if no matched pages
+    /// Try <see cref="GetCurrentActiveDefinedPage{TPage,TSettings}" /> or return null if no matched pages
     /// </summary>
     public static TPage? TryGetCurrentActiveDefinedPage<TPage, TSettings>(
         this IWebDriver webDriver,
@@ -149,7 +149,7 @@ public static class WebDriverExtension
     }
 
     /// <summary>
-    /// Try <see cref="GetDefinedPageByUrl{TSettings}"/> or return null if no matched pages
+    /// Try <see cref="GetDefinedPageByUrl{TSettings}" /> or return null if no matched pages
     /// </summary>
     public static IPage? TryGetDefinedPageByUrl<TSettings>(
         this IWebDriver webDriver,
@@ -192,7 +192,7 @@ public static class WebDriverExtension
     }
 
     /// <summary>
-    /// Try <see cref="GetDefinedPageByUrlInfo{TSettings}"/> or return null if no matched pages
+    /// Try <see cref="GetDefinedPageByUrlInfo{TSettings}" /> or return null if no matched pages
     /// </summary>
     public static IPage? TryGetDefinedPageByUrlInfo<TSettings>(
         this IWebDriver webDriver,

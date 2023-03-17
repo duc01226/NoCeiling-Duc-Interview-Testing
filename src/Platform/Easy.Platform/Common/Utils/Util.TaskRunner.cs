@@ -11,7 +11,7 @@ public static partial class Util
     public static class TaskRunner
     {
         public const int DefaultWaitUntilMaxSeconds = 60;
-        public const double DefaultMinimumDelayWaitSeconds = 0.3;
+        public const double DefaultWaitIntervalSeconds = 0.3;
 
         /// <summary>
         /// Execute an action after a given of time.
@@ -342,7 +342,7 @@ public static partial class Util
                 .Handle<TException>()
                 .WaitAndRetryAsync(
                     retryCount,
-                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultMinimumDelayWaitSeconds)),
+                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndThrowFinalExceptionAsync(
                     executeFunc,
@@ -361,7 +361,7 @@ public static partial class Util
                 .Handle<TException>()
                 .WaitAndRetryAsync(
                     retryCount,
-                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultMinimumDelayWaitSeconds)),
+                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndThrowFinalExceptionAsync(
                     executeFunc,
@@ -400,7 +400,7 @@ public static partial class Util
                 .Handle<Exception>()
                 .WaitAndRetryAsync(
                     retryCount,
-                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultMinimumDelayWaitSeconds)),
+                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndCaptureAsync(
                     executeFunc);
@@ -416,7 +416,7 @@ public static partial class Util
                 .Handle<Exception>()
                 .WaitAndRetryAsync(
                     retryCount,
-                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultMinimumDelayWaitSeconds)),
+                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndCaptureAsync(
                     executeFunc);
@@ -443,7 +443,7 @@ public static partial class Util
                 .Handle<Exception>()
                 .WaitAndRetry(
                     retryCount,
-                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultMinimumDelayWaitSeconds)),
+                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndThrowFinalException(
                     executeFunc,
@@ -460,7 +460,7 @@ public static partial class Util
                 .Handle<Exception>()
                 .WaitAndRetry(
                     retryCount,
-                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultMinimumDelayWaitSeconds)),
+                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndCapture(executeFunc);
         }
@@ -485,7 +485,7 @@ public static partial class Util
                 .Handle<Exception>()
                 .WaitAndRetry(
                     retryCount,
-                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultMinimumDelayWaitSeconds)),
+                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndThrowFinalException(
                     executeAction,
@@ -502,7 +502,7 @@ public static partial class Util
                 .Handle<Exception>()
                 .WaitAndRetry(
                     retryCount,
-                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultMinimumDelayWaitSeconds)),
+                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndCapture(
                     executeAction);
@@ -520,7 +520,7 @@ public static partial class Util
                 .Handle<TException>()
                 .WaitAndRetry(
                     retryCount,
-                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultMinimumDelayWaitSeconds)),
+                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndThrowFinalException(
                     executeFunc,
@@ -537,7 +537,7 @@ public static partial class Util
                 .Handle<TException>()
                 .WaitAndRetry(
                     retryCount,
-                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultMinimumDelayWaitSeconds)),
+                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndCapture(
                     executeFunc);
@@ -548,14 +548,14 @@ public static partial class Util
             Thread.Sleep(millisecondsToWait);
         }
 
-        public static void DoThenWait(Action action, double secondsToWait = DefaultMinimumDelayWaitSeconds)
+        public static void DoThenWait(Action action, double secondsToWait = DefaultWaitIntervalSeconds)
         {
             action();
 
             Thread.Sleep((int)(secondsToWait * 1000));
         }
 
-        public static T DoThenWait<T>(Func<T> action, double secondsToWait = DefaultMinimumDelayWaitSeconds)
+        public static T DoThenWait<T>(Func<T> action, double secondsToWait = DefaultWaitIntervalSeconds)
         {
             var result = action();
 
@@ -567,23 +567,19 @@ public static partial class Util
         public static void WaitUntil(
             Func<bool> condition,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
-            double delayRetryTimeSeconds = DefaultMinimumDelayWaitSeconds,
+            double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
-            WaitUntilToDo(condition, () => { }, maxWaitSeconds, delayRetryTimeSeconds, waitForMsg);
+            WaitUntilToDo(condition, () => { }, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
         }
 
         public static void TryWaitUntil(
             Func<bool> condition,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
-            double delayRetryTimeSeconds = DefaultMinimumDelayWaitSeconds,
+            double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
-            CatchException(
-                () =>
-                {
-                    WaitUntil(condition, maxWaitSeconds, delayRetryTimeSeconds, waitForMsg);
-                });
+            CatchException(() => WaitUntil(condition, maxWaitSeconds, waitIntervalSeconds, waitForMsg));
         }
 
         public static TResult WaitUntilGetValidResult<T, TResult>(
@@ -596,11 +592,11 @@ public static partial class Util
             var startWaitTime = DateTime.UtcNow;
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
-            Thread.Sleep((int)(DefaultMinimumDelayWaitSeconds * 1000));
+            Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
 
             while (!condition(getResult(t)))
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
-                    Thread.Sleep((int)(DefaultMinimumDelayWaitSeconds * 1000));
+                    Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
                 else
                     throw new TimeoutException(
                         $"WaitUntilGetValidResult is timed out (Max: {maxWaitSeconds} seconds)." +
@@ -612,26 +608,26 @@ public static partial class Util
         /// <summary>
         /// Wait until the condition met. Stop wait immediately if continueWaitOnlyWhen assert failed throw exception
         /// </summary>
-        public static T WaitUntil<T>(
+        public static T WaitUntil<T, TAny>(
             T t,
             Func<bool> condition,
-            Func<T, object> continueWaitOnlyWhen,
+            Func<T, TAny>? continueWaitOnlyWhen = null,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {
             var startWaitTime = DateTime.UtcNow;
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
-            Thread.Sleep((int)(DefaultMinimumDelayWaitSeconds * 1000));
+            Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
 
             try
             {
                 while (!condition())
                 {
-                    continueWaitOnlyWhen(t);
+                    continueWaitOnlyWhen?.Invoke(t);
 
                     if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
-                        Thread.Sleep((int)(DefaultMinimumDelayWaitSeconds * 1000));
+                        Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
                     else
                         throw new TimeoutException(
                             $"WaitUntil is timed out (Max: {maxWaitSeconds} seconds)." +
@@ -656,27 +652,27 @@ public static partial class Util
             return WaitUntil(t, condition, continueWaitOnlyWhen.ToFunc(), maxWaitSeconds, waitForMsg);
         }
 
-        public static TResult WaitUntilGetValidResult<T, TResult>(
+        public static TResult WaitUntilGetValidResult<T, TResult, TAny>(
             T t,
             Func<T, TResult> getResult,
             Func<TResult, bool> condition,
-            Func<T, object> continueWaitOnlyWhen,
+            Func<T, TAny>? continueWaitOnlyWhen = null,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {
             var startWaitTime = DateTime.UtcNow;
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
-            Thread.Sleep((int)(DefaultMinimumDelayWaitSeconds * 1000));
+            Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
 
             try
             {
                 while (!condition(getResult(t)))
                 {
-                    continueWaitOnlyWhen(t);
+                    continueWaitOnlyWhen?.Invoke(t);
 
                     if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
-                        Thread.Sleep((int)(DefaultMinimumDelayWaitSeconds * 1000));
+                        Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
                     else
                         throw new TimeoutException(
                             $"WaitUntilGetValidResult is timed out (Max: {maxWaitSeconds} seconds)." +
@@ -708,26 +704,26 @@ public static partial class Util
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {
-            return WaitUntilGetSuccess(t, getResult, _ => default, maxWaitSeconds, waitForMsg);
+            return WaitUntilGetSuccess(t, getResult, continueWaitOnlyWhen: null, maxWaitSeconds, waitForMsg);
         }
 
-        public static TResult WaitUntilGetSuccess<T, TResult>(
+        public static TResult WaitUntilGetSuccess<T, TResult, TAny>(
             T t,
             Func<T, TResult> getResult,
-            Func<T, object> continueWaitOnlyWhen,
+            Func<T, TAny>? continueWaitOnlyWhen = null,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {
             var startWaitTime = DateTime.UtcNow;
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
-            Thread.Sleep((int)(DefaultMinimumDelayWaitSeconds * 1000));
+            Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
 
             try
             {
                 while (true)
                 {
-                    continueWaitOnlyWhen(t);
+                    continueWaitOnlyWhen?.Invoke(t);
 
                     try
                     {
@@ -736,7 +732,7 @@ public static partial class Util
                     catch (Exception)
                     {
                         if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
-                            Thread.Sleep((int)(DefaultMinimumDelayWaitSeconds * 1000));
+                            Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
                         else
                             throw;
                     }
@@ -762,17 +758,17 @@ public static partial class Util
             Func<bool> condition,
             Func<T> action,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
-            double delayRetryTimeSeconds = DefaultMinimumDelayWaitSeconds,
+            double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
             var startWaitTime = DateTime.UtcNow;
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
-            Thread.Sleep((int)(delayRetryTimeSeconds * 1000));
+            Thread.Sleep((int)(waitIntervalSeconds * 1000));
 
             while (!condition())
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
-                    Thread.Sleep((int)(delayRetryTimeSeconds * 1000));
+                    Thread.Sleep((int)(waitIntervalSeconds * 1000));
                 else
                     throw new TimeoutException(
                         $"WaitUntilToDo is timed out (Max: {maxWaitSeconds} seconds)." +
@@ -785,25 +781,25 @@ public static partial class Util
             Func<bool> condition,
             Action action,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
-            double delayRetryTimeSeconds = DefaultMinimumDelayWaitSeconds,
+            double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
-            WaitUntilToDo(condition, action.ToFunc(), maxWaitSeconds, delayRetryTimeSeconds, waitForMsg);
+            WaitUntilToDo(condition, action.ToFunc(), maxWaitSeconds, waitIntervalSeconds, waitForMsg);
         }
 
         public static TTarget WaitUntilHasMatchedCase<TSource, TTarget>(
             WhenCase<TSource, TTarget> whenDo,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
-            double delayRetryTimeSeconds = DefaultMinimumDelayWaitSeconds,
+            double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
             var startWaitTime = DateTime.UtcNow;
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
-            Thread.Sleep((int)(delayRetryTimeSeconds * 1000));
+            Thread.Sleep((int)(waitIntervalSeconds * 1000));
             while (!whenDo.HasMatchedCase())
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
-                    Thread.Sleep((int)(delayRetryTimeSeconds * 1000));
+                    Thread.Sleep((int)(waitIntervalSeconds * 1000));
                 else
                     throw new TimeoutException(
                         $"WaitUntilHasMatchedCase is timed out (Max: {maxWaitSeconds} seconds)." +
@@ -815,10 +811,10 @@ public static partial class Util
         public static TSource WaitUntilHasMatchedCase<TSource>(
             WhenCase<TSource> whenDo,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
-            double delayRetryTimeSeconds = DefaultMinimumDelayWaitSeconds,
+            double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
-            WaitUntilHasMatchedCase(whenDo.As<WhenCase<TSource, ValueTuple>>(), maxWaitSeconds, delayRetryTimeSeconds, waitForMsg);
+            WaitUntilHasMatchedCase(whenDo.As<WhenCase<TSource, ValueTuple>>(), maxWaitSeconds, waitIntervalSeconds, waitForMsg);
 
             return whenDo.Source;
         }
@@ -827,17 +823,17 @@ public static partial class Util
             Action action,
             Func<bool> condition,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
-            double delayRetryTimeSeconds = DefaultMinimumDelayWaitSeconds,
+            double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
-            WaitAndRetryUntil(action.ToFunc(), condition, maxWaitSeconds, delayRetryTimeSeconds, waitForMsg);
+            WaitAndRetryUntil(action.ToFunc(), condition, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
         }
 
         public static T WaitAndRetryUntil<T>(
             Func<T> action,
             Func<bool> condition,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
-            double delayRetryTimeSeconds = DefaultMinimumDelayWaitSeconds,
+            double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
             var startWaitTime = DateTime.UtcNow;
@@ -848,7 +844,7 @@ public static partial class Util
             while (!condition())
             {
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
-                    Thread.Sleep((int)(delayRetryTimeSeconds * 1000));
+                    Thread.Sleep((int)(waitIntervalSeconds * 1000));
                 else
                     throw new TimeoutException(
                         $"WaitAndRetryUntil is timed out (Max: {maxWaitSeconds} seconds)." +
@@ -864,17 +860,17 @@ public static partial class Util
             Func<Task> action,
             Func<Task<bool>> condition,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
-            double delayRetryTimeSeconds = DefaultMinimumDelayWaitSeconds,
+            double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
-            await WaitAndRetryUntilAsync(action.ToAsyncFunc(), condition, maxWaitSeconds, delayRetryTimeSeconds, waitForMsg);
+            await WaitAndRetryUntilAsync(action.ToAsyncFunc(), condition, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
         }
 
         public static async Task<T> WaitAndRetryUntilAsync<T>(
             Func<Task<T>> action,
             Func<Task<bool>> condition,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
-            double delayRetryTimeSeconds = DefaultMinimumDelayWaitSeconds,
+            double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
             var startWaitTime = DateTime.UtcNow;
@@ -885,7 +881,7 @@ public static partial class Util
             while (!await condition())
             {
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
-                    Thread.Sleep((int)(delayRetryTimeSeconds * 1000));
+                    Thread.Sleep((int)(waitIntervalSeconds * 1000));
                 else
                     throw new TimeoutException(
                         $"DoUntil is timed out (Max: {maxWaitSeconds} seconds)." +

@@ -7,13 +7,12 @@ public static partial class TextSnippetApp
     public static class Const
     {
         public const string AppName = "TextSnippetApp";
+        public const int DefaultMaxWaitSeconds = 5;
     }
 
     public abstract class BasePage<TPage> : Page<TPage, AutomationTestSettings>
         where TPage : BasePage<TPage>
     {
-        public const int DefaultMaxRequestWaitSeconds = 5;
-
         public BasePage(IWebDriver webDriver, AutomationTestSettings settings) : base(webDriver, settings)
         {
             GlobalSpinner = new SpinnerUiComponent(webDriver, parent: this);
@@ -24,7 +23,7 @@ public static partial class TextSnippetApp
         public override string? FormValidationErrorElementsCssSelector => ".mat-mdc-form-field-error";
         public override IWebElement? GlobalSpinnerElement => GlobalSpinner.RootElement;
 
-        public override int DefaultWaitUntilMaxSeconds => DefaultMaxRequestWaitSeconds;
+        public override int DefaultMaxWaitSeconds => Const.DefaultMaxWaitSeconds;
 
         public SpinnerUiComponent GlobalSpinner { get; set; }
     }

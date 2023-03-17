@@ -30,8 +30,8 @@ public class HomePageSteps : BddStepDefinitions<TextSnippetAutomationTestSetting
                     ? Util.Random.ReturnByChanceOrDefault(
                         percentChance: 20, // random 20 percent test failed waiting timeout error by only one second
                         chanceReturnValue: 1,
-                        TextSnippetApp.HomePage.DefaultMaxRequestWaitSeconds)
-                    : TextSnippetApp.HomePage.DefaultMaxRequestWaitSeconds);
+                        TextSnippetApp.Const.DefaultMaxWaitSeconds)
+                    : TextSnippetApp.Const.DefaultMaxWaitSeconds);
     }
 
     [When(

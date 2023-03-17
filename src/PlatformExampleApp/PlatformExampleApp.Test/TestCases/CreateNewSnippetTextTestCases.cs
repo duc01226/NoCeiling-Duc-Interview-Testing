@@ -28,8 +28,8 @@ public class CreateNewSnippetTextTestCases : TestCase<TextSnippetAutomationTestS
                     ? Util.Random.ReturnByChanceOrDefault(
                         percentChance: 20, // random 20 percent test failed waiting timeout error by only one second
                         chanceReturnValue: 1,
-                        TextSnippetApp.HomePage.DefaultMaxRequestWaitSeconds)
-                    : TextSnippetApp.HomePage.DefaultMaxRequestWaitSeconds);
+                        TextSnippetApp.Const.DefaultMaxWaitSeconds)
+                    : TextSnippetApp.Const.DefaultMaxWaitSeconds);
 
         // WHEN: Create new item snippet text by different unique name
         var newSnippetText = autoRandomTextSnippetEntityData.SnippetText;

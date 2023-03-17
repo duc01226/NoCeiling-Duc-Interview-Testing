@@ -24,13 +24,11 @@ public class SearchSnippetTextTestCases : TestCase
                 maxWaitForLoadingDataSeconds: Util.Random.ReturnByChanceOrDefault(
                     percentChance: 20, // random 20 percent test failed waiting timeout error by only one second
                     chanceReturnValue: 1,
-                    TextSnippetApp.HomePage.DefaultMaxRequestWaitSeconds));
+                    TextSnippetApp.Const.DefaultMaxWaitSeconds));
 
         // WHEN: Copy snippet text in first grid row to search box
-        var firstItemSnippetText = loadedHomePage
-            .TextSnippetItemsTable
-            .GetCell(rowIndex: 0, TextSnippetApp.HomePage.SnippetTextColName)!.RootElement!
-            .Text;
+        var firstItemSnippetText = loadedHomePage.TextSnippetItemsTable
+            .GetCell(rowIndex: 0, TextSnippetApp.HomePage.SnippetTextColName)!.Text;
         loadedHomePage.DoSearchTextSnippet(firstItemSnippetText);
 
         // THEN: At least one item matched with the search test displayed

@@ -28,6 +28,8 @@ public interface IPage : IUiComponent
 
     public IWebElement? GlobalSpinnerElement { get; }
 
+    public int DefaultMaxWaitSeconds { get; }
+
     public IPage Reload();
 
     public IEnumerable<IWebElement> GeneralErrorElements();
@@ -328,16 +330,19 @@ public interface IPage<TPage, TSettings> : IPage<TSettings>
 
     public TResult WaitUntilAssertSuccess<TResult>(
         Func<TPage, TResult> waitForSuccess,
+        string? waitForMsg = null,
         double? maxWaitSeconds = null);
 
     public TResult WaitUntilAssertSuccess<TResult>(
         Func<TPage, TResult> waitForSuccess,
         Action<TPage> continueWaitOnlyWhen,
+        string? waitForMsg = null,
         double? maxWaitSeconds = null);
 
     public TResult WaitUntilAssertSuccess<TResult>(
         Func<TPage, TResult> waitForSuccess,
         Func<TPage, object> continueWaitOnlyWhen,
+        string? waitForMsg = null,
         double? maxWaitSeconds = null);
 
     public TCurrentActivePage? TryGetCurrentActiveDefinedPage<TCurrentActivePage>() where TCurrentActivePage : class, IPage<TCurrentActivePage, TSettings>;
@@ -363,11 +368,11 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         Settings = settings;
     }
 
-    public virtual int DefaultWaitUntilMaxSeconds => Util.TaskRunner.DefaultWaitUntilMaxSeconds;
-    protected WebDriverWait WebDriverWait => webDriverWait ??= CreateDefaultWebDriverWait(WebDriver);
-    protected virtual int DefaultWebDriverWaitTimeoutSeconds => 60;
+    public WebDriverWait WebDriverWait => webDriverWait ??= CreateDefaultWebDriverWait(WebDriver);
     public abstract string? GeneralErrorElementsCssSelector { get; }
     public abstract string? FormValidationErrorElementsCssSelector { get; }
+
+    public virtual int DefaultMaxWaitSeconds => Util.TaskRunner.DefaultWaitUntilMaxSeconds;
 
     public TSettings Settings { get; }
 
@@ -480,14 +485,19 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
 
     public virtual TResult WaitUntilAssertSuccess<TResult>(
         Func<TPage, TResult> waitForSuccess,
+        string? waitForMsg = null,
         double? maxWaitSeconds = null)
     {
-        return this.As<TPage>().WaitUntilGetSuccess(waitForSuccess, maxWaitSeconds: maxWaitSeconds ?? DefaultWaitUntilMaxSeconds);
+        return this.As<TPage>().WaitUntilGetSuccess(
+            waitForSuccess,
+            waitForMsg: waitForMsg,
+            maxWaitSeconds: maxWaitSeconds ?? DefaultMaxWaitSeconds);
     }
 
     public virtual TResult WaitUntilAssertSuccess<TResult>(
         Func<TPage, TResult> waitForSuccess,
         Action<TPage> continueWaitOnlyWhen,
+        string? waitForMsg = null,
         double? maxWaitSeconds = null)
     {
         return this.As<TPage>()
@@ -498,15 +508,8 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
                     continueWaitOnlyWhen(_);
                     return default(TResult);
                 },
-                maxWaitSeconds: maxWaitSeconds ?? DefaultWaitUntilMaxSeconds);
-    }
-
-    public virtual TResult WaitUntilAssertSuccess<TResult>(
-        Func<TPage, TResult> waitForSuccess,
-        Func<TPage, object> continueWaitOnlyWhen,
-        double? maxWaitSeconds = null)
-    {
-        return this.As<TPage>().WaitUntilGetSuccess(waitForSuccess, continueWaitOnlyWhen, maxWaitSeconds: maxWaitSeconds ?? DefaultWaitUntilMaxSeconds);
+                maxWaitSeconds: maxWaitSeconds ?? DefaultMaxWaitSeconds,
+                waitForMsg);
     }
 
     public TCurrentActivePage? TryGetCurrentActiveDefinedPage<TCurrentActivePage>() where TCurrentActivePage : class, IPage<TCurrentActivePage, TSettings>
@@ -519,9 +522,22 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         return AllErrorElements().Select(selector: p => p.Text);
     }
 
+    public virtual TResult WaitUntilAssertSuccess<TResult>(
+        Func<TPage, TResult> waitForSuccess,
+        Func<TPage, object> continueWaitOnlyWhen,
+        string? waitForMsg = null,
+        double? maxWaitSeconds = null)
+    {
+        return this.As<TPage>().WaitUntilGetSuccess(
+            waitForSuccess,
+            continueWaitOnlyWhen,
+            maxWaitSeconds: maxWaitSeconds ?? DefaultMaxWaitSeconds,
+            waitForMsg);
+    }
+
     protected virtual WebDriverWait CreateDefaultWebDriverWait(IWebDriver webDriver)
     {
-        return new WebDriverWait(webDriver, DefaultWebDriverWaitTimeoutSeconds.Seconds())
+        return new WebDriverWait(webDriver, DefaultMaxWaitSeconds.Seconds())
             .With(p => p.PollingInterval = TimeSpan.FromMilliseconds(300));
     }
 
@@ -529,10 +545,29 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         int? maxWaitForLoadingDataSeconds = null,
         string waitForMsg = "Page Global Spinner is stopped")
     {
-        return (TPage)this.WaitUntil(
+        return WaitUntil(
             condition: _ => GlobalSpinnerElement?.IsClickable() != true,
-            maxWaitSeconds: maxWaitForLoadingDataSeconds ?? DefaultWaitUntilMaxSeconds, // Multiple wait time to test failed waiting timeout
+            maxWaitSeconds: maxWaitForLoadingDataSeconds ?? DefaultMaxWaitSeconds, // Multiple wait time to test failed waiting timeout
             waitForMsg: waitForMsg);
+    }
+
+    public TPage WaitUntil(
+        Func<TPage, bool> condition,
+        Func<TPage, object> continueWaitOnlyWhen,
+        string? waitForMsg = null,
+        double? maxWaitSeconds = null)
+    {
+        return Util.TaskRunner.WaitUntil(this.As<TPage>(), () => condition(this.As<TPage>()), continueWaitOnlyWhen, maxWaitSeconds ?? DefaultMaxWaitSeconds, waitForMsg);
+    }
+
+    public TPage WaitUntil(
+        Func<TPage, bool> condition,
+        string? waitForMsg = null,
+        double? maxWaitSeconds = null)
+    {
+        Util.TaskRunner.WaitUntil(() => condition(this.As<TPage>()), maxWaitSeconds ?? DefaultMaxWaitSeconds, waitForMsg: waitForMsg);
+
+        return this.As<TPage>();
     }
 }
 
