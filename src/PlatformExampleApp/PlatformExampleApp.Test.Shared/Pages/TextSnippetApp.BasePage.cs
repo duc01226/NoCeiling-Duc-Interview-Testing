@@ -20,7 +20,8 @@ public static partial class TextSnippetApp
         }
 
         public override string AppName => Const.AppName;
-        public override string ErrorElementCssSelector => ".mat-mdc-error";
+        public override string? GeneralErrorElementsCssSelector => ".app__errors-content";
+        public override string? FormValidationErrorElementsCssSelector => ".mat-mdc-form-field-error";
         public override IWebElement? GlobalSpinnerElement => GlobalSpinner.RootElement;
 
         public override int DefaultWaitUntilMaxSeconds => DefaultMaxRequestWaitSeconds;

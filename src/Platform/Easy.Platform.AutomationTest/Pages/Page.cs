@@ -30,6 +30,64 @@ public interface IPage : IUiComponent
 
     public IPage Reload();
 
+    public IEnumerable<IWebElement> GeneralErrorElements();
+
+    public IEnumerable<IWebElement> FormValidationErrorElements();
+
+    public IEnumerable<IWebElement> AllErrorElements();
+
+    public IEnumerable<string> AllErrors();
+
+    public PlatformValidationResult<IPage> ValidateCurrentPageUrlMatched()
+    {
+        return ValidateCurrentPageUrlMatched(page: this);
+    }
+
+    public PlatformValidationResult<IPage> ValidateCurrentPageTitleMatched()
+    {
+        return ValidateCurrentPageTitleMatched(page: this);
+    }
+
+    public PlatformValidationResult<IPage> ValidateIsCurrentActivePage()
+    {
+        return ValidateCurrentPageUrlMatched().And(nextValidation: () => ValidateCurrentPageTitleMatched());
+    }
+
+    public PlatformValidationResult<IPage> ValidatePageHasNoErrors()
+    {
+        return ValidatePageHasNoErrors(page: this, p => p.AllErrorElements());
+    }
+
+    public PlatformValidationResult<IPage> ValidatePageHasSomeErrors()
+    {
+        return ValidatePageHasSomeErrors(page: this, p => p.AllErrorElements());
+    }
+
+    public PlatformValidationResult<IPage> ValidatePageMustHasError(string errorMsg)
+    {
+        return ValidatePageMustHasErrors(page: this, p => p.AllErrorElements(), errorMsg);
+    }
+
+    public IPage AssertPageHasNoErrors()
+    {
+        return ValidatePageHasNoErrors().AssertValid();
+    }
+
+    public IPage AssertPageHasSomeErrors()
+    {
+        return ValidatePageHasSomeErrors().AssertValid();
+    }
+
+    public IPage AssertPageMustHasError(string errorMsg)
+    {
+        return ValidatePageMustHasError(errorMsg).AssertValid();
+    }
+
+    public IPage AssertIsCurrentActivePage()
+    {
+        return ValidateIsCurrentActivePage().AssertValid();
+    }
+
     public static IPage<TSettings> CreateInstance<TSettings>(
         Type pageType,
         IWebDriver webDriver,
@@ -165,13 +223,12 @@ public interface IPage : IUiComponent
         return settings.AppNameToOrigin[appName];
     }
 
-    public static PlatformValidationResult<TPage> ValidatePageHasNoErrors<TPage>(TPage page) where TPage : IPage
+    public static PlatformValidationResult<TPage> ValidatePageHasNoErrors<TPage>(TPage page, Func<TPage, IEnumerable<IWebElement>> pageErrors) where TPage : IPage
     {
         if (page.ValidateIsCurrentActivePage() == false)
             return PlatformValidationResult.Valid(page);
 
-        return page
-            .AllErrorElements()
+        return pageErrors(page)
             .Validate(
                 must: errorElements => !errorElements.Any(predicate: errorElement => errorElement.IsClickable()),
                 errorMsgs: errors => AssertHelper.Failed(
@@ -181,13 +238,12 @@ public interface IPage : IUiComponent
             .Of(page);
     }
 
-    public static PlatformValidationResult<TPage> ValidatePageHasSomeErrors<TPage>(TPage page) where TPage : IPage
+    public static PlatformValidationResult<TPage> ValidatePageHasSomeErrors<TPage>(TPage page, Func<TPage, IEnumerable<IWebElement>> pageErrors) where TPage : IPage
     {
         if (page.ValidateIsCurrentActivePage() == false)
             return PlatformValidationResult.Valid(page);
 
-        return page
-            .AllErrorElements()
+        return pageErrors(page)
             .Validate(
                 must: errors => errors.Any(),
                 errorMsgs: errors => AssertHelper.Failed(
@@ -197,15 +253,15 @@ public interface IPage : IUiComponent
             .Of(page);
     }
 
-    public static PlatformValidationResult<TPage> ValidatePageMustHasErrors<TPage>(TPage page, string errorMsg) where TPage : IPage
+    public static PlatformValidationResult<TPage> ValidatePageMustHasErrors<TPage>(TPage page, Func<TPage, IEnumerable<IWebElement>> pageErrors, string errorMsg)
+        where TPage : IPage
     {
         if (page.ValidateIsCurrentActivePage() == false)
             return PlatformValidationResult.Valid(page);
 
-        return page
-            .AllErrorElements()
+        return pageErrors(page)
             .Validate(
-                must: errors => errors.Any(predicate: p => p.Text.Contains(errorMsg, StringComparison.InvariantCultureIgnoreCase)),
+                must: errors => errors.Any(predicate: p => p.Text.ContainsIgnoreCase(errorMsg)),
                 errorMsgs: errors => AssertHelper.Failed(
                     generalMsg: "Has no errors displayed on Page",
                     expected: $"Must has error \"{errorMsg}\" displayed on Page",
@@ -213,58 +269,13 @@ public interface IPage : IUiComponent
             .Of(page);
     }
 
-    public List<IWebElement> AllErrorElements();
 
-    public List<string> AllErrors();
-
-    public PlatformValidationResult<IPage> ValidateCurrentPageUrlMatched()
+    public static IEnumerable<IWebElement> GetErrorElements(IPage page, string? errorElementSelector)
     {
-        return ValidateCurrentPageUrlMatched(page: this);
-    }
-
-    public PlatformValidationResult<IPage> ValidateCurrentPageTitleMatched()
-    {
-        return ValidateCurrentPageTitleMatched(page: this);
-    }
-
-    public PlatformValidationResult<IPage> ValidateIsCurrentActivePage()
-    {
-        return ValidateCurrentPageUrlMatched().And(nextValidation: () => ValidateCurrentPageTitleMatched());
-    }
-
-    public PlatformValidationResult<IPage> ValidatePageHasNoErrors()
-    {
-        return ValidatePageHasNoErrors(page: this);
-    }
-
-    public PlatformValidationResult<IPage> ValidatePageHasSomeErrors()
-    {
-        return ValidatePageHasSomeErrors(page: this);
-    }
-
-    public PlatformValidationResult<IPage> ValidatePageMustHasError(string errorMsg)
-    {
-        return ValidatePageMustHasErrors(page: this, errorMsg);
-    }
-
-    public IPage AssertPageHasNoErrors()
-    {
-        return ValidatePageHasNoErrors().AssertValid();
-    }
-
-    public IPage AssertPageHasSomeErrors()
-    {
-        return ValidatePageHasSomeErrors().AssertValid();
-    }
-
-    public IPage AssertPageMustHasError(string errorMsg)
-    {
-        return ValidatePageMustHasError(errorMsg).AssertValid();
-    }
-
-    public IPage AssertIsCurrentActivePage()
-    {
-        return ValidateIsCurrentActivePage().AssertValid();
+        return errorElementSelector.IsNullOrEmpty()
+            ? Enumerable.Empty<IWebElement>()
+            : page.WebDriver.FindElements(errorElementSelector!)
+                .Where(predicate: p => p.IsClickable() && !p.Text.IsNullOrWhiteSpace());
     }
 }
 
@@ -339,13 +350,6 @@ public interface IPage<TPage, TSettings> : IPage<TSettings>
 
         return page;
     }
-
-    public static List<IWebElement> AllErrorElements(TPage page, string errorElementSelector)
-    {
-        return page.WebDriver.FindElements(errorElementSelector)
-            .Where(predicate: p => p.Displayed && p.Enabled && !p.Text.IsNullOrWhiteSpace())
-            .ToList();
-    }
 }
 
 public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, TSettings>
@@ -359,11 +363,11 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         Settings = settings;
     }
 
-    public abstract string ErrorElementCssSelector { get; }
-
     public virtual int DefaultWaitUntilMaxSeconds => Util.TaskRunner.DefaultWaitUntilMaxSeconds;
     protected WebDriverWait WebDriverWait => webDriverWait ??= CreateDefaultWebDriverWait(WebDriver);
     protected virtual int DefaultWebDriverWaitTimeoutSeconds => 60;
+    public abstract string? GeneralErrorElementsCssSelector { get; }
+    public abstract string? FormValidationErrorElementsCssSelector { get; }
 
     public TSettings Settings { get; }
 
@@ -374,6 +378,24 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
     IPage IPage.Reload()
     {
         return Reload();
+    }
+
+    public IEnumerable<IWebElement> GeneralErrorElements()
+    {
+        return IPage.GetErrorElements(this, GeneralErrorElementsCssSelector);
+    }
+
+    public IEnumerable<IWebElement> FormValidationErrorElements()
+    {
+        return IPage.GetErrorElements(this, FormValidationErrorElementsCssSelector);
+    }
+
+    public IEnumerable<IWebElement> AllErrorElements()
+    {
+        return GeneralErrorElements()
+            .ConcatIf(
+                GeneralErrorElementsCssSelector != FormValidationErrorElementsCssSelector,
+                FormValidationErrorElements());
     }
 
     /// <summary>
@@ -387,7 +409,7 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
     public virtual string Origin => IPage.BuildOrigin(Settings, AppName);
 
     /// <summary>
-    /// The path of the page after the origin. The full url is: {Origin}/{Path}{QueryParamsUrlPart}. See <see cref="IPage{TPage,TSettings}.BuildFullUrl" />
+    /// The path of the page after the origin. The full url is: {Origin}/{Path}{QueryParamsUrlPart}. See <see cref="IPage.BuildFullUrl{TPage}" />
     /// </summary>
     public abstract string Path { get; }
 
@@ -416,29 +438,19 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         return IPage<TPage, TSettings>.Reload(page: this.As<TPage>());
     }
 
-    public virtual List<IWebElement> AllErrorElements()
-    {
-        return IPage<TPage, TSettings>.AllErrorElements(page: this.As<TPage>(), ErrorElementCssSelector);
-    }
-
-    public List<string> AllErrors()
-    {
-        return AllErrorElements().Select(selector: p => p.Text).ToList();
-    }
-
     public PlatformValidationResult<TPage> ValidatePageHasNoErrors()
     {
-        return IPage.ValidatePageHasNoErrors(page: this.As<TPage>());
+        return IPage.ValidatePageHasNoErrors(page: this.As<TPage>(), p => p.AllErrorElements());
     }
 
     public PlatformValidationResult<TPage> ValidatePageHasSomeErrors()
     {
-        return IPage.ValidatePageHasSomeErrors(page: this.As<TPage>());
+        return IPage.ValidatePageHasSomeErrors(page: this.As<TPage>(), p => p.AllErrorElements());
     }
 
     public PlatformValidationResult<TPage> ValidatePageMustHasError(string errorMsg)
     {
-        return IPage.ValidatePageMustHasErrors(page: this.As<TPage>(), errorMsg);
+        return IPage.ValidatePageMustHasErrors(page: this.As<TPage>(), p => p.AllErrorElements(), errorMsg);
     }
 
     IPage<TSettings> IPage<TSettings>.Reload()
@@ -502,6 +514,11 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         return WebDriver.TryGetCurrentActiveDefinedPage<TCurrentActivePage, TSettings>(Settings);
     }
 
+    public IEnumerable<string> AllErrors()
+    {
+        return AllErrorElements().Select(selector: p => p.Text);
+    }
+
     protected virtual WebDriverWait CreateDefaultWebDriverWait(IWebDriver webDriver)
     {
         return new WebDriverWait(webDriver, DefaultWebDriverWaitTimeoutSeconds.Seconds())
@@ -529,9 +546,10 @@ public class GeneralCurrentActivePage<TSettings> : Page<GeneralCurrentActivePage
     {
     }
 
-    public override string ErrorElementCssSelector => ".error";
     public override string Title => WebDriver.Title;
     public override IWebElement? GlobalSpinnerElement { get; } = null;
+    public override string? GeneralErrorElementsCssSelector => ".error";
+    public override string? FormValidationErrorElementsCssSelector => ".error";
 
     public override string AppName =>
         Settings.AppNameToOrigin.Where(predicate: p => WebDriver.Url.Contains(p.Value)).Select(selector: p => p.Key).FirstOrDefault() ?? "Unknown";

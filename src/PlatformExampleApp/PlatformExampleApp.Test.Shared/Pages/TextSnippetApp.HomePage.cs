@@ -27,10 +27,6 @@ public static partial class TextSnippetApp
 
         public IWebElement? Header => WebDriver.TryFindElement(cssSelector: ".app__header > h1");
 
-        public IWebElement? GlobalError =>
-            WebDriver.TryFindElement(cssSelector: ".app__errors-content")
-                .PipeIfOrDefault(when: element => element?.Text.IsNullOrWhiteSpace() == false, thenPipe: element => element, defaultValue: null);
-
         public List<IWebElement> SaveSnippetTextDetailErrors =>
             WebDriver.FindElements(cssSelector: "platform-example-web-text-snippet-detail .text-snippet-detail__error");
 
@@ -42,11 +38,6 @@ public static partial class TextSnippetApp
         public FormFieldUiComponent SaveSnippetFormFullTextTxt { get; }
         public GeneralUiComponent SaveSnippetFormSubmitBtn => new(WebDriver, rootElementClassSelector: ".text-snippet-detail__main-form-submit-btn", parent: this);
         public GeneralUiComponent SaveSnippetFormResetBtn => new(WebDriver, rootElementClassSelector: ".text-snippet-detail__main-form-reset-btn", parent: this);
-
-        public override List<IWebElement> AllErrorElements()
-        {
-            return base.AllErrorElements().ConcatIf(@if: GlobalError != null, GlobalError!).Concat(SaveSnippetTextDetailErrors).ToList();
-        }
 
         public HomePage AssertTextSnippetItemsDisplayFullPage()
         {
