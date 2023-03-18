@@ -134,7 +134,7 @@ services:
       - "localhost:host-gateway"
     # command: bash -c "sudo chmod 777 /etc/hosts && sudo sed 's/127.0.0.1\s\{1,\}localhost/#127.0.0.1       localhost/g' /etc/hosts > /tmp/hosts-new && sudo cp /tmp/hosts-new /etc/hosts && sudo cat /etc/hosts && /opt/bin/entry_point.sh"
 
-  edge1:
+  edge:
     image: selenium/node-edge:4.4.0-20220831
     shm_size: 2gb
     depends_on:
@@ -151,12 +151,12 @@ services:
       - SCREEN_WIDTH=1280
       - SCREEN_HEIGHT=720
     network_mode: "host"
-    # extra_hosts:
-    #   - "host.docker.internal:host-gateway"
-    #   - "localhost:host-gateway"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "localhost:host-gateway"
     # command: bash -c "sudo chmod 777 /etc/hosts && sudo sed 's/127.0.0.1\s\{1,\}localhost/#127.0.0.1       localhost/g' /etc/hosts > /tmp/hosts-new && sudo cp /tmp/hosts-new /etc/hosts && sudo cat /etc/hosts && /opt/bin/entry_point.sh"
 
-  firefox1:
+  firefox:
     image: selenium/node-firefox:4.4.0-20220831
     shm_size: 2gb
     depends_on:
@@ -173,9 +173,9 @@ services:
       - SCREEN_WIDTH=1280
       - SCREEN_HEIGHT=720
     network_mode: "host"
-    # extra_hosts:
-    #   - "host.docker.internal:host-gateway"
-    #   - "localhost:host-gateway"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "localhost:host-gateway"
     # command: bash -c "sudo chmod 777 /etc/hosts && sudo sed 's/127.0.0.1\s\{1,\}localhost/#127.0.0.1       localhost/g' /etc/hosts > /tmp/hosts-new && sudo cp /tmp/hosts-new /etc/hosts && sudo cat /etc/hosts && /opt/bin/entry_point.sh"
 
   selenium-hub:
