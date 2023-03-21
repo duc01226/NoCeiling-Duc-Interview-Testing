@@ -397,14 +397,14 @@ public static class TaskExtension
         return source.WaitUntilHasMatchedCase(_ => whenDo, maxWaitSeconds, waitForMsg: waitForMsg);
     }
 
-    public static T WaitAndRetryUntil<T>(
+    public static T WaitRetryDoUntil<T>(
         this T t,
         Action<T> action,
         Func<T, bool> until,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        Util.TaskRunner.WaitAndRetryUntil(() => action(t), () => until(t), maxWaitSeconds, waitForMsg: waitForMsg);
+        Util.TaskRunner.WaitRetryDoUntil(() => action(t), () => until(t), maxWaitSeconds, waitForMsg: waitForMsg);
 
         return t;
     }

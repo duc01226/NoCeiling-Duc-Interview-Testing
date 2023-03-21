@@ -624,7 +624,13 @@ public static partial class Util
             {
                 while (!condition())
                 {
-                    continueWaitOnlyWhen?.Invoke(t);
+                    // Retry check condition again to continueWaitOnlyWhen throw error only when condition not matched
+                    // Sometime when continueWaitOnlyWhen execute the condition is matched
+                    WaitRetryThrowFinalException(
+                        () =>
+                        {
+                            if (!condition()) continueWaitOnlyWhen?.Invoke(t);
+                        });
 
                     if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                         Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
@@ -638,7 +644,7 @@ public static partial class Util
             }
             catch (Exception e)
             {
-                throw new Exception($"{(waitForMsg != null ? $"WaitFor: {waitForMsg}" : "Wait")} stopped because:{Environment.NewLine}" + e.Message);
+                throw new Exception($"{(waitForMsg != null ? $"WaitFor: '{waitForMsg}'" : "Wait")} failed." + $"{Environment.NewLine}Error: {e.Message}");
             }
         }
 
@@ -669,7 +675,13 @@ public static partial class Util
             {
                 while (!condition(getResult(t)))
                 {
-                    continueWaitOnlyWhen?.Invoke(t);
+                    // Retry check condition again to continueWaitOnlyWhen throw error only when condition not matched
+                    // Sometime when continueWaitOnlyWhen execute the condition is matched
+                    WaitRetryThrowFinalException(
+                        () =>
+                        {
+                            if (!condition(getResult(t))) continueWaitOnlyWhen?.Invoke(t);
+                        });
 
                     if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                         Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
@@ -683,7 +695,7 @@ public static partial class Util
             }
             catch (Exception e)
             {
-                throw new Exception($"{(waitForMsg != null ? $"WaitFor: {waitForMsg}" : "Wait")} stopped because:{Environment.NewLine}" + e.Message);
+                throw new Exception($"{(waitForMsg != null ? $"WaitFor: '{waitForMsg}'" : "Wait")} failed." + $"{Environment.NewLine}Error: {e.Message}");
             }
         }
 
@@ -709,7 +721,7 @@ public static partial class Util
 
         public static TResult WaitUntilGetSuccess<T, TResult, TAny>(
             T t,
-            Func<T, TResult> getResult,
+            Func<T, TResult?> getResult,
             Func<T, TAny>? continueWaitOnlyWhen = null,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
@@ -727,20 +739,27 @@ public static partial class Util
 
                     try
                     {
-                        return getResult(t);
+                        var result = getResult(t);
+
+                        if (result == null) throw new Exception("Result must be not null");
+
+                        return result;
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
                         if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                             Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
                         else
-                            throw;
+                            throw new TimeoutException(
+                                $"WaitUntilGetSuccess is timed out (Max: {maxWaitSeconds} seconds)." +
+                                $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}" +
+                                $"{Environment.NewLine}Error: {e.Message}");
                     }
                 }
             }
             catch (Exception e)
             {
-                throw new Exception($"{(waitForMsg != null ? $"WaitFor: {waitForMsg}" : "Wait")} stopped because:{Environment.NewLine}" + e.Message);
+                throw new Exception($"{(waitForMsg != null ? $"WaitFor: '{waitForMsg}'" : "Wait")} failed." + $"{Environment.NewLine}Error: {e.Message}");
             }
         }
 
@@ -771,7 +790,7 @@ public static partial class Util
                     Thread.Sleep((int)(waitIntervalSeconds * 1000));
                 else
                     throw new TimeoutException(
-                        $"WaitUntilToDo is timed out (Max: {maxWaitSeconds} seconds)." +
+                        $"WaitUntil is timed out (Max: {maxWaitSeconds} seconds)." +
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
 
             return action();
@@ -819,17 +838,17 @@ public static partial class Util
             return whenDo.Source;
         }
 
-        public static void WaitAndRetryUntil(
+        public static void WaitRetryDoUntil(
             Action action,
             Func<bool> condition,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
-            WaitAndRetryUntil(action.ToFunc(), condition, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
+            WaitRetryDoUntil(action.ToFunc(), condition, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
         }
 
-        public static T WaitAndRetryUntil<T>(
+        public static T WaitRetryDoUntil<T>(
             Func<T> action,
             Func<bool> condition,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
@@ -847,7 +866,7 @@ public static partial class Util
                     Thread.Sleep((int)(waitIntervalSeconds * 1000));
                 else
                     throw new TimeoutException(
-                        $"WaitAndRetryUntil is timed out (Max: {maxWaitSeconds} seconds)." +
+                        $"WaitRetryDoUntil is timed out (Max: {maxWaitSeconds} seconds)." +
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
 
                 result = action();
@@ -856,17 +875,17 @@ public static partial class Util
             return result;
         }
 
-        public static async Task WaitAndRetryUntilAsync(
+        public static async Task WaitRetryDoUntilAsync(
             Func<Task> action,
             Func<Task<bool>> condition,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
-            await WaitAndRetryUntilAsync(action.ToAsyncFunc(), condition, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
+            await WaitRetryDoUntilAsync(action.ToAsyncFunc(), condition, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
         }
 
-        public static async Task<T> WaitAndRetryUntilAsync<T>(
+        public static async Task<T> WaitRetryDoUntilAsync<T>(
             Func<Task<T>> action,
             Func<Task<bool>> condition,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,

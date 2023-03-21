@@ -101,8 +101,8 @@ services:
       - SE_EVENT_BUS_HOST=localhost
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
-      - SE_NODE_PORT=5500
-      - VNC_PORT=5900
+      - SE_NODE_PORT=55000
+      - VNC_PORT=59000
       - DISPLAY=:1.0
       - DISPLAY_NUM=1
       - SCREEN_WIDTH=1280
@@ -122,8 +122,8 @@ services:
       - SE_EVENT_BUS_HOST=localhost
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
-      - SE_NODE_PORT=5501
-      - VNC_PORT=5901
+      - SE_NODE_PORT=55010
+      - VNC_PORT=59010
       - DISPLAY=:2.0
       - DISPLAY_NUM=2
       - SCREEN_WIDTH=1280
@@ -144,8 +144,8 @@ services:
       - SE_EVENT_BUS_HOST=localhost
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
-      - SE_NODE_PORT=5520
-      - VNC_PORT=5920
+      - SE_NODE_PORT=55200
+      - VNC_PORT=59200
       - DISPLAY=:21.0
       - DISPLAY_NUM=21
       - SCREEN_WIDTH=1280
@@ -166,8 +166,8 @@ services:
       - SE_EVENT_BUS_HOST=localhost
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
-      - SE_NODE_PORT=5540
-      - VNC_PORT=5940
+      - SE_NODE_PORT=55400
+      - VNC_PORT=59400
       - DISPLAY=:41.0
       - DISPLAY_NUM=41
       - SCREEN_WIDTH=1280

@@ -19,7 +19,7 @@ namespace PlatformExampleApp.Test.BDD.Features
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("TechTalk.SpecFlow", "3.9.0.0")]
     [System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    public partial class CreateTTextSnippetFeatureFeature : object, Xunit.IClassFixture<CreateTTextSnippetFeatureFeature.FixtureData>, System.IDisposable
+    public partial class CreateTextSnippetFeatureFeature : object, Xunit.IClassFixture<CreateTextSnippetFeatureFeature.FixtureData>, System.IDisposable
     {
         
         private static TechTalk.SpecFlow.ITestRunner testRunner;
@@ -31,7 +31,7 @@ namespace PlatformExampleApp.Test.BDD.Features
 #line 1 "CreateTextSnippet.feature"
 #line hidden
         
-        public CreateTTextSnippetFeatureFeature(CreateTTextSnippetFeatureFeature.FixtureData fixtureData, PlatformExampleApp_Test_BDD_XUnitAssemblyFixture assemblyFixture, Xunit.Abstractions.ITestOutputHelper testOutputHelper)
+        public CreateTextSnippetFeatureFeature(CreateTextSnippetFeatureFeature.FixtureData fixtureData, PlatformExampleApp_Test_BDD_XUnitAssemblyFixture assemblyFixture, Xunit.Abstractions.ITestOutputHelper testOutputHelper)
         {
             this._testOutputHelper = testOutputHelper;
             this.TestInitialize();
@@ -40,7 +40,7 @@ namespace PlatformExampleApp.Test.BDD.Features
         public static void FeatureSetup()
         {
             testRunner = TechTalk.SpecFlow.TestRunnerManager.GetTestRunner();
-            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Create tText Snippet Feature", null, ProgrammingLanguage.CSharp, featureTags);
+            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Create Text Snippet Feature", null, ProgrammingLanguage.CSharp, featureTags);
             testRunner.OnFeatureStart(featureInfo);
         }
         
@@ -81,7 +81,7 @@ namespace PlatformExampleApp.Test.BDD.Features
         }
         
         [Xunit.SkippableFactAttribute(DisplayName="Create a new random unique snippet text item should be successful")]
-        [Xunit.TraitAttribute("FeatureTitle", "Create tText Snippet Feature")]
+        [Xunit.TraitAttribute("FeatureTitle", "Create Text Snippet Feature")]
         [Xunit.TraitAttribute("Description", "Create a new random unique snippet text item should be successful")]
         public void CreateANewRandomUniqueSnippetTextItemShouldBeSuccessful()
         {
@@ -121,7 +121,7 @@ this.ScenarioInitialize(scenarioInfo);
         }
         
         [Xunit.SkippableFactAttribute(DisplayName="Create two new duplicated snippet text item should be failed")]
-        [Xunit.TraitAttribute("FeatureTitle", "Create tText Snippet Feature")]
+        [Xunit.TraitAttribute("FeatureTitle", "Create Text Snippet Feature")]
         [Xunit.TraitAttribute("Description", "Create two new duplicated snippet text item should be failed")]
         public void CreateTwoNewDuplicatedSnippetTextItemShouldBeFailed()
         {
@@ -159,12 +159,12 @@ this.ScenarioInitialize(scenarioInfo);
             
             public FixtureData()
             {
-                CreateTTextSnippetFeatureFeature.FeatureSetup();
+                CreateTextSnippetFeatureFeature.FeatureSetup();
             }
             
             void System.IDisposable.Dispose()
             {
-                CreateTTextSnippetFeatureFeature.FeatureTearDown();
+                CreateTextSnippetFeatureFeature.FeatureTearDown();
             }
         }
     }

@@ -31,6 +31,15 @@ public static class AssertHelper
         return value.Validate(must, expected, actual: actual).AssertValid();
     }
 
+    public static TValue AssertMust<TValue>(
+        this TValue value,
+        Func<TValue, bool> must,
+        PlatformValidationError expected,
+        Func<TValue, string>? actual = null)
+    {
+        return value.Validate(must, expected, actual: actual?.Invoke(value)).AssertValid();
+    }
+
     public static TValue AssertMustNot<TValue>(
         this TValue value,
         Func<TValue, bool> mustNot,
@@ -40,7 +49,7 @@ public static class AssertHelper
         return value.ValidateNot(mustNot, expected, actual: actual).AssertValid();
     }
 
-    public static TValue AssertFail<TValue>(
+    public static TValue AssertFailed<TValue>(
         this TValue value,
         PlatformValidationError expected,
         string? actual = null)

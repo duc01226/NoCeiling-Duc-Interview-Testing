@@ -296,6 +296,20 @@ public static class ListExtension
         return ConcatIf(source, @if, (IEnumerable<TSource>)second);
     }
 
+    public static IEnumerable<TSource> ConcatIf<TSource>(
+        this IEnumerable<TSource> source,
+        Func<IEnumerable<TSource>, bool> @if,
+        Func<IEnumerable<TSource>, IEnumerable<TSource>> second)
+    {
+        var sourceList = source.ToList();
+        return @if(sourceList) ? sourceList.Concat(second(sourceList)) : sourceList;
+    }
+
+    public static IEnumerable<TSource> ConcatIf<TSource>(this IEnumerable<TSource> source, Func<IEnumerable<TSource>, bool> @if, params TSource[] second)
+    {
+        return ConcatIf(source, @if, p => second);
+    }
+
     public static List<T> Exclude<T>(this IList<T> items, IList<T> excludeItems)
     {
         var excludeItemsHashSet = excludeItems.ToHashSet();
@@ -344,10 +358,7 @@ public static class ListExtension
     {
         foreach (var i in source)
         {
-            await foreach (var item in selector(i))
-            {
-                yield return item;
-            }
+            await foreach (var item in selector(i)) yield return item;
         }
     }
 
@@ -356,5 +367,57 @@ public static class ListExtension
         return query
             .PipeIf(skipCount >= 0, _ => _.Skip(skipCount!.Value))
             .PipeIf(maxResultCount >= 0, _ => _.Take(maxResultCount!.Value));
+    }
+
+    public static bool All<TSource>(this IEnumerable<TSource> source, Func<TSource, int, bool> predicate)
+    {
+        var sourceList = source.ToList();
+
+        for (var i = 0; i < sourceList.Count; i++)
+        {
+            if (!predicate(sourceList[i], i))
+                return false;
+        }
+
+        return true;
+    }
+
+    public static TSource? FirstOrDefault<TSource>(this IEnumerable<TSource> source, Func<TSource, int, bool> predicate)
+    {
+        var sourceList = source.ToList();
+
+        for (var i = 0; i < sourceList.Count; i++)
+        {
+            if (predicate(sourceList[i], i))
+                return sourceList[i];
+        }
+
+        return default;
+    }
+
+    public static TSource First<TSource>(this IEnumerable<TSource> source, Func<TSource, int, bool> predicate)
+    {
+        var sourceList = source.ToList();
+
+        for (var i = 0; i < sourceList.Count; i++)
+        {
+            if (predicate(sourceList[i], i))
+                return sourceList[i];
+        }
+
+        throw new Exception("Item not found");
+    }
+
+    public static bool Any<TSource>(this IEnumerable<TSource> source, Func<TSource, int, bool> predicate)
+    {
+        var sourceList = source.ToList();
+
+        for (var i = 0; i < sourceList.Count; i++)
+        {
+            if (predicate(sourceList[i], i))
+                return true;
+        }
+
+        return false;
     }
 }

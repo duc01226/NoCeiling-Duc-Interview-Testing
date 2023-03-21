@@ -22,7 +22,8 @@ public static partial class TextSnippetApp
                 .WithIdentifierSelector(appSearchInput: ".text-snippet-detail__full-text-form-field");
         }
 
-        public override string Path => "/";
+        public override string PathRoute => "/";
+        public override string PageContentLoadedElementIndicatorSelector => "platform-example-web-root";
         public override string Title => DefaultTitle;
 
         public IWebElement? Header => WebDriver.TryFindElement(cssSelector: ".app__header > h1");
@@ -30,14 +31,14 @@ public static partial class TextSnippetApp
         public List<IWebElement> SaveSnippetTextDetailErrors =>
             WebDriver.FindElements(cssSelector: "platform-example-web-text-snippet-detail .text-snippet-detail__error");
 
-        public HtmlTableUiComponent TextSnippetItemsTable => new(WebDriver, rootElementClassSelector: ".app__text-snippet-items-grid > table", parent: this);
+        public HtmlTableUiComponent TextSnippetItemsTable => new(WebDriver, rootElementSelector: ".app__text-snippet-items-grid > table", parent: this);
 
         public FormFieldUiComponent SearchTextSnippetTxt { get; }
 
         public FormFieldUiComponent SaveSnippetFormSnippetTextTxt { get; }
         public FormFieldUiComponent SaveSnippetFormFullTextTxt { get; }
-        public GeneralUiComponent SaveSnippetFormSubmitBtn => new(WebDriver, rootElementClassSelector: ".text-snippet-detail__main-form-submit-btn", parent: this);
-        public GeneralUiComponent SaveSnippetFormResetBtn => new(WebDriver, rootElementClassSelector: ".text-snippet-detail__main-form-reset-btn", parent: this);
+        public GeneralUiComponent SaveSnippetFormSubmitBtn => CreateGeneralComponent(".text-snippet-detail__main-form-submit-btn");
+        public GeneralUiComponent SaveSnippetFormResetBtn => CreateGeneralComponent(".text-snippet-detail__main-form-reset-btn");
 
         public HomePage AssertTextSnippetItemsDisplayFullPage()
         {
@@ -52,7 +53,7 @@ public static partial class TextSnippetApp
         {
             AssertIsCurrentActivePage();
 
-            WaitGlobalSpinnerStopped(maxWaitForLoadingDataSeconds);
+            WaitPageContentLoadedSuccessfully(maxWaitForLoadingDataSeconds);
 
             AssertPageHasNoErrors().AssertTextSnippetItemsDisplayFullPage();
 
@@ -156,7 +157,7 @@ public static partial class TextSnippetApp
         public HomePage DoFillInAndSubmitSaveSnippetTextForm(TextSnippetEntityData textSnippetEntityData)
         {
             SaveSnippetFormSubmitBtn
-                .WaitAndRetryUntil(
+                .WaitRetryDoUntil(
                     action: _ =>
                     {
                         SaveSnippetFormSnippetTextTxt.ReplaceTextAndEnter(textSnippetEntityData.SnippetText);
@@ -169,7 +170,7 @@ public static partial class TextSnippetApp
 
             WaitGlobalSpinnerStopped(
                 DefaultMaxWaitSeconds,
-                waitForMsg: "Wait for saving snippet text successfully");
+                waitForMsg: "Saving snippet text successfully");
 
             return this;
         }

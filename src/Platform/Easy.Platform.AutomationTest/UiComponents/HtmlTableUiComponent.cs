@@ -16,9 +16,9 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
 
     public HtmlTableUiComponent(
         IWebDriver webDriver,
-        string rootElementClassSelector,
+        string rootElementSelector,
         IUiComponent? parent = null,
-        Func<IWebElement, string>? getHeaderName = null) : base(webDriver, rootElementClassSelector, parent)
+        Func<IWebElement, string>? getHeaderName = null) : base(webDriver, rootElementSelector, parent)
     {
         if (getHeaderName != null) GetHeaderName = getHeaderName;
     }
@@ -99,9 +99,9 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
             IWebDriver webDriver,
             int rowIndex,
             Func<IEnumerable<IWebElement>> headers,
-            string rootElementClassSelector,
+            string rootElementSelector,
             IUiComponent? parent = null,
-            Func<IWebElement, string>? getHeaderName = null) : base(webDriver, rootElementClassSelector, parent)
+            Func<IWebElement, string>? getHeaderName = null) : base(webDriver, rootElementSelector, parent)
         {
             RowIndex = rowIndex;
             Headers = headers;

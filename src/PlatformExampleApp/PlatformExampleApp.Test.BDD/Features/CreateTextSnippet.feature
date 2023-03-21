@@ -1,4 +1,4 @@
-Feature: Create tText Snippet Feature
+Feature: Create Text Snippet Feature
 
 Scenario: Create a new random unique snippet text item should be successful
     Given Loaded success home page

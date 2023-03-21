@@ -10,12 +10,14 @@ public static class WebDriverExtension
     public static TPage NavigatePage<TPage, TSettings>(
         this IWebDriver webDriver,
         TSettings settings,
-        Dictionary<string, string?>? queryParams = null)
+        Dictionary<string, string?>? queryParams = null,
+        Dictionary<string, string>? routeParams = null)
         where TPage : class, IPage<TPage, TSettings>
         where TSettings : AutomationTestSettings
     {
         var page = IPage.CreateInstance<TPage, TSettings>(webDriver, settings)
-            .With(_ => _.QueryParams = queryParams);
+            .With(_ => _.QueryParams = queryParams)
+            .With(_ => _.PathRouteParams = routeParams);
 
         webDriver.Navigate().GoToUrl(page.FullUrl);
 
@@ -96,6 +98,7 @@ public static class WebDriverExtension
     {
         var page = IPage.CreateInstance<TPage, TSettings>(webDriver, settings)
             .With(page => page.QueryParams = webDriver.Url.ToUri().QueryParams())
+            .With(page => page.PathRouteParams = IPage.BuildPathRouteParams(webDriver.Url.ToUri().Path(), page.PathRoute))
             .AssertIsCurrentActivePage();
 
         return page;
@@ -223,10 +226,11 @@ public static class WebDriverExtension
     public static TPage NavigatePage<TPage>(
         this IWebDriver webDriver,
         AutomationTestSettings settings,
-        Dictionary<string, string?>? queryParams = null)
+        Dictionary<string, string?>? queryParams = null,
+        Dictionary<string, string>? routeParams = null)
         where TPage : class, IPage<TPage, AutomationTestSettings>
     {
-        return NavigatePage<TPage, AutomationTestSettings>(webDriver, settings, queryParams);
+        return NavigatePage<TPage, AutomationTestSettings>(webDriver, settings, queryParams, routeParams);
     }
 
     public static IWebElement FindElement(this IWebDriver webDriver, string cssSelector)

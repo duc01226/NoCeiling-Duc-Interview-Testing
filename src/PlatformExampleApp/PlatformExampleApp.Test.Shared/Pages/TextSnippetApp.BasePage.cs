@@ -15,7 +15,6 @@ public static partial class TextSnippetApp
     {
         public BasePage(IWebDriver webDriver, AutomationTestSettings settings) : base(webDriver, settings)
         {
-            GlobalSpinner = new SpinnerUiComponent(webDriver, parent: this);
         }
 
         public override string AppName => Const.AppName;
@@ -25,6 +24,6 @@ public static partial class TextSnippetApp
 
         public override int DefaultMaxWaitSeconds => Const.DefaultMaxWaitSeconds;
 
-        public SpinnerUiComponent GlobalSpinner { get; set; }
+        public SpinnerUiComponent GlobalSpinner => new(WebDriver, parent: this);
     }
 }

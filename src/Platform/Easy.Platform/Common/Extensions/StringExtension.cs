@@ -110,4 +110,9 @@ public static class StringExtension
     {
         return str?.Contains(value, StringComparison.InvariantCultureIgnoreCase) == true;
     }
+
+    public static string ToUniqueStr(this string str)
+    {
+        return str + " " + Guid.NewGuid();
+    }
 }

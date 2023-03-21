@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Easy.Platform.AutomationTest.Extensions;
 using Easy.Platform.AutomationTest.Helpers;
 using Easy.Platform.AutomationTest.UiComponents;
@@ -9,12 +10,23 @@ namespace Easy.Platform.AutomationTest.Pages;
 
 public interface IPage : IUiComponent
 {
+    public static readonly Regex BuildPathRouteParamRegex = new(@"\{(\w*?)\}", RegexOptions.Compiled);
+
     public string AppName { get; }
     public string Origin { get; }
+
+    /// <summary>
+    /// Used to build the path of the page after the origin. The full url is: {Origin}/{Path}{QueryParamsUrlPart}. See <see cref="BuildFullUrl{TPage}" />. <br/>
+    /// Example: /Users; /Users/{id}/Detail
+    /// </summary>
+    public string PathRoute { get; }
+
+    public Dictionary<string, string>? PathRouteParams { get; set; }
+
     public string Path { get; }
 
     /// <summary>
-    /// The Base default url of a page with out query
+    /// The Base default url of a page without query
     /// </summary>
     public string BaseUrl { get; }
 
@@ -29,6 +41,11 @@ public interface IPage : IUiComponent
     public IWebElement? GlobalSpinnerElement { get; }
 
     public int DefaultMaxWaitSeconds { get; }
+
+    public static string GetPathRouteParamName(Match pathRouteParamMatch)
+    {
+        return pathRouteParamMatch.Groups[1].Value;
+    }
 
     public IPage Reload();
 
@@ -94,22 +111,41 @@ public interface IPage : IUiComponent
         Type pageType,
         IWebDriver webDriver,
         TSettings settings,
-        Dictionary<string, string?>? queryParams = null) where TSettings : AutomationTestSettings
+        Dictionary<string, string?>? queryParams = null,
+        string? generatedWithRouteParamsPath = null) where TSettings : AutomationTestSettings
     {
         return Util.CreateInstance(pageType, webDriver, settings)
             .Cast<IPage<TSettings>>()
-            .With(_ => _.QueryParams = queryParams);
+            .With(_ => _.QueryParams = queryParams)
+            .WithIf(generatedWithRouteParamsPath != null, _ => _.PathRouteParams = BuildPathRouteParams(generatedWithRouteParamsPath!, _.PathRoute));
+    }
+
+    public static Dictionary<string, string> BuildPathRouteParams(string generatedWithRouteParamsPath, string pathRoute)
+    {
+        var generatedWithRouteParamsPathSegments = generatedWithRouteParamsPath.TrimStart('/').Split("/");
+        var pathRouteSegments = pathRoute.TrimStart('/').Split("/");
+
+        return generatedWithRouteParamsPathSegments
+            .Select(
+                (generatedWithRouteParamsPathSegment, index) => new
+                {
+                    generatedWithRouteParamsPathSegment,
+                    pathRouteSegmentMatch = BuildPathRouteParamRegex.Matches(pathRouteSegments[index]).FirstOrDefault()
+                })
+            .Where(p => p.pathRouteSegmentMatch != null)
+            .ToDictionary(p => GetPathRouteParamName(p.pathRouteSegmentMatch!), p => p.generatedWithRouteParamsPathSegment);
     }
 
     public static IPage<TSettings>? TryCreateInstance<TSettings>(
         Type pageType,
         IWebDriver webDriver,
         TSettings settings,
-        Dictionary<string, string?>? queryParams = null) where TSettings : AutomationTestSettings
+        Dictionary<string, string?>? queryParams = null,
+        string? generatedWithRouteParamsPath = null) where TSettings : AutomationTestSettings
     {
         try
         {
-            return CreateInstance(pageType, webDriver, settings, queryParams);
+            return CreateInstance(pageType, webDriver, settings, queryParams, generatedWithRouteParamsPath);
         }
         catch (Exception)
         {
@@ -140,17 +176,32 @@ public interface IPage : IUiComponent
                 predicate: scanType => scanType.IsClass &&
                                        !scanType.IsAbstract &&
                                        scanType.IsAssignableTo(targetType: typeof(IPage)))
-            .Select(selector: pageType => TryCreateInstance(pageType, webDriver, settings, queryParams: url.ToUri().QueryParams()))
+            .Select(
+                selector: pageType => TryCreateInstance(
+                    pageType,
+                    webDriver,
+                    settings,
+                    queryParams: url.ToUri().QueryParams(),
+                    generatedWithRouteParamsPath: url.ToUri().Path()))
+            .OrderByDescending(p => p?.PathRoute.Length)
             .FirstOrDefault(predicate: parsedPage => parsedPage?.Pipe(fn: _ => ValidateUrlMatchedForPage(_, url)).IsValid == true);
     }
 
-    public static PlatformValidationResult<TPage> ValidateUrlMatchedForPage<TPage>(TPage page, string url)
+    public static PlatformValidationResult<TPage> ValidateUrlMatchedForPage<TPage>(TPage page, string url, string? generalErrorMsg = null)
         where TPage : IPage
     {
+        var urlOrigin = url.ToUri().Origin();
+        var urlPathSegments = url.ToUri().Path().TrimStart('/').Split("/");
+        var pageUrlOrigin = page.BaseUrl.ToUri().Origin();
+        var pageUrlPathSegments = page.BaseUrl.ToUri().Path().TrimStart('/').Split("/");
+
         return page.Validate(
-            must: url.StartsWith(page.BaseUrl),
+            must: urlOrigin == pageUrlOrigin &&
+                  urlPathSegments.Length == pageUrlPathSegments.Length &&
+                  urlPathSegments.All(
+                      (urlPathSegment, index) => urlPathSegment == pageUrlPathSegments[index] || BuildPathRouteParamRegex.IsMatch(pageUrlPathSegments[index])),
             AssertHelper.Failed(
-                generalMsg: "Url is not matched",
+                generalMsg: generalErrorMsg ?? "Page Url is not matched",
                 page.BaseUrl,
                 url));
     }
@@ -158,12 +209,7 @@ public interface IPage : IUiComponent
     public static PlatformValidationResult<TPage> ValidateCurrentPageUrlMatched<TPage>(TPage page)
         where TPage : IPage
     {
-        return page.Validate(
-            must: page.WebDriver.Url.StartsWith(page.BaseUrl),
-            AssertHelper.Failed(
-                generalMsg: "Current Page Url is not matched",
-                page.BaseUrl,
-                page.WebDriver.Url));
+        return ValidateUrlMatchedForPage(page, page.WebDriver.Url, "Current Page Url is not matched");
     }
 
     public static PlatformValidationResult<TPage> ValidateCurrentPageTitleMatched<TPage>(TPage page)
@@ -185,6 +231,23 @@ public interface IPage : IUiComponent
     public static string BuildBaseUrl(string origin, string path)
     {
         return Util.Path.ConcatRelativePath(origin, path);
+    }
+
+    public static string BuildPath<TPage>(TPage page) where TPage : IPage
+    {
+        return BuildPath(page.PathRoute, page.PathRouteParams);
+    }
+
+    /// <summary>
+    /// Example: pagePathRoute: "/Users/{id}/Detail"; pagePathRouteParams: ["1"]; Return: /Users/1/Detail
+    /// </summary>
+    public static string BuildPath(string pagePathRoute, Dictionary<string, string>? pagePathRouteParams)
+    {
+        if (pagePathRouteParams == null || pagePathRouteParams.Count == 0) return pagePathRoute;
+
+        return BuildPathRouteParamRegex.Replace(
+            pagePathRoute,
+            match => pagePathRouteParams![GetPathRouteParamName(match)]);
     }
 
     public static Uri BuildFullUrl<TPage>(TPage page) where TPage : IPage
@@ -292,6 +355,11 @@ public interface IPage<TSettings> : IPage where TSettings : AutomationTestSettin
         return this.As<IPage>().AssertPageHasNoErrors().As<IPage<TSettings>>();
     }
 
+    public new IPage<TSettings> AssertPageHasSomeErrors()
+    {
+        return this.As<IPage>().AssertPageHasSomeErrors().As<IPage<TSettings>>();
+    }
+
     public new IPage<TSettings> AssertPageMustHasError(string errorMsg)
     {
         return this.As<IPage>().AssertPageMustHasError(errorMsg).As<IPage<TSettings>>();
@@ -372,6 +440,11 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
     public abstract string? GeneralErrorElementsCssSelector { get; }
     public abstract string? FormValidationErrorElementsCssSelector { get; }
 
+    /// <summary>
+    /// Used to WaitPageContentLoadedSuccessfully. Page is considered as loaded when this element from PageContentLoadedElementIndicatorSelector is displayed
+    /// </summary>
+    public abstract string PageContentLoadedElementIndicatorSelector { get; }
+
     public virtual int DefaultMaxWaitSeconds => Util.TaskRunner.DefaultWaitUntilMaxSeconds;
 
     public TSettings Settings { get; }
@@ -416,7 +489,10 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
     /// <summary>
     /// The path of the page after the origin. The full url is: {Origin}/{Path}{QueryParamsUrlPart}. See <see cref="IPage.BuildFullUrl{TPage}" />
     /// </summary>
-    public abstract string Path { get; }
+    public virtual string Path => IPage.BuildPath(this);
+
+    public abstract string PathRoute { get; }
+    public Dictionary<string, string>? PathRouteParams { get; set; }
 
     public string BaseUrl => IPage.BuildBaseUrl(page: this.As<TPage>());
     public Dictionary<string, string?>? QueryParams { get; set; }
@@ -488,10 +564,11 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         string? waitForMsg = null,
         double? maxWaitSeconds = null)
     {
-        return this.As<TPage>().WaitUntilGetSuccess(
-            waitForSuccess,
-            waitForMsg: waitForMsg,
-            maxWaitSeconds: maxWaitSeconds ?? DefaultMaxWaitSeconds);
+        return this.As<TPage>()
+            .WaitUntilGetSuccess(
+                waitForSuccess,
+                waitForMsg: waitForMsg,
+                maxWaitSeconds: maxWaitSeconds ?? DefaultMaxWaitSeconds);
     }
 
     public virtual TResult WaitUntilAssertSuccess<TResult>(
@@ -528,11 +605,12 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         string? waitForMsg = null,
         double? maxWaitSeconds = null)
     {
-        return this.As<TPage>().WaitUntilGetSuccess(
-            waitForSuccess,
-            continueWaitOnlyWhen,
-            maxWaitSeconds: maxWaitSeconds ?? DefaultMaxWaitSeconds,
-            waitForMsg);
+        return this.As<TPage>()
+            .WaitUntilGetSuccess(
+                waitForSuccess,
+                continueWaitOnlyWhen,
+                maxWaitSeconds: maxWaitSeconds ?? DefaultMaxWaitSeconds,
+                waitForMsg);
     }
 
     protected virtual WebDriverWait CreateDefaultWebDriverWait(IWebDriver webDriver)
@@ -547,8 +625,19 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
     {
         return WaitUntil(
             condition: _ => GlobalSpinnerElement?.IsClickable() != true,
-            maxWaitSeconds: maxWaitForLoadingDataSeconds ?? DefaultMaxWaitSeconds, // Multiple wait time to test failed waiting timeout
+            maxWaitSeconds: maxWaitForLoadingDataSeconds ?? DefaultMaxWaitSeconds,
             waitForMsg: waitForMsg);
+    }
+
+    public virtual TPage WaitPageContentLoadedSuccessfully(
+        int? maxWaitForLoadingDataSeconds = null,
+        string waitForMsg = "Page Content is loaded and displayed successfully")
+    {
+        return WaitUntil(
+                condition: _ => WebDriver.TryFindElement(PageContentLoadedElementIndicatorSelector)?.Displayed == true,
+                maxWaitSeconds: maxWaitForLoadingDataSeconds ?? DefaultMaxWaitSeconds,
+                waitForMsg: waitForMsg)
+            .WaitGlobalSpinnerStopped(maxWaitForLoadingDataSeconds);
     }
 
     public TPage WaitUntil(
@@ -560,6 +649,20 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         return Util.TaskRunner.WaitUntil(this.As<TPage>(), () => condition(this.As<TPage>()), continueWaitOnlyWhen, maxWaitSeconds ?? DefaultMaxWaitSeconds, waitForMsg);
     }
 
+    public TResult WaitUntilGetSuccess<TResult, TAny>(
+        Func<TPage, TResult?> getResult,
+        Func<TPage, TAny>? continueWaitOnlyWhen = null,
+        string? waitForMsg = null,
+        double? maxWaitSeconds = null)
+    {
+        return Util.TaskRunner.WaitUntilGetSuccess(
+            this.As<TPage>(),
+            p => getResult(this.As<TPage>()),
+            continueWaitOnlyWhen,
+            maxWaitSeconds ?? DefaultMaxWaitSeconds,
+            waitForMsg);
+    }
+
     public TPage WaitUntil(
         Func<TPage, bool> condition,
         string? waitForMsg = null,
@@ -568,6 +671,31 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         Util.TaskRunner.WaitUntil(() => condition(this.As<TPage>()), maxWaitSeconds ?? DefaultMaxWaitSeconds, waitForMsg: waitForMsg);
 
         return this.As<TPage>();
+    }
+
+    public TPage WaitRetryDoUntil(
+        Action<TPage> action,
+        Func<TPage, bool> condition,
+        string? waitForMsg = null,
+        double? maxWaitSeconds = null)
+    {
+        Util.TaskRunner.WaitRetryDoUntil(
+            () => action(this.As<TPage>()),
+            () => condition(this.As<TPage>()),
+            maxWaitSeconds ?? DefaultMaxWaitSeconds,
+            waitForMsg: waitForMsg);
+
+        return this.As<TPage>();
+    }
+
+    protected GeneralUiComponent CreateGeneralComponent(string rootElementSelector)
+    {
+        return new GeneralUiComponent(WebDriver, rootElementSelector: rootElementSelector, parent: this);
+    }
+
+    protected GeneralUiComponent CreateGeneralComponent(Func<IWebElement> directReferenceRootElement)
+    {
+        return new GeneralUiComponent(WebDriver, directReferenceRootElement: directReferenceRootElement, parent: this);
     }
 }
 
@@ -585,11 +713,13 @@ public class GeneralCurrentActivePage<TSettings> : Page<GeneralCurrentActivePage
     public override IWebElement? GlobalSpinnerElement { get; } = null;
     public override string? GeneralErrorElementsCssSelector => ".error";
     public override string? FormValidationErrorElementsCssSelector => ".error";
+    public override string PageContentLoadedElementIndicatorSelector => "body";
 
     public override string AppName =>
         Settings.AppNameToOrigin.Where(predicate: p => WebDriver.Url.Contains(p.Value)).Select(selector: p => p.Key).FirstOrDefault() ?? "Unknown";
 
     public override string Path => WebDriver.Url.ToUri().Path();
+    public override string PathRoute => WebDriver.Url.ToUri().Path();
     public override string Origin => WebDriver.Url.ToUri().Origin();
 }
 

@@ -44,6 +44,7 @@ public interface IUiComponent
     public string Text { get; }
 
     public bool IsClickable();
+    public bool IsDisplayed();
     public IUiComponent WaitUntilClickable(double maxWaitSeconds, string? waitForMsg = null);
     public IUiComponent Clear(string? childElementSelector = null);
     public IUiComponent Click(string? childElementSelector = null);
@@ -51,8 +52,8 @@ public interface IUiComponent
     public IUiComponent SendKeysAndFocusOut(string text, string? childElementSelector = null);
     public IUiComponent Submit(string? childElementSelector = null);
     public IUiComponent FocusOut(string? childElementSelector = null);
-    public IUiComponent ReplaceText(string text, string? childElementSelector = null);
-    public IUiComponent ReplaceTextAndEnter(string text, string? childElementSelector = null);
+    public IUiComponent ReplaceTextValue(string text, string? childElementSelector = null);
+    public IUiComponent ReplaceTextValueAndEnter(string text, string? childElementSelector = null);
 
     public IWebElement? FindChildOrRootElement(string? childElementSelector);
 
@@ -106,8 +107,6 @@ public interface IUiComponent<out TComponent> : IUiComponent
     public new TComponent Submit(string? childElementSelector = null);
     public new TComponent FocusOut(string? childElementSelector = null);
     public new TComponent WaitUntilClickable(double maxWaitSeconds, string? waitForMsg = null);
-    public new TComponent ReplaceText(string text, string? childElementSelector = null);
-    public new TComponent ReplaceTextAndEnter(string text, string? childElementSelector = null);
 }
 
 public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
@@ -124,11 +123,11 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
 
     public UiComponent(
         IWebDriver webDriver,
-        string rootElementClassSelector,
+        string rootElementSelector,
         IUiComponent? parent = null) : this(webDriver, directReferenceRootElement: null, parent)
     {
         WebDriver = webDriver;
-        RootElementClassSelector = rootElementClassSelector;
+        RootElementClassSelector = rootElementSelector;
         Parent = parent;
     }
 
@@ -152,19 +151,14 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
         return RootElement?.IsClickable() == true;
     }
 
+    public bool IsDisplayed()
+    {
+        return RootElement?.Displayed == true;
+    }
+
     public TComponent WaitUntilClickable(double maxWaitSeconds, string? waitForMsg = null)
     {
         return (TComponent)this.WaitUntil(condition: _ => _.IsClickable(), maxWaitSeconds, waitForMsg: waitForMsg);
-    }
-
-    public TComponent ReplaceText(string text, string? childElementSelector = null)
-    {
-        return InternalReplaceText(text, childElementSelector);
-    }
-
-    public TComponent ReplaceTextAndEnter(string text, string? childElementSelector = null)
-    {
-        return InternalReplaceText(text, childElementSelector, enterBeforeFocusOut: true);
     }
 
     IUiComponent IUiComponent.WaitUntilClickable(double maxWaitSeconds, string? waitForMsg)
@@ -202,14 +196,14 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
         return FocusOut(childElementSelector);
     }
 
-    IUiComponent IUiComponent.ReplaceText(string text, string? childElementSelector)
+    IUiComponent IUiComponent.ReplaceTextValue(string text, string? childElementSelector)
     {
-        return ReplaceText(text, childElementSelector);
+        return ReplaceTextValue(text, childElementSelector);
     }
 
-    IUiComponent IUiComponent.ReplaceTextAndEnter(string text, string? childElementSelector)
+    IUiComponent IUiComponent.ReplaceTextValueAndEnter(string text, string? childElementSelector)
     {
-        return ReplaceTextAndEnter(text, childElementSelector);
+        return ReplaceTextValueAndEnter(text, childElementSelector);
     }
 
     public TComponent Clear(string? childElementSelector = null)
@@ -278,6 +272,16 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
         return IUiComponent.FindChildElements(component: this, childElementSelector);
     }
 
+    public TComponent ReplaceTextValue(string text, string? childElementSelector = null)
+    {
+        return InternalReplaceTextValue(text, childElementSelector, enterBeforeFocusOut: false);
+    }
+
+    public TComponent ReplaceTextValueAndEnter(string text, string? childElementSelector = null)
+    {
+        return InternalReplaceTextValue(text, childElementSelector, enterBeforeFocusOut: true);
+    }
+
     public TComponent WithIdentifierSelector(string appSearchInput)
     {
         return (TComponent)this.With(_ => _.IdentifierSelector = appSearchInput);
@@ -289,15 +293,25 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
         return (TComponent)this;
     }
 
-    private TComponent InternalReplaceText(string text, string? childElementSelector, bool enterBeforeFocusOut = false)
+    private TComponent InternalReplaceTextValue(string newTextValue, string? childElementSelector, bool enterBeforeFocusOut = false)
     {
         var element = FindChildOrRootElement(childElementSelector);
 
-        element!.Clear();
-        element.SendKeys(text);
-        if (enterBeforeFocusOut) element.SendKeys(Keys.Return);
-        element.FocusOut(WebDriver);
-        HumanDelay();
+        if (element != null)
+        {
+            element.Value()?.ForEach(p => element.SendKeys(Keys.Backspace));
+
+            if (!element.Value().IsNullOrEmpty())
+                element.Clear();
+
+            element.SendKeys(newTextValue);
+
+            if (enterBeforeFocusOut) element.SendKeys(Keys.Return);
+
+            element.FocusOut(WebDriver);
+
+            HumanDelay();
+        }
 
         return (TComponent)this;
     }

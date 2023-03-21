@@ -58,7 +58,7 @@ public class HomePageSteps : BddStepDefinitions<TextSnippetAutomationTestSetting
     public void WhenCreateANewRandomUniqueSnippetTextItemSuccessfulAndTryCreateTheSamePreviousSnippetTextItemValueAgain()
     {
         var loadedHomePage = Context.LoadedSuccessHomePage!;
-        var autoRandomTextSnippetData = new TextSnippetEntityData("SnippetText" + Guid.NewGuid(), "FullText" + Guid.NewGuid());
+        var autoRandomTextSnippetData = new TextSnippetEntityData("SnippetText".ToUniqueStr(), "FullText".ToUniqueStr());
 
         loadedHomePage.DoFillInAndSubmitSaveSnippetTextForm(autoRandomTextSnippetData);
         loadedHomePage.DoFillInAndSubmitSaveSnippetTextForm(autoRandomTextSnippetData);

@@ -1,10 +1,13 @@
 using OpenQA.Selenium;
+using OpenQA.Selenium.Interactions;
 using OpenQA.Selenium.Support.UI;
 
 namespace Easy.Platform.AutomationTest.Extensions;
 
 public static class WebElementExtension
 {
+    public const int DefaultShortWaitUiUpdateSeconds = 5;
+
     public static IWebElement FindElement(this IWebElement webElement, string cssSelector)
     {
         return webElement.FindElement(by: By.CssSelector(cssSelector));
@@ -35,26 +38,62 @@ public static class WebElementExtension
     public static IWebElement? FocusOut(
         this IWebElement? element,
         IWebDriver webDriver,
-        params IWebElement[] focusOutToOtherElements)
+        params IWebElement[] additionalFocusToOtherElements)
     {
-        element?.WaitAndRetryUntil(
-            action: _ =>
+        element?.WaitRetryDoUntil(
+            action: element =>
             {
-                webDriver.TryFindElement(cssSelector: "body")?.Click();
+                webDriver.FindElement(cssSelector: "body").SendKeys(Keys.Escape);
 
-                Util.ListBuilder.New("body div:visible", "header", "footer", "h1", "h2", "h3")
-                    .Select<string, Action>(selector: elementSelector => () => webDriver.TryFindElement(elementSelector)?.Click())
-                    .Concat(second: focusOutToOtherElements.Select<IWebElement, Action>(selector: element => () => element.Click()))
-                    .ForEach(
-                        action: action =>
-                        {
-                            if (element.ToStaleElementWrapper().Get(_ => _.Selected)) action();
-                        });
+                if (element.IsFocused(webDriver))
+                    TryActionToFocusOutToOtherElement(
+                        element,
+                        webDriver,
+                        additionalFocusToOtherElements,
+                        otherElement => new Actions(webDriver).SendKeys(Keys.Escape).Perform());
             },
-            until: _ => !element.ToStaleElementWrapper().Get(_ => _.Selected),
-            maxWaitSeconds: 2);
+            until: _ => !element.IsFocused(webDriver),
+            maxWaitSeconds: DefaultShortWaitUiUpdateSeconds);
 
         return element;
+    }
+
+    public static void TryActionToFocusOutToOtherElement(
+        IWebElement targetElement,
+        IWebDriver webDriver,
+        IWebElement[] additionalFocusToOtherElements,
+        Action<IWebElement> otherElementAction)
+    {
+        webDriver.TryFindElement(cssSelector: "body")?.Pipe(otherElementAction);
+
+        if (IsFocused(targetElement, webDriver))
+        {
+            var otherElementActions = Util.ListBuilder.New(
+                    "body",
+                    "body > *",
+                    "p",
+                    "header",
+                    "footer",
+                    "h1",
+                    "h2",
+                    "h3")
+                .SelectMany(otherElementSelector => webDriver.FindElements(cssSelector: otherElementSelector))
+                .Where(p => p.IsClickable())
+                .Select<IWebElement, Action>(otherElement => () => otherElementAction(otherElement))
+                .Concat(additionalFocusToOtherElements.Select<IWebElement, Action>(element => () => element.Pipe(otherElementAction)))
+                .Where(otherElement => !otherElement.Equals(targetElement));
+
+            foreach (var action in otherElementActions)
+                if (IsFocused(targetElement, webDriver))
+                    action();
+                else
+                    return;
+        }
+    }
+
+    public static bool IsFocused(this IWebElement element, IWebDriver webDriver)
+    {
+        return webDriver.SwitchTo().ActiveElement().Equals(element) || element.ToStaleElementWrapper().Get(p => p.Selected);
     }
 
     /// <summary>
@@ -159,6 +198,13 @@ public static class WebElementExtension
         public T Get<T>(Func<IWebElement, T> getFn)
         {
             return Util.TaskRunner.CatchException<StaleElementReferenceException, T>(func: () => getFn(element));
+        }
+
+        public StaleWebElementWrapper Execute(Action<IWebElement> getFn)
+        {
+            Util.TaskRunner.CatchException<StaleElementReferenceException, object>(func: () => getFn.ToFunc()(element));
+
+            return this;
         }
     }
 }

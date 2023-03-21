@@ -11,7 +11,7 @@ public class GeneralUiComponent : UiComponent<GeneralUiComponent>
     {
     }
 
-    public GeneralUiComponent(IWebDriver webDriver, string rootElementClassSelector, IUiComponent? parent = null) : base(webDriver, rootElementClassSelector, parent)
+    public GeneralUiComponent(IWebDriver webDriver, string rootElementSelector, IUiComponent? parent = null) : base(webDriver, rootElementSelector, parent)
     {
     }
 }
