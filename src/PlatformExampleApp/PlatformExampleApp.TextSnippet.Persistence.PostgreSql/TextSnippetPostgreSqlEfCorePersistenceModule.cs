@@ -54,8 +54,11 @@ public class TextSnippetPostgreSqlEfCorePlatformFullTextSearchPersistenceService
         Func<string, string, Expression<Func<T, bool>>> buildFullTextSearchSinglePropPredicatePerWord)
     {
         return removedSpecialCharacterSearchTextWords
-            .Select<string, Expression<Func<T, bool>>>(
-                searchWord => p => EF.Functions.ToTsVector("english", fullTextSearchPropNames.JoinToString(" ")).Matches(searchWord))
+            .Select(
+                searchWord => fullTextSearchPropNames
+                    .Select<string, Expression<Func<T, bool>>>(
+                        fullTextSearchPropName => entity => EF.Functions.ToTsVector("english", EF.Property<string>(entity, fullTextSearchPropName)).Matches(searchWord))
+                    .Aggregate((current, next) => current.Or(next)))
             .Aggregate(
                 (currentExpr, nextExpr) => exactMatch ? currentExpr.AndAlso(nextExpr) : currentExpr.Or(nextExpr));
     }

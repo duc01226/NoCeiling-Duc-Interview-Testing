@@ -47,7 +47,9 @@ public class TextSnippetDbContext : PlatformMongoDbContext<TextSnippetDbContext>
                     new(
                         Builders<TextSnippetEntity>.IndexKeys.Ascending(p => p.AddressStrings)),
                     new(
-                        Builders<TextSnippetEntity>.IndexKeys.Text(p => p.SnippetText))
+                        Builders<TextSnippetEntity>.IndexKeys
+                            .Text(p => p.SnippetText)
+                            .Text(p => p.FullText))
                 }));
     }
 

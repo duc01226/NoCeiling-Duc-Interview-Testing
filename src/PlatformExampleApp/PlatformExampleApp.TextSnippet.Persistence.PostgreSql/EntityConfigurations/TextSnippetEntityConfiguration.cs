@@ -39,7 +39,7 @@ internal class TextSnippetEntityConfiguration : PlatformAuditedEntityConfigurati
 
         // Support fulltext search index. References: https://www.npgsql.org/efcore/mapping/full-text-search.html#method-2-expression-index
         builder
-            .HasIndex(p => p.SnippetText)
+            .HasIndex(p => new { p.SnippetText, p.FullText })
             .HasMethod("GIN")
             .IsTsVectorExpressionIndex("english");
 

@@ -76,7 +76,7 @@ public class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicationHandler
                         request.SearchText,
                         inFullTextSearchProps: new Expression<Func<TextSnippetEntity, object>>[]
                         {
-                            e => e.SnippetText
+                            e => e.SnippetText, e => e.FullText
                         },
                         fullTextExactMatch: true,
                         includeStartWithProps: new Expression<Func<TextSnippetEntity, object>>[]
