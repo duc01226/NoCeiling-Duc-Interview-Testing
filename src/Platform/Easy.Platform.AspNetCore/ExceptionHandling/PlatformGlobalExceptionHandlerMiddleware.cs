@@ -89,7 +89,7 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
                         exception,
                         "[UnexpectedRequestError] There is an unexpected exception during the processing of the request. RequestId: {RequestId}. UserContext: {UserContext}",
                         context.TraceIdentifier,
-                        userContextAccessor.Current.GetAllKeyValues().AsJson());
+                        userContextAccessor.Current.GetAllKeyValues().ToJson());
 
                     return new PlatformAspNetMvcErrorResponse(
                         new PlatformAspNetMvcErrorInfo

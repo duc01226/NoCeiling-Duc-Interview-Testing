@@ -46,21 +46,16 @@ public class TextSnippetPostgreSqlEfCorePlatformFullTextSearchPersistenceService
     }
 
     // https://www.npgsql.org/efcore/mapping/full-text-search.html#method-2-expression-index
-    protected override Expression<Func<T, bool>> BuildFullTextSearchPropsPredicate<T>(
-        string searchText,
+    public override IQueryable<T> BuildFullTextSearchForSinglePropQueryPart<T>(
+        IQueryable<T> originalQuery,
+        string fullTextSearchSinglePropName,
         List<string> removedSpecialCharacterSearchTextWords,
-        List<string> fullTextSearchPropNames,
-        bool exactMatch,
-        Func<string, string, Expression<Func<T, bool>>> buildFullTextSearchSinglePropPredicatePerWord)
+        bool exactMatch)
     {
-        return removedSpecialCharacterSearchTextWords
-            .Select(
-                searchWord => fullTextSearchPropNames
-                    .Select<string, Expression<Func<T, bool>>>(
-                        fullTextSearchPropName => entity => EF.Functions.ToTsVector("english", EF.Property<string>(entity, fullTextSearchPropName)).Matches(searchWord))
-                    .Aggregate((current, next) => current.Or(next)))
-            .Aggregate(
-                (currentExpr, nextExpr) => exactMatch ? currentExpr.AndAlso(nextExpr) : currentExpr.Or(nextExpr));
+        return originalQuery.Where(
+            entity => EF.Functions
+                .ToTsVector("english", EF.Property<string>(entity, fullTextSearchSinglePropName))
+                .Matches(removedSpecialCharacterSearchTextWords.JoinToString(exactMatch ? " & " : " | ")));
     }
 
     // Override support search case insensitive for start with by using ILike

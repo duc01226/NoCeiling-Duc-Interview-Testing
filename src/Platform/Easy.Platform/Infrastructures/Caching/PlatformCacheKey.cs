@@ -106,7 +106,7 @@ public readonly struct PlatformCacheKey
             throw new ArgumentException("requestKeyParts must be not empty.", nameof(requestKeyParts));
 
         return
-            $"[{requestKeyParts.Select(p => p ?? "null").Select(p => p.AsJson().Replace("\"", "'")).JoinToString(RequestKeyPartsSeparator)}]";
+            $"[{requestKeyParts.Select(p => p ?? "null").Select(p => p.ToJson().Replace("\"", "'")).JoinToString(RequestKeyPartsSeparator)}]";
     }
 
     public static object[] BuildRequestKeyParts(string requestKey)

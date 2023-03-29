@@ -117,7 +117,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                         e,
                         "[PlatformConsumeInboxEventBusMessageHostedService] Try to consume inbox message with Id:{MessageId} failed. Message Content:{InboxMessage}",
                         toHandleInboxMessage.Id,
-                        toHandleInboxMessage.AsJson());
+                        toHandleInboxMessage.ToJson());
                 }
             }
         }

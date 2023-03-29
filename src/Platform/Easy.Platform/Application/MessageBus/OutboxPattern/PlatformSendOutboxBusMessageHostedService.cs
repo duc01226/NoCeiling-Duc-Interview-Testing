@@ -101,7 +101,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
                                     "[PlatformSendOutboxEventBusMessageHostedService] Failed to produce outbox message. " +
                                     $"Id:{toHandleOutboxMessage.Id} failed. " +
                                     "Message Content:{OutboxMessage}",
-                                    toHandleOutboxMessage.AsFormattedJson());
+                                    toHandleOutboxMessage.ToFormattedJson());
                             }
                         }
                     })

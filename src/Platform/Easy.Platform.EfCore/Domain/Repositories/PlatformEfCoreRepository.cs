@@ -34,8 +34,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
             .PipeIf(
                 loadRelatedEntities.Any(),
                 p => loadRelatedEntities.Aggregate(p.AsQueryable(), (query, loadRelatedEntityFn) => query.Include(loadRelatedEntityFn)))
-            .AsQueryable()
-            .AsNoTracking();
+            .AsQueryable();
     }
 
     public override Task<List<TSource>> ToListAsync<TSource>(
@@ -85,15 +84,5 @@ public abstract class PlatformEfCoreRootRepository<TEntity, TPrimaryKey, TDbCont
         cqrs,
         serviceProvider)
     {
-    }
-
-    public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object>>[] loadRelatedEntities)
-    {
-        return GetTable(uow)
-            .PipeIf(
-                loadRelatedEntities.Any(),
-                p => loadRelatedEntities.Aggregate(p.AsQueryable(), (query, loadRelatedEntityFn) => query.Include(loadRelatedEntityFn)))
-            .AsQueryable()
-            .PipeIf(UnitOfWorkManager.TryGetCurrentActiveUow() == null, p => p.AsNoTracking());
     }
 }

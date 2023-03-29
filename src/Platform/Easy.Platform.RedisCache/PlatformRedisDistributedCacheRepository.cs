@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Linq;
 using Easy.Platform.Application.Context;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Infrastructures.Caching;
@@ -145,7 +144,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
                 ex,
                 $"[{GetType().Name}] SetToRedisCache has errors. CacheKey: {{CacheKey}}. Value: {{CacheValue}}",
                 cacheKey,
-                value.AsJson());
+                value.ToJson());
             throw;
         }
     }

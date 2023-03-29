@@ -40,6 +40,10 @@ public interface IPage : IUiComponent
 
     public IWebElement? GlobalSpinnerElement { get; }
 
+    /// <summary>
+    /// Default max wait seconds value is used for all .WaitUntil method from a page 
+    /// when max wait is not given
+    /// </summary>
     public int DefaultMaxWaitSeconds { get; }
 
     public static string GetPathRouteParamName(Match pathRouteParamMatch)
@@ -657,7 +661,7 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
     {
         return Util.TaskRunner.WaitUntilGetSuccess(
             this.As<TPage>(),
-            p => getResult(this.As<TPage>()),
+            getResult: p => getResult(this.As<TPage>()),
             continueWaitOnlyWhen,
             maxWaitSeconds ?? DefaultMaxWaitSeconds,
             waitForMsg);
@@ -680,8 +684,8 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         double? maxWaitSeconds = null)
     {
         Util.TaskRunner.WaitRetryDoUntil(
-            () => action(this.As<TPage>()),
-            () => condition(this.As<TPage>()),
+            action: () => action(this.As<TPage>()),
+            condition: () => condition(this.As<TPage>()),
             maxWaitSeconds ?? DefaultMaxWaitSeconds,
             waitForMsg: waitForMsg);
 

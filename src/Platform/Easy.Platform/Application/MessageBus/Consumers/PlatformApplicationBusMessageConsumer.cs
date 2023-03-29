@@ -54,7 +54,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                 $"Message Info: {{BusMessage}}.{Environment.NewLine}",
                 routingKey,
                 message.GetType().GetNameOrGenericTypeName(),
-                message.AsJson());
+                message.ToJson());
             throw;
         }
     }

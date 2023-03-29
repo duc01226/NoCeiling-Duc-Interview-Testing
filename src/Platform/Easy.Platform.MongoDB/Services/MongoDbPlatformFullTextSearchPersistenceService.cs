@@ -12,39 +12,16 @@ public class MongoDbPlatformFullTextSearchPersistenceService : PlatformFullTextS
     {
     }
 
-    public override IQueryable<T> Search<T>(
-        IQueryable<T> query,
-        string searchText,
-        Expression<Func<T, object>>[] inFullTextSearchProps,
-        bool fullTextExactMatch = false,
-        Expression<Func<T, object>>[] includeStartWithProps = null)
-    {
-        if (!IsSupportQuery(query) &&
-            TrySearchByFirstSupportQueryHelper(
-                query,
-                searchText,
-                inFullTextSearchProps,
-                fullTextExactMatch,
-                out var newQuery,
-                includeStartWithProps))
-            return newQuery;
-
-        return DoMongoSearch(
-            query,
-            searchText,
-            fullTextExactMatch,
-            includeStartWithProps);
-    }
-
     public override bool IsSupportQuery<T>(IQueryable<T> query)
     {
         return query is IMongoQueryable;
     }
 
-    public static IQueryable<T> DoMongoSearch<T>(
+    protected override IQueryable<T> DoSearch<T>(
         IQueryable<T> query,
         string searchText,
-        bool fullTextExactMatch,
+        Expression<Func<T, object>>[] inFullTextSearchProps,
+        bool fullTextExactMatch = false,
         Expression<Func<T, object>>[] includeStartWithProps = null)
     {
         if (string.IsNullOrWhiteSpace(searchText))

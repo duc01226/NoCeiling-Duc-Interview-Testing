@@ -41,7 +41,7 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
     {
         try
         {
-            var jsonMessage = message.AsJson();
+            var jsonMessage = message.ToJson();
             var selectedRoutingKey = routingKey ?? message.As<IPlatformSelfRoutingKeyBusMessage>()?.RoutingKey();
 
             await PublishMessageToQueueAsync(jsonMessage, selectedRoutingKey);

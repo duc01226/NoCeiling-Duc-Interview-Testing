@@ -39,9 +39,18 @@ internal class TextSnippetEntityConfiguration : PlatformAuditedEntityConfigurati
 
         // Support fulltext search index. References: https://www.npgsql.org/efcore/mapping/full-text-search.html#method-2-expression-index
         builder
-            .HasIndex(p => new { p.SnippetText, p.FullText })
+            .HasIndex(p => new { p.SnippetText }, "IX_TextSnippet_SnippetText_FullTextSearch")
             .HasMethod("GIN")
             .IsTsVectorExpressionIndex("english");
+        // Not that column for full-text search must be not null to ensure it works
+        // If null => index created will be "(to_tsvector('english'::regconfig, COALESCE("FullText", ''::text)))" => with COALESCE it doesn't work
+        // Correct must be "(to_tsvector('english'::regconfig, "FullText"))"
+        builder
+            .HasIndex(p => new { p.FullText }, "IX_TextSnippet_FullText_FullTextSearch")
+            .HasMethod("GIN")
+            .IsTsVectorExpressionIndex("english");
+
+        builder.HasIndex(p => p.SnippetText);
 
         builder
             .HasIndex(p => p.Addresses)

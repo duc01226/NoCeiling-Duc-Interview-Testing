@@ -37,7 +37,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
         return BackgroundJob.Schedule(
             () => ExecuteBackgroundJob(
                 typeof(TJobExecutor),
-                jobExecutorParam != null ? jobExecutorParam.AsJson() : null),
+                jobExecutorParam != null ? jobExecutorParam.ToJson() : null),
             enqueueAt);
     }
 
@@ -59,7 +59,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
         return BackgroundJob.Schedule(
             () => ExecuteBackgroundJob(
                 typeof(TJobExecutor),
-                jobExecutorParam != null ? jobExecutorParam.AsJson() : null),
+                jobExecutorParam != null ? jobExecutorParam.ToJson() : null),
             delay ?? TimeSpan.Zero);
     }
 
@@ -152,7 +152,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
     {
         ExecuteBackgroundJob(
             typeof(TJobExecutor),
-            jobExecutorParam?.AsJson());
+            jobExecutorParam?.ToJson());
     }
 
     public string BuildRecurringJobId<TJobExecutor>() where TJobExecutor : IPlatformBackgroundJobExecutor

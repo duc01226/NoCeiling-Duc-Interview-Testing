@@ -65,7 +65,7 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
                 e,
                 $"[{GetType().FullName}] Failed to send {{MessageName}}. Message Info: {{EventBusMessage}}",
                 nameof(TMessage),
-                e.EventBusMessage.AsJson());
+                e.EventBusMessage.ToJson());
             throw;
         }
     }

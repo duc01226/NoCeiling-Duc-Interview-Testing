@@ -7,14 +7,6 @@ namespace Easy.Platform.Application.MessageBus.OutboxPattern;
 
 public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, string>, IRowVersionEntity
 {
-    public enum SendStatuses
-    {
-        New,
-        Processing,
-        Processed,
-        Failed
-    }
-
     public const int IdMaxLength = 200;
     public const int RoutingKeyMaxLength = 500;
     public const int MessageTypeFullNameMaxLength = 1000;
@@ -62,7 +54,7 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
         var result = new PlatformOutboxBusMessage
         {
             Id = BuildId(trackId).TakeTop(IdMaxLength),
-            JsonMessage = message.AsFormattedJson(),
+            JsonMessage = message.ToFormattedJson(),
             MessageTypeFullName = GetMessageTypeFullName(message.GetType()),
             RoutingKey = routingKey.TakeTop(RoutingKeyMaxLength),
             LastSendDate = nowDate,
@@ -91,5 +83,13 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
     {
         return DateTime.UtcNow.AddSeconds(
             retryProcessFailedMessageInSecondsUnit * Math.Pow(2, retriedProcessCount ?? 0));
+    }
+
+    public enum SendStatuses
+    {
+        New,
+        Processing,
+        Processed,
+        Failed
     }
 }

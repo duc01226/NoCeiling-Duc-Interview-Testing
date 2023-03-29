@@ -42,7 +42,7 @@ public class SaveSnippetTextCommandEventBusMessageConsumer : PlatformCqrsCommand
         // Sleep to demo warning slow consumer
         Thread.Sleep(((SlowProcessWarningTimeMilliseconds() ?? DefaultProcessWarningTimeMilliseconds) + 1000).Seconds());
 
-        Logger.LogInformation($"{GetType().FullName} has handled message. Message Detail: {{BusMessage}}", message.AsFormattedJson());
+        Logger.LogInformation($"{GetType().FullName} has handled message. Message Detail: {{BusMessage}}", message.ToFormattedJson());
 
         return Task.CompletedTask;
     }

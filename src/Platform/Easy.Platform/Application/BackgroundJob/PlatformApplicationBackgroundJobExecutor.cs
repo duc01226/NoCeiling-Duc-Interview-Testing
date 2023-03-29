@@ -30,7 +30,7 @@ public abstract class PlatformApplicationBackgroundJobExecutor<TParam> : Platfor
         using (var activity = IPlatformApplicationBackgroundJobExecutor.ActivitySource.StartActivity())
         {
             activity?.SetTag("Type", GetType().Name);
-            activity?.SetTag("Param", param?.AsJson());
+            activity?.SetTag("Param", param?.ToJson());
 
             if (AutoOpenUow)
                 using (var uow = UnitOfWorkManager.Begin())

@@ -150,25 +150,6 @@ public class PlatformBusMessageRoutingKey : IEqualityComparer<PlatformBusMessage
         };
     }
 
-    public static PlatformBusMessageRoutingKey NewEnsureValid(
-        string messageGroup,
-        string producerContext,
-        string messageType,
-        string messageAction = null,
-        bool validateForMatchingPattern = false,
-        Func<PlatformValidationResult, Exception> exceptionProvider = null)
-    {
-        var result = New(
-            messageGroup,
-            producerContext,
-            messageType,
-            messageAction);
-
-        result.EnsureValid(validateForMatchingPattern, exceptionProvider);
-
-        return result;
-    }
-
     public static PlatformBusMessageRoutingKey New(string combinedKey)
     {
         var combinedPatternParts = combinedKey.Split(CombinedStringKeySeparator).ToList();
@@ -272,7 +253,7 @@ public class PlatformBusMessageRoutingKey : IEqualityComparer<PlatformBusMessage
                 : new PlatformValidationException(validationResult));
     }
 
-    public bool IsValid(bool forMatchingPattern = false)
+    public PlatformValidationResult<PlatformBusMessageRoutingKey> Validate(bool forMatchingPattern = false)
     {
         return Validator(forMatchingPattern).Validate(this);
     }

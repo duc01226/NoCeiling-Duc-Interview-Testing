@@ -118,7 +118,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                     "Message Info: {BusMessage}.",
                     routingKey,
                     message.GetType().GetNameOrGenericTypeName(),
-                    message.AsJson());
+                    message.ToJson());
 
                 await UpdateExistingInboxFailedMessageAsync(
                     serviceProvider,

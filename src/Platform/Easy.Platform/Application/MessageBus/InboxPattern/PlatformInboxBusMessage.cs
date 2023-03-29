@@ -7,14 +7,6 @@ namespace Easy.Platform.Application.MessageBus.InboxPattern;
 
 public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, string>, IRowVersionEntity
 {
-    public enum ConsumeStatuses
-    {
-        New,
-        Processing,
-        Processed,
-        Failed
-    }
-
     public const int IdMaxLength = 200;
     public const int MessageTypeFullNameMaxLength = 1000;
     public const int RoutingKeyMaxLength = 500;
@@ -85,7 +77,7 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
         var result = new PlatformInboxBusMessage
         {
             Id = BuildId(trackId, consumerBy).TakeTop(IdMaxLength),
-            JsonMessage = message.AsFormattedJson(),
+            JsonMessage = message.ToFormattedJson(),
             MessageTypeFullName = message.GetType().FullName.TakeTop(MessageTypeFullNameMaxLength),
             ProduceFrom = produceFrom,
             RoutingKey = routingKey.TakeTop(RoutingKeyMaxLength),
@@ -103,5 +95,13 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
     public string GetTrackId()
     {
         return Id.Split(BuildIdSeparator).FirstOrDefault();
+    }
+
+    public enum ConsumeStatuses
+    {
+        New,
+        Processing,
+        Processed,
+        Failed
     }
 }

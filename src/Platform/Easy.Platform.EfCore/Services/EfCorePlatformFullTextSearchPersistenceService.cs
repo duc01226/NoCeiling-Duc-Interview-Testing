@@ -17,42 +17,17 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
     /// Override this if you want to modify predicate for search split word by word in search text
     /// Example for SQL : entity => EF.Functions.Contains(EF.Property[string](entity, fullTextSearchPropName), searchWord); SqlServerMigrationUtil.CreateFullTextCatalogIfNotExists(migrationBuilder, $"FTS_EntityName"); SqlServerMigrationUtil.CreateFullTextIndexIfNotExists(columnNames: [fullTextSearchPropName1, fullTextSearchPropName2]) <br />
     /// </summary>
-    protected virtual Expression<Func<TEntity, bool>> BuildFullTextSearchSinglePropPredicatePerWord<TEntity>(
+    protected virtual Expression<Func<TEntity, bool>> BuildFullTextSearchSinglePropPerWordPredicate<TEntity>(
         string fullTextSearchPropName,
         string searchWord)
     {
         return entity => EF.Functions.Like(EF.Property<string>(entity, fullTextSearchPropName), $"%{searchWord}%");
     }
 
-    public override IQueryable<T> Search<T>(
-        IQueryable<T> query,
-        string searchText,
-        Expression<Func<T, object>>[] inFullTextSearchProps,
-        bool fullTextExactMatch = false,
-        Expression<Func<T, object>>[] includeStartWithProps = null)
-    {
-        if (!IsSupportQuery(query) &&
-            TrySearchByFirstSupportQueryHelper(
-                query,
-                searchText,
-                inFullTextSearchProps,
-                fullTextExactMatch,
-                out var newQuery,
-                includeStartWithProps))
-            return newQuery;
-
-        return DoSearch(
-            query,
-            searchText,
-            inFullTextSearchProps,
-            fullTextExactMatch,
-            (fullTextSearchPropName, searchWord) => BuildFullTextSearchSinglePropPredicatePerWord<T>(fullTextSearchPropName, searchWord),
-            includeStartWithProps);
-    }
-
     public override bool IsSupportQuery<T>(IQueryable<T> query) where T : class
     {
         var queryType = query.GetType();
+
         return queryType.IsAssignableTo(typeof(DbSet<T>)) ||
                queryType.IsAssignableTo(typeof(IInfrastructure<T>)) ||
                queryType.IsAssignableTo(typeof(EntityQueryable<T>));
@@ -62,43 +37,77 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
     /// Build query for all search prop. Example: Search by PropA, PropB for text "hello word" will generate query with predicate:
     /// (propA.Contains("hello") AND propA.Contains("word")) OR (propB.Contains("hello") AND propB.Contains("word")).
     /// </summary>
-    public IQueryable<T> BuildSearchQuery<T>(
+    public virtual IQueryable<T> BuildSearchQuery<T>(
         IQueryable<T> query,
         string searchText,
-        List<string> removedSpecialCharacterSearchTextWords,
+        List<string> ignoredSpecialCharactersSearchWords,
         List<string> fullTextSearchPropNames,
-        Func<string, string, Expression<Func<T, bool>>> buildFullTextSearchSinglePropPredicatePerWord,
         bool exactMatch = false,
         List<string> startWithPropNames = null)
     {
-        var fullTextSearchPropsPredicate = BuildFullTextSearchPropsPredicate(
-            searchText,
-            removedSpecialCharacterSearchTextWords,
-            fullTextSearchPropNames,
-            exactMatch,
-            buildFullTextSearchSinglePropPredicatePerWord);
-        var startWithPropsPredicate = startWithPropNames?.Any() == true
-            ? BuildStartWithPropsPredicate<T>(searchText, startWithPropNames)
-            : null;
+        var fullTextQuery = BuildFullTextSearchQueryPart(query, searchText, ignoredSpecialCharactersSearchWords, fullTextSearchPropNames, exactMatch);
+        var startWithQuery = BuildStartWithSearchQueryPart(query, searchText, startWithPropNames);
 
         // WHY: Should use union instead of OR because UNION is better at performance
         // https://stackoverflow.com/questions/16438556/combining-free-text-search-with-another-condition-is-slow
-        return query.Where(fullTextSearchPropsPredicate)
-            .PipeIf(startWithPropsPredicate != null, p => p.Union(query.Where(startWithPropsPredicate!)));
+        return fullTextQuery.PipeIf(startWithQuery != null, p => p.Union(startWithQuery!).Distinct());
     }
 
-    public IQueryable<T> DoSearch<T>(
+    public virtual IQueryable<T> BuildStartWithSearchQueryPart<T>(IQueryable<T> query, string searchText, List<string> startWithPropNames)
+    {
+        if (startWithPropNames?.Any() != true) return null;
+
+        var predicate = BuildStartWithPropsPredicate<T>(searchText, startWithPropNames);
+
+        return query.Where(predicate!);
+    }
+
+    public virtual IQueryable<T> BuildFullTextSearchQueryPart<T>(
+        IQueryable<T> query,
+        string searchText,
+        List<string> ignoredSpecialCharactersSearchWords,
+        List<string> fullTextSearchPropNames,
+        bool exactMatch = false)
+    {
+        if (fullTextSearchPropNames.IsEmpty()) return query;
+
+        // WHY: Should use union instead of OR because UNION is better at performance
+        // https://stackoverflow.com/questions/16438556/combining-free-text-search-with-another-condition-is-slow
+        return fullTextSearchPropNames
+            .Select(
+                fullTextSearchPropName => BuildFullTextSearchForSinglePropQueryPart(
+                    query,
+                    fullTextSearchPropName,
+                    ignoredSpecialCharactersSearchWords,
+                    exactMatch))
+            .Aggregate((current, next) => current.Union(next))
+            .Distinct();
+    }
+
+    public virtual IQueryable<T> BuildFullTextSearchForSinglePropQueryPart<T>(
+        IQueryable<T> originalQuery,
+        string fullTextSearchSinglePropName,
+        List<string> removedSpecialCharacterSearchTextWords,
+        bool exactMatch)
+    {
+        var predicate = removedSpecialCharacterSearchTextWords
+            .Select(searchWord => BuildFullTextSearchSinglePropPerWordPredicate<T>(fullTextSearchSinglePropName, searchWord))
+            .Aggregate((current, next) => exactMatch ? current.AndAlso(next) : current.Or(next));
+
+        return originalQuery.Where(predicate);
+    }
+
+    protected override IQueryable<T> DoSearch<T>(
         IQueryable<T> query,
         string searchText,
         Expression<Func<T, object>>[] inFullTextSearchProps,
-        bool fullTextExactMatch,
-        Func<string, string, Expression<Func<T, bool>>> buildFullTextSearchSinglePropPredicatePerWord,
+        bool fullTextExactMatch = false,
         Expression<Func<T, object>>[] includeStartWithProps = null)
     {
         if (string.IsNullOrWhiteSpace(searchText))
             return query;
 
-        var searchWords = IPlatformFullTextSearchPersistenceService.BuildSearchWordsIgnoreSpecialCharacters(searchText.Trim());
+        var ignoredSpecialCharactersSearchWords = BuildIgnoredSpecialCharactersSearchWords(searchText.Trim());
         var fullTextSearchPropNames =
             inFullTextSearchProps.Where(p => p != null).Select(ExpressionExtension.GetPropertyName).ToList();
         var includeStartWithPropNames =
@@ -107,61 +116,44 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
         var searchedQuery = BuildSearchQuery(
             query,
             searchText,
-            searchWords,
+            ignoredSpecialCharactersSearchWords,
             fullTextSearchPropNames,
-            buildFullTextSearchSinglePropPredicatePerWord,
             fullTextExactMatch,
             includeStartWithPropNames);
 
         return searchedQuery;
     }
 
-    /// <summary>
-    /// BuildFullTextSearchPropsPredicate default.
-    /// Example: Search text "abc def". Expression: .Or(EF.Functions.Like('%abc%')).Or(EF.Functions.Like('%def%'))
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="searchText"></param>
-    /// <param name="removedSpecialCharacterSearchTextWords"></param>
-    /// <param name="fullTextSearchPropNames"></param>
-    /// <param name="exactMatch"></param>
-    /// <param name="buildFullTextSearchSinglePropPredicatePerWord">(string fullTextSearchPropName, string searchWord) => Expression<Func<TEntity, bool>> BuildFullTextSearchPropPredicate<TEntity></param>
-    /// <returns></returns>
-    protected virtual Expression<Func<T, bool>> BuildFullTextSearchPropsPredicate<T>(
-        string searchText,
-        List<string> removedSpecialCharacterSearchTextWords,
-        List<string> fullTextSearchPropNames,
-        bool exactMatch,
-        Func<string, string, Expression<Func<T, bool>>> buildFullTextSearchSinglePropPredicatePerWord)
+    public virtual List<string> BuildIgnoredSpecialCharactersSearchWords(string searchText)
     {
-        var fullTextSearchPropsPredicate = fullTextSearchPropNames
-            .Select(
-                fullTextSearchPropName =>
-                {
-                    return removedSpecialCharacterSearchTextWords
-                        .Select(searchWord => buildFullTextSearchSinglePropPredicatePerWord(fullTextSearchPropName, searchWord))
-                        .Aggregate(
-                            (resultPredicate, nextPredicate) =>
-                                exactMatch
-                                    ? resultPredicate.AndAlso(nextPredicate)
-                                    : resultPredicate.Or(nextPredicate));
-                })
-            .Aggregate((resultPredicate, nextSinglePropPredicate) => resultPredicate.Or(nextSinglePropPredicate));
-        return fullTextSearchPropsPredicate;
+        var specialCharacters = new[] { '\\', '~', '[', ']', '(', ')', '!' };
+
+        // Remove special not supported character for full text search
+        var removedSpecialCharactersSearchText = specialCharacters.Aggregate(searchText, (current, next) => current.Replace(next.ToString(), " "));
+
+        var searchWords = removedSpecialCharactersSearchText.Split(" ")
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .ToList();
+
+        return searchWords;
     }
 
+    /// <summary>
+    /// BuildStartWithPropsPredicate default.
+    /// Example: Search text "abc def". Expression: .Or(EF.Functions.Like('%abc%')).Or(EF.Functions.Like('%def%'))
+    /// </summary>
     protected virtual Expression<Func<T, bool>> BuildStartWithPropsPredicate<T>(
         string searchText,
         List<string> startWithPropNames)
     {
-        var startWithPropsPredicate = startWithPropNames
+        return startWithPropNames
             .Select(startWithPropName => BuildStartWithSinglePropPredicate<T>(searchText, startWithPropName))
             .Aggregate((resultPredicate, nextPredicate) => resultPredicate.Or(nextPredicate));
-        return startWithPropsPredicate;
     }
 
     /// <summary>
-    /// Default use EF.Functions.Like for startWith
+    /// BuildStartWithSinglePropPredicate default.
+    /// Example: EF.Functions.Like('%abc%')
     /// </summary>
     protected virtual Expression<Func<T, bool>> BuildStartWithSinglePropPredicate<T>(
         string searchText,
@@ -180,7 +172,7 @@ public class LikeOperationEfCorePlatformFullTextSearchPersistenceService : EfCor
     {
     }
 
-    protected override Expression<Func<TEntity, bool>> BuildFullTextSearchSinglePropPredicatePerWord<TEntity>(string fullTextSearchPropName, string searchWord)
+    protected override Expression<Func<TEntity, bool>> BuildFullTextSearchSinglePropPerWordPredicate<TEntity>(string fullTextSearchPropName, string searchWord)
     {
         return entity => EF.Functions.Like(EF.Property<string>(entity, fullTextSearchPropName), $"%{searchWord}%");
     }

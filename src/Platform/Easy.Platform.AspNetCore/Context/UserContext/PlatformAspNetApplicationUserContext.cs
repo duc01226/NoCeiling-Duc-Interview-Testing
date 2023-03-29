@@ -210,7 +210,7 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
             if (parsedSuccess)
             {
                 // WHY: Serialize then Deserialize to ensure could parse from double to int, long, float, etc.. any of number type T
-                foundValue = PlatformJsonSerializer.Deserialize<T>(parsedValue.AsJson());
+                foundValue = PlatformJsonSerializer.Deserialize<T>(parsedValue.ToJson());
                 return true;
             }
         }
@@ -270,7 +270,7 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
             if (isParsedAllItemSuccess)
             {
                 // Serialize then Deserialize to type T so ensure parse matchedClaimStringValues to type T successfully
-                foundValue = PlatformJsonSerializer.Deserialize<T>(parsedItemList.AsJson());
+                foundValue = PlatformJsonSerializer.Deserialize<T>(parsedItemList.ToJson());
                 return true;
             }
         }

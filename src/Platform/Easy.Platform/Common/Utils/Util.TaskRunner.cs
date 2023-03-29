@@ -583,7 +583,7 @@ public static partial class Util
         }
 
         public static TResult WaitUntilGetValidResult<T, TResult>(
-            T t,
+            T target,
             Func<T, TResult> getResult,
             Func<TResult, bool> condition,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
@@ -594,7 +594,7 @@ public static partial class Util
 
             Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
 
-            while (!condition(getResult(t)))
+            while (!condition(getResult(target)))
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
                 else
@@ -602,14 +602,14 @@ public static partial class Util
                         $"WaitUntilGetValidResult is timed out (Max: {maxWaitSeconds} seconds)." +
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
 
-            return getResult(t);
+            return getResult(target);
         }
 
         /// <summary>
         /// Wait until the condition met. Stop wait immediately if continueWaitOnlyWhen assert failed throw exception
         /// </summary>
         public static T WaitUntil<T, TAny>(
-            T t,
+            T target,
             Func<bool> condition,
             Func<T, TAny>? continueWaitOnlyWhen = null,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
@@ -629,7 +629,7 @@ public static partial class Util
                     WaitRetryThrowFinalException(
                         () =>
                         {
-                            if (!condition()) continueWaitOnlyWhen?.Invoke(t);
+                            if (!condition()) continueWaitOnlyWhen?.Invoke(target);
                         });
 
                     if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
@@ -640,7 +640,7 @@ public static partial class Util
                             $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
                 }
 
-                return t;
+                return target;
             }
             catch (Exception e)
             {
@@ -649,17 +649,17 @@ public static partial class Util
         }
 
         public static T WaitUntil<T>(
-            T t,
+            T target,
             Func<bool> condition,
             Action<T> continueWaitOnlyWhen,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {
-            return WaitUntil(t, condition, continueWaitOnlyWhen.ToFunc(), maxWaitSeconds, waitForMsg);
+            return WaitUntil(target, condition, continueWaitOnlyWhen.ToFunc(), maxWaitSeconds, waitForMsg);
         }
 
         public static TResult WaitUntilGetValidResult<T, TResult, TAny>(
-            T t,
+            T target,
             Func<T, TResult> getResult,
             Func<TResult, bool> condition,
             Func<T, TAny>? continueWaitOnlyWhen = null,
@@ -673,14 +673,14 @@ public static partial class Util
 
             try
             {
-                while (!condition(getResult(t)))
+                while (!condition(getResult(target)))
                 {
                     // Retry check condition again to continueWaitOnlyWhen throw error only when condition not matched
                     // Sometime when continueWaitOnlyWhen execute the condition is matched
                     WaitRetryThrowFinalException(
                         () =>
                         {
-                            if (!condition(getResult(t))) continueWaitOnlyWhen?.Invoke(t);
+                            if (!condition(getResult(target))) continueWaitOnlyWhen?.Invoke(target);
                         });
 
                     if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
@@ -691,7 +691,7 @@ public static partial class Util
                             $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
                 }
 
-                return getResult(t);
+                return getResult(target);
             }
             catch (Exception e)
             {
@@ -700,27 +700,27 @@ public static partial class Util
         }
 
         public static TResult WaitUntilGetValidResult<T, TResult>(
-            T t,
+            T target,
             Func<T, TResult> getResult,
             Func<TResult, bool> condition,
             Action<T> continueWaitOnlyWhen,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {
-            return WaitUntilGetValidResult(t, getResult, condition, continueWaitOnlyWhen.ToFunc(), maxWaitSeconds, waitForMsg);
+            return WaitUntilGetValidResult(target, getResult, condition, continueWaitOnlyWhen.ToFunc(), maxWaitSeconds, waitForMsg);
         }
 
         public static TResult WaitUntilGetSuccess<T, TResult>(
-            T t,
+            T target,
             Func<T, TResult> getResult,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {
-            return WaitUntilGetSuccess(t, getResult, continueWaitOnlyWhen: null, maxWaitSeconds, waitForMsg);
+            return WaitUntilGetSuccess(target, getResult, continueWaitOnlyWhen: null, maxWaitSeconds, waitForMsg);
         }
 
         public static TResult WaitUntilGetSuccess<T, TResult, TAny>(
-            T t,
+            T target,
             Func<T, TResult?> getResult,
             Func<T, TAny>? continueWaitOnlyWhen = null,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
@@ -735,15 +735,13 @@ public static partial class Util
             {
                 while (true)
                 {
-                    continueWaitOnlyWhen?.Invoke(t);
+                    continueWaitOnlyWhen?.Invoke(target);
 
                     try
                     {
-                        var result = getResult(t);
+                        var result = getResult(target);
 
-                        if (result == null) throw new Exception("Result must be not null");
-
-                        return result;
+                        return result == null ? throw new Exception("Result must be not null") : result;
                     }
                     catch (Exception e)
                     {
@@ -764,13 +762,13 @@ public static partial class Util
         }
 
         public static TResult WaitUntilGetSuccess<T, TResult>(
-            T t,
+            T target,
             Func<T, TResult> getResult,
             Action<T> continueWaitOnlyWhen,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {
-            return WaitUntilGetSuccess(t, getResult, continueWaitOnlyWhen.ToFunc(), maxWaitSeconds, waitForMsg);
+            return WaitUntilGetSuccess(target, getResult, continueWaitOnlyWhen.ToFunc(), maxWaitSeconds, waitForMsg);
         }
 
         public static T WaitUntilToDo<T>(

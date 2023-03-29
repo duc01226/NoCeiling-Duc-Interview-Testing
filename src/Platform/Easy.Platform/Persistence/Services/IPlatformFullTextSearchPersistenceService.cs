@@ -1,5 +1,4 @@
 using System.Linq.Expressions;
-using Easy.Platform.Common.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Easy.Platform.Persistence.Services;
@@ -25,30 +24,6 @@ public interface IPlatformFullTextSearchPersistenceService : IPersistenceService
         Expression<Func<T, object>>[] includeStartWithProps = null) where T : class;
 
     public bool IsSupportQuery<T>(IQueryable<T> query) where T : class;
-
-    public static List<string> BuildSearchWordsIgnoreSpecialCharacters(string searchText)
-    {
-        // Remove special not supported character for full text search
-        var removedSpecialCharactersSearchText = searchText
-            .Replace("\"", " ")
-            .Replace("~", " ")
-            .Replace("[", " ")
-            .Replace("]", " ")
-            .Replace("(", " ")
-            .Replace(")", " ")
-            .Replace("!", " ");
-
-        var searchWords = removedSpecialCharactersSearchText.Split(" ")
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .ToList();
-
-        return searchWords;
-    }
-
-    public static string BuildSearchTextIgnoreSpecialCharacters(string searchText)
-    {
-        return BuildSearchWordsIgnoreSpecialCharacters(searchText).JoinToString(" ");
-    }
 }
 
 public abstract class PlatformFullTextSearchPersistenceService : IPlatformFullTextSearchPersistenceService
@@ -60,39 +35,45 @@ public abstract class PlatformFullTextSearchPersistenceService : IPlatformFullTe
         ServiceProvider = serviceProvider;
     }
 
-    public abstract IQueryable<T> Search<T>(
+    public IQueryable<T> Search<T>(
+        IQueryable<T> query,
+        string searchText,
+        Expression<Func<T, object>>[] inFullTextSearchProps,
+        bool fullTextExactMatch = false,
+        Expression<Func<T, object>>[] includeStartWithProps = null) where T : class
+    {
+        var byFirstSupportQueryHelperFilterQuery = !IsSupportQuery(query)
+            ? TrySearchByFirstSupportQueryHelper(query, searchText, inFullTextSearchProps, fullTextExactMatch, includeStartWithProps)
+            : null;
+
+        return byFirstSupportQueryHelperFilterQuery ?? DoSearch(query, searchText, inFullTextSearchProps, fullTextExactMatch, includeStartWithProps);
+    }
+
+    public abstract bool IsSupportQuery<T>(IQueryable<T> query) where T : class;
+
+    protected abstract IQueryable<T> DoSearch<T>(
         IQueryable<T> query,
         string searchText,
         Expression<Func<T, object>>[] inFullTextSearchProps,
         bool fullTextExactMatch = false,
         Expression<Func<T, object>>[] includeStartWithProps = null) where T : class;
 
-    public abstract bool IsSupportQuery<T>(IQueryable<T> query) where T : class;
-
-    protected bool TrySearchByFirstSupportQueryHelper<T>(
+    protected IQueryable<T> TrySearchByFirstSupportQueryHelper<T>(
         IQueryable<T> query,
         string searchText,
         Expression<Func<T, object>>[] inFullTextSearchProps,
         bool exactMatch,
-        out IQueryable<T> newQuery,
         Expression<Func<T, object>>[] includeStartWithProps = null) where T : class
     {
         var otherSupportHelper = ServiceProvider?
             .GetServices<IPlatformFullTextSearchPersistenceService>()
             .FirstOrDefault(p => p.IsSupportQuery(query));
 
-        if (otherSupportHelper != null)
-        {
-            newQuery = otherSupportHelper.Search(
-                query,
-                searchText,
-                inFullTextSearchProps,
-                exactMatch,
-                includeStartWithProps);
-            return true;
-        }
-
-        newQuery = query;
-        return false;
+        return otherSupportHelper?.Search(
+            query,
+            searchText,
+            inFullTextSearchProps,
+            exactMatch,
+            includeStartWithProps);
     }
 }

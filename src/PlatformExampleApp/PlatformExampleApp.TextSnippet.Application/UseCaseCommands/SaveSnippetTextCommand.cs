@@ -133,7 +133,7 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
         //    .Then(request => request.As<IPlatformCqrsCommand>())
         //    .Then(request => request.As<PlatformCqrsCommand<SaveSnippetTextCommandResult>>().AsTask()) // Then work like Promise.Then, support both sync and async func
         //    .EnsureFound();
-        var demoSingleValueToListOrArray = request.AsInArray().Concat(request.AsInList()); // return [request].Concat(List<>{request}) => [request, request]
+        var demoSingleValueToListOrArray = request.BoxedInArray().Concat(request.BoxedInList()); // return [request].Concat(List<>{request}) => [request, request]
 
         try
         {

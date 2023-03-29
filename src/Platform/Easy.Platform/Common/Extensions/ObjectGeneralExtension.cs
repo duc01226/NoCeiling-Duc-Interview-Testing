@@ -35,7 +35,7 @@ public static class ObjectGeneralExtension
         return (T)obj;
     }
 
-    public static T[] AsInArray<T>(this T obj)
+    public static T[] BoxedInArray<T>(this T obj)
     {
         return new[]
         {
@@ -43,29 +43,29 @@ public static class ObjectGeneralExtension
         };
     }
 
-    public static List<T> AsInList<T>(this T obj)
+    public static List<T> BoxedInList<T>(this T obj)
     {
         return Util.ListBuilder.New(obj);
     }
 
-    public static string AsJson<T>(this T obj)
+    public static string ToJson<T>(this T obj)
     {
         return PlatformJsonSerializer.Serialize(obj);
     }
 
-    public static string AsFormattedJson<T>(this T obj)
+    public static string ToFormattedJson<T>(this T obj)
     {
         return PlatformJsonSerializer.Serialize(obj, PlatformJsonSerializer.CurrentOptions.Value.Clone().With(_ => _.WriteIndented = true));
     }
 
-    public static string AsJson<T>(this T obj, JsonSerializerOptions options)
+    public static string ToJson<T>(this T obj, JsonSerializerOptions options)
     {
         return PlatformJsonSerializer.Serialize(obj, options);
     }
 
     public static string GetContentHash<T>(this T obj)
     {
-        return Convert.ToBase64String(SHA256.HashData(Encoding.ASCII.GetBytes(obj.AsJson())));
+        return Convert.ToBase64String(SHA256.HashData(Encoding.ASCII.GetBytes(obj.ToJson())));
     }
 
     public static object GetPropValue(this object source, string propName)

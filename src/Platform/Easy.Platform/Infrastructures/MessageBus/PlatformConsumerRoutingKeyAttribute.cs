@@ -4,14 +4,14 @@ namespace Easy.Platform.Infrastructures.MessageBus;
 
 /// <summary>
 /// Define message routing key for <inheritdoc cref="IPlatformMessageBusConsumer" />.
-/// If not defined, consumer will bind to default free format message routing key from <inheritdoc cref="PlatformBuildDefaultRoutingKeyHelper" />
+/// If not defined, consumer will bind to default free format message routing key from <inheritdoc cref="PlatformBusMessageRoutingKey.BuildDefaultRoutingKey" />
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public class PlatformConsumerRoutingKeyAttribute : Attribute
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="PlatformConsumerRoutingKeyAttribute" /> class.
-    /// Pattern value support <see cref="MatchAllPatternValue" /> to match startWith (*XXX), endWith (XXX*) and contains (*XXX*)
+    /// Pattern value support <see cref="PlatformBusMessageRoutingKey.MatchAllSingleGroupLevelChar" /> to match startWith (*XXX), endWith (XXX*) and contains (*XXX*)
     /// </summary>
     /// <param name="messageGroup">
     ///     <see cref="PlatformBusMessageRoutingKey.MessageGroup" />
@@ -29,11 +29,11 @@ public class PlatformConsumerRoutingKeyAttribute : Attribute
         string messageGroup,
         string producerContext,
         string messageType,
-        string messageAction)
+        string messageAction = null)
     {
         MessageGroup = PlatformBusMessageRoutingKey.AutoFixKeyPart(messageGroup);
-        ProducerContext = PlatformBusMessageRoutingKey.AutoFixKeyPart(producerContext);
-        MessageType = PlatformBusMessageRoutingKey.AutoFixKeyPart(messageType);
+        ProducerContext = PlatformBusMessageRoutingKey.AutoFixKeyPart(producerContext) ?? PlatformBusMessageRoutingKey.MatchAllSingleGroupLevelChar;
+        MessageType = PlatformBusMessageRoutingKey.AutoFixKeyPart(messageType) ?? PlatformBusMessageRoutingKey.MatchAllSingleGroupLevelChar;
         MessageAction = PlatformBusMessageRoutingKey.AutoFixKeyPart(messageAction) ?? PlatformBusMessageRoutingKey.MatchAllSingleGroupLevelChar;
 
         EnsureValid();
@@ -138,8 +138,8 @@ public class PlatformConsumerRoutingKeyAttribute : Attribute
                     MessageGroup,
                     PlatformBusMessageRoutingKey.MatchAllSingleGroupLevelChar,
                     CustomRoutingKey)
-                .EnsureValid(true, exceptionProvider);
+                .EnsureValid(forMatchingPattern: true, exceptionProvider);
         else
-            ToPlatformRoutingKey().EnsureValid(true, exceptionProvider);
+            ToPlatformRoutingKey().EnsureValid(forMatchingPattern: true, exceptionProvider);
     }
 }

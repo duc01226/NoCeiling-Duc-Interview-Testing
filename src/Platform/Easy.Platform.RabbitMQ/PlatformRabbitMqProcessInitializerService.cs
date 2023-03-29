@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 using Easy.Platform.Application;
@@ -427,7 +426,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
                         Logger.LogInformation(
                             message: $"RabbitMQ retry queue message for the routing key: {rabbitMqMessage.RoutingKey}.{Environment.NewLine}" +
                                      "Message: {BusMessage}",
-                            busMessage.AsJson());
+                            busMessage.ToJson());
                     },
                     retryAttempt => TimeSpan.FromSeconds(options.ProcessRequeueMessageRetryDelaySeconds),
                     options.ProcessRequeueMessageRetryCount,
@@ -435,7 +434,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
                         finalEx,
                         message: $"RabbitMQ retry queue failed message for the routing key: {rabbitMqMessage.RoutingKey}.{Environment.NewLine}" +
                                  "Message: {BusMessage}",
-                        busMessage.AsJson()));
+                        busMessage.ToJson()));
 
                 return Task.CompletedTask;
             },
@@ -466,7 +465,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
         if (busMessage != null)
         {
             traceActivity?.SetTag("consumer", consumer.GetType().Name);
-            traceActivity?.SetTag("message", busMessage.AsJson());
+            traceActivity?.SetTag("message", busMessage.ToJson());
 
             await PlatformMessageBusConsumer.InvokeConsumerAsync(
                 consumer,

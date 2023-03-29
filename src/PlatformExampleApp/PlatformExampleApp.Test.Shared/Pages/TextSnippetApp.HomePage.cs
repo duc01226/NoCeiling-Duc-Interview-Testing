@@ -86,7 +86,7 @@ public static partial class TextSnippetApp
                 must: _ => TextSnippetItemsTable.Rows.Count() == 1 &&
                            TextSnippetItemsTable.Rows.Any(predicate: row => row.GetCell(SnippetTextColName)!.RootElement!.Text == searchText),
                 expected: $"GridRowSnippetTextValues contains at least one item equal '{searchText}'",
-                actual: $"GridRowSnippetTextValues: {GetTextSnippetDataTableItems().Select(p => p.SnippetText).AsFormattedJson()}");
+                actual: $"GridRowSnippetTextValues: {GetTextSnippetDataTableItems().Select(p => p.SnippetText).ToFormattedJson()}");
 
             return this;
         }
@@ -115,7 +115,7 @@ public static partial class TextSnippetApp
             this.AssertMust(
                 must: _ => !TextSnippetItemsTable.Rows.Any(),
                 expected: $"TextSnippetItemsTable.Rows.Count must equal 0 for searchText '{searchText}'",
-                actual: $"GridRowSnippetTextValues: {GetTextSnippetDataTableItems().Select(p => p.SnippetText).AsFormattedJson()}");
+                actual: $"GridRowSnippetTextValues: {GetTextSnippetDataTableItems().Select(p => p.SnippetText).ToFormattedJson()}");
 
             return this;
         }
@@ -128,7 +128,7 @@ public static partial class TextSnippetApp
                 must: _ => TextSnippetItemsTable.Rows.Any() &&
                            CheckAllTextSnippetGrowsMatchSearchText(searchText),
                 expected: $"GridRowSnippetTextValues contains at least one item match '{searchText}'",
-                actual: $"GridRowSnippetTextValues: {GetTextSnippetDataTableItems().Select(p => p.SnippetText).AsFormattedJson()}");
+                actual: $"GridRowSnippetTextValues: {GetTextSnippetDataTableItems().Select(p => p.SnippetText).ToFormattedJson()}");
 
             return this;
         }
@@ -140,7 +140,7 @@ public static partial class TextSnippetApp
             this.AssertMust(
                 must: _ => GetTextSnippetDataTableItems().Select(p => p.SnippetText).All(predicate: rowSnippetTextValue => rowSnippetTextValue != searchText),
                 expected: $"SnippetText Item '{searchText}' must not existing",
-                actual: $"GridRowSnippetTextValues: {GetTextSnippetDataTableItems().Select(p => p.SnippetText).AsFormattedJson()}");
+                actual: $"GridRowSnippetTextValues: {GetTextSnippetDataTableItems().Select(p => p.SnippetText).ToFormattedJson()}");
 
             return this;
         }

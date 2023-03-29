@@ -155,123 +155,130 @@ public static class TaskExtension
         return Task.FromResult(t);
     }
 
-    public static T Wait<T>(this T t, double maxWaitSeconds)
+    public static T Wait<T>(this T target, double maxWaitSeconds)
     {
         Util.TaskRunner.Wait((int)(maxWaitSeconds * 1000));
 
-        return t;
+        return target;
     }
 
-    public static T WaitThen<T>(this T t, Action<T> action, double maxWaitSeconds)
+
+    /// <summary>
+    /// Wait a period of time then do a given action
+    /// </summary>
+    public static T WaitThen<T>(this T target, Action<T> action, double maxWaitSeconds)
     {
         Util.TaskRunner.Wait((int)(maxWaitSeconds * 1000));
 
-        action(t);
+        action(target);
 
-        return t;
+        return target;
     }
 
+    /// <summary>
+    /// Wait a period of time then do a given action
+    /// </summary>
     public static TResult WaitThen<T, TResult>(
-        this T t,
+        this T target,
         Func<T, TResult> action,
         double maxWaitSeconds)
     {
         Util.TaskRunner.Wait((int)(maxWaitSeconds * 1000));
 
-        return action(t);
+        return action(target);
     }
 
     /// <inheritdoc cref="Util.TaskRunner.WaitUntil{T}" />
     public static T WaitUntil<T>(
-        this T t,
+        this T target,
         Func<T, bool> condition,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        Util.TaskRunner.WaitUntil(() => condition(t), maxWaitSeconds, waitForMsg: waitForMsg);
+        Util.TaskRunner.WaitUntil(() => condition(target), maxWaitSeconds, waitForMsg: waitForMsg);
 
-        return t;
+        return target;
     }
 
     /// <inheritdoc cref="Util.TaskRunner.WaitUntil{T}" />
     public static T WaitUntil<T>(
-        this T t,
+        this T target,
         Func<bool> condition,
         Action<T> continueWaitOnlyWhen,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return Util.TaskRunner.WaitUntil(t, condition, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntil(target, condition, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
     }
 
     public static TResult WaitUntilGetValidResult<T, TResult>(
-        this T t,
+        this T target,
         Func<T, TResult> getResult,
         Func<TResult, bool> condition,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return Util.TaskRunner.WaitUntilGetValidResult(t, getResult, condition, maxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntilGetValidResult(target, getResult, condition, maxWaitSeconds, waitForMsg);
     }
 
     public static TResult WaitUntilGetValidResult<T, TResult>(
-        this T t,
+        this T target,
         Func<T, TResult> getResult,
         Func<TResult, bool> condition,
         Action<T> continueWaitOnlyWhen,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return Util.TaskRunner.WaitUntilGetValidResult(t, getResult, condition, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntilGetValidResult(target, getResult, condition, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
     }
 
     /// <inheritdoc cref="Util.TaskRunner.WaitUntil{T}" />
     public static T WaitUntil<T, TAny>(
-        this T t,
+        this T target,
         Func<T, bool> condition,
-        Func<T, TAny>? continueWaitOnlyWhen = null,
+        Func<T, TAny> continueWaitOnlyWhen = null,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return Util.TaskRunner.WaitUntil(t, () => condition(t), continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntil(target, () => condition(target), continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
     }
 
     /// <inheritdoc cref="Util.TaskRunner.WaitUntil{T}" />
     public static T WaitUntil<T>(
-        this T t,
+        this T target,
         Func<T, bool> condition,
         Action<T> continueWaitOnlyWhen,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return Util.TaskRunner.WaitUntil(t, () => condition(t), continueWaitOnlyWhen.ToFunc(), maxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntil(target, () => condition(target), continueWaitOnlyWhen.ToFunc(), maxWaitSeconds, waitForMsg);
     }
 
     public static TResult WaitUntilGetValidResult<T, TResult, TAny>(
-        this T t,
+        this T target,
         Func<T, TResult> getResult,
         Func<TResult, bool> condition,
-        Func<T, TAny>? continueWaitOnlyWhen = null,
+        Func<T, TAny> continueWaitOnlyWhen = null,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return Util.TaskRunner.WaitUntilGetValidResult(t, getResult, condition, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntilGetValidResult(target, getResult, condition, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
     }
 
     /// <summary>
     /// WaitUntilGetValidResult. If failed return default value.
     /// </summary>
     public static TResult TryWaitUntilGetValidResult<T, TResult, TAny>(
-        this T t,
+        this T target,
         Func<T, TResult> getResult,
         Func<TResult, bool> condition,
-        Func<T, TAny>? continueWaitOnlyWhen = null,
+        Func<T, TAny> continueWaitOnlyWhen = null,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
         try
         {
-            return Util.TaskRunner.WaitUntilGetValidResult(t, getResult, condition, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
+            return Util.TaskRunner.WaitUntilGetValidResult(target, getResult, condition, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
         }
         catch (Exception)
         {
@@ -280,85 +287,85 @@ public static class TaskExtension
     }
 
     public static TResult WaitUntilNotNull<T, TResult>(
-        this T t,
+        this T target,
         Func<T, TResult> getResult,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return WaitUntilGetValidResult(t, getResult, _ => _ != null, maxWaitSeconds, waitForMsg);
+        return WaitUntilGetValidResult(target, getResult, _ => _ != null, maxWaitSeconds, waitForMsg);
     }
 
     public static TResult WaitUntilGetSuccess<T, TResult>(
-        this T t,
+        this T target,
         Func<T, TResult> getResult,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return Util.TaskRunner.WaitUntilGetSuccess(t, getResult, maxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntilGetSuccess(target, getResult, maxWaitSeconds, waitForMsg);
     }
 
     public static TResult WaitUntilGetSuccess<T, TResult, TAny>(
-        this T t,
+        this T target,
         Func<T, TResult> getResult,
-        Func<T, TAny>? continueWaitOnlyWhen = null,
+        Func<T, TAny> continueWaitOnlyWhen = null,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return Util.TaskRunner.WaitUntilGetSuccess(t, getResult, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntilGetSuccess(target, getResult, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
     }
 
     public static TResult WaitUntilGetSuccess<T, TResult>(
-        this T t,
+        this T target,
         Func<T, TResult> getResult,
         Action<T> continueWaitOnlyWhen,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return Util.TaskRunner.WaitUntilGetSuccess(t, getResult, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntilGetSuccess(target, getResult, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
     }
 
     public static T WaitUntilToDo<T>(
-        this T t,
+        this T target,
         Func<T, bool> condition,
         Action<T> action,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        Util.TaskRunner.WaitUntilToDo(() => condition(t), () => action(t), maxWaitSeconds, waitForMsg: waitForMsg);
+        Util.TaskRunner.WaitUntilToDo(() => condition(target), () => action(target), maxWaitSeconds, waitForMsg: waitForMsg);
 
-        return t;
+        return target;
     }
 
     public static TResult WaitUntilToDo<T, TResult>(
-        this T t,
+        this T target,
         Func<T, bool> condition,
         Func<T, TResult> action,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return Util.TaskRunner.WaitUntilToDo(() => condition(t), () => action(t), maxWaitSeconds, waitForMsg: waitForMsg);
+        return Util.TaskRunner.WaitUntilToDo(() => condition(target), () => action(target), maxWaitSeconds, waitForMsg: waitForMsg);
     }
 
     public static async Task<T> WaitUntilToDo<T>(
-        this T t,
+        this T target,
         Func<T, bool> condition,
         Func<Task<T>> action,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        await Util.TaskRunner.WaitUntilToDo(() => condition(t), () => action(), maxWaitSeconds, waitForMsg: waitForMsg);
+        await Util.TaskRunner.WaitUntilToDo(() => condition(target), () => action(), maxWaitSeconds, waitForMsg: waitForMsg);
 
-        return t;
+        return target;
     }
 
     public static async Task<TResult> WaitUntilToDo<T, TResult>(
-        this T t,
+        this T target,
         Func<T, bool> condition,
         Func<T, Task<TResult>> action,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return await Util.TaskRunner.WaitUntilToDo(() => condition(t), () => action(t), maxWaitSeconds, waitForMsg: waitForMsg);
+        return await Util.TaskRunner.WaitUntilToDo(() => condition(target), () => action(target), maxWaitSeconds, waitForMsg: waitForMsg);
     }
 
     public static TTarget WaitUntilHasMatchedCase<TSource, TTarget>(
@@ -398,14 +405,14 @@ public static class TaskExtension
     }
 
     public static T WaitRetryDoUntil<T>(
-        this T t,
+        this T target,
         Action<T> action,
         Func<T, bool> until,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        Util.TaskRunner.WaitRetryDoUntil(() => action(t), () => until(t), maxWaitSeconds, waitForMsg: waitForMsg);
+        Util.TaskRunner.WaitRetryDoUntil(() => action(target), () => until(target), maxWaitSeconds, waitForMsg: waitForMsg);
 
-        return t;
+        return target;
     }
 }

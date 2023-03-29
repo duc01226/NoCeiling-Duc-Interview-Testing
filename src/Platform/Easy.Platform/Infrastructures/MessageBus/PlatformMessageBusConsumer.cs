@@ -118,7 +118,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
                     if (elapsedMilliseconds >= toCheckSlowProcessWarningTimeMilliseconds)
                         logger?.LogWarning(
                             $"[MessageBus] SlowProcessWarningTimeMilliseconds:{toCheckSlowProcessWarningTimeMilliseconds}. {logMessage}. MessageContent: {{BusMessage}}",
-                            busMessage.AsJson());
+                            busMessage.ToJson());
                     else
                         logger?.LogInformation($"[MessageBus] Finished invoking consumer. {logMessage}");
                 });
@@ -191,7 +191,7 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
                 $"Message Info: {{BusMessage}}.{Environment.NewLine}",
                 routingKey,
                 message.GetType().GetNameOrGenericTypeName(),
-                message.AsJson());
+                message.ToJson());
             throw;
         }
     }

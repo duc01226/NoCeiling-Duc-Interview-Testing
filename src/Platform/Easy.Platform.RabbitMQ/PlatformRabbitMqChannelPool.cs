@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.ObjectPool;
@@ -92,7 +91,7 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>
             logger.LogError(
                 ex,
                 "Create rabbit-mq channel failed. RabbitMqOptions:{RabbitMqOptions}",
-                options.AsJson());
+                options.ToJson());
             ReInitNewConnectionInitializer();
             throw;
         }

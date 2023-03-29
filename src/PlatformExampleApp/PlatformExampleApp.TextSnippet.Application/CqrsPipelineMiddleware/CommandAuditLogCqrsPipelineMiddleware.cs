@@ -29,7 +29,7 @@ public class CommandAuditLogCqrsPipelineMiddleware<TRequest, TResponse> : Platfo
 
         if (request is IPlatformCqrsCommand command)
             logger.LogInformation(
-                $"Command {command.GetType().Name} has been executed. TrackId: {command.AuditTrackId}. UserId: {command.AuditRequestByUserId}");
+                $"Command {command.GetType().Name} has been executed. TrackId: {command.AuditInfo?.AuditTrackId}. UserId: {command.AuditInfo?.AuditRequestByUserId}");
 
         return response;
     }

@@ -32,7 +32,7 @@ public class SnippetTextEntityEventBusConsumer : PlatformCqrsEntityEventBusMessa
 
         Logger.LogInformation(
             $"{GetType().FullName} has handled message {(message.Payload.DomainEvents.Any() ? $"for DomainEvents [{message.Payload.DomainEvents.Select(p => p.Key).JoinToString(", ")}]" : "")}.\r\n" +
-            $"Message Detail: ${message.AsJson()}");
+            $"Message Detail: ${message.ToJson()}");
 
         return Task.CompletedTask;
     }

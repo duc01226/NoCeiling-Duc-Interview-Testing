@@ -32,7 +32,7 @@ public class TransferSnippetTextToMultiDbDemoEntityNameDomainEventConsumer
 
         Logger.LogInformation(
             $"{GetType().FullName} has handled message. Message Detail: {{BusMessage}}",
-            message.AsFormattedJson());
+            message.ToFormattedJson());
 
         return Task.CompletedTask;
     }

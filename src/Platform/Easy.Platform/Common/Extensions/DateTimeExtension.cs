@@ -72,6 +72,11 @@ public static class DateTimeExtension
         return dateTime.ConvertToTimeZone(timeZoneInfo);
     }
 
+    public static DateTimeOffset ConvertToDateTimeOffset(this DateTime dateTime, string ianaTimeZone)
+    {
+        return new DateTimeOffset(dateTime.ConvertToTimeZone(ianaTimeZone));
+    }
+
     public enum MonToSunDayOfWeeks
     {
         Monday,

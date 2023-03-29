@@ -21,7 +21,7 @@ public static class PlatformConfigurationBuilder
             .Pipe(
                 builder =>
                 {
-                    var aspCoreEnv = PlatformEnvironment.Name ?? fallbackAspCoreEnv;
+                    var aspCoreEnv = PlatformEnvironment.AspCoreEnvironmentValue ?? fallbackAspCoreEnv;
 
                     var aspCoreEnvInheritanceLevelNames = aspCoreEnv.Split(".");
 
@@ -38,6 +38,6 @@ public static class PlatformConfigurationBuilder
             .AddEnvironmentVariables()
             .AddInMemoryCollection(
                 new List<KeyValuePair<string, string>>
-                    { new(PlatformEnvironment.AspCoreEnvVariableName, Environment.GetEnvironmentVariable(PlatformEnvironment.AspCoreEnvVariableName)) });
+                    { new(PlatformEnvironment.AspCoreEnvironmentVariableName, Environment.GetEnvironmentVariable(PlatformEnvironment.AspCoreEnvironmentVariableName)) });
     }
 }

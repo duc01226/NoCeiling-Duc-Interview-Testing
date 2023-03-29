@@ -1,14 +1,12 @@
 using System.Diagnostics;
 using System.Reflection.Metadata;
 using Easy.Platform.Application.Context.UserContext;
-using Easy.Platform.Application.Exceptions;
+using Easy.Platform.Application.Exceptions.Extensions;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Commands;
-using Easy.Platform.Common.Exceptions;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Common.Validations.Exceptions.Extensions;
-using Easy.Platform.Domain.Exceptions;
 using Easy.Platform.Domain.UnitOfWork;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -41,32 +39,28 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
         using (var activity = IPlatformCqrsCommandApplicationHandler.ActivitySource.StartActivity($"{nameof(IPlatformCqrsCommandApplicationHandler)}.{nameof(Handle)}"))
         {
             activity?.SetTag("RequestType", request.GetType().Name);
-            activity?.SetTag("Request", request.AsJson());
+            activity?.SetTag("Request", request.ToJson());
 
-            var validRequest = (TCommand)PopulateAuditInfo(request)
-                .Validate()
-                .EnsureValidationValid();
+            request.SetAuditInfo<TCommand>(BuildRequestAuditInfo(request)).Validate().EnsureValidationValid();
 
             var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
-                () => ExecuteHandleAsync(validRequest, cancellationToken),
+                () => ExecuteHandleAsync(request, cancellationToken),
                 onException: ex =>
                 {
-                    if (ex is PlatformPermissionException ||
-                        ex is PlatformNotFoundException ||
-                        ex is PlatformApplicationException ||
-                        ex is PlatformDomainException)
-                        PlatformApplicationGlobal.LoggerFactory.CreateLogger(GetType())
-                            .LogWarning(
-                                ex,
-                                "[{Tag1}] Command has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. UserContext:{UserContext}",
-                                "LogicErrorWarning",
-                                request.AuditTrackId,
-                                request.AsJson(),
-                                CurrentUser.GetAllKeyValues().AsJson());
+                    PlatformApplicationGlobal.LoggerFactory.CreateLogger(GetType())
+                        .Log(
+                            ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
+                            ex,
+                            "[{Tag1}] Command:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. UserContext:{UserContext}",
+                            ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
+                            request.GetType().Name,
+                            request.AuditInfo.AuditTrackId,
+                            request.ToJson(),
+                            CurrentUser.GetAllKeyValues().ToJson());
                 });
 
             await Cqrs.SendEvent(
-                new PlatformCqrsCommandEvent<TCommand>(validRequest, PlatformCqrsCommandEventAction.Executed),
+                new PlatformCqrsCommandEvent<TCommand>(request, PlatformCqrsCommandEventAction.Executed),
                 cancellationToken);
 
             return result;
