@@ -31,7 +31,7 @@ public class SaveSnippetTextCommand : PlatformCqrsCommand<SaveSnippetTextCommand
         return this
             .Validate(p => Data != null, "Data must be not null.")
             .And(p => Data.MapToEntity().Validate().Of(p))
-            .And(p => p.JustDemoUsingValidateNot())
+            .AndThen(p => p.JustDemoUsingValidateNot())
             .Of<IPlatformCqrsRequest>();
     }
 
@@ -77,6 +77,21 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
         this.logger = logger;
 
         this.sendMailService.SendEmail("demo@email.com", "demo header", "demo content");
+    }
+
+    /// <summary>
+    /// DEMO ADDITIONAL VALIDATE REQUEST ASYNC IF NEEDED, OVERRIDE THE FUNCTION ValidateRequestAsync
+    /// </summary>
+    protected override Task<PlatformValidationResult<SaveSnippetTextCommand>> ValidateRequestAsync(
+        PlatformValidationResult<SaveSnippetTextCommand> requestSelfValidation,
+        CancellationToken cancellationToken)
+    {
+        return requestSelfValidation.AndAsync(
+            request =>
+            {
+                // Logic async validation here, example connect database to validate something
+                return PlatformValidationResult.Valid(request).AsTask();
+            });
     }
 
     [SuppressMessage("Style", "IDE0039:Use local function", Justification = "<Pending>")]
@@ -154,7 +169,7 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
         // STEP 1: Build saving entity data from request. Throw not found if update (when id is not null)
         var toSaveEntity = request.Data.Id.HasValue
             ? await textSnippetEntityRepository.GetByIdAsync(request.Data.Id.Value, cancellationToken)
-                .EnsureFound($"Has not found text snippet for id {request.Data.Id}")
+                .EnsureFoundAsync($"Has not found text snippet for id {request.Data.Id}")
                 .Then(existingEntity => request.Data.UpdateToEntity(existingEntity))
             : request.Data.MapToEntity();
 

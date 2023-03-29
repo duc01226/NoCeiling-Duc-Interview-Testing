@@ -6,7 +6,6 @@ using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Queries;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
-using Easy.Platform.Common.Validations.Exceptions.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -38,7 +37,9 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
             activity?.SetTag("RequestType", request.GetType().Name);
             activity?.SetTag("Request", request.ToJson());
 
-            request.SetAuditInfo<TQuery>(BuildRequestAuditInfo(request)).Validate().EnsureValidationValid();
+            request.SetAuditInfo<TQuery>(BuildRequestAuditInfo(request));
+
+            await ValidateRequestAsync(request.Validate().Of<TQuery>(), cancellationToken).Then(result => result.EnsureValid());
 
             return await Util.TaskRunner.CatchExceptionContinueThrowAsync(
                 () => HandleAsync(request, cancellationToken),

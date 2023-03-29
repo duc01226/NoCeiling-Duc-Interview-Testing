@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common.Cqrs;
+using Easy.Platform.Common.Exceptions.Extensions;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Repositories;
@@ -48,7 +49,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default);
 
-    public abstract Task<TSource> FirstOrDefaultAsync<TSource>(
+    public abstract Task<TSource?> FirstOrDefaultAsync<TSource>(
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default);
 
@@ -70,7 +71,8 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => FirstAsync(query.Where(p => p.Id.Equals(id)), cancellationToken),
+            (uow, query) => FirstOrDefaultAsync(query.Where(p => p.Id.Equals(id)), cancellationToken)
+                .EnsureFoundAsync($"{typeof(TEntity).Name} with Id {id} is not found"),
             loadRelatedEntities);
     }
 
@@ -150,7 +152,8 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => FirstAsync(query.WhereIf(predicate != null, predicate), cancellationToken),
+            (uow, query) => FirstOrDefaultAsync(query.WhereIf(predicate != null, predicate), cancellationToken)
+                .EnsureFoundAsync($"{typeof(TEntity).Name} is not found"),
             loadRelatedEntities);
     }
 

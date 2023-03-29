@@ -8,7 +8,7 @@ public static class PlatformAsyncValidateExtension
         this Task<PlatformValidationResult<T>> sourceValidationTask,
         Func<T, PlatformValidationResult<TResult>> nextValidation)
     {
-        return sourceValidationTask.Then(p => p.And(_ => nextValidation(_)));
+        return sourceValidationTask.Then(p => p.AndThen(_ => nextValidation(_)));
     }
 
     public static Task<PlatformValidationResult> ThenValidate(
@@ -22,7 +22,7 @@ public static class PlatformAsyncValidateExtension
         this Task<PlatformValidationResult<T>> sourceValidationTask,
         Func<T, Task<PlatformValidationResult<TResult>>> nextValidation)
     {
-        return sourceValidationTask.Then(p => p.AndAsync(_ => nextValidation(_)));
+        return sourceValidationTask.Then(p => p.AndThenAsync(_ => nextValidation(_)));
     }
 
     public static Task<PlatformValidationResult> ThenValidateAsync(

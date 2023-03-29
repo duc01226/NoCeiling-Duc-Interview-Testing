@@ -300,7 +300,7 @@ public interface IPage : IUiComponent
         return pageErrors(page)
             .Validate(
                 must: errorElements => !errorElements.Any(predicate: errorElement => errorElement.IsClickable()),
-                errorMsgs: errors => AssertHelper.Failed(
+                errorMsg: errors => AssertHelper.Failed(
                     generalMsg: "Has errors displayed on Page",
                     expected: "No errors displayed on Page",
                     actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)))
@@ -315,7 +315,7 @@ public interface IPage : IUiComponent
         return pageErrors(page)
             .Validate(
                 must: errors => errors.Any(),
-                errorMsgs: errors => AssertHelper.Failed(
+                errorMsg: errors => AssertHelper.Failed(
                     generalMsg: "Has no errors displayed on Page",
                     expected: "Has some errors displayed on Page",
                     actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)))
@@ -331,7 +331,7 @@ public interface IPage : IUiComponent
         return pageErrors(page)
             .Validate(
                 must: errors => errors.Any(predicate: p => p.Text.ContainsIgnoreCase(errorMsg)),
-                errorMsgs: errors => AssertHelper.Failed(
+                errorMsg: errors => AssertHelper.Failed(
                     generalMsg: "Has no errors displayed on Page",
                     expected: $"Must has error \"{errorMsg}\" displayed on Page",
                     actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)))

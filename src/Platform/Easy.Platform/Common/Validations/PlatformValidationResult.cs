@@ -287,11 +287,6 @@ public class PlatformValidationResult<TValue> : ValidationResult
         return this;
     }
 
-    public PlatformValidationResult<TValue> And(PlatformValidationResult<TValue> nextValidation)
-    {
-        return And(value => nextValidation);
-    }
-
     public PlatformValidationResult<TValue> And(
         Func<TValue, bool> must,
         params PlatformValidationError[] errors)
@@ -304,9 +299,14 @@ public class PlatformValidationResult<TValue> : ValidationResult
         return And(value => nextValidation());
     }
 
-    public PlatformValidationResult<TNextValidation> And<TNextValidation>(Func<TValue, PlatformValidationResult<TNextValidation>> nextValidation)
+    public PlatformValidationResult<TNextValidation> AndThen<TNextValidation>(Func<TValue, PlatformValidationResult<TNextValidation>> nextValidation)
     {
         return IsValid ? nextValidation(Value) : PlatformValidationResult<TNextValidation>.Invalid(default, Errors.ToArray());
+    }
+
+    public PlatformValidationResult<TValue> And<TNextValidation>(Func<TValue, PlatformValidationResult<TNextValidation>> nextValidation)
+    {
+        return IsValid ? nextValidation(Value).Of(Value) : Invalid(default, Errors.ToArray());
     }
 
     public async Task<PlatformValidationResult<TValue>> And(
@@ -321,10 +321,16 @@ public class PlatformValidationResult<TValue> : ValidationResult
         return !IsValid ? this : await nextValidation(Value);
     }
 
-    public async Task<PlatformValidationResult<TNextValidation>> AndAsync<TNextValidation>(
+    public async Task<PlatformValidationResult<TNextValidation>> AndThenAsync<TNextValidation>(
         Func<TValue, Task<PlatformValidationResult<TNextValidation>>> nextValidation)
     {
         return !IsValid ? PlatformValidationResult<TNextValidation>.Invalid(default, Errors.ToArray()) : await nextValidation(Value);
+    }
+
+    public async Task<PlatformValidationResult<TValue>> AndAsync<TNextValidation>(
+        Func<TValue, Task<PlatformValidationResult<TNextValidation>>> nextValidation)
+    {
+        return !IsValid ? Invalid(default, Errors.ToArray()) : await nextValidation(Value).Then(nextValResult => nextValResult.Of(Value));
     }
 
     public PlatformValidationResult<TValue> AndNot(
@@ -332,11 +338,6 @@ public class PlatformValidationResult<TValue> : ValidationResult
         params PlatformValidationError[] errors)
     {
         return And(() => ValidateNot(value: Value, () => mustNot(Value), errors));
-    }
-
-    public PlatformValidationResult<TValue> Or(PlatformValidationResult<TValue> nextValidation)
-    {
-        return IsValid ? this : nextValidation;
     }
 
     public PlatformValidationResult<TValue> Or(Func<PlatformValidationResult<TValue>> nextValidation)
@@ -540,10 +541,18 @@ public class PlatformValidationResult : PlatformValidationResult<object>
         return !IsValid ? this : await nextValidation();
     }
 
-    public async Task<PlatformValidationResult<TNextValidation>> AndAsync<TNextValidation>(
+    public async Task<PlatformValidationResult<TNextValidation>> AndThenAsync<TNextValidation>(
         Func<Task<PlatformValidationResult<TNextValidation>>> nextValidation)
     {
         return !IsValid ? PlatformValidationResult<TNextValidation>.Invalid(default, Errors.ToArray()) : await nextValidation();
+    }
+
+    public async Task<PlatformValidationResult<object>> AndAsync<TNextValidation>(
+        Func<Task<PlatformValidationResult<TNextValidation>>> nextValidation)
+    {
+        return !IsValid
+            ? PlatformValidationResult<TNextValidation>.Invalid(default, Errors.ToArray())
+            : await nextValidation().Then(nextValResult => nextValResult.Of(Value));
     }
 
     public TValue EnsureValid<TValue>(Func<PlatformValidationResult, Exception> invalidException = null)

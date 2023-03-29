@@ -34,8 +34,9 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
     }
 
     /// <summary>
-    /// Build query for all search prop. Example: Search by PropA, PropB for text "hello word" will generate query with predicate:
-    /// (propA.Contains("hello") AND propA.Contains("word")) OR (propB.Contains("hello") AND propB.Contains("word")).
+    /// Build default search query for all search prop. Example: Search by PropA, PropB for text "hello word" will generate query with predicate:
+    /// (propA.Contains("hello") AND propA.Contains("word")) OR (propB.Contains("hello") AND propB.Contains("word"))
+    /// And if have startWith then add: propA.Like('hello word%') or propB.Like('hello word%')
     /// </summary>
     public virtual IQueryable<T> BuildSearchQuery<T>(
         IQueryable<T> query,
@@ -50,16 +51,18 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
 
         // WHY: Should use union instead of OR because UNION is better at performance
         // https://stackoverflow.com/questions/16438556/combining-free-text-search-with-another-condition-is-slow
-        return fullTextQuery.PipeIf(startWithQuery != null, p => p.Union(startWithQuery!).Distinct());
+        return fullTextQuery.PipeIf(startWithQuery != null, p => p.Union(startWithQuery!));
     }
 
     public virtual IQueryable<T> BuildStartWithSearchQueryPart<T>(IQueryable<T> query, string searchText, List<string> startWithPropNames)
     {
         if (startWithPropNames?.Any() != true) return null;
 
-        var predicate = BuildStartWithPropsPredicate<T>(searchText, startWithPropNames);
-
-        return query.Where(predicate!);
+        // WHY: Should use union instead of OR because UNION is better at performance
+        // https://stackoverflow.com/questions/16438556/combining-free-text-search-with-another-condition-is-slow
+        return startWithPropNames
+            .Select(startWithPropName => BuildStartWithSearchForSinglePropQueryPart(query, startWithPropName, searchText))
+            .Aggregate((current, next) => current.Union(next));
     }
 
     public virtual IQueryable<T> BuildFullTextSearchQueryPart<T>(
@@ -80,8 +83,7 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
                     fullTextSearchPropName,
                     ignoredSpecialCharactersSearchWords,
                     exactMatch))
-            .Aggregate((current, next) => current.Union(next))
-            .Distinct();
+            .Aggregate((current, next) => current.Union(next));
     }
 
     public virtual IQueryable<T> BuildFullTextSearchForSinglePropQueryPart<T>(
@@ -139,27 +141,15 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
     }
 
     /// <summary>
-    /// BuildStartWithPropsPredicate default.
-    /// Example: Search text "abc def". Expression: .Or(EF.Functions.Like('%abc%')).Or(EF.Functions.Like('%def%'))
+    /// BuildStartWithSearchForSinglePropQueryPart default.
+    /// Example: Search text "abc def". Expression: EF.Functions.Like('abc def%')
     /// </summary>
-    protected virtual Expression<Func<T, bool>> BuildStartWithPropsPredicate<T>(
-        string searchText,
-        List<string> startWithPropNames)
+    protected virtual IQueryable<T> BuildStartWithSearchForSinglePropQueryPart<T>(
+        IQueryable<T> originalQuery,
+        string startWithPropName,
+        string searchText)
     {
-        return startWithPropNames
-            .Select(startWithPropName => BuildStartWithSinglePropPredicate<T>(searchText, startWithPropName))
-            .Aggregate((resultPredicate, nextPredicate) => resultPredicate.Or(nextPredicate));
-    }
-
-    /// <summary>
-    /// BuildStartWithSinglePropPredicate default.
-    /// Example: EF.Functions.Like('%abc%')
-    /// </summary>
-    protected virtual Expression<Func<T, bool>> BuildStartWithSinglePropPredicate<T>(
-        string searchText,
-        string startWithPropName)
-    {
-        return entity => EF.Functions.Like(EF.Property<string>(entity, startWithPropName), $"{searchText}%");
+        return originalQuery.Where(entity => EF.Functions.Like(EF.Property<string>(entity, startWithPropName), $"{searchText}%"));
     }
 }
 

@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Easy.Platform.Common.Extensions;
 
 namespace Easy.Platform.Common.Validations.Extensions;
@@ -17,9 +18,17 @@ public static class PlatformValidateObjectExtension
     public static PlatformValidationResult<TValue> Validate<TValue>(
         this TValue value,
         Func<TValue, bool> must,
-        Func<TValue, PlatformValidationError> errorMsgs)
+        PlatformValidationError errorMsg)
     {
-        return PlatformValidationResult<TValue>.Validate(value, () => must(value), errorMsgs(value));
+        return PlatformValidationResult<TValue>.Validate(value, () => must(value), errorMsg);
+    }
+
+    public static PlatformValidationResult<TValue> Validate<TValue>(
+        this TValue value,
+        Func<TValue, bool> must,
+        Func<TValue, PlatformValidationError> errorMsg)
+    {
+        return PlatformValidationResult<TValue>.Validate(value, () => must(value), errorMsg(value));
     }
 
     public static PlatformValidationResult<TValue> Validate<TValue>(
@@ -170,6 +179,66 @@ public static class PlatformValidateObjectExtension
             value,
             () => mustNot,
             $"Expected: {expected}".PipeIf(_ => !string.IsNullOrEmpty(actual), _ => _ + $".{Environment.NewLine}Actual: {actual}"));
+    }
+
+    #endregion
+
+    #region ValidateFound
+
+    public static PlatformValidationResult<T> ValidateFound<T>(this T? obj, string errorMsg = null)
+    {
+        return obj != null ? PlatformValidationResult.Valid(obj) : PlatformValidationResult.Invalid(obj, errorMsg ?? "Not found");
+    }
+
+    public static PlatformValidationResult<IEnumerable<T>> ValidateFound<T>(this IEnumerable<T> objects, string errorMsg = null)
+    {
+        var objectsList = objects?.ToList();
+
+        return objectsList?.Any() == true
+            ? PlatformValidationResult.Valid(objectsList.As<IEnumerable<T>>())
+            : PlatformValidationResult.Invalid(objectsList.As<IEnumerable<T>>(), errorMsg);
+    }
+
+    public static PlatformValidationResult<List<T>> ValidateFoundAll<T>(this List<T> objects, List<T> toFoundObjects, Func<List<T>, string> notFoundObjectsToErrorMsg)
+    {
+        var notFoundObjects = toFoundObjects.Except(objects ?? new List<T>()).ToList();
+
+        return notFoundObjects.Any() ? PlatformValidationResult.Invalid(objects, notFoundObjectsToErrorMsg(notFoundObjects)) : PlatformValidationResult.Valid(objects);
+    }
+
+    public static PlatformValidationResult<List<T>> ValidateFoundAllBy<T, TFoundBy>(
+        this List<T> objects,
+        Func<T, TFoundBy> foundBy,
+        List<TFoundBy> toFoundByObjects,
+        Func<List<TFoundBy>, string> notFoundByObjectsToErrorMsg)
+    {
+        var notFoundByObjects = toFoundByObjects.Except(objects.Select(foundBy)).ToList();
+
+        return notFoundByObjects.Any()
+            ? PlatformValidationResult.Invalid(objects, notFoundByObjectsToErrorMsg(notFoundByObjects))
+            : PlatformValidationResult.Valid(objects);
+    }
+
+    public static PlatformValidationResult<T> ValidateFound<T>(this T? obj, Func<T, bool> and, string errorMsg = null)
+    {
+        return obj != null && and(obj) ? PlatformValidationResult.Valid(obj) : PlatformValidationResult.Invalid(obj, errorMsg);
+    }
+
+    public static PlatformValidationResult<T> ValidateFound<T>(this T? obj, Func<T, Task<bool>> and, string errorMsg = null)
+    {
+        return obj.ValidateFound(p => and(obj).Result, errorMsg);
+    }
+
+    public static async Task<PlatformValidationResult<T>> ValidateFoundAsync<T>(this T? obj, Func<T, Task<bool>> and, string errorMsg = null)
+    {
+        var andResultCondition = obj != null && await and(obj);
+
+        return obj.ValidateFound(p => andResultCondition, errorMsg);
+    }
+
+    public static PlatformValidationResult<IQueryable<T>> ValidateFoundAny<T>(this IQueryable<T> query, Expression<Func<T, bool>> any, string errorMsg = null)
+    {
+        return query.Any(any) ? PlatformValidationResult.Valid(query) : PlatformValidationResult.Invalid(query, errorMsg);
     }
 
     #endregion

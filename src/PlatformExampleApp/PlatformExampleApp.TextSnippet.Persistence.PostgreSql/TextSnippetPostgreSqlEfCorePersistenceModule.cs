@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using Easy.Platform.EfCore;
 using Easy.Platform.EfCore.Services;
 using Microsoft.EntityFrameworkCore;
@@ -58,9 +57,12 @@ public class TextSnippetPostgreSqlEfCorePlatformFullTextSearchPersistenceService
                 .Matches(removedSpecialCharacterSearchTextWords.JoinToString(exactMatch ? " & " : " | ")));
     }
 
-    // Override support search case insensitive for start with by using ILike
-    protected override Expression<Func<T, bool>> BuildStartWithSinglePropPredicate<T>(string searchText, string startWithPropName)
+    // For postgres, should use fulltext index for start with support for prefix-search <=> to_tsvector(mycol) @@ to_tsquery('search:*')
+    protected override IQueryable<T> BuildStartWithSearchForSinglePropQueryPart<T>(IQueryable<T> originalQuery, string startWithPropName, string searchText)
     {
-        return entity => EF.Functions.ILike(EF.Property<string>(entity, startWithPropName), $"{searchText}%");
+        return originalQuery.Where(
+            entity => EF.Functions
+                .ToTsVector("english", EF.Property<string>(entity, startWithPropName))
+                .Matches($"{searchText}:*"));
     }
 }

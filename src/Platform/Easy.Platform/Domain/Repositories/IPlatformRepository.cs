@@ -36,7 +36,7 @@ public interface IPlatformRepository<TEntity, TPrimaryKey> : IPlatformBasicRepos
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
-    public Task<TEntity> FirstOrDefaultAsync(
+    public Task<TEntity?> FirstOrDefaultAsync(
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object>>[] loadRelatedEntities);
@@ -159,7 +159,7 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
     /// </summary>
     public IQueryable<TEntity> GetCurrentUowQuery(params Expression<Func<TEntity, object>>[] loadRelatedEntities);
 
-    /// <see cref="GetCurrentUowQuery"/>
+    /// <see cref="GetCurrentUowQuery" />
     public IQueryable<TResult> GetCurrentUowQuery<TResult>(
         Func<IQueryable<TEntity>, IQueryable<TResult>> queryBuilder,
         params Expression<Func<TEntity, object>>[] loadRelatedEntities)

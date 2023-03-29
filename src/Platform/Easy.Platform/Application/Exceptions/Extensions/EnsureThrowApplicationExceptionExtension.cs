@@ -20,19 +20,19 @@ public static class EnsureThrowApplicationExceptionExtension
         return must(value).GetResult() ? value : throw new PlatformApplicationException(errorMsg);
     }
 
-    public static async Task<T> EnsureApplicationLogicValid<T>(this Task<T> valueTask, Func<T, bool> must, string errorMsg)
+    public static async Task<T> EnsureApplicationLogicValidAsync<T>(this Task<T> valueTask, Func<T, bool> must, string errorMsg)
     {
         var value = await valueTask;
         return value.EnsureApplicationLogicValid(must, errorMsg);
     }
 
-    public static async Task<T> EnsureApplicationLogicValid<T>(this Task<PlatformValidationResult<T>> applicationValTask)
+    public static async Task<T> EnsureApplicationLogicValidAsync<T>(this Task<PlatformValidationResult<T>> applicationValTask)
     {
         var applicationVal = await applicationValTask;
         return applicationVal.EnsureApplicationLogicValid();
     }
 
-    public static async Task<object> EnsureApplicationLogicValid(this Task<PlatformValidationResult> applicationValTask)
+    public static async Task<object> EnsureApplicationLogicValidAsync(this Task<PlatformValidationResult> applicationValTask)
     {
         var applicationVal = await applicationValTask;
         return applicationVal.EnsureApplicationLogicValid();
