@@ -31,10 +31,10 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
     public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return GetTable(uow)
+            .AsQueryable()
             .PipeIf(
                 loadRelatedEntities.Any(),
-                p => loadRelatedEntities.Aggregate(p.AsQueryable(), (query, loadRelatedEntityFn) => query.Include(loadRelatedEntityFn)))
-            .AsQueryable();
+                query => loadRelatedEntities.Aggregate(query, (query, loadRelatedEntityFn) => query.Include(loadRelatedEntityFn)));
     }
 
     public override Task<List<TSource>> ToListAsync<TSource>(

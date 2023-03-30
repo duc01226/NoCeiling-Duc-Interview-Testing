@@ -317,10 +317,8 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         {
             var uow = UnitOfWorkManager.CreateNewUow();
 
-            var result = await readDataFn(uow, GetQuery(uow, loadRelatedEntities));
-
-            if (!DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result))
-                uow.Dispose();
+            var result = await readDataFn(uow, GetQuery(uow, loadRelatedEntities))
+                .ThenAction(result => HandleDisposeContextBeforeReturnLogic(uow, loadRelatedEntities, result));
 
             return result;
         }
@@ -328,6 +326,21 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         return await readDataFn(
             UnitOfWorkManager.CurrentActiveUow(),
             GetQuery(UnitOfWorkManager.CurrentActiveUow(), loadRelatedEntities));
+
+        static void HandleDisposeContextBeforeReturnLogic<TResult>(IUnitOfWork uow, Expression<Func<TEntity, object>>[] loadRelatedEntities, TResult result)
+        {
+            var needDisposeContext = !DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result);
+
+            if (loadRelatedEntities.Any() && !DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result))
+            {
+                // Fix Eager loading include with using UseLazyLoadingProxies of EfCore by try to access the entity before dispose context
+                if (result is TEntity entity) loadRelatedEntities.ForEach(loadRelatedEntityFn => loadRelatedEntityFn.Compile()(entity));
+                if (result is IEnumerable<TEntity> entities)
+                    entities.ForEach(entity => loadRelatedEntities.ForEach(loadRelatedEntityFn => loadRelatedEntityFn.Compile()(entity)));
+            }
+
+            if (needDisposeContext) uow.Dispose();
+        }
     }
 
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(

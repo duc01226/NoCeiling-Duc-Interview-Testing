@@ -61,14 +61,21 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
                 {
                     Logger.LogWarning(
                         ex,
-                        $"Retry SendOutboxEventBusMessages {currentRetry} time(s) failed with error: {ex.Message}. [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]");
+                        "Retry SendOutboxEventBusMessages {CurrentRetry} time(s) failed with error: {ExMessage}. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly_FullName}]",
+                        currentRetry,
+                        ex.Message,
+                        applicationSettingContext.ApplicationName,
+                        applicationSettingContext.ApplicationAssembly.FullName);
                 });
         }
         catch (Exception ex)
         {
             Logger.LogError(
                 ex,
-                $"SendOutboxEventBusMessages failed with error: {ex.Message}. [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]");
+                "SendOutboxEventBusMessages failed with error: {Ex_Message}. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly_FullName}]",
+                ex.Message,
+                applicationSettingContext.ApplicationName,
+                applicationSettingContext.ApplicationAssembly.FullName);
         }
 
         isProcessing = false;
@@ -99,9 +106,10 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
                                 Logger.LogError(
                                     e,
                                     "[PlatformSendOutboxEventBusMessageHostedService] Failed to produce outbox message. " +
-                                    $"Id:{toHandleOutboxMessage.Id} failed. " +
+                                    "Id:{OutboxMessageId} failed. " +
                                     "Message Content:{OutboxMessage}",
-                                    toHandleOutboxMessage.ToFormattedJson());
+                                    toHandleOutboxMessage.Id,
+                                    toHandleOutboxMessage.ToJson());
                             }
                         }
                     })
