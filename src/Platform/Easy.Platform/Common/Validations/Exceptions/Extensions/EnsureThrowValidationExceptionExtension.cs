@@ -17,13 +17,13 @@ public static class EnsureThrowValidationExceptionExtension
         return must(value).Result ? value : throw new PlatformValidationException(errorMsg);
     }
 
-    public static async Task<T> EnsureValidationValid<T>(this Task<PlatformValidationResult<T>> valTask)
+    public static async Task<T> EnsureValidationValidAsync<T>(this Task<PlatformValidationResult<T>> valTask)
     {
         var applicationVal = await valTask;
         return applicationVal.EnsureValidationValid();
     }
 
-    public static async Task<T> EnsureValidationValid<T>(this Task<T> valueTask, Func<T, bool> must, string errorMsg)
+    public static async Task<T> EnsureValidationValidAsync<T>(this Task<T> valueTask, Func<T, bool> must, string errorMsg)
     {
         var value = await valueTask;
         return must(value) ? value : throw new PlatformValidationException(errorMsg);

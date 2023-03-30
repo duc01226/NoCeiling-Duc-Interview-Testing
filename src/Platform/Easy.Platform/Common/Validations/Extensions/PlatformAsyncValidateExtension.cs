@@ -31,4 +31,10 @@ public static class PlatformAsyncValidateExtension
     {
         return sourceValidation.Then(p => p.AndAsync(nextValidation));
     }
+
+    public static Task<T> EnsureValidAsync<T>(
+        this Task<PlatformValidationResult<T>> sourceValidationTask)
+    {
+        return sourceValidationTask.Then(p => p.EnsureValid());
+    }
 }

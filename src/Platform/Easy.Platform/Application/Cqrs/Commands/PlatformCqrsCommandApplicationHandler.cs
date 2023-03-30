@@ -6,6 +6,7 @@ using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Commands;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
+using Easy.Platform.Common.Validations.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -42,7 +43,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
 
             request.SetAuditInfo<TCommand>(BuildRequestAuditInfo(request));
 
-            await ValidateRequestAsync(request.Validate().Of<TCommand>(), cancellationToken).Then(result => result.EnsureValid());
+            await ValidateRequestAsync(request.Validate().Of<TCommand>(), cancellationToken).EnsureValidAsync();
 
             var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
                 () => ExecuteHandleAsync(request, cancellationToken),

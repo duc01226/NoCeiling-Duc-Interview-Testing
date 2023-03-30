@@ -7,7 +7,7 @@ public static class WithExceptionValidationExtension
         return val.WithInvalidException(val => new PlatformValidationException(val.ErrorsMsg()));
     }
 
-    public static async Task<PlatformValidationResult<T>> WithValidationException<T>(this Task<PlatformValidationResult<T>> valTask)
+    public static async Task<PlatformValidationResult<T>> WithValidationExceptionAsync<T>(this Task<PlatformValidationResult<T>> valTask)
     {
         var applicationVal = await valTask;
         return applicationVal.WithValidationException();
