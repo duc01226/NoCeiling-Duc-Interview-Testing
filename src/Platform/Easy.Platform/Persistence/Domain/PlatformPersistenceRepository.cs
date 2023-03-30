@@ -68,7 +68,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<TEntity> GetByIdAsync(
         TPrimaryKey id,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(query.Where(p => p.Id.Equals(id)), cancellationToken)
@@ -79,7 +79,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<List<TEntity>> GetByIdsAsync(
         List<TPrimaryKey> ids,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => ToListAsync(query.Where(p => ids.Contains(p.Id)), cancellationToken),
@@ -89,7 +89,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<List<TEntity>> GetAllAsync(
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => ToListAsync(query.WhereIf(predicate != null, predicate), cancellationToken),
@@ -104,7 +104,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override IEnumerable<TEntity> GetAllEnumerable(
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
                 (uow, query) => ToAsyncEnumerable(query.WhereIf(predicate != null, predicate), cancellationToken).ToEnumerable(),
@@ -120,7 +120,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override IAsyncEnumerable<TSelector> GetAllAsyncEnumerable<TSelector>(
         Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
                 (uow, query) => ToAsyncEnumerable(queryBuilder(query), cancellationToken),
@@ -131,7 +131,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override IAsyncEnumerable<TSelector> GetAllAsyncEnumerable<TSelector>(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
                 (uow, query) => ToAsyncEnumerable(queryBuilder(uow, query), cancellationToken),
@@ -149,7 +149,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<TEntity> FirstAsync(
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(query.WhereIf(predicate != null, predicate), cancellationToken)
@@ -160,7 +160,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<TEntity> FirstOrDefaultAsync(
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(query.WhereIf(predicate != null, predicate), cancellationToken),
@@ -211,7 +211,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<List<TSelector>> GetAllAsync<TSelector>(
         Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => ToListAsync(queryBuilder(query), cancellationToken),
@@ -221,7 +221,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<List<TSelector>> GetAllAsync<TSelector>(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => ToListAsync(queryBuilder(uow, query), cancellationToken),
@@ -231,7 +231,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<TSelector> FirstOrDefaultAsync<TSelector>(
         Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(queryBuilder(query), cancellationToken),
@@ -241,7 +241,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<TSelector> FirstOrDefaultAsync<TSelector>(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(queryBuilder(uow, query), cancellationToken),

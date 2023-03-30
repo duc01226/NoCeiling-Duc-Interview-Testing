@@ -28,7 +28,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         return GetUowDbContext(uow).Set<TEntity>();
     }
 
-    public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+    public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return GetTable(uow)
             .PipeIf(
