@@ -20,6 +20,14 @@ export function date_setToStartOfDay(date: Date): Date {
   return new Date(new Date(date).setHours(0, 0, 0, 0));
 }
 
+export function date_getEndOfYear(date: Date): Date {
+  return new Date(date.getFullYear(), 11, 31);
+}
+
+export function date_getStartOfYear(date: Date): Date {
+  return new Date(date.getFullYear(), 0, 1);
+}
+
 export function date_daysInRange(startDate: Date, stopDate: Date): Date[] {
   const dateArray: Date[] = [];
   let currentDate: Date = new Date(startDate);

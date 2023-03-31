@@ -124,10 +124,9 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
       );
     });
 
-    this.patchVmValuesToForm(this.vm);
+    this.patchVmValuesToForm(this.vm, false);
 
-    if (!this.isViewMode) this.validateForm();
-    else this.form.disable();
+    if (this.isViewMode) this.form.disable();
 
     if (this.formConfig.afterInit) this.formConfig.afterInit();
   }
@@ -178,7 +177,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     return invalidChildFormsGroup == undefined;
   }
 
-  public patchVmValuesToForm(vm: TViewModel): void {
+  public patchVmValuesToForm(vm: TViewModel, runFormValidation: boolean = true): void {
     const vmFormValues: Partial<TViewModel> = this.getFromVmFormValues(vm);
     const currentReactiveFormValues: Partial<TViewModel> = this.getCurrentReactiveFormControlValues();
 
@@ -205,7 +204,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 
         this.form.patchValue(<any>{ [formKey]: vmFormKeyValue }, { emitEvent: false });
 
-        if (!this.isViewMode) this.processGroupValidation(formKey);
+        if (!this.isViewMode && runFormValidation) this.processGroupValidation(formKey);
       }
     });
   }
@@ -236,7 +235,12 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     return <FormControl>this.form.get(key);
   }
 
-  public formControlsError(controlKey: string, errorKey: string): IPlatformFormValidationError | null {
+  public formControlsError(
+    controlKey: string,
+    errorKey: string,
+    onlyWhenTouched: boolean = true
+  ): IPlatformFormValidationError | null {
+    if (onlyWhenTouched && this.form.touched == false) return null;
     return this.formControls(controlKey)?.errors?.[errorKey];
   }
 
