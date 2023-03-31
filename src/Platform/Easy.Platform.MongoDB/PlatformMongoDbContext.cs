@@ -1,11 +1,13 @@
 using System.Data.Common;
 using System.Linq.Expressions;
+using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
+using Easy.Platform.Domain.Entities.Extensions;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.Exceptions;
 using Easy.Platform.MongoDB.Extensions;
@@ -32,14 +34,17 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     protected readonly IPlatformCqrs Cqrs;
     protected readonly Lazy<Dictionary<Type, string>> EntityTypeToCollectionNameDictionary;
     protected readonly ILogger Logger;
+    protected readonly IPlatformApplicationUserContextAccessor UserContextAccessor;
 
     public PlatformMongoDbContext(
         IOptions<PlatformMongoOptions<TDbContext>> options,
         IPlatformMongoClient<TDbContext> client,
         ILoggerFactory loggerFactory,
-        IPlatformCqrs cqrs)
+        IPlatformCqrs cqrs,
+        IPlatformApplicationUserContextAccessor userContextAccessor)
     {
         Cqrs = cqrs;
+        UserContextAccessor = userContextAccessor;
         Database = client.MongoClient.GetDatabase(options.Value.Database);
         EntityTypeToCollectionNameDictionary = new Lazy<Dictionary<Type, string>>(BuildEntityTypeToCollectionNameDictionary);
         Logger = loggerFactory.CreateLogger(GetType());
@@ -153,7 +158,13 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     {
         await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
 
-        var toBeUpdatedEntity = entity.PipeIf(entity is IAuditedDateEntity, p => p.As<IAuditedDateEntity>().With(_ => _.LastUpdatedDate = DateTime.UtcNow).As<TEntity>());
+        var toBeUpdatedEntity = entity
+            .PipeIf(entity is IDateAuditedEntity, p => p.As<IDateAuditedEntity>().With(_ => _.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
+            .PipeIf(
+                entity.IsAuditedUserEntity(),
+                p => p.As<IUserAuditedEntity>()
+                    .SetLastUpdatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
+                    .As<TEntity>());
 
         if (toBeUpdatedEntity is IRowVersionEntity rowVersionEntity)
         {
@@ -586,20 +597,27 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     {
         await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
 
+        var toBeCreatedEntity = entity
+            .PipeIf(
+                entity.IsAuditedUserEntity(),
+                p => p.As<IUserAuditedEntity>()
+                    .SetCreatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
+                    .As<TEntity>());
+
         if (upsert == false)
-            await GetTable<TEntity>().InsertOneAsync(entity, null, cancellationToken);
+            await GetTable<TEntity>().InsertOneAsync(toBeCreatedEntity, null, cancellationToken);
         else
             await GetTable<TEntity>()
                 .ReplaceOneAsync(
-                    p => p.Id.Equals(entity.Id),
-                    entity,
+                    p => p.Id.Equals(toBeCreatedEntity.Id),
+                    toBeCreatedEntity,
                     new ReplaceOptions { IsUpsert = true },
                     cancellationToken);
 
         if (!dismissSendEvent)
-            await Cqrs.SendEntityEvent(entity, PlatformCqrsEntityEventCrudAction.Created, cancellationToken);
+            await Cqrs.SendEntityEvent(toBeCreatedEntity, PlatformCqrsEntityEventCrudAction.Created, cancellationToken);
 
-        return entity;
+        return toBeCreatedEntity;
     }
 
     protected virtual void Dispose(bool disposing)

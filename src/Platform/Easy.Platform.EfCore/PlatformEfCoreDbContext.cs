@@ -1,9 +1,11 @@
 using System.Data.Common;
 using System.Linq.Expressions;
+using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
+using Easy.Platform.Domain.Entities.Extensions;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.EfCore.EntityConfiguration;
 using Easy.Platform.Persistence;
@@ -20,15 +22,18 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     protected readonly IPlatformCqrs Cqrs;
     protected readonly ILogger Logger;
     protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
+    protected readonly IPlatformApplicationUserContextAccessor UserContextAccessor;
 
     public PlatformEfCoreDbContext(
         DbContextOptions<TDbContext> options,
         ILoggerFactory loggerFactory,
         IPlatformCqrs cqrs,
-        PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration) : base(options)
+        PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
+        IPlatformApplicationUserContextAccessor userContextAccessor) : base(options)
     {
         Cqrs = cqrs;
         PersistenceConfiguration = persistenceConfiguration;
+        UserContextAccessor = userContextAccessor;
         Logger = loggerFactory.CreateLogger(GetType());
     }
 
@@ -197,7 +202,12 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
         var result = entity
             .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
-            .PipeIf(entity is IAuditedDateEntity, p => p.As<IAuditedDateEntity>().With(_ => _.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
+            .PipeIf(entity is IDateAuditedEntity, p => p.As<IDateAuditedEntity>().With(_ => _.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
+            .PipeIf(
+                entity.IsAuditedUserEntity(),
+                p => p.As<IUserAuditedEntity>()
+                    .SetLastUpdatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
+                    .As<TEntity>())
             .Pipe(entity => GetTable<TEntity>().Update(entity).Entity);
 
         if (result is IRowVersionEntity rowVersionEntity)
@@ -282,10 +292,17 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     {
         await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
 
-        var result = await GetTable<TEntity>().AddAsync(entity, cancellationToken).AsTask().Then(p => entity);
+        var toBeCreatedEntity = entity
+            .PipeIf(
+                entity.IsAuditedUserEntity(),
+                p => p.As<IUserAuditedEntity>()
+                    .SetCreatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
+                    .As<TEntity>());
+
+        var result = await GetTable<TEntity>().AddAsync(toBeCreatedEntity, cancellationToken).AsTask().Then(p => toBeCreatedEntity);
 
         if (!dismissSendEvent)
-            await Cqrs.SendEntityEvent(entity, PlatformCqrsEntityEventCrudAction.Created, cancellationToken);
+            await Cqrs.SendEntityEvent(toBeCreatedEntity, PlatformCqrsEntityEventCrudAction.Created, cancellationToken);
 
         return result;
     }

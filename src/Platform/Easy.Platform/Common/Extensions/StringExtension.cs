@@ -28,6 +28,11 @@ public static class StringExtension
         return strValue != null ? PlatformJsonSerializer.Deserialize<T>(PlatformJsonSerializer.Serialize(strValue)) : default;
     }
 
+    public static object ParseToSerializableType(this string strValue, Type serializeType)
+    {
+        return strValue != null ? PlatformJsonSerializer.Deserialize(PlatformJsonSerializer.Serialize(strValue), serializeType) : default;
+    }
+
     public static string SliceFromRight(this string strValue, int fromIndex, int toIndex = 0)
     {
         return strValue.Substring(toIndex, strValue.Length - fromIndex);

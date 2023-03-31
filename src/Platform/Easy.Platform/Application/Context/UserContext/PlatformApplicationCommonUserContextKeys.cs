@@ -26,7 +26,12 @@ public static class PlatformApplicationCommonUserContextKeys
 
     public static T UserId<T>(this IPlatformApplicationUserContext context)
     {
-        return context.UserId().ParseToSerializableType<T>();
+        return (T)UserId(context, typeof(T));
+    }
+
+    public static object UserId(this IPlatformApplicationUserContext context, Type userIdType)
+    {
+        return context.UserId().ParseToSerializableType(userIdType);
     }
 
     public static string UserName(this IPlatformApplicationUserContext context)

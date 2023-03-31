@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 namespace Easy.Platform.Application.Context.UserContext.Default;
 
 public class PlatformDefaultApplicationUserContext : IPlatformApplicationUserContext
@@ -7,6 +9,11 @@ public class PlatformDefaultApplicationUserContext : IPlatformApplicationUserCon
     public T GetValue<T>(string contextKey = "")
     {
         return (T)userContextData.GetValueOrDefault(contextKey);
+    }
+
+    public object GetValue(Type valueType, string contextKey = "")
+    {
+        return TypeDescriptor.GetConverter(valueType).ConvertFrom(userContextData.GetValueOrDefault(contextKey));
     }
 
     public void SetValue(object value, string contextKey = "")

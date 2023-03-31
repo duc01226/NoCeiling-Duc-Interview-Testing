@@ -1,3 +1,4 @@
+using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.MongoDB;
 using Microsoft.Extensions.Logging;
@@ -13,7 +14,8 @@ public class TextSnippetMultiDbDemoDbContext : PlatformMongoDbContext<TextSnippe
         IOptions<PlatformMongoOptions<TextSnippetMultiDbDemoDbContext>> options,
         IPlatformMongoClient<TextSnippetMultiDbDemoDbContext> client,
         ILoggerFactory loggerFactory,
-        IPlatformCqrs cqrs) : base(options, client, loggerFactory, cqrs)
+        IPlatformCqrs cqrs,
+        IPlatformApplicationUserContextAccessor userContextAccessor) : base(options, client, loggerFactory, cqrs, userContextAccessor)
     {
     }
 

@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Security.Claims;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.AspNetCore.Context.UserContext.UserContextKeyToClaimTypeMapper.Abstract;
@@ -9,6 +10,7 @@ namespace Easy.Platform.AspNetCore.Context.UserContext;
 public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserContext
 {
     private readonly IPlatformApplicationUserContextKeyToClaimTypeMapper claimTypeMapper;
+    private readonly MethodInfo getValueByGenericTypeMethodInfo;
     private readonly IHttpContextAccessor httpContextAccessor;
 
     public PlatformAspNetApplicationUserContext(
@@ -17,6 +19,8 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
     {
         this.httpContextAccessor = httpContextAccessor;
         this.claimTypeMapper = claimTypeMapper;
+        getValueByGenericTypeMethodInfo =
+            GetType().GetMethods().First(p => p.IsGenericMethod && p.Name == nameof(GetValue) && p.GetGenericArguments().Length == 1 && p.IsPublic);
     }
 
     protected Dictionary<string, object> ManuallySetValueItemsDic { get; } = new();
@@ -36,6 +40,13 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
         }
 
         return default;
+    }
+
+    public object GetValue(Type valueType, string contextKey = "")
+    {
+        return getValueByGenericTypeMethodInfo
+            .MakeGenericMethod(valueType)
+            .Invoke(this, parameters: new object[] { contextKey });
     }
 
     public void SetValue(object value, string contextKey = "")

@@ -1,3 +1,5 @@
+using Easy.Platform.Application.Context.UserContext;
+using Easy.Platform.Application.Context.UserContext.Default;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.EfCore;
 using Easy.Platform.Persistence;
@@ -14,7 +16,8 @@ public class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDbContext
         DbContextOptions<TextSnippetDbContext> options,
         ILoggerFactory loggerFactory,
         IPlatformCqrs cqrs,
-        PlatformPersistenceConfiguration<TextSnippetDbContext> persistenceConfiguration) : base(options, loggerFactory, cqrs, persistenceConfiguration)
+        PlatformPersistenceConfiguration<TextSnippetDbContext> persistenceConfiguration,
+        IPlatformApplicationUserContextAccessor userContextAccessor) : base(options, loggerFactory, cqrs, persistenceConfiguration, userContextAccessor)
     {
     }
 
@@ -30,7 +33,12 @@ public class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDbContext
             var optionsBuilder = new DbContextOptionsBuilder<TextSnippetDbContext>();
             optionsBuilder.UseNpgsql("Host=localhost;Port=54320;Username=postgres;Password=postgres;Database=TextSnippedDb");
 
-            return new TextSnippetDbContext(optionsBuilder.Options, new LoggerFactory(), null, new PlatformPersistenceConfiguration<TextSnippetDbContext>());
+            return new TextSnippetDbContext(
+                optionsBuilder.Options,
+                new LoggerFactory(),
+                null,
+                new PlatformPersistenceConfiguration<TextSnippetDbContext>(),
+                new PlatformDefaultApplicationUserContextAccessor());
         }
     }
 }

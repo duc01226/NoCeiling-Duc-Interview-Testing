@@ -37,7 +37,7 @@ public abstract class PlatformEntityConfiguration<TEntity, TPrimaryKey>
 
 public abstract class PlatformAuditedEntityConfiguration<TEntity, TPrimaryKey, TUserId>
     : PlatformEntityConfiguration, IEntityTypeConfiguration<TEntity>
-    where TEntity : class, IEntity<TPrimaryKey>, IAuditedEntity<TUserId>
+    where TEntity : class, IEntity<TPrimaryKey>, IFullAuditedEntity<TUserId>
 {
     public virtual void Configure(EntityTypeBuilder<TEntity> builder)
     {
