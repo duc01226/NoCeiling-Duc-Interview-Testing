@@ -1,14 +1,17 @@
 namespace Easy.Platform.Domain.Entities;
 
-public interface IAuditedEntity<TUserId>
+public interface IAuditedDateEntity
+{
+    public DateTime? CreatedDate { get; set; }
+
+    public DateTime? LastUpdatedDate { get; set; }
+}
+
+public interface IAuditedEntity<TUserId> : IAuditedDateEntity
 {
     public TUserId CreatedBy { get; set; }
 
     public TUserId LastUpdatedBy { get; set; }
-
-    public DateTime? CreatedDate { get; set; }
-
-    public DateTime? LastUpdatedDate { get; set; }
 }
 
 public abstract class RootAuditedEntity<TEntity, TPrimaryKey, TUserId> : RootEntity<TEntity, TPrimaryKey>, IAuditedEntity<TUserId>

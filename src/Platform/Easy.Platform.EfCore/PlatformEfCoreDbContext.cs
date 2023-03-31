@@ -197,6 +197,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
         var result = entity
             .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
+            .PipeIf(entity is IAuditedDateEntity, p => p.As<IAuditedDateEntity>().With(_ => _.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
             .Pipe(entity => GetTable<TEntity>().Update(entity).Entity);
 
         if (result is IRowVersionEntity rowVersionEntity)

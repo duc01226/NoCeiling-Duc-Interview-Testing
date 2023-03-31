@@ -199,9 +199,9 @@ public static class PlatformValidateObjectExtension
             : PlatformValidationResult.Invalid(objectsList.As<IEnumerable<T>>(), errorMsg);
     }
 
-    public static PlatformValidationResult<List<T>> ValidateFoundAll<T>(this List<T> objects, List<T> toFoundObjects, Func<List<T>, string> notFoundObjectsToErrorMsg)
+    public static PlatformValidationResult<List<T>> ValidateFoundAll<T>(this List<T> objects, List<T> mustFoundAllItems, Func<List<T>, string> notFoundObjectsToErrorMsg)
     {
-        var notFoundObjects = toFoundObjects.Except(objects ?? new List<T>()).ToList();
+        var notFoundObjects = mustFoundAllItems.Except(objects ?? new List<T>()).ToList();
 
         return notFoundObjects.Any() ? PlatformValidationResult.Invalid(objects, notFoundObjectsToErrorMsg(notFoundObjects)) : PlatformValidationResult.Valid(objects);
     }

@@ -318,7 +318,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
             var uow = UnitOfWorkManager.CreateNewUow();
 
             var result = await readDataFn(uow, GetQuery(uow, loadRelatedEntities))
-                .ThenAction(result => HandleDisposeContextBeforeReturnLogic(uow, loadRelatedEntities, result));
+                .ThenSideEffectAction(result => HandleDisposeContextBeforeReturnLogic(uow, loadRelatedEntities, result));
 
             return result;
         }

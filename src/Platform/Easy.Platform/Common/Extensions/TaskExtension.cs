@@ -37,7 +37,7 @@ public static class TaskExtension
         return await nextTask(targetValue);
     }
 
-    public static async Task<T> ThenAction<T>(
+    public static async Task<T> ThenSideEffectAction<T>(
         this Task<T> task,
         Action<T> action)
     {
@@ -48,7 +48,7 @@ public static class TaskExtension
         return targetValue;
     }
 
-    public static async Task<T> ThenActionAsync<T>(
+    public static async Task<T> ThenSideEffectActionAsync<T>(
         this Task<T> task,
         Func<T, Task> nextTask)
     {

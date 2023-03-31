@@ -24,7 +24,7 @@ public class PlatformValidationException<TValue> : Exception, IPlatformValidatio
     PlatformValidationResult IPlatformValidationException.ValidationResult
     {
         get => ValidationResult;
-        set => ValidationResult = value;
+        set => ValidationResult = value?.Of(value.Value is TValue validTypeValue ? validTypeValue : default);
     }
 }
 

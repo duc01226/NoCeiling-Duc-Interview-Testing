@@ -30,8 +30,8 @@ public class SaveSnippetTextCommand : PlatformCqrsCommand<SaveSnippetTextCommand
     {
         return this
             .Validate(p => Data != null, "Data must be not null.")
-            .And(p => Data.MapToEntity().Validate().Of(p))
-            .AndThen(p => p.JustDemoUsingValidateNot())
+            .And(p => Data.MapToNewEntity().Validate().Of(p))
+            .AndThenValidate(p => p.JustDemoUsingValidateNot())
             .Of<IPlatformCqrsRequest>();
     }
 
@@ -39,7 +39,7 @@ public class SaveSnippetTextCommand : PlatformCqrsCommand<SaveSnippetTextCommand
     {
         return this
             .ValidateNot(p => Data == null, "Data must be not null.")
-            .AndNot(p => Data.MapToEntity().Validate().IsValid == false, Data.MapToEntity().Validate().Errors.FirstOrDefault())
+            .AndNot(p => Data.MapToNewEntity().Validate().IsValid == false, Data.MapToNewEntity().Validate().Errors.FirstOrDefault())
             .Of<IPlatformCqrsRequest>();
     }
 }
@@ -171,7 +171,7 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
             ? await textSnippetEntityRepository.GetByIdAsync(request.Data.Id.Value, cancellationToken)
                 .EnsureFoundAsync($"Has not found text snippet for id {request.Data.Id}")
                 .Then(existingEntity => request.Data.UpdateToEntity(existingEntity))
-            : request.Data.MapToEntity();
+            : request.Data.MapToNewEntity();
 
         // STEP 2: Do validation and ensure that all logic is valid
         var validToSaveEntity = toSaveEntity

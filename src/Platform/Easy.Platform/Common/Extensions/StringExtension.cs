@@ -33,6 +33,16 @@ public static class StringExtension
         return strValue.Substring(toIndex, strValue.Length - fromIndex);
     }
 
+    public static bool IsNotNullOrEmpty(this string strValue)
+    {
+        return !string.IsNullOrEmpty(strValue);
+    }
+
+    public static bool IsNotNullOrWhiteSpace(this string strValue)
+    {
+        return !string.IsNullOrWhiteSpace(strValue);
+    }
+
     public static bool IsNullOrEmpty(this string strValue)
     {
         return string.IsNullOrEmpty(strValue);

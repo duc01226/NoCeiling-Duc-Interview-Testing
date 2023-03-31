@@ -62,9 +62,9 @@ public static class EnsureThrowCommonExceptionExtension
         return objects.ValidateFound(errorMsg).WithNotFoundException().EnsureValid();
     }
 
-    public static List<T> EnsureFoundAll<T>(this List<T> objects, List<T> toFoundObjects, Func<List<T>, string> notFoundObjectsToErrorMsg)
+    public static List<T> EnsureFoundAll<T>(this List<T> objects, List<T> mustFoundAllItems, Func<List<T>, string> notFoundObjectsToErrorMsg)
     {
-        return objects.ValidateFoundAll(toFoundObjects, notFoundObjectsToErrorMsg).WithNotFoundException().EnsureValid();
+        return objects.ValidateFoundAll(mustFoundAllItems, notFoundObjectsToErrorMsg).WithNotFoundException().EnsureValid();
     }
 
     public static List<T> EnsureFoundAllBy<T, TFoundBy>(
@@ -126,10 +126,10 @@ public static class EnsureThrowCommonExceptionExtension
         return objects.EnsureFound(errorMessage);
     }
 
-    public static async Task<List<T>> EnsureFoundAllAsync<T>(this Task<List<T>> objectsTask, List<T> toFoundObjects, Func<List<T>, string> errorMsg)
+    public static async Task<List<T>> EnsureFoundAllAsync<T>(this Task<List<T>> objectsTask, List<T> mustFoundAllItems, Func<List<T>, string> errorMsg)
     {
         var objects = await objectsTask;
-        return objects.EnsureFoundAll(toFoundObjects, errorMsg);
+        return objects.EnsureFoundAll(mustFoundAllItems, errorMsg);
     }
 
     public static async Task<ICollection<T>> EnsureFoundAsync<T>(this Task<ICollection<T>> objectsTask, string errorMessage = null)

@@ -1,4 +1,5 @@
 using Easy.Platform.Common.Dtos;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Validations;
 using Easy.Platform.Domain.Entities;
 
@@ -27,19 +28,54 @@ public abstract class PlatformEntityDto<TEntity, TId> : IPlatformDto<PlatformEnt
         return PlatformValidationResult<PlatformEntityDto<TEntity, TId>>.Valid(this);
     }
 
-    public virtual TEntity MapToEntity()
+    /// <summary>
+    /// Return the defined Id from inherit dto. This function is used to check that the dto is submitted to create or edit in IsSubmitToUpdate function
+    /// </summary>
+    /// <returns></returns>
+    protected abstract object? GetSubmittedId();
+
+    public virtual TEntity MapToNewEntity()
     {
         var initialEntity = Activator.CreateInstance<TEntity>();
 
-        var updatedEntity = UpdateToEntity(initialEntity);
+        var updatedEntity = MapToEntity(initialEntity, PlatformEntityDtoMapToEntityModes.MapNewEntity);
 
         return updatedEntity;
     }
 
+    public abstract TEntity MapToEntity(TEntity entity, PlatformEntityDtoMapToEntityModes mode);
+
     /// <summary>
-    /// Modify the toBeUpdatedEntity by apply current data from entity dto to the target toBeUpdatedEntity.
-    /// Return
+    /// Modify the toBeUpdatedEntity by apply current data from entity dto to the target toBeUpdatedEntity
     /// </summary>
     /// <returns>Return the modified toBeUpdatedEntity</returns>
-    public abstract TEntity UpdateToEntity(TEntity toBeUpdatedEntity);
+    public virtual TEntity UpdateToEntity(TEntity toBeUpdatedEntity)
+    {
+        return MapToEntity(toBeUpdatedEntity, PlatformEntityDtoMapToEntityModes.UpdateExistingEntity);
+    }
+
+    public virtual bool IsSubmitToUpdate()
+    {
+        if (GetSubmittedId() == null || GetSubmittedId() == default) return false;
+
+        return GetSubmittedId() switch
+        {
+            string strId => strId.IsNotNullOrEmpty(),
+            Guid guidId => guidId != Guid.Empty,
+            long longId => longId != default,
+            int intId => intId != default,
+            _ => false
+        };
+    }
+
+    public virtual bool IsSubmitToCreate()
+    {
+        return !IsSubmitToUpdate();
+    }
+}
+
+public enum PlatformEntityDtoMapToEntityModes
+{
+    MapNewEntity,
+    UpdateExistingEntity
 }

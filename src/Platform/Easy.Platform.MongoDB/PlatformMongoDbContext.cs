@@ -153,7 +153,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     {
         await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
 
-        if (entity is IRowVersionEntity rowVersionEntity)
+        var toBeUpdatedEntity = entity.PipeIf(entity is IAuditedDateEntity, p => p.As<IAuditedDateEntity>().With(_ => _.LastUpdatedDate = DateTime.UtcNow).As<TEntity>());
+
+        if (toBeUpdatedEntity is IRowVersionEntity rowVersionEntity)
         {
             var currentInMemoryConcurrencyUpdateToken = rowVersionEntity.ConcurrencyUpdateToken;
             var newUpdateConcurrencyUpdateToken = Guid.NewGuid();
@@ -162,33 +164,33 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
 
             var result = await GetTable<TEntity>()
                 .ReplaceOneAsync(
-                    p => p.Id.Equals(entity.Id) &&
+                    p => p.Id.Equals(toBeUpdatedEntity.Id) &&
                          (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
                           ((IRowVersionEntity)p).ConcurrencyUpdateToken == Guid.Empty ||
                           ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken),
-                    entity,
+                    toBeUpdatedEntity,
                     new ReplaceOptions { IsUpsert = false },
                     cancellationToken);
 
             if (result.MatchedCount <= 0)
             {
-                if (await GetTable<TEntity>().AsQueryable().AnyAsync(p => p.Id.Equals(entity.Id), cancellationToken))
+                if (await GetTable<TEntity>().AsQueryable().AnyAsync(p => p.Id.Equals(toBeUpdatedEntity.Id), cancellationToken))
                     throw new PlatformDomainRowVersionConflictException(
-                        $"Update {typeof(TEntity).Name} with Id:{entity.Id} has conflicted version.");
-                throw new PlatformDomainEntityNotFoundException<TEntity>(entity.Id.ToString());
+                        $"Update {typeof(TEntity).Name} with Id:{toBeUpdatedEntity.Id} has conflicted version.");
+                throw new PlatformDomainEntityNotFoundException<TEntity>(toBeUpdatedEntity.Id.ToString());
             }
         }
         else
         {
             var result = await GetTable<TEntity>()
                 .ReplaceOneAsync(
-                    p => p.Id.Equals(entity.Id),
-                    entity,
+                    p => p.Id.Equals(toBeUpdatedEntity.Id),
+                    toBeUpdatedEntity,
                     new ReplaceOptions { IsUpsert = false },
                     cancellationToken);
 
             if (result.MatchedCount <= 0)
-                throw new PlatformDomainEntityNotFoundException<TEntity>(entity.Id.ToString());
+                throw new PlatformDomainEntityNotFoundException<TEntity>(toBeUpdatedEntity.Id.ToString());
         }
 
         if (!dismissSendEvent)
