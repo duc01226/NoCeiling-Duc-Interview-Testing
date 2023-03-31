@@ -6,7 +6,7 @@ import { ArrayElement } from 'type-fest/source/exact';
 
 import { IPlatformFormValidationError } from '../../form-validators';
 import { FormHelpers } from '../../helpers';
-import { immutableUpdate, isDifferent, keys, toPlainObj } from '../../utils';
+import { immutableUpdate, isDifferent, keys, task_delay, toPlainObj } from '../../utils';
 import { IPlatformVm, PlatformFormMode } from '../../view-models';
 import { PlatformVmComponent } from './platform.vm-component';
 
@@ -238,24 +238,31 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
   public formControlsError(
     controlKey: string,
     errorKey: string,
-    onlyWhenTouched: boolean = true
+    onlyWhenTouchedOrDirty: boolean = true
   ): IPlatformFormValidationError | null {
-    if (onlyWhenTouched && this.form.touched == false) return null;
+    if (onlyWhenTouchedOrDirty && this.form.touched == false && this.form.dirty == false) return null;
     return this.formControls(controlKey)?.errors?.[errorKey];
   }
 
   public processGroupValidation(formControlKey: keyof TViewModel | string | number | symbol) {
-    if (this.formConfig.groupValidations == null) return;
+    this.cancelStoredSubscription('processGroupValidation');
 
-    this.formConfig.groupValidations.forEach(groupValidators => {
-      if (groupValidators.includes(<keyof TViewModel>formControlKey))
-        groupValidators.forEach(groupValidatorControlKey => {
-          this.formControls(groupValidatorControlKey.toString()).updateValueAndValidity({
-            emitEvent: false,
-            onlySelf: true
-          });
+    this.storeSubscription(
+      'processGroupValidation',
+      task_delay(() => {
+        if (this.formConfig.groupValidations == null) return;
+
+        this.formConfig.groupValidations.forEach(groupValidators => {
+          if (groupValidators.includes(<keyof TViewModel>formControlKey))
+            groupValidators.forEach(groupValidatorControlKey => {
+              this.formControls(groupValidatorControlKey.toString()).updateValueAndValidity({
+                emitEvent: false,
+                onlySelf: true
+              });
+            });
         });
-    });
+      }, 500)
+    );
   }
 
   protected formGroupArrayFor<TItemModel>(

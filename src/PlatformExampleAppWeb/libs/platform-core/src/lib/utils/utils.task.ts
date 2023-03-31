@@ -4,10 +4,10 @@ import { delay as rxjs_delay, filter as rxjs_filter, takeUntil as rxjs_takeUntil
 
 export function task_delay(
   callback: () => void,
-  delayTime?: number,
+  delayTimeMilliseconds?: number,
   cancelOnFirstTrueValue$?: Observable<boolean>
 ): Subscription {
-  if (typeof delayTime === 'number' && delayTime <= 0) {
+  if (typeof delayTimeMilliseconds === 'number' && delayTimeMilliseconds <= 0) {
     callback();
     return new Subscription();
   }
@@ -16,7 +16,7 @@ export function task_delay(
     cancelOnFirstTrueValue$ != null
       ? rxjs_takeUntil(cancelOnFirstTrueValue$?.pipe(rxjs_filter(x => x == true)))
       : (obs: Observable<unknown>) => obs,
-    rxjs_delay(delayTime == null ? 10 : delayTime)
+    rxjs_delay(delayTimeMilliseconds == null ? 10 : delayTimeMilliseconds)
   );
   return delayObs(of({})).subscribe(() => {
     callback();
