@@ -82,9 +82,9 @@ public class FullName : PlatformValueObject<FullName>
             .And(_ => !MiddleName.IsNullOrEmpty() && FirstName.IsNullOrEmpty() && LastName.IsNullOrEmpty(), "FirstName and LastName must be given with MiddleName");
     }
 
-    public static implicit operator string(FullName address)
+    public static implicit operator string(FullName fullName)
     {
-        return address.ToString();
+        return fullName?.ToString();
     }
 
     public override string ToString()
