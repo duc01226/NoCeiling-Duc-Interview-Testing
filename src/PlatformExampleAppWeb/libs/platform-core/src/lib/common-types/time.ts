@@ -81,6 +81,21 @@ export class Time implements ITime {
     );
   }
 
+  public hourMinuteDisplay(): string {
+    return `${number_formatLength(this.hour, 2)}` + `:${number_formatLength(this.minute, 2)}`;
+  }
+
+  public diff(otherTime: Time): number {
+    const minutesInHour = 60;
+
+    const currTime = this.hour * minutesInHour + this.minute;
+    const otherTimeConvertToMinutes = otherTime.hour * minutesInHour + otherTime.minute;
+
+    const timeDiffMinutes = Math.abs(currTime - otherTimeConvertToMinutes); //Ensure that the result is always positive
+    const timeDiffHours = timeDiffMinutes / minutesInHour;
+    return Number(timeDiffHours.toFixed(1)); //Round to 1 decimal, ex: 1.55555 to 1.6
+  }
+
   public toJSON(): string {
     return this.toString();
   }

@@ -8,6 +8,14 @@ export function date_setToEndOfDay(date: Date): Date {
   return new Date(new Date(date).setHours(23, 59, 59, 0));
 }
 
+export function date_getStartOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+export function date_getEndOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+}
+
 export function date_setToStartOfDay(date: Date): Date {
   return new Date(new Date(date).setHours(0, 0, 0, 0));
 }
@@ -204,4 +212,28 @@ export function date_format(date: Date, format: string): string {
 
 export function date_timeDiff(value1: Date, value2: Date): number {
   return value1.getTime() - value2.getTime();
+}
+
+export function date_startOfQuarter(date: Date): Date {
+  return moment(date).startOf('quarter').toDate();
+}
+
+export function date_endOfQuarter(date: Date): Date {
+  return moment(date).endOf('quarter').toDate();
+}
+
+export function date_startOfWeek(date: Date): Date {
+  return moment(date).startOf('isoWeek').toDate();
+}
+
+export function date_endOfWeek(date: Date): Date {
+  return moment(date).endOf('isoWeek').toDate();
+}
+
+export function date_addQuarters(currentDate: Date, numberOfQuarters: number): Date {
+  return moment(currentDate).add(numberOfQuarters, 'quarter').toDate();
+}
+
+export function date_addWeeks(currentDate: Date, numberOfWeeks: number): Date {
+  return moment(currentDate).add(numberOfWeeks, 'week').toDate();
 }
