@@ -4,6 +4,10 @@ namespace Easy.Platform.Common.Validations.Extensions;
 
 public static class PlatformAsyncValidateExtension
 {
+    /// <summary>
+    /// Then validate and map to the next validation[T]. <br />
+    /// Validation[T] => AndThenValidateAsync Validation[T1] => Validation[T1]
+    /// </summary>
     public static Task<PlatformValidationResult<TResult>> AndThenValidateAsync<T, TResult>(
         this Task<PlatformValidationResult<T>> sourceValidationTask,
         Func<T, PlatformValidationResult<TResult>> nextValidation)
@@ -11,6 +15,10 @@ public static class PlatformAsyncValidateExtension
         return sourceValidationTask.Then(p => p.AndThenValidate(_ => nextValidation(_)));
     }
 
+    /// <summary>
+    /// Then validate and map to the next validation[T]. <br />
+    /// Validation[T] => AndThenValidateAsync Validation[T1] => Validation[T1]
+    /// </summary>
     public static Task<PlatformValidationResult<TResult>> AndThenValidateAsync<T, TResult>(
         this Task<PlatformValidationResult<T>> sourceValidationTask,
         Func<T, Task<PlatformValidationResult<TResult>>> nextValidation)
