@@ -240,17 +240,19 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
   public formControlsError(
     controlKey: string,
     errorKey: string,
-    onlyWhenTouchedOrDirty: boolean = true
+    onlyWhenTouchedOrDirty: boolean = false
   ): IPlatformFormValidationError | null {
     if (onlyWhenTouchedOrDirty && this.form.touched == false && this.form.dirty == false) return null;
     return this.formControls(controlKey)?.errors?.[errorKey];
   }
 
   public processGroupValidation(formControlKey: keyof TViewModel | string | number | symbol) {
-    this.cancelStoredSubscription('processGroupValidation');
+    if (this.formConfig.groupValidations == null) return;
+
+    this.cancelStoredSubscription(`processGroupValidation_${formControlKey.toString()}`);
 
     this.storeSubscription(
-      'processGroupValidation',
+      `processGroupValidation_${formControlKey.toString()}`,
       task_delay(() => {
         if (this.formConfig.groupValidations == null) return;
 
@@ -263,7 +265,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
               });
             });
         });
-      }, 500)
+      }, 300)
     );
   }
 

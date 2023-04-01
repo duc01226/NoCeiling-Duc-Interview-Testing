@@ -245,3 +245,13 @@ export function date_addQuarters(currentDate: Date, numberOfQuarters: number): D
 export function date_addWeeks(currentDate: Date, numberOfWeeks: number): Date {
   return moment(currentDate).add(numberOfWeeks, 'week').toDate();
 }
+
+export function date_getNextWeekday(
+  date: Date,
+  dayToFind: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thusday' | 'Friday' | 'Sartuday' | 'Sunday'
+): Date {
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thusday', 'Friday', 'Sartuday'];
+  const dayIndex = days.findIndex(v => v === dayToFind);
+  const dateCopy = new Date(date.getTime());
+  return new Date(dateCopy.setDate(dateCopy.getDate() + ((7 - dateCopy.getDay() + dayIndex) % 7 || 7)));
+}
