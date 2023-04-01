@@ -144,9 +144,11 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
   };
 
   public isFormValid(): boolean {
+    // form or formConfig if it's initiated asynchronous, waiting call api but the component template use isFormValid
+    // so that it could be undefined. check to prevent the bug
     return (
-      this.form.valid &&
-      (this.formConfig.childForms == undefined || this.isAllChildFormsValid(this.formConfig.childForms()))
+      this.form?.valid &&
+      (this.formConfig?.childForms == undefined || this.isAllChildFormsValid(this.formConfig.childForms()))
     );
   }
 
