@@ -137,6 +137,8 @@ export abstract class PlatformApiService extends PlatformHttpService {
   }
 
   protected throwError<T>(error: IPlatformApiServiceErrorResponse): Observable<T> {
+    if (error.developerExceptionMessage != null) console.error(error.developerExceptionMessage);
+
     return <Observable<T>>of({}).pipe(
       switchMap(() => {
         return throwError(() => new PlatformApiServiceErrorResponse(error));
