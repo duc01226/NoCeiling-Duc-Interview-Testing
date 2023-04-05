@@ -18,7 +18,7 @@ public class PlatformRabbitMqExchangeProvider : IPlatformRabbitMqExchangeProvide
 
         var validMessageGroup = messageGroup
             .Validate(
-                !string.IsNullOrEmpty(messageGroup),
+                messageGroup.IsNotNullOrEmpty(),
                 $"[{nameof(PlatformRabbitMqExchangeProvider)}] RoutingKey MessageGroup must be not null and empty. RoutingKey must be in format [YourMessageGroup].xxx")
             .EnsureValid(p => new ArgumentException(p.ErrorsMsg()));
 

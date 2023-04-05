@@ -3,6 +3,7 @@ using System.Text.Json;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Exceptions;
 using Easy.Platform.AspNetCore.Middleware.Abstracts;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Exceptions;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Domain.Exceptions;
@@ -17,12 +18,6 @@ namespace Easy.Platform.AspNetCore.ExceptionHandling;
 /// </summary>
 public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
 {
-    private const string DefaultServerErrorMessage =
-        "There is an unexpected error during the processing of the request. Please try again or contact the Administrator for help.";
-
-    private readonly bool developerExceptionEnabled;
-    private readonly IPlatformApplicationUserContextAccessor userContextAccessor;
-
     public PlatformGlobalExceptionHandlerMiddleware(
         RequestDelegate next,
         ILogger<PlatformGlobalExceptionHandlerMiddleware> logger,
@@ -30,11 +25,14 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
         IPlatformApplicationUserContextAccessor userContextAccessor) : base(next)
     {
         Logger = logger;
-        this.userContextAccessor = userContextAccessor;
-        developerExceptionEnabled = configuration.GetValue<bool>("DeveloperExceptionEnabled");
+        UserContextAccessor = userContextAccessor;
+        Configuration = configuration;
     }
 
+    protected IConfiguration Configuration { get; }
     protected ILogger Logger { get; }
+    protected IPlatformApplicationUserContextAccessor UserContextAccessor { get; }
+    protected bool DeveloperExceptionEnabled => PlatformEnvironment.IsDevelopment || Configuration.GetValue<bool>("DeveloperExceptionEnabled");
 
     protected override async Task InternalInvokeAsync(HttpContext context)
     {
@@ -59,27 +57,27 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
         var errorResponse = exception
             .WhenIs<Exception, PlatformPermissionException, PlatformAspNetMvcErrorResponse>(
                 permissionException => new PlatformAspNetMvcErrorResponse(
-                    PlatformAspNetMvcErrorInfo.FromPermissionException(permissionException),
+                    PlatformAspNetMvcErrorInfo.FromPermissionException(permissionException, DeveloperExceptionEnabled),
                     HttpStatusCode.Forbidden,
                     context.TraceIdentifier).Pipe(_ => LogKnownRequestWarning(exception, context)))
             .WhenIs<IPlatformValidationException>(
                 validationException => new PlatformAspNetMvcErrorResponse(
-                    PlatformAspNetMvcErrorInfo.FromValidationException(validationException),
+                    PlatformAspNetMvcErrorInfo.FromValidationException(validationException, DeveloperExceptionEnabled),
                     HttpStatusCode.BadRequest,
                     context.TraceIdentifier).Pipe(_ => LogKnownRequestWarning(exception, context)))
             .WhenIs<PlatformApplicationException>(
                 applicationException => new PlatformAspNetMvcErrorResponse(
-                    PlatformAspNetMvcErrorInfo.FromApplicationException(applicationException),
+                    PlatformAspNetMvcErrorInfo.FromApplicationException(applicationException, DeveloperExceptionEnabled),
                     HttpStatusCode.BadRequest,
                     context.TraceIdentifier).Pipe(_ => LogKnownRequestWarning(exception, context)))
             .WhenIs<PlatformNotFoundException>(
                 domainNotFoundException => new PlatformAspNetMvcErrorResponse(
-                    PlatformAspNetMvcErrorInfo.FromNotFoundException(domainNotFoundException),
+                    PlatformAspNetMvcErrorInfo.FromNotFoundException(domainNotFoundException, DeveloperExceptionEnabled),
                     HttpStatusCode.NotFound,
                     context.TraceIdentifier).Pipe(_ => LogKnownRequestWarning(exception, context)))
             .WhenIs<PlatformDomainException>(
                 domainException => new PlatformAspNetMvcErrorResponse(
-                    PlatformAspNetMvcErrorInfo.FromDomainException(domainException),
+                    PlatformAspNetMvcErrorInfo.FromDomainException(domainException, DeveloperExceptionEnabled),
                     HttpStatusCode.BadRequest,
                     context.TraceIdentifier).Pipe(_ => LogKnownRequestWarning(exception, context)))
             .Else(
@@ -89,14 +87,10 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
                         exception,
                         "[UnexpectedRequestError] There is an unexpected exception during the processing of the request. RequestId: {RequestId}. UserContext: {UserContext}",
                         context.TraceIdentifier,
-                        userContextAccessor.Current.GetAllKeyValues().ToJson());
+                        UserContextAccessor.Current.GetAllKeyValues().ToJson());
 
                     return new PlatformAspNetMvcErrorResponse(
-                        new PlatformAspNetMvcErrorInfo
-                        {
-                            Code = "InternalServerException",
-                            Message = developerExceptionEnabled ? exception.ToString() : DefaultServerErrorMessage
-                        },
+                        PlatformAspNetMvcErrorInfo.FromUnknownException(exception, DeveloperExceptionEnabled),
                         HttpStatusCode.InternalServerError,
                         context.TraceIdentifier);
                 })

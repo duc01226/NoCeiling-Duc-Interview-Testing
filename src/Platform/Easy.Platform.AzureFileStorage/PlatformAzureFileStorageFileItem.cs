@@ -17,6 +17,11 @@ public class PlatformAzureFileStorageFileItem : IPlatformFileStorageFileItem
     public string Description { get; init; }
     public string AbsoluteUri { get; init; }
 
+    public string FullFilePathWithoutRootDirectory()
+    {
+        return FullFilePath.Substring(RootDirectory.Length).TrimStart('/');
+    }
+
     public static PlatformAzureFileStorageFileItem Create(BlobItem blobItem, BlobContainerClient blobContainerClient)
     {
         var result = new PlatformAzureFileStorageFileItem
@@ -36,12 +41,12 @@ public class PlatformAzureFileStorageFileItem : IPlatformFileStorageFileItem
 
     public static string GetFullFilePath(BlobClient blobClient)
     {
-        return Util.Path.ConcatRelativePath(blobClient.BlobContainerName, blobClient.Name);
+        return Util.PathBuilder.ConcatRelativePath(blobClient.BlobContainerName, blobClient.Name);
     }
 
     public static string GetFullFilePath(BlobContainerClient blobContainerClient, BlobItem blobItem)
     {
-        return Util.Path.ConcatRelativePath(blobContainerClient.Name, blobItem.Name);
+        return Util.PathBuilder.ConcatRelativePath(blobContainerClient.Name, blobItem.Name);
     }
 
     public static IDictionary<string, string> SetMetadata(
@@ -66,10 +71,5 @@ public class PlatformAzureFileStorageFileItem : IPlatformFileStorageFileItem
         // throw exception BlobNotFound. So when save metadata we has encode data to base64
         return currentMetadata.TryGetValueOrDefault(key)
             .PipeIfNotNull(_ => _.TryFromBase64ToString());
-    }
-
-    public string FullFilePathWithoutRootDirectory()
-    {
-        return FullFilePath.Substring(RootDirectory.Length).TrimStart('/');
     }
 }

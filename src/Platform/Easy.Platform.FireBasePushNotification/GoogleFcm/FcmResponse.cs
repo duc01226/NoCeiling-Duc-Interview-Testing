@@ -2,6 +2,9 @@ using System.Text.Json.Serialization;
 
 namespace Easy.Platform.FireBasePushNotification.GoogleFcm;
 
+/// <summary>
+/// Firebase cloud message response
+/// </summary>
 internal class FcmResponse
 {
     [JsonPropertyName("multicast_id")]

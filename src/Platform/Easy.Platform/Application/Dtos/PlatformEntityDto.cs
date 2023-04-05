@@ -34,16 +34,32 @@ public abstract class PlatformEntityDto<TEntity, TId> : IPlatformDto<PlatformEnt
     /// <returns></returns>
     protected abstract object? GetSubmittedId();
 
+    /// <summary>
+    /// Map to create new entity
+    /// </summary>
+    /// <returns></returns>
     public virtual TEntity MapToNewEntity()
     {
         var initialEntity = Activator.CreateInstance<TEntity>();
 
-        var updatedEntity = MapToEntity(initialEntity, PlatformEntityDtoMapToEntityModes.MapNewEntity);
+        var updatedEntity = MapToEntity(initialEntity, MapToEntityModes.MapNewEntity);
 
         return updatedEntity;
     }
 
-    public abstract TEntity MapToEntity(TEntity entity, PlatformEntityDtoMapToEntityModes mode);
+    /// <summary>
+    /// Map all props
+    /// </summary>
+    public virtual TEntity MapToEntity()
+    {
+        var initialEntity = Activator.CreateInstance<TEntity>();
+
+        var updatedEntity = MapToEntity(initialEntity, MapToEntityModes.MapAllProps);
+
+        return updatedEntity;
+    }
+
+    protected abstract TEntity MapToEntity(TEntity entity, MapToEntityModes mode);
 
     /// <summary>
     /// Modify the toBeUpdatedEntity by apply current data from entity dto to the target toBeUpdatedEntity
@@ -51,7 +67,7 @@ public abstract class PlatformEntityDto<TEntity, TId> : IPlatformDto<PlatformEnt
     /// <returns>Return the modified toBeUpdatedEntity</returns>
     public virtual TEntity UpdateToEntity(TEntity toBeUpdatedEntity)
     {
-        return MapToEntity(toBeUpdatedEntity, PlatformEntityDtoMapToEntityModes.UpdateExistingEntity);
+        return MapToEntity(toBeUpdatedEntity, MapToEntityModes.MapToUpdateExistingEntity);
     }
 
     public virtual bool IsSubmitToUpdate()
@@ -74,8 +90,9 @@ public abstract class PlatformEntityDto<TEntity, TId> : IPlatformDto<PlatformEnt
     }
 }
 
-public enum PlatformEntityDtoMapToEntityModes
+public enum MapToEntityModes
 {
+    MapAllProps,
     MapNewEntity,
-    UpdateExistingEntity
+    MapToUpdateExistingEntity
 }

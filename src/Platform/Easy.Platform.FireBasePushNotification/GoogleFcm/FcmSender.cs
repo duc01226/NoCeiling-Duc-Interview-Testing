@@ -17,7 +17,7 @@ internal interface IFcmSender
 }
 
 /// <summary>
-/// Firebase message sender
+/// Firebase Cloud message sender
 /// </summary>
 internal class FcmSender : IFcmSender
 {
@@ -31,7 +31,7 @@ internal class FcmSender : IFcmSender
     }
 
     /// <summary>
-    /// Send firebase notification.
+    /// Send Firebase notification.
     /// Please check out payload formats:
     /// https://firebase.google.com/docs/cloud-messaging/concept-options#notifications
     /// The SendAsync method will add/replace "to" value with deviceId
@@ -65,7 +65,7 @@ internal class FcmSender : IFcmSender
         {
             httpRequest.Headers.Add("Authorization", $"key = {settings.ServerKey}");
 
-            if (!string.IsNullOrEmpty(settings.SenderId))
+            if (settings.SenderId.IsNotNullOrEmpty())
                 httpRequest.Headers.Add("Sender", $"id = {settings.SenderId}");
 
             httpRequest.Content = new StringContent(serialized, Encoding.UTF8, "application/json");

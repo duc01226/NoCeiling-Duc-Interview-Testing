@@ -30,7 +30,7 @@ public class SaveSnippetTextCommand : PlatformCqrsCommand<SaveSnippetTextCommand
     {
         return this
             .Validate(p => Data != null, "Data must be not null.")
-            .And(p => Data.MapToNewEntity().Validate().Of(p))
+            .And(p => Data.MapToEntity().Validate().Of(p))
             .AndThenValidate(p => p.JustDemoUsingValidateNot())
             .Of<IPlatformCqrsRequest>();
     }
@@ -39,7 +39,7 @@ public class SaveSnippetTextCommand : PlatformCqrsCommand<SaveSnippetTextCommand
     {
         return this
             .ValidateNot(p => Data == null, "Data must be not null.")
-            .AndNot(p => Data.MapToNewEntity().Validate().IsValid == false, Data.MapToNewEntity().Validate().Errors.FirstOrDefault())
+            .AndNot(p => Data.MapToEntity().Validate().IsValid == false, Data.MapToEntity().Validate().Errors.FirstOrDefault())
             .Of<IPlatformCqrsRequest>();
     }
 }
@@ -167,19 +167,24 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
         }
 
         // STEP 1: Build saving entity data from request. Throw not found if update (when id is not null)
-        var toSaveEntity = request.Data.Id.HasValue
-            ? await textSnippetEntityRepository.GetByIdAsync(request.Data.Id.Value, cancellationToken)
+        var toSaveEntity = request.Data.IsSubmitToUpdate()
+            ? await textSnippetEntityRepository.GetByIdAsync(request.Data.Id!.Value, cancellationToken)
                 .EnsureFoundAsync($"Has not found text snippet for id {request.Data.Id}")
                 .Then(existingEntity => request.Data.UpdateToEntity(existingEntity))
             : request.Data.MapToNewEntity();
 
         // STEP 2: Do validation and ensure that all logic is valid
-        var validToSaveEntity = toSaveEntity
-            //.With(toSaveEntity => toSaveEntity.SnippetText += " Update") //Demo Update Data By With Support Chaining
+        var validToSaveEntity = await toSaveEntity
+            .With(
+                toSaveEntity =>
+                {
+                    //toSaveEntity.SnippetText += " Update";  //Demo Update Data By With Support Chaining
+                })
             .ValidateSavePermission(userId: CurrentUser.UserId<Guid?>()) // Demo Permission Logic
             .And(entity => toSaveEntity.ValidateSomeSpecificIsXxxLogic()) // Demo domain business logic
-            .And(entity => ValidateSomeThisCommandApplicationLogic(entity)) // Demo application business logic
-            .EnsureValid(); // Throw PermissionException, or DomainException, or ApplicationException on invalid for each stage
+            .AndAsync(entity => toSaveEntity.ValidateSomeSpecificIsXxxLogicAsync(textSnippetEntityRepository, multiDbDemoEntityRepository)) // Demo domain business logic
+            .AndAsync(entity => ValidateSomeThisCommandApplicationLogic(entity)) // Demo application business logic
+            .EnsureValidAsync(); // Throw PermissionException, or DomainException, or ApplicationException on invalid for each stage
 
         // ADDITIONAL DEMO STEP 2 - Bonus Demo Alternative Validation directly on object
         // (Not recommended because of easily violate SingleResponsibility or duplicate code)

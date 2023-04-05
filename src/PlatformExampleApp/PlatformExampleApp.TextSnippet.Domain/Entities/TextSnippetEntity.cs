@@ -4,6 +4,7 @@ using Easy.Platform.Common.Validations.Validators;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Exceptions.Extensions;
 using FluentValidation;
+using PlatformExampleApp.TextSnippet.Domain.Repositories;
 using PlatformExampleApp.TextSnippet.Domain.ValueObjects;
 using static Easy.Platform.Domain.Entities.ISupportDomainEventsEntity;
 
@@ -81,6 +82,16 @@ public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid
             });
 
         return this;
+    }
+
+    public async Task<PlatformValidationResult<TextSnippetEntity>> ValidateSomeSpecificIsXxxLogicAsync(
+        ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository,
+        ITextSnippetRootRepository<MultiDbDemoEntity> multiDbDemoEntityRepository)
+    {
+        // Example get data from db to check and validate logic
+        return await this.ValidateAsync(
+            must: async () => !await textSnippetEntityRepository.AnyAsync(p => p.Id != Id && p.SnippetText == SnippetText),
+            "SnippetText is duplicated");
     }
 
     public class EncryptSnippetTextDomainEvent : DomainEvent

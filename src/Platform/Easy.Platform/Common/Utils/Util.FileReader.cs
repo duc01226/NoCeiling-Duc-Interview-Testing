@@ -41,8 +41,8 @@ public static partial class Util
         public static string ReadCurrentDirectoryFileAsString(string filePathFromCurrentExecutingDirectory)
         {
             return ReadFileAsString(
-                Path.ConcatRelativePath(
-                    System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+                PathBuilder.ConcatRelativePath(
+                    Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
                     filePathFromCurrentExecutingDirectory));
         }
     }

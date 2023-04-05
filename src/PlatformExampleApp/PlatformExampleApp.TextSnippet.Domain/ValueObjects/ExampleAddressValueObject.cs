@@ -11,14 +11,14 @@ public class ExampleAddressValueObject : PlatformValueObject<ExampleAddressValue
     public static PlatformExpressionValidator<ExampleAddressValueObject> NumberValidator()
     {
         return new PlatformExpressionValidator<ExampleAddressValueObject>(
-            p => !string.IsNullOrEmpty(p.Number),
+            p => p.Number.IsNotNullOrEmpty(),
             "Number must be not null or empty");
     }
 
     public static PlatformExpressionValidator<ExampleAddressValueObject> StreetValidator()
     {
         return new PlatformExpressionValidator<ExampleAddressValueObject>(
-            p => !string.IsNullOrEmpty(p.Street),
+            p => p.Street.IsNotNullOrEmpty(),
             "Street must be not null or empty");
     }
 

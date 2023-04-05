@@ -2,9 +2,9 @@ namespace Easy.Platform.Common.Utils;
 
 public static partial class Util
 {
-    public static class Random
+    public static class RandomGenerator
     {
-        private static readonly System.Random DefaultRandomInstance = new();
+        private static readonly Random DefaultRandomInstance = new();
 
         public static void DoByChance(int percentChance, Action action)
         {

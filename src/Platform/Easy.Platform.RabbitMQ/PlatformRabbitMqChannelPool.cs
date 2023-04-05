@@ -144,7 +144,7 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>
     private IConnection CreateConnection()
     {
         var hostNames = options.HostNames.Split(',')
-            .Where(hostName => !string.IsNullOrEmpty(hostName))
+            .Where(hostName => hostName.IsNotNullOrEmpty())
             .ToArray();
 
         return connectionFactory.CreateConnection(hostNames);

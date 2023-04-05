@@ -84,7 +84,7 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
 
         var allCurrentRecurringJobExecutors = serviceScope.ServiceProvider
             .GetServices<IPlatformBackgroundJobExecutor>()
-            .Where(p => !string.IsNullOrEmpty(PlatformRecurringJobAttribute.GetCronExpressionInfo(p.GetType())))
+            .Where(p => PlatformRecurringJobAttribute.GetCronExpressionInfo(p.GetType()).IsNotNullOrEmpty())
             .ToList();
 
         scheduler.ReplaceAllRecurringBackgroundJobs(allCurrentRecurringJobExecutors);

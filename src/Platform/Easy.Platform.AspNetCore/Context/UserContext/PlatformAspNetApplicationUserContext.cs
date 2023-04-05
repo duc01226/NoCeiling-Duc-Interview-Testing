@@ -154,7 +154,7 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
 
     private bool TryGetRequestId<T>(HttpContext httpContext, out T foundValue)
     {
-        if (!string.IsNullOrEmpty(httpContext.TraceIdentifier) && typeof(T) == typeof(string))
+        if (httpContext.TraceIdentifier.IsNotNullOrEmpty() && typeof(T) == typeof(string))
         {
             foundValue = (T)(object)httpContext.TraceIdentifier;
             return true;

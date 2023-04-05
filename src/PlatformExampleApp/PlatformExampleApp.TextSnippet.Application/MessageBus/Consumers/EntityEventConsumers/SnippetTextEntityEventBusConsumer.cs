@@ -26,7 +26,7 @@ public class SnippetTextEntityEventBusConsumer : PlatformCqrsEntityEventBusMessa
         TextSnippetEntityEventBusMessage message,
         string routingKey)
     {
-        Util.Random.DoByChance(
+        Util.RandomGenerator.DoByChance(
             percentChance: 5,
             () => throw new Exception("Random Test Retry Consumer Throw Exception"));
 

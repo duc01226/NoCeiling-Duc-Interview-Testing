@@ -46,14 +46,14 @@ public class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, Guid>
         return Id;
     }
 
-    public override TextSnippetEntity MapToEntity(TextSnippetEntity entity, PlatformEntityDtoMapToEntityModes mode)
+    protected override TextSnippetEntity MapToEntity(TextSnippetEntity entity, MapToEntityModes mode)
     {
-        entity.Id = IsSubmitToCreate() ? Guid.NewGuid() : Id!.Value;
+        entity.Id = mode == MapToEntityModes.MapNewEntity || IsSubmitToCreate() ? Guid.NewGuid() : Id!.Value;
         entity.SnippetText = SnippetText;
         entity.FullText = FullText;
 
         // Demo do not update address on submit. Only when create new entity or mapping data to return to client
-        if (mode == PlatformEntityDtoMapToEntityModes.MapNewEntity)
+        if (mode != MapToEntityModes.MapToUpdateExistingEntity)
             entity.Address = Address?.MapToObject();
         entity.TimeOnly = TimeOnly ?? default;
 

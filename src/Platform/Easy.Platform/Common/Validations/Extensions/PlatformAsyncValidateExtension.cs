@@ -4,6 +4,46 @@ namespace Easy.Platform.Common.Validations.Extensions;
 
 public static class PlatformAsyncValidateExtension
 {
+    public static Task<PlatformValidationResult<TValue>> ValidateAsync<TValue>(
+        this TValue value,
+        Func<TValue, Task<bool>> must,
+        params PlatformValidationError[] errorMsgs)
+    {
+        return must(value).Then(mustValue => PlatformValidationResult<TValue>.Validate(value, mustValue, errorMsgs));
+    }
+
+    public static Task<PlatformValidationResult<TValue>> ValidateAsync<TValue>(
+        this TValue value,
+        Func<TValue, Task<bool>> must,
+        PlatformValidationError errorMsg)
+    {
+        return must(value).Then(mustValue => PlatformValidationResult<TValue>.Validate(value, mustValue, errorMsg));
+    }
+
+    public static Task<PlatformValidationResult<TValue>> ValidateAsync<TValue>(
+        this TValue value,
+        Func<TValue, Task<bool>> must,
+        Func<TValue, PlatformValidationError> errorMsg)
+    {
+        return must(value).Then(mustValue => PlatformValidationResult<TValue>.Validate(value, mustValue, errorMsg(value)));
+    }
+
+    public static Task<PlatformValidationResult<TValue>> ValidateAsync<TValue>(
+        this TValue value,
+        Func<Task<bool>> must,
+        params PlatformValidationError[] errorMsgs)
+    {
+        return must().Then(mustValue => PlatformValidationResult<TValue>.Validate(value, mustValue, errorMsgs));
+    }
+
+    public static Task<PlatformValidationResult<TValue>> ValidateAsync<TValue>(
+        this TValue value,
+        Task<bool> must,
+        params PlatformValidationError[] errorMsgs)
+    {
+        return must.Then(mustValue => PlatformValidationResult<TValue>.Validate(value, mustValue, errorMsgs));
+    }
+
     /// <summary>
     /// Then validate and map to the next validation[T]. <br />
     /// Validation[T] => AndThenValidateAsync Validation[T1] => Validation[T1]

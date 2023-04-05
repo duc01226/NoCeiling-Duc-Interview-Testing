@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -13,12 +14,12 @@ public static class StringExtension
         return strValue.Length >= takeMaxLength ? strValue.Substring(0, takeMaxLength) : strValue;
     }
 
-    public static string EnsureNotNullOrWhiteSpace(this string target, Func<Exception> exception)
+    public static string EnsureNotNullOrWhiteSpace(this string? target, Func<Exception> exception)
     {
         return target.Ensure(must: target => !string.IsNullOrWhiteSpace(target), exception);
     }
 
-    public static string EnsureNotNullOrEmpty(this string target, Func<Exception> exception)
+    public static string EnsureNotNullOrEmpty(this string? target, Func<Exception> exception)
     {
         return target.Ensure(must: target => !string.IsNullOrEmpty(target), exception);
     }
@@ -38,22 +39,22 @@ public static class StringExtension
         return strValue.Substring(toIndex, strValue.Length - fromIndex);
     }
 
-    public static bool IsNotNullOrEmpty(this string strValue)
+    public static bool IsNotNullOrEmpty([NotNullWhen(true)] this string strValue)
     {
         return !string.IsNullOrEmpty(strValue);
     }
 
-    public static bool IsNotNullOrWhiteSpace(this string strValue)
+    public static bool IsNotNullOrWhiteSpace([NotNullWhen(true)] this string strValue)
     {
         return !string.IsNullOrWhiteSpace(strValue);
     }
 
-    public static bool IsNullOrEmpty(this string strValue)
+    public static bool IsNullOrEmpty([MaybeNullWhen(true)] this string strValue)
     {
         return string.IsNullOrEmpty(strValue);
     }
 
-    public static bool IsNullOrWhiteSpace(this string strValue)
+    public static bool IsNullOrWhiteSpace([MaybeNullWhen(true)] this string strValue)
     {
         return string.IsNullOrWhiteSpace(strValue);
     }

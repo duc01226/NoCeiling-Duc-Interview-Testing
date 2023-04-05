@@ -2,7 +2,7 @@ namespace Easy.Platform.Common.Utils;
 
 public static partial class Util
 {
-    public static class Path
+    public static class PathBuilder
     {
         public static string ConcatRelativePath(params string[] paths)
         {

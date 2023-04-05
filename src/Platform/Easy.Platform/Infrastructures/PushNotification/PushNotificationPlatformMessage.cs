@@ -1,4 +1,5 @@
 using Easy.Platform.Common.Dtos;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Validations;
 
 namespace Easy.Platform.Infrastructures.PushNotification;
@@ -14,8 +15,8 @@ public class PushNotificationPlatformMessage : IPlatformDto<PushNotificationPlat
     public PlatformValidationResult<PushNotificationPlatformMessage> Validate()
     {
         return PlatformValidationResult.Valid(this)
-            .And(p => !string.IsNullOrEmpty(DeviceId), "DeviceId is missing")
-            .And(p => !string.IsNullOrEmpty(Title), "Title is missing")
-            .And(p => !string.IsNullOrEmpty(Body), "Body is missing");
+            .And(p => DeviceId.IsNotNullOrEmpty(), "DeviceId is missing")
+            .And(p => Title.IsNotNullOrEmpty(), "Title is missing")
+            .And(p => Body.IsNotNullOrEmpty(), "Body is missing");
     }
 }

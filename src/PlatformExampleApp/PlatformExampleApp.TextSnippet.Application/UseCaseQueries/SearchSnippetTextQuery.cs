@@ -70,7 +70,7 @@ public class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicationHandler
         var fullItemsQueryBuilder = repository.GetQueryBuilder(
             query => query
                 .PipeIf(
-                    !string.IsNullOrEmpty(request.SearchText),
+                    request.SearchText.IsNotNullOrEmpty(),
                     _ => fullTextSearchPersistenceService.Search(
                         query,
                         request.SearchText,
@@ -84,13 +84,13 @@ public class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicationHandler
                             e => e.SnippetText
                         }))
                 .PipeIf(
-                    !string.IsNullOrEmpty(request.SearchAddress),
+                    request.SearchAddress.IsNotNullOrEmpty(),
                     _ => _.Where(p => p.Addresses.Any(add => add.Street == request.SearchAddress)))
                 .PipeIf(
-                    !string.IsNullOrEmpty(request.SearchSingleAddress),
+                    request.SearchSingleAddress.IsNotNullOrEmpty(),
                     _ => _.Where(p => p.Address.Street == request.SearchSingleAddress))
                 .PipeIf(
-                    !string.IsNullOrEmpty(request.SearchAddressString),
+                    request.SearchAddressString.IsNotNullOrEmpty(),
                     _ => _.Where(p => p.AddressStrings.Any() && p.AddressStrings.Contains(request.SearchAddressString)))
                 .WhereIf(request.SearchId != null, p => p.Id == request.SearchId));
 

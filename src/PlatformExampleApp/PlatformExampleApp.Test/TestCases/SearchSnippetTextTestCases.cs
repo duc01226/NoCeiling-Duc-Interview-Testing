@@ -21,7 +21,7 @@ public class SearchSnippetTextTestCases : TestCase
         // GIVEN: loadedHomePage
         var loadedHomePage = GlobalWebDriver.NavigatePage<TextSnippetApp.HomePage>(Settings)
             .WaitInitLoadingDataSuccessWithFullPagingData(
-                maxWaitForLoadingDataSeconds: Util.Random.ReturnByChanceOrDefault(
+                maxWaitForLoadingDataSeconds: Util.RandomGenerator.ReturnByChanceOrDefault(
                     percentChance: 20, // random 20 percent test failed waiting timeout error by only one second
                     chanceReturnValue: 1,
                     TextSnippetApp.Const.DefaultMaxWaitSeconds));

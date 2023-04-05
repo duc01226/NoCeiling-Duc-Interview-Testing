@@ -27,7 +27,7 @@ public class HomePageSteps : BddStepDefinitions<TextSnippetAutomationTestSetting
         Context.LoadedSuccessHomePage = WebDriver.NavigatePage<TextSnippetApp.HomePage>(Settings)
             .WaitInitLoadingDataSuccessWithFullPagingData(
                 maxWaitForLoadingDataSeconds: Settings.RandomTestShortWaitingFailed == true
-                    ? Util.Random.ReturnByChanceOrDefault(
+                    ? Util.RandomGenerator.ReturnByChanceOrDefault(
                         percentChance: 20, // random 20 percent test failed waiting timeout error by only one second
                         chanceReturnValue: 1,
                         TextSnippetApp.Const.DefaultMaxWaitSeconds)

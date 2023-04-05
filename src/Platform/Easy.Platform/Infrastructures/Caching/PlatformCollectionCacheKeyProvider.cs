@@ -38,7 +38,7 @@ public class PlatformCollectionCacheKeyProvider : PlatformContextCacheKeyProvide
     protected override PlatformCollectionCacheKeyProvider EnsureValidProvider()
     {
         return this.Ensure(
-            p => !string.IsNullOrEmpty(p.Context) && !string.IsNullOrEmpty(p.Collection),
+            p => p.Context.IsNotNullOrEmpty() && p.Collection.IsNotNullOrEmpty(),
             () => new Exception("Context and Collection must be not null"));
     }
 }

@@ -6,12 +6,17 @@ namespace Easy.Platform.AspNetCore.ExceptionHandling;
 
 public class PlatformAspNetMvcErrorInfo
 {
+    private const string DefaultServerErrorMessage =
+        "There is an unexpected error during the processing of the request. Please try again or contact the Administrator for help.";
+
     /// <summary>
     ///     One of a server-defined set of error types.
     /// </summary>
     public string Code { get; set; }
 
     public string Message { get; set; }
+
+    public string? DeveloperExceptionMessage { get; set; }
 
     public Dictionary<string, object> FormattedMessagePlaceholderValues { get; set; }
 
@@ -22,13 +27,27 @@ public class PlatformAspNetMvcErrorInfo
 
     public List<PlatformAspNetMvcErrorInfo> Details { get; set; }
 
+    public static PlatformAspNetMvcErrorInfo FromUnknownException(
+        Exception exception,
+        bool developerExceptionEnabled)
+    {
+        return new PlatformAspNetMvcErrorInfo
+        {
+            Code = "InternalServerException",
+            Message = DefaultServerErrorMessage,
+            DeveloperExceptionMessage = developerExceptionEnabled ? exception.ToString() : null
+        };
+    }
+
     public static PlatformAspNetMvcErrorInfo FromValidationException(
-        IPlatformValidationException validationException)
+        IPlatformValidationException validationException,
+        bool developerExceptionEnabled)
     {
         return new PlatformAspNetMvcErrorInfo
         {
             Code = validationException.GetType().Name,
             Message = validationException.Message,
+            DeveloperExceptionMessage = developerExceptionEnabled ? validationException.ToString() : null,
             Details = validationException.ValidationResult.AggregateErrors()
                 .Select(
                     p => new PlatformAspNetMvcErrorInfo
@@ -43,42 +62,50 @@ public class PlatformAspNetMvcErrorInfo
     }
 
     public static PlatformAspNetMvcErrorInfo FromApplicationException(
-        PlatformApplicationException applicationException)
+        PlatformApplicationException applicationException,
+        bool developerExceptionEnabled)
     {
         return new PlatformAspNetMvcErrorInfo
         {
             Code = applicationException.GetType().Name,
-            Message = applicationException.Message
+            Message = applicationException.Message,
+            DeveloperExceptionMessage = developerExceptionEnabled ? applicationException.ToString() : null
         };
     }
 
     public static PlatformAspNetMvcErrorInfo FromDomainException(
-        PlatformDomainException domainException)
+        PlatformDomainException domainException,
+        bool developerExceptionEnabled)
     {
         return new PlatformAspNetMvcErrorInfo
         {
             Code = domainException.GetType().Name,
-            Message = domainException.Message
+            Message = domainException.Message,
+            DeveloperExceptionMessage = developerExceptionEnabled ? domainException.ToString() : null
         };
     }
 
     public static PlatformAspNetMvcErrorInfo FromPermissionException(
-        PlatformPermissionException permissionException)
+        PlatformPermissionException permissionException,
+        bool developerExceptionEnabled)
     {
         return new PlatformAspNetMvcErrorInfo
         {
             Code = permissionException.GetType().Name,
-            Message = permissionException.Message
+            Message = permissionException.Message,
+            DeveloperExceptionMessage = developerExceptionEnabled ? permissionException.ToString() : null
         };
     }
 
     public static PlatformAspNetMvcErrorInfo FromNotFoundException(
-        PlatformNotFoundException domainNotFoundException)
+        PlatformNotFoundException domainNotFoundException,
+        bool developerExceptionEnabled)
     {
         return new PlatformAspNetMvcErrorInfo
         {
             Code = nameof(PlatformNotFoundException),
-            Message = domainNotFoundException.Message
+            Message = domainNotFoundException.Message,
+            DeveloperExceptionMessage = developerExceptionEnabled ? domainNotFoundException.ToString() : null
         };
     }
 }

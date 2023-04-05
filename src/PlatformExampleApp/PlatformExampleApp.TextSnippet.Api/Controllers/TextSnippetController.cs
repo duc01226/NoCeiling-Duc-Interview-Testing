@@ -38,7 +38,7 @@ public class TextSnippetController : PlatformBaseController
     public async Task<SearchSnippetTextQueryResult> Search([FromQuery] SearchSnippetTextQuery request)
     {
         // Random delay slow request for spinner
-        Util.Random.DoByChance(50, () => Thread.Sleep(1000));
+        Util.RandomGenerator.DoByChance(50, () => Thread.Sleep(1000));
 
         RandomThrowToTestHandleInternalException();
 
@@ -71,7 +71,7 @@ public class TextSnippetController : PlatformBaseController
     public async Task<SaveSnippetTextCommandResult> Save([FromBody] SaveSnippetTextCommand request)
     {
         // Random delay slow request for spinner
-        Util.Random.DoByChance(50, () => Thread.Sleep(1000));
+        Util.RandomGenerator.DoByChance(50, () => Thread.Sleep(1000));
 
         RandomThrowToTestHandleInternalException();
 
@@ -150,7 +150,7 @@ public class TextSnippetController : PlatformBaseController
     [Route("testSaveUsingDirectDbContext")]
     public async Task<SaveSnippetTextCommandResult> TestSaveUsingDirectDbContext([FromBody] SaveSnippetTextCommand request)
     {
-        var savedEntity = await textSnippetDbContext.CreateOrUpdateAsync<TextSnippetEntity, Guid>(request.Data.MapToNewEntity());
+        var savedEntity = await textSnippetDbContext.CreateOrUpdateAsync<TextSnippetEntity, Guid>(request.Data.MapToEntity());
 
         await textSnippetDbContext.SaveChangesAsync();
 
@@ -163,7 +163,7 @@ public class TextSnippetController : PlatformBaseController
     private static void RandomThrowToTestHandleInternalException(int percentChance = 5)
     {
         if (PlatformApplicationGlobal.Configuration.GetSection("RandomThrowExceptionForTesting").Get<bool?>() == true)
-            Util.Random.DoByChance(
+            Util.RandomGenerator.DoByChance(
                 percentChance,
                 () => throw new Exception("Random Test Throw Exception"));
     }

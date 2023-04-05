@@ -153,6 +153,6 @@ public class PlatformFileStorageUploader
     /// </summary>
     public static string CombinePath(params string[] elements)
     {
-        return string.Join('/', elements.Where(el => !string.IsNullOrEmpty(el)));
+        return string.Join('/', elements.Where(el => el.IsNotNullOrEmpty()));
     }
 }

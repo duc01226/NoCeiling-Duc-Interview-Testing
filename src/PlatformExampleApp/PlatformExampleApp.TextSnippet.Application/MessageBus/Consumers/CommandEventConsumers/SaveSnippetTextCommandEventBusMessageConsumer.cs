@@ -35,7 +35,7 @@ public class SaveSnippetTextCommandEventBusMessageConsumer : PlatformCqrsCommand
         PlatformBusMessage<PlatformCqrsCommandEvent<SaveSnippetTextCommand>> message,
         string routingKey)
     {
-        Util.Random.DoByChance(
+        Util.RandomGenerator.DoByChance(
             percentChance: 5,
             () => throw new Exception("Random Test Retry Consumer Throw Exception"));
 

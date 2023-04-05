@@ -1,3 +1,4 @@
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Validations;
 
 namespace Easy.Platform.Infrastructures.MessageBus;
@@ -101,7 +102,7 @@ public class PlatformConsumerRoutingKeyAttribute : Attribute
 
     public bool IsMatchMessageRoutingKey(string messageRoutingKey)
     {
-        if (!string.IsNullOrEmpty(CustomRoutingKey))
+        if (CustomRoutingKey.IsNotNullOrEmpty())
             return PlatformBusMessageRoutingKey.IsMatchRoutingKeyPattern(
                        routingKeyPattern: CustomRoutingKey,
                        messageRoutingKey) ||
@@ -125,14 +126,14 @@ public class PlatformConsumerRoutingKeyAttribute : Attribute
 
     public string ConsumerBindingRoutingKey()
     {
-        return !string.IsNullOrEmpty(CustomRoutingKey)
+        return CustomRoutingKey.IsNotNullOrEmpty()
             ? PlatformBusMessageRoutingKey.BuildCombinedStringKey(MessageGroup, CustomRoutingKey)
             : PlatformBusMessageRoutingKey.BuildCombinedStringKey(MessageGroup, ProducerContext, MessageType);
     }
 
     private void EnsureValid(Func<PlatformValidationResult, Exception> exceptionProvider = null)
     {
-        if (!string.IsNullOrEmpty(CustomRoutingKey))
+        if (CustomRoutingKey.IsNotNullOrEmpty())
             PlatformBusMessageRoutingKey
                 .New(
                     MessageGroup,

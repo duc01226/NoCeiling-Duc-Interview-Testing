@@ -234,7 +234,7 @@ public interface IPage : IUiComponent
 
     public static string BuildBaseUrl(string origin, string path)
     {
-        return Util.Path.ConcatRelativePath(origin, path);
+        return Util.PathBuilder.ConcatRelativePath(origin, path);
     }
 
     public static string BuildPath<TPage>(TPage page) where TPage : IPage

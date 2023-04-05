@@ -58,7 +58,7 @@ public class PlatformContextCacheKeyProvider : IPlatformContextCacheKeyProvider
 
     protected virtual PlatformContextCacheKeyProvider EnsureValidProvider()
     {
-        return this.Ensure(p => !string.IsNullOrEmpty(p.Context), () => new Exception("Context must be not null"));
+        return this.Ensure(p => p.Context.IsNotNullOrEmpty(), () => new Exception("Context must be not null"));
     }
 }
 
