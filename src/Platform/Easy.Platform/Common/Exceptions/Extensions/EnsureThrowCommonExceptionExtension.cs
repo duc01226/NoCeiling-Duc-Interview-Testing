@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Validations;
@@ -47,8 +48,10 @@ public static class EnsureThrowCommonExceptionExtension
         return value.EnsurePermissionValid(must, errorMsg);
     }
 
+    [return: NotNull]
     public static T EnsureFound<T>(this T? obj, string errorMsg = null)
     {
+        if (obj is Task) throw new Exception($"Target should not be a task. You might want to use {nameof(EnsureFoundAsync)} instead.");
         return obj.ValidateFound(errorMsg).WithNotFoundException().EnsureValid();
     }
 
@@ -81,8 +84,10 @@ public static class EnsureThrowCommonExceptionExtension
         return objects.ValidateFound(errorMsg).WithNotFoundException().EnsureValid();
     }
 
+    [return: NotNull]
     public static T EnsureFound<T>(this T? obj, Func<T, bool> and, string errorMsg = null)
     {
+        if (obj is Task) throw new Exception($"Target should not be a task. You might want to use {nameof(EnsureFoundAsync)} instead.");
         return obj.ValidateFound(and, errorMsg).WithNotFoundException().EnsureValid();
     }
 
@@ -91,23 +96,27 @@ public static class EnsureThrowCommonExceptionExtension
         return query.ValidateFoundAny(any, errorMsg).WithNotFoundException().EnsureValid();
     }
 
+    [return: NotNull]
     public static async Task<T> EnsureFoundAsync<T>(this Task<T?> objectTask, string errorMessage = null)
     {
         var obj = await objectTask;
         return obj.EnsureFound(errorMessage);
     }
 
+    [return: NotNull]
     public static async Task<T> EnsureFoundAsync<T>(this T? obj, Func<T, Task<bool>> and, string errorMsg = null)
     {
         return await obj.ValidateFoundAsync(and, errorMsg).Then(p => p.WithNotFoundException().EnsureValid());
     }
 
+    [return: NotNull]
     public static async Task<T> EnsureFoundAsync<T>(this Task<T?> objectTask, Func<T, bool> and, string errorMsg = null)
     {
         var obj = await objectTask;
         return obj.EnsureFound(and, errorMsg);
     }
 
+    [return: NotNull]
     public static async Task<T> EnsureFoundAsync<T>(this Task<T?> objectTask, Func<T, Task<bool>> and, string errorMsg = null)
     {
         var obj = await objectTask;
