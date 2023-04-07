@@ -32,4 +32,11 @@ public abstract class PlatformCqrsRequestApplicationHandler<TRequest> : Platform
     {
         return requestSelfValidation;
     }
+
+    protected virtual async Task<PlatformValidationResult<TRequest>> ValidateRequestAsync(
+        TRequest request,
+        CancellationToken cancellationToken)
+    {
+        return await ValidateRequestAsync(request.Validate().Of<TRequest>(), cancellationToken);
+    }
 }

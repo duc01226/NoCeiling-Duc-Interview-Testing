@@ -33,8 +33,40 @@ public static class TaskExtension
         this Task<T> task,
         Func<T, Task<TR>> nextTask)
     {
-        var targetValue = await task;
-        return await nextTask(targetValue);
+        var taskResult = await task;
+        return await nextTask(taskResult);
+    }
+
+    public static async Task<TR> Then<T1, T2, TR>(
+        this Task<ValueTuple<T1, T2>> task,
+        Func<T1, T2, Task<TR>> nextTask)
+    {
+        var taskResult = await task;
+        return await nextTask(taskResult.Item1, taskResult.Item2);
+    }
+
+    public static async Task<TR> Then<T1, T2, T3, TR>(
+        this Task<ValueTuple<T1, T2, T3>> task,
+        Func<T1, T2, T3, Task<TR>> nextTask)
+    {
+        var taskResult = await task;
+        return await nextTask(taskResult.Item1, taskResult.Item2, taskResult.Item3);
+    }
+
+    public static async Task<TR> Then<T1, T2, T3, T4, TR>(
+        this Task<ValueTuple<T1, T2, T3, T4>> task,
+        Func<T1, T2, T3, T4, Task<TR>> nextTask)
+    {
+        var taskResult = await task;
+        return await nextTask(taskResult.Item1, taskResult.Item2, taskResult.Item3, taskResult.Item4);
+    }
+
+    public static async Task<TR> Then<T1, T2, T3, T4, T5, TR>(
+        this Task<ValueTuple<T1, T2, T3, T4, T5>> task,
+        Func<T1, T2, T3, T4, T5, Task<TR>> nextTask)
+    {
+        var taskResult = await task;
+        return await nextTask(taskResult.Item1, taskResult.Item2, taskResult.Item3, taskResult.Item4, taskResult.Item5);
     }
 
     public static async Task<T> ThenSideEffectAction<T>(
@@ -150,7 +182,7 @@ public static class TaskExtension
                 : t.GetResult());
     }
 
-    public static Task<T> AsTask<T>(this T t)
+    public static Task<T> ToTask<T>(this T t)
     {
         return Task.FromResult(t);
     }
@@ -415,4 +447,302 @@ public static class TaskExtension
 
         return target;
     }
+
+    #region ThenFrom
+
+    public static async Task<ValueTuple<TR1, TR2>> ThenGetAll<TR1, TR2>(
+        this Task task,
+        Func<TR1> fr1,
+        Func<TR2> fr2)
+    {
+        await task;
+        return (fr1(), fr2());
+    }
+
+    public static async Task<ValueTuple<TR1, TR2, TR3>> ThenGetAll<TR1, TR2, TR3>(
+        this Task task,
+        Func<TR1> fr1,
+        Func<TR2> fr2,
+        Func<TR3> fr3)
+    {
+        await task;
+        return (fr1(), fr2(), fr3());
+    }
+
+    public static async Task<ValueTuple<TR1, TR2, TR3, TR4>> ThenGetAll<TR1, TR2, TR3, TR4>(
+        this Task task,
+        Func<TR1> fr1,
+        Func<TR2> fr2,
+        Func<TR3> fr3,
+        Func<TR4> fr4)
+    {
+        await task;
+        return (fr1(), fr2(), fr3(), fr4());
+    }
+
+    public static async Task<ValueTuple<TR1, TR2, TR3, TR4, TR5>> ThenGetAll<TR1, TR2, TR3, TR4, TR5>(
+        this Task task,
+        Func<TR1> fr1,
+        Func<TR2> fr2,
+        Func<TR3> fr3,
+        Func<TR4> fr4,
+        Func<TR5> fr5)
+    {
+        await task;
+        return (fr1(), fr2(), fr3(), fr4(), fr5());
+    }
+
+
+    public static async Task<ValueTuple<TR1, TR2>> ThenGetAll<T, TR1, TR2>(
+        this Task<T> task,
+        Func<T, TR1> fr1,
+        Func<T, TR2> fr2)
+    {
+        var tResult = await task;
+        return (fr1(tResult), fr2(tResult));
+    }
+
+    public static async Task<ValueTuple<TR1, TR2, TR3>> ThenGetAll<T, TR1, TR2, TR3>(
+        this Task<T> task,
+        Func<T, TR1> fr1,
+        Func<T, TR2> fr2,
+        Func<T, TR3> fr3)
+    {
+        var tResult = await task;
+        return (fr1(tResult), fr2(tResult), fr3(tResult));
+    }
+
+    public static async Task<ValueTuple<TR1, TR2, TR3, TR4>> ThenGetAll<T, TR1, TR2, TR3, TR4>(
+        this Task<T> task,
+        Func<T, TR1> fr1,
+        Func<T, TR2> fr2,
+        Func<T, TR3> fr3,
+        Func<T, TR4> fr4)
+    {
+        var tResult = await task;
+        return (fr1(tResult), fr2(tResult), fr3(tResult), fr4(tResult));
+    }
+
+    public static async Task<ValueTuple<TR1, TR2, TR3, TR4, TR5>> ThenGetAll<T, TR1, TR2, TR3, TR4, TR5>(
+        this Task<T> task,
+        Func<T, TR1> fr1,
+        Func<T, TR2> fr2,
+        Func<T, TR3> fr3,
+        Func<T, TR4> fr4,
+        Func<T, TR5> fr5)
+    {
+        var tResult = await task;
+        return (fr1(tResult), fr2(tResult), fr3(tResult), fr4(tResult), fr5(tResult));
+    }
+
+    public static async Task<ValueTuple<TR1, TR2>> ThenGetAll<T1, T2, TR1, TR2>(
+        this Task<ValueTuple<T1, T2>> task,
+        Func<T1, T2, TR1> fr1,
+        Func<T1, T2, TR2> fr2)
+    {
+        var tResult = await task;
+        return (fr1(tResult.Item1, tResult.Item2), fr2(tResult.Item1, tResult.Item2));
+    }
+
+    public static async Task<ValueTuple<TR1, TR2, TR3>> ThenGetAll<T1, T2, TR1, TR2, TR3>(
+        this Task<ValueTuple<T1, T2>> task,
+        Func<T1, T2, TR1> fr1,
+        Func<T1, T2, TR2> fr2,
+        Func<T1, T2, TR3> fr3)
+    {
+        var tResult = await task;
+        return (fr1(tResult.Item1, tResult.Item2), fr2(tResult.Item1, tResult.Item2), fr3(tResult.Item1, tResult.Item2));
+    }
+
+    public static async Task<ValueTuple<TR1, TR2>> ThenGetAll<T1, T2, T3, TR1, TR2>(
+        this Task<ValueTuple<T1, T2, T3>> task,
+        Func<T1, T2, T3, TR1> fr1,
+        Func<T1, T2, T3, TR2> fr2)
+    {
+        var tResult = await task;
+        return (fr1(tResult.Item1, tResult.Item2, tResult.Item3), fr2(tResult.Item1, tResult.Item2, tResult.Item3));
+    }
+
+    public static async Task<ValueTuple<TR1, TR2, TR3>> ThenGetAll<T1, T2, T3, TR1, TR2, TR3>(
+        this Task<ValueTuple<T1, T2, T3>> task,
+        Func<T1, T2, T3, TR1> fr1,
+        Func<T1, T2, T3, TR2> fr2,
+        Func<T1, T2, T3, TR3> fr3)
+    {
+        var tResult = await task;
+        return (fr1(tResult.Item1, tResult.Item2, tResult.Item3), fr2(tResult.Item1, tResult.Item2, tResult.Item3), fr3(tResult.Item1, tResult.Item2, tResult.Item3));
+    }
+
+
+    public static async Task<ValueTuple<TR1, TR2>> ThenGetAllAsync<TR1, TR2>(
+        this Task task,
+        Func<Task<TR1>> fr1,
+        Func<Task<TR2>> fr2)
+    {
+        await task;
+
+        return await Util.TaskRunner.WhenAll(fr1(), fr2());
+    }
+
+    public static async Task<ValueTuple<TR1, TR2, TR3>> ThenGetAllAsync<TR1, TR2, TR3>(
+        this Task task,
+        Func<Task<TR1>> fr1,
+        Func<Task<TR2>> fr2,
+        Func<Task<TR3>> fr3)
+    {
+        await task;
+        return await Util.TaskRunner.WhenAll(fr1(), fr2(), fr3());
+    }
+
+    public static async Task<ValueTuple<TR1, TR2, TR3, TR4>> ThenGetAllAsync<TR1, TR2, TR3, TR4>(
+        this Task task,
+        Func<Task<TR1>> fr1,
+        Func<Task<TR2>> fr2,
+        Func<Task<TR3>> fr3,
+        Func<Task<TR4>> fr4)
+    {
+        await task;
+        return await Util.TaskRunner.WhenAll(fr1(), fr2(), fr3(), fr4());
+    }
+
+    public static async Task<ValueTuple<TR1, TR2, TR3, TR4, TR5>> ThenGetAllAsync<TR1, TR2, TR3, TR4, TR5>(
+        this Task task,
+        Func<Task<TR1>> fr1,
+        Func<Task<TR2>> fr2,
+        Func<Task<TR3>> fr3,
+        Func<Task<TR4>> fr4,
+        Func<Task<TR5>> fr5)
+    {
+        await task;
+        return await Util.TaskRunner.WhenAll(fr1(), fr2(), fr3(), fr4(), fr5());
+    }
+
+    public static async Task<ValueTuple<TR1, TR2>> ThenGetAllAsync<T, TR1, TR2>(
+        this Task<T> task,
+        Func<T, Task<TR1>> fr1,
+        Func<T, Task<TR2>> fr2)
+    {
+        var tResult = await task;
+        return await Util.TaskRunner.WhenAll(fr1(tResult), fr2(tResult));
+    }
+
+    public static async Task<ValueTuple<TR1, TR2, TR3>> ThenGetAllAsync<T, TR1, TR2, TR3>(
+        this Task<T> task,
+        Func<T, Task<TR1>> fr1,
+        Func<T, Task<TR2>> fr2,
+        Func<T, Task<TR3>> fr3)
+    {
+        var tResult = await task;
+        return await Util.TaskRunner.WhenAll(fr1(tResult), fr2(tResult), fr3(tResult));
+    }
+
+    public static async Task<ValueTuple<TR1, TR2, TR3, TR4>> ThenGetAllAsync<T, TR1, TR2, TR3, TR4>(
+        this Task<T> task,
+        Func<T, Task<TR1>> fr1,
+        Func<T, Task<TR2>> fr2,
+        Func<T, Task<TR3>> fr3,
+        Func<T, Task<TR4>> fr4)
+    {
+        var tResult = await task;
+        return await Util.TaskRunner.WhenAll(fr1(tResult), fr2(tResult), fr3(tResult), fr4(tResult));
+    }
+
+    public static async Task<ValueTuple<TR1, TR2, TR3, TR4, TR5>> ThenGetAllAsync<T, TR1, TR2, TR3, TR4, TR5>(
+        this Task<T> task,
+        Func<T, Task<TR1>> fr1,
+        Func<T, Task<TR2>> fr2,
+        Func<T, Task<TR3>> fr3,
+        Func<T, Task<TR4>> fr4,
+        Func<T, Task<TR5>> fr5)
+    {
+        var tResult = await task;
+        return await Util.TaskRunner.WhenAll(fr1(tResult), fr2(tResult), fr3(tResult), fr4(tResult), fr5(tResult));
+    }
+
+
+    public static async Task<ValueTuple<TR1, TR2>> ThenGetAllAsync<T1, T2, TR1, TR2>(
+        this Task<ValueTuple<T1, T2>> task,
+        Func<T1, T2, Task<TR1>> fr1,
+        Func<T1, T2, Task<TR2>> fr2)
+    {
+        var tResult = await task;
+        return await Util.TaskRunner.WhenAll(fr1(tResult.Item1, tResult.Item2), fr2(tResult.Item1, tResult.Item2));
+    }
+
+    public static async Task<ValueTuple<TR1, TR2, TR3>> ThenGetAllAsync<T1, T2, TR1, TR2, TR3>(
+        this Task<ValueTuple<T1, T2>> task,
+        Func<T1, T2, Task<TR1>> fr1,
+        Func<T1, T2, Task<TR2>> fr2,
+        Func<T1, T2, Task<TR3>> fr3)
+    {
+        var tResult = await task;
+        return await Util.TaskRunner.WhenAll(fr1(tResult.Item1, tResult.Item2), fr2(tResult.Item1, tResult.Item2), fr3(tResult.Item1, tResult.Item2));
+    }
+
+    public static async Task<ValueTuple<TR1, TR2>> ThenGetAllAsync<T1, T2, T3, TR1, TR2>(
+        this Task<ValueTuple<T1, T2, T3>> task,
+        Func<T1, T2, T3, Task<TR1>> fr1,
+        Func<T1, T2, T3, Task<TR2>> fr2)
+    {
+        var tResult = await task;
+        return await Util.TaskRunner.WhenAll(fr1(tResult.Item1, tResult.Item2, tResult.Item3), fr2(tResult.Item1, tResult.Item2, tResult.Item3));
+    }
+
+    public static async Task<ValueTuple<TR1, TR2, TR3>> ThenGetAllAsync<T1, T2, T3, TR1, TR2, TR3>(
+        this Task<ValueTuple<T1, T2, T3>> task,
+        Func<T1, T2, T3, Task<TR1>> fr1,
+        Func<T1, T2, T3, Task<TR2>> fr2,
+        Func<T1, T2, T3, Task<TR3>> fr3)
+    {
+        var tResult = await task;
+        return await Util.TaskRunner.WhenAll(
+            fr1(tResult.Item1, tResult.Item2, tResult.Item3),
+            fr2(tResult.Item1, tResult.Item2, tResult.Item3),
+            fr3(tResult.Item1, tResult.Item2, tResult.Item3));
+    }
+
+
+    public static async Task<ValueTuple<T, TR1, TR2>> ThenWithAllAsync<T, TR1, TR2>(
+        this Task<T> task,
+        Func<T, Task<TR1>> fr1,
+        Func<T, Task<TR2>> fr2)
+    {
+        var tResult = await task;
+        return await Util.TaskRunner.WhenAll(tResult.ToTask(), fr1(tResult), fr2(tResult));
+    }
+
+    public static async Task<ValueTuple<T, TR1, TR2, TR3>> ThenWithAllAsync<T, TR1, TR2, TR3>(
+        this Task<T> task,
+        Func<T, Task<TR1>> fr1,
+        Func<T, Task<TR2>> fr2,
+        Func<T, Task<TR3>> fr3)
+    {
+        var tResult = await task;
+        return await Util.TaskRunner.WhenAll(tResult.ToTask(), fr1(tResult), fr2(tResult), fr3(tResult));
+    }
+
+    public static async Task<ValueTuple<T, TR1, TR2, TR3, TR4>> ThenWithAllAsync<T, TR1, TR2, TR3, TR4>(
+        this Task<T> task,
+        Func<T, Task<TR1>> fr1,
+        Func<T, Task<TR2>> fr2,
+        Func<T, Task<TR3>> fr3,
+        Func<T, Task<TR4>> fr4)
+    {
+        var tResult = await task;
+        return await Util.TaskRunner.WhenAll(tResult.ToTask(), fr1(tResult), fr2(tResult), fr3(tResult), fr4(tResult));
+    }
+
+    public static async Task<ValueTuple<T, TR1, TR2, TR3, TR4, TR5>> ThenWithAllAsync<T, TR1, TR2, TR3, TR4, TR5>(
+        this Task<T> task,
+        Func<T, Task<TR1>> fr1,
+        Func<T, Task<TR2>> fr2,
+        Func<T, Task<TR3>> fr3,
+        Func<T, Task<TR4>> fr4,
+        Func<T, Task<TR5>> fr5)
+    {
+        var tResult = await task;
+        return await Util.TaskRunner.WhenAll(tResult.ToTask(), fr1(tResult), fr2(tResult), fr3(tResult), fr4(tResult), fr5(tResult));
+    }
+
+    #endregion
 }

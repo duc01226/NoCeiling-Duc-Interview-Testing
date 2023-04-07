@@ -31,7 +31,7 @@ public class SaveSnippetTextCommand : PlatformCqrsCommand<SaveSnippetTextCommand
         return this
             .Validate(p => Data != null, "Data must be not null.")
             .And(p => Data.MapToEntity().Validate().Of(p))
-            .AndThenValidate(p => p.JustDemoUsingValidateNot())
+            .ThenValidate(p => p.JustDemoUsingValidateNot())
             .Of<IPlatformCqrsRequest>();
     }
 
@@ -79,6 +79,115 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
         this.sendMailService.SendEmail("demo@email.com", "demo header", "demo content");
     }
 
+    /*
+     * OTHER CODE FROM OTHER PROJECT DEMO CHAINING WAY TO SHOW THAT CLEAN FLUENT PROGRAMMING CODE COULD DO CHAINING.
+     * ALSO DEMO CONVENIENT MAPPING METHOD FOR Task<PlatformValidation<T>> and Task<PlatformValidation<ValueTuple<T1,T2,T3>>>
+     *
+     * var validationOfResult = await ValidateRequestAsync(request, cancellationToken)
+            .WaitValidThenWithAllAsync(
+                request => employeeRepository.FirstAsync(
+                    predicate: Employee.UniqueExpr(CurrentUser.ProductScope(), CurrentUser.CurrentCompanyId(), CurrentUser.UserId()),
+                    cancellationToken,
+                    loadRelatedEntities: p => p.User),
+                request => employeeRepository.FirstAsync(
+                    predicate: Employee.UniqueExpr(CurrentUser.ProductScope(), CurrentUser.CurrentCompanyId(), CurrentUser.UserId()),
+                    cancellationToken,
+                    loadRelatedEntities: p => p.User))
+            .WaitValidThenGetAllAsync(
+                (request, currentUserEmployee1, currentUserEmployee2) => currentUserEmployee1.ToTask(),
+                (request, currentUserEmployee1, currentUserEmployee2) => currentUserEmployee2.ToTask())
+            .WaitValidThenGetAll(
+                (currentUserEmployee1, currentUserEmployee2) => currentUserEmployee1,
+                (currentUserEmployee1, currentUserEmployee2) => currentUserEmployee2)
+            .WaitValidThen(
+                (currentUserEmployee1, currentUserEmployee2) =>
+                    request.Data.IsSubmitToCreate()
+                        ? request.Data.MapToNewEntity()
+                            .With(_ => _.EmployeeId = currentUserEmployee1.Id)
+                            .With(_ => _.UserId = currentUserEmployee1.UserId)
+                            .With(_ => _.TimeZone = request.TimeZone)
+                            .ToTask()
+                        : leaveRequestRepository
+                            .GetByIdAsync(request.Data.Id, cancellationToken)
+                            .Then(existingEntity => request.Data.UpdateToEntity(existingEntity)))
+            .WaitValidThen(
+                toSaveLeaveRequest => toSaveLeaveRequest.ValidateCanBeSavedAsync(
+                    isUpdate: request.Data.IsSubmitToUpdate(),
+                    leaveRequestRepository,
+                    leaveTypeRepository,
+                    employeeRemainingLeaveRepository,
+                    employeeRepository,
+                    CurrentUser.ProductScope(),
+                    cancellationToken))
+            .WaitValidThen(
+                validToSaveLeaveRequest => leaveRequestRepository.CreateOrUpdateAsync(validToSaveLeaveRequest, cancellationToken: cancellationToken)
+                    .ThenSideEffectActionAsync(
+                        async p =>
+                        {
+                            // Side effect before return result here using ThenSideEffectActionAsync
+                            if (request.IsSendingNotificationEmail && request.Data.IsSubmitToCreate())
+                                await leaveRequestEmailHelper.SendEmailApproverAsync(validToSaveLeaveRequest);
+                        }))
+            .WaitValidThen(
+                savedLeaveRequest => new SaveLeaveRequestCommandResult
+                {
+                    SaveLeaveRequest = new LeaveRequestEntityDto(savedLeaveRequest)
+                });
+
+        var ensuredValidResult = await ValidateRequestAsync(request, cancellationToken)
+            .EnsureValidAsync()
+            .ThenWithAllAsync(
+                request => employeeRepository.FirstAsync(
+                    predicate: Employee.UniqueExpr(CurrentUser.ProductScope(), CurrentUser.CurrentCompanyId(), CurrentUser.UserId()),
+                    cancellationToken,
+                    loadRelatedEntities: p => p.User),
+                request => employeeRepository.FirstAsync(
+                    predicate: Employee.UniqueExpr(CurrentUser.ProductScope(), CurrentUser.CurrentCompanyId(), CurrentUser.UserId()),
+                    cancellationToken,
+                    loadRelatedEntities: p => p.User))
+            .ThenGetAllAsync(
+                (request, currentUserEmployee1, currentUserEmployee2) => currentUserEmployee1.ToTask(),
+                (request, currentUserEmployee1, currentUserEmployee2) => currentUserEmployee2.ToTask())
+            .ThenGetAll(
+                (currentUserEmployee1, currentUserEmployee2) => currentUserEmployee1,
+                (currentUserEmployee1, currentUserEmployee2) => currentUserEmployee2)
+            .Then(
+                (currentUserEmployee1, currentUserEmployee2) => request.Data.IsSubmitToCreate()
+                    ? request.Data.MapToNewEntity()
+                        .With(_ => _.EmployeeId = currentUserEmployee1.Id)
+                        .With(_ => _.UserId = currentUserEmployee1.UserId)
+                        .With(_ => _.TimeZone = request.TimeZone)
+                        .ToTask()
+                    : leaveRequestRepository
+                        .GetByIdAsync(request.Data.Id, cancellationToken)
+                        .Then(existingEntity => request.Data.UpdateToEntity(existingEntity)))
+            .Then(
+                toSaveLeaveRequest => toSaveLeaveRequest
+                    .ValidateCanBeSavedAsync(
+                        isUpdate: request.Data.IsSubmitToUpdate(),
+                        leaveRequestRepository,
+                        leaveTypeRepository,
+                        employeeRemainingLeaveRepository,
+                        employeeRepository,
+                        CurrentUser.ProductScope(),
+                        cancellationToken)
+                    .EnsureValidAsync())
+            .Then(
+                validToSaveLeaveRequest => leaveRequestRepository.CreateOrUpdateAsync(validToSaveLeaveRequest, cancellationToken: cancellationToken)
+                    .ThenSideEffectActionAsync(
+                        async p =>
+                        {
+                            // Side effect before return result here using ThenSideEffectActionAsync
+                            if (request.IsSendingNotificationEmail && request.Data.IsSubmitToCreate())
+                                await leaveRequestEmailHelper.SendEmailApproverAsync(validToSaveLeaveRequest);
+                        }))
+            .Then(
+                savedLeaveRequest => new SaveLeaveRequestCommandResult
+                {
+                    SaveLeaveRequest = new LeaveRequestEntityDto(savedLeaveRequest)
+                });
+     */
+
     /// <summary>
     /// DEMO ADDITIONAL VALIDATE REQUEST ASYNC IF NEEDED, OVERRIDE THE FUNCTION ValidateRequestAsync
     /// </summary>
@@ -90,7 +199,7 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
             request =>
             {
                 // Logic async validation here, example connect database to validate something
-                return PlatformValidationResult.Valid(request).AsTask();
+                return PlatformValidationResult.Valid(request).ToTask();
             });
     }
 
@@ -126,14 +235,14 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
                 {
                     Id = userId,
                     Name = $"User {userId}"
-                }.AsTask()); // return [{Id:"UserId1",Name:"User UserId1"},{Id:"UserId2",Name:"User UserId2"}]
+                }.ToTask()); // return [{Id:"UserId1",Name:"User UserId1"},{Id:"UserId2",Name:"User UserId2"}]
         var demoGetItemsByExecuteAsyncOnEachOtherItemsWithItemIndex = await Util.ListBuilder.New("UserId1", "UserId2")
             .SelectAsync(
                 (userId, itemIndex) => new
                 {
                     Id = userId,
                     Name = $"User Index{itemIndex} {userId}"
-                }.AsTask()); // return [{Id:"UserId1",Name:"User Index0 UserId1"},{Id:"UserId2",Name:"User Index1 UserId2"}]
+                }.ToTask()); // return [{Id:"UserId1",Name:"User Index0 UserId1"},{Id:"UserId2",Name:"User Index1 UserId2"}]
         await Util.ListBuilder.New("UserId1", "UserId2")
             .ForEachAsync(
                 (userId, itemIndex) => Task.Run(() => logger.LogInformation($"{userId} {itemIndex}"), cancellationToken)); // Demo ForEach call async function
@@ -141,7 +250,7 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
         // Check that an obj could be a object as other type. Like xxx as TXX in c#. Return null if it could not be parsed.
         // This case return null so that EnsureFound will throw not found
         // var demoFluentAs = request.As<TextSnippetEntity>().EnsureFound();
-        var demoFluentAsync = request.AsTask(); // equal to Task.FromResult(request)
+        var demoFluentAsync = request.ToTask(); // equal to Task.FromResult(request)
         // This case return the command because it is IPlatformCqrsCommand. Also demo fluent async task
         // Do not need to use await keyword in parenthesis (await request.AsTask()).As<IPlatformCqrsCommand>().EnsureFound();
         //var demoFluentAsync1 = await request.AsTask()

@@ -274,7 +274,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         if (!dismissSendEvent)
             await Cqrs.SendEntityEvents(entities, PlatformCqrsEntityEventCrudAction.Deleted, cancellationToken);
 
-        return await entities.AsTask();
+        return await entities.ToTask();
     }
 
     public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(

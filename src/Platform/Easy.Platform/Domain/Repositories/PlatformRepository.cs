@@ -351,7 +351,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
         Task<TResult> ReadDataFnAsync(IUnitOfWork unitOfWork, IQueryable<TEntity> entities)
         {
-            return readDataFn(unitOfWork, entities).AsTask();
+            return readDataFn(unitOfWork, entities).ToTask();
         }
     }
 

@@ -150,7 +150,7 @@ public static class Validation
         Func<T, Task<Validation<TR>>> f)
     {
         return val.Match(
-            reasons => F.Invalid<TR>(reasons).AsTask(),
+            reasons => F.Invalid<TR>(reasons).ToTask(),
             t => f(t));
     }
 
@@ -159,7 +159,7 @@ public static class Validation
         Func<T, Task<TR>> func)
     {
         return @this.Match(
-            reasons => F.Invalid<TR>(reasons).AsTask(),
+            reasons => F.Invalid<TR>(reasons).ToTask(),
             t => func(t).Then(_ => F.Valid(_)));
     }
 

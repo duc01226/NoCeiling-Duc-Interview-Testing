@@ -23,10 +23,11 @@ public class PlatformValidationResult<TValue> : ValidationResult
         InvalidException = invalidException;
     }
 
+    public override bool IsValid => !Errors.Any();
+
     public TValue Value { get; protected set; }
     public Func<PlatformValidationResult<TValue>, Exception> InvalidException { get; set; }
     public new List<PlatformValidationError> Errors => finalCombinedValidationErrors ??= FinalCombinedValidation().RootValidationErrors;
-    public override bool IsValid => !Errors.Any();
 
     protected List<PlatformValidationError> RootValidationErrors { get; } = new();
     protected bool IsRootValidationValid => !RootValidationErrors.Any();
@@ -34,7 +35,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
     protected List<LogicalAndValidationsChainItem> LogicalAndValidationsChain { get; set; } = new();
 
     /// <summary>
-    ///     Dictionary map from LogicalAndValidationsChainItem Position to ExceptionCreatorFn
+    /// Dictionary map from LogicalAndValidationsChainItem Position to ExceptionCreatorFn
     /// </summary>
     protected Dictionary<int, Func<PlatformValidationResult<TValue>, Exception>> LogicalAndValidationsChainInvalidExceptions { get; } =
         new();
@@ -61,7 +62,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
 
     public static implicit operator TValue(PlatformValidationResult<TValue> validation)
     {
-        return validation.Value;
+        return validation.EnsureValid();
     }
 
     public static implicit operator bool(PlatformValidationResult<TValue> validation)
@@ -105,7 +106,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
     }
 
     /// <summary>
-    ///     Return a valid validation result.
+    /// Return a valid validation result.
     /// </summary>
     /// <returns>A valid validation result.</returns>
     internal static PlatformValidationResult<TValue> Valid(TValue value = default)
@@ -114,7 +115,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
     }
 
     /// <summary>
-    ///     Return a invalid validation result.
+    /// Return a invalid validation result.
     /// </summary>
     /// <param name="value">The validation target object.</param>
     /// <param name="errors">The validation errors.</param>
@@ -186,7 +187,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
     {
         return validations.IsEmpty()
             ? Valid()
-            : validations.Aggregate((prevVal, nextVal) => () => prevVal().Then(() => nextVal()))();
+            : validations.Aggregate((prevVal, nextVal) => () => prevVal().ThenValidate(p => nextVal()))();
     }
 
     /// <inheritdoc cref="Combine(System.Func{Easy.Platform.Common.Validations.PlatformValidationResult{TValue}}[])" />
@@ -240,22 +241,6 @@ public class PlatformValidationResult<TValue> : ValidationResult
     }
 
     public PlatformValidationResult<T> Then<T>(
-        Func<PlatformValidationResult<T>> nextVal)
-    {
-        return Match(
-            valid: value => nextVal(),
-            invalid: err => Of<T>(default));
-    }
-
-    public PlatformValidationResult<T> Then<T>(
-        Func<TValue, PlatformValidationResult<T>> nextVal)
-    {
-        return Match(
-            valid: value => nextVal(Value),
-            invalid: err => Of<T>(default));
-    }
-
-    public PlatformValidationResult<T> Then<T>(
         Func<TValue, T> next)
     {
         return Match(
@@ -263,9 +248,42 @@ public class PlatformValidationResult<TValue> : ValidationResult
             invalid: err => Of<T>(default));
     }
 
+
+    public Task<PlatformValidationResult<T>> ThenAsync<T>(
+        Func<Task<PlatformValidationResult<T>>> nextVal)
+    {
+        return MatchAsync(
+            valid: value => nextVal(),
+            invalid: err => Of<T>(default).ToTask());
+    }
+
+    public Task<PlatformValidationResult<T>> ThenAsync<T>(
+        Func<TValue, Task<PlatformValidationResult<T>>> nextVal)
+    {
+        return MatchAsync(
+            valid: value => nextVal(Value),
+            invalid: err => Of<T>(default).ToTask());
+    }
+
+    public Task<PlatformValidationResult<T>> ThenAsync<T>(
+        Func<TValue, Task<T>> next)
+    {
+        return MatchAsync(
+            valid: async value => new PlatformValidationResult<T>(await next(value), null),
+            invalid: err => Of<T>(default).ToTask());
+    }
+
+
     public PlatformValidationResult<T> Match<T>(
         Func<TValue, PlatformValidationResult<T>> valid,
         Func<IEnumerable<PlatformValidationError>, PlatformValidationResult<T>> invalid)
+    {
+        return IsValid ? valid(Value) : invalid(Errors);
+    }
+
+    public Task<PlatformValidationResult<T>> MatchAsync<T>(
+        Func<TValue, Task<PlatformValidationResult<T>>> valid,
+        Func<IEnumerable<PlatformValidationError>, Task<PlatformValidationResult<T>>> invalid)
     {
         return IsValid ? valid(Value) : invalid(Errors);
     }
@@ -303,7 +321,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
     /// <summary>
     /// Validation[T] => and Validation[T1] => Validation[T1]
     /// </summary>
-    public PlatformValidationResult<TNextValidation> AndThenValidate<TNextValidation>(Func<TValue, PlatformValidationResult<TNextValidation>> nextValidation)
+    public PlatformValidationResult<TNextValidation> ThenValidate<TNextValidation>(Func<TValue, PlatformValidationResult<TNextValidation>> nextValidation)
     {
         return IsValid ? nextValidation(Value) : PlatformValidationResult<TNextValidation>.Invalid(default, Errors.ToArray());
     }
@@ -328,7 +346,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
     /// <summary>
     /// Validation[T] => and => Validation[T1]
     /// </summary>
-    public async Task<PlatformValidationResult<TNextValidation>> AndThenValidateAsync<TNextValidation>(
+    public async Task<PlatformValidationResult<TNextValidation>> ThenValidateAsync<TNextValidation>(
         Func<TValue, Task<PlatformValidationResult<TNextValidation>>> nextValidation)
     {
         return !IsValid ? PlatformValidationResult<TNextValidation>.Invalid(default, Errors.ToArray()) : await nextValidation(Value);
@@ -420,12 +438,12 @@ public class PlatformValidationResult<TValue> : ValidationResult
     }
 
     /// <summary>
-    ///     Do validation all conditions in AndConditions Chain when .And().And() and collect all errors
-    ///     <br />
-    ///     "andValidationChainItem => Util.TaskRunner.CatchException(" Explain:
-    ///     Because the and chain could depend on previous chain, so do harvest validation errors could throw errors on some
-    ///     depended validation, so we catch and ignore the depended chain item
-    ///     try to get all available interdependent/not depend on prev validation item chain validations
+    /// Do validation all conditions in AndConditions Chain when .And().And() and collect all errors
+    /// <br />
+    /// "andValidationChainItem => Util.TaskRunner.CatchException(" Explain:
+    /// Because the and chain could depend on previous chain, so do harvest validation errors could throw errors on some
+    /// depended validation, so we catch and ignore the depended chain item
+    /// try to get all available interdependent/not depend on prev validation item chain validations
     /// </summary>
     public List<PlatformValidationError> AggregateErrors()
     {
@@ -470,7 +488,7 @@ public class PlatformValidationResult : PlatformValidationResult<object>
     }
 
     /// <summary>
-    ///     Return a valid validation result.
+    /// Return a valid validation result.
     /// </summary>
     /// <returns>A valid validation result.</returns>
     public static PlatformValidationResult<TValue> Valid<TValue>(TValue value = default)
@@ -479,7 +497,7 @@ public class PlatformValidationResult : PlatformValidationResult<object>
     }
 
     /// <summary>
-    ///     Return a invalid validation result.
+    /// Return a invalid validation result.
     /// </summary>
     /// <param name="value">The validation target object.</param>
     /// <param name="errors">The validation errors.</param>
@@ -496,7 +514,7 @@ public class PlatformValidationResult : PlatformValidationResult<object>
     }
 
     /// <summary>
-    ///     Return a valid validation result if the condition is true, otherwise return a invalid validation with errors.
+    /// Return a valid validation result if the condition is true, otherwise return a invalid validation with errors.
     /// </summary>
     /// <param name="must">The valid condition.</param>
     /// <param name="errors">The errors if the valid condition is false.</param>
@@ -518,16 +536,16 @@ public class PlatformValidationResult : PlatformValidationResult<object>
         return Validate(value, validConditionFunc(), errors);
     }
 
-    /// <inheritdoc cref="PlatformValidationResult{TValue}.Combine(Func{PlatformValidationResult{TValue}}[])"/>
+    /// <inheritdoc cref="PlatformValidationResult{TValue}.Combine(Func{PlatformValidationResult{TValue}}[])" />
     public static PlatformValidationResult Combine(
         params Func<PlatformValidationResult>[] validations)
     {
         return validations.Aggregate(
             seed: Valid(validations.First()().Value),
-            (acc, validator) => acc.Then(() => validator()));
+            (acc, validator) => acc.ThenValidate(p => validator()));
     }
 
-    /// <inheritdoc cref="PlatformValidationResult{TValue}.Aggregate(PlatformValidationResult{TValue}[])"/>
+    /// <inheritdoc cref="PlatformValidationResult{TValue}.Aggregate(PlatformValidationResult{TValue}[])" />
     public static PlatformValidationResult Aggregate(
         params PlatformValidationResult[] validations)
     {

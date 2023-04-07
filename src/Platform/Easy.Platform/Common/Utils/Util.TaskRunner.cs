@@ -316,6 +316,18 @@ public static partial class Util
             return (task1.Result, task2.Result, task3.Result, task4.Result, task5.Result);
         }
 
+        public static async Task<ValueTuple<T1, T2, T3, T4, T5, T6>> WhenAll<T1, T2, T3, T4, T5, T6>(
+            Task<T1> task1,
+            Task<T2> task2,
+            Task<T3> task3,
+            Task<T4> task4,
+            Task<T5> task5,
+            Task<T6> task6)
+        {
+            await Task.WhenAll(task1, task2, task3, task4, task5, task6);
+            return (task1.Result, task2.Result, task3.Result, task4.Result, task5.Result, task6.Result);
+        }
+
         public static Task<T> Async<T>(T t)
         {
             return Task.FromResult(t);

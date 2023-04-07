@@ -39,6 +39,11 @@ public class PlatformCqrsRequest : IPlatformCqrsRequest
 
         return this.As<TRequest>();
     }
+
+    public virtual PlatformValidationResult<TRequest> Validate<TRequest>() where TRequest : IPlatformCqrsRequest
+    {
+        return PlatformValidationResult<IPlatformCqrsRequest>.Valid(value: this).Of<TRequest>();
+    }
 }
 
 public interface IPlatformCqrsRequestAuditInfo
