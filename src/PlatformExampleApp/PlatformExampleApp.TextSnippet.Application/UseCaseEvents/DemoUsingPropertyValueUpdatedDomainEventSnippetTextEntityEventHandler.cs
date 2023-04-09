@@ -17,12 +17,12 @@ public class DemoUsingPropertyValueUpdatedDomainEventSnippetTextEntityEventHandl
     protected override async Task HandleAsync(PlatformCqrsEntityEvent<TextSnippetEntity> @event, CancellationToken cancellationToken)
     {
         // DEMO USING PROPERTY CHANGED DOMAIN EVENT
-        var snippetTextPropUpdatedEvent = @event.FindPropertyValueUpdatedDomainEvents(p => p.SnippetText).FirstOrDefault();
+        var snippetTextPropUpdatedEvent = @event.FindPropertyValueUpdatedDomainEvent(p => p.SnippetText);
         if (snippetTextPropUpdatedEvent != null)
             Logger.LogInformation(
                 $"TextSnippetEntity Id:'{@event.EntityData.Id}' SnippetText updated. Prev: {snippetTextPropUpdatedEvent.OriginalValue}. New: {snippetTextPropUpdatedEvent.NewValue}");
 
-        var fullTextPropUpdatedEvent = @event.FindPropertyValueUpdatedDomainEvents(p => p.FullText).FirstOrDefault();
+        var fullTextPropUpdatedEvent = @event.FindPropertyValueUpdatedDomainEvent(p => p.FullText);
         if (fullTextPropUpdatedEvent != null)
             Logger.LogInformation(
                 $"TextSnippetEntity Id:'{@event.EntityData.Id}' FullText updated. Prev: {fullTextPropUpdatedEvent.OriginalValue}. New: {fullTextPropUpdatedEvent.NewValue}");

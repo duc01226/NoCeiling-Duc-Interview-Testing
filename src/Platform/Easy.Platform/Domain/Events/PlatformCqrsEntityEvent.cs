@@ -57,14 +57,13 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent
             .ToList();
     }
 
-    public List<PropertyValueUpdatedDomainEvent<TValue>> FindPropertyValueUpdatedDomainEvents<TValue>(
+    public PropertyValueUpdatedDomainEvent<TValue> FindPropertyValueUpdatedDomainEvent<TValue>(
         Expression<Func<TEntity, TValue>> property)
     {
         return DomainEvents
             .Where(p => p.Key == DomainEvent.GetDefaultDomainEventName<PropertyValueUpdatedDomainEvent>())
             .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<PropertyValueUpdatedDomainEvent<TValue>>(p.Value))
-            .Where(p => p.PropertyName == property.GetPropertyName())
-            .ToList();
+            .FirstOrDefault(p => p.PropertyName == property.GetPropertyName());
     }
 }
 
