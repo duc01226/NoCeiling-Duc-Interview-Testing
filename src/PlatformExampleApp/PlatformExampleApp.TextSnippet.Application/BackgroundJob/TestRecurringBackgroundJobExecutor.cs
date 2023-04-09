@@ -33,12 +33,10 @@ public class TestRecurringBackgroundJobExecutor : PlatformApplicationBackgroundJ
     public override async Task ProcessAsync(object param = null)
     {
         await textSnippetEntityRepository.CreateOrUpdateAsync(
-            new TextSnippetEntity
-            {
-                Id = Guid.Parse("76e0f523-ee53-4124-b109-13dedaa4618d"),
-                SnippetText = "TestRecurringBackgroundJob " + Clock.Now.ToShortTimeString(),
-                FullText = "Test of recurring job upsert this entity"
-            });
+            TextSnippetEntity.Create(
+                id: Guid.Parse("76e0f523-ee53-4124-b109-13dedaa4618d"),
+                snippetText: "TestRecurringBackgroundJob " + Clock.Now.ToShortTimeString(),
+                fullText: "Test of recurring job upsert this entity"));
 
         await cqrs.SendCommand(
             new DemoSendFreeFormatEventBusMessageCommand

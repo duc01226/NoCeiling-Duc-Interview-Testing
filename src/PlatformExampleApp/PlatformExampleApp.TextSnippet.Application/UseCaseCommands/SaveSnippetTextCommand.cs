@@ -346,6 +346,12 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
             validToSaveEntity,
             cancellationToken: cancellationToken);
 
+        if (request.Data.IsSubmitToUpdate())
+            // TEST DEMO Case update using CreateOrUpdate directly entity is mapped from dto. When update do not get from existing entity still should work normally, should also add domain event
+            savedData = await textSnippetEntityRepository.CreateOrUpdateAsync(
+                request.Data.MapToEntity().With(p => p.FullText += " Updated TEST DEMO Case update using CreateOrUpdate"),
+                cancellationToken: cancellationToken);
+
         // STEP 4: Build and return result
         return new SaveSnippetTextCommandResult
         {

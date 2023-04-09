@@ -32,12 +32,10 @@ public class DemoMigrateDataCrossDbContext : PlatformMongoDbContext<DemoMigrateD
         if (!TextSnippetEntityCollection.AsQueryable()
             .Any(p => p.SnippetText == "DemoMigrateApplicationDataDbContext Entity"))
             await TextSnippetEntityCollection.InsertOneAsync(
-                new TextSnippetEntity
-                {
-                    Id = Guid.NewGuid(),
-                    SnippetText = "DemoMigrateApplicationDataDbContext Entity",
-                    FullText = "DemoMigrateApplicationDataDbContext Entity"
-                });
+                TextSnippetEntity.Create(
+                    id: Guid.NewGuid(),
+                    snippetText: "DemoMigrateApplicationDataDbContext Entity",
+                    fullText: "DemoMigrateApplicationDataDbContext Entity"));
 
         await base.Initialize(serviceProvider);
     }

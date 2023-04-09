@@ -1,3 +1,5 @@
+using System.Linq.Expressions;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Validations;
 using Easy.Platform.Common.Validations.Validators;
@@ -35,9 +37,54 @@ public interface ISupportDomainEventsEntity
     /// </summary>
     public List<KeyValuePair<string, DomainEvent>> GetDomainEvents();
 
+    public ISupportDomainEventsEntity AddDomainEvent<TEvent>(TEvent domainEvent, string customDomainEventName = null) where TEvent : DomainEvent;
+
     public abstract class DomainEvent
     {
+        public static string GetDefaultDomainEventName<TEvent>() where TEvent : DomainEvent
+        {
+            return typeof(TEvent).Name;
+        }
     }
+
+    public class PropertyValueUpdatedDomainEvent : DomainEvent
+    {
+        public string PropertyName { get; set; }
+        public object OriginalValue { get; set; }
+        public object NewValue { get; set; }
+
+        public static PropertyValueUpdatedDomainEvent Create(string propertyName, object originalValue, object newValue)
+        {
+            return new PropertyValueUpdatedDomainEvent
+            {
+                PropertyName = propertyName,
+                OriginalValue = originalValue,
+                NewValue = newValue
+            };
+        }
+    }
+
+    public class PropertyValueUpdatedDomainEvent<TValue> : PropertyValueUpdatedDomainEvent
+    {
+        public new TValue OriginalValue { get; set; }
+        public new TValue NewValue { get; set; }
+
+        public static PropertyValueUpdatedDomainEvent<TValue> Create(string propertyName, TValue originalValue, TValue newValue)
+        {
+            return new PropertyValueUpdatedDomainEvent<TValue>
+            {
+                PropertyName = propertyName,
+                OriginalValue = originalValue,
+                NewValue = newValue
+            };
+        }
+    }
+}
+
+public interface ISupportDomainEventsEntity<out TEntity> : ISupportDomainEventsEntity
+    where TEntity : class, IEntity, new()
+{
+    public new TEntity AddDomainEvent<TEvent>(TEvent eventActionPayload, string customDomainEventName = null) where TEvent : DomainEvent;
 }
 
 /// <summary>
@@ -55,13 +102,13 @@ public interface IValidatableEntity<TEntity, TPrimaryKey> : IValidatableEntity<T
     where TEntity : IEntity<TPrimaryKey>
 {
     /// <summary>
-    /// Default return null. Default check unique is by Id. </br>
+    /// Default return null. Default check unique is by Id. <br />
     /// If return not null, this will be used instead to check the entity is unique to create or update
     /// </summary>
     public PlatformCheckUniqueValidator<TEntity> CheckUniqueValidator();
 }
 
-public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity, TPrimaryKey>, ISupportDomainEventsEntity
+public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity, TPrimaryKey>, ISupportDomainEventsEntity<TEntity>
     where TEntity : Entity<TEntity, TPrimaryKey>, new()
 {
     protected readonly List<KeyValuePair<string, DomainEvent>> DomainEvents = new();
@@ -70,6 +117,19 @@ public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity,
     {
         return DomainEvents;
     }
+
+    ISupportDomainEventsEntity ISupportDomainEventsEntity.AddDomainEvent<TEvent>(TEvent domainEvent, string customDomainEventName)
+    {
+        return AddDomainEvent(domainEvent, customDomainEventName);
+    }
+
+    public TEntity AddDomainEvent<TEvent>(TEvent eventActionPayload, string customDomainEventName = null)
+        where TEvent : DomainEvent
+    {
+        DomainEvents.Add(new KeyValuePair<string, DomainEvent>(customDomainEventName ?? DomainEvent.GetDefaultDomainEventName<TEvent>(), eventActionPayload));
+        return (TEntity)this;
+    }
+
 
     public TPrimaryKey Id { get; set; }
 
@@ -90,6 +150,27 @@ public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity,
         return Validate();
     }
 
+    public TEntity AddPropertyValueUpdatedDomainEvent<TValue>(string propertyName, TValue originalValue, TValue newValue)
+    {
+        return this.As<TEntity>().AddPropertyValueUpdatedDomainEvent<TEntity, TValue>(propertyName, originalValue, newValue);
+    }
+
+    public TEntity AddPropertyValueUpdatedDomainEvent<TValue>(Expression<Func<TEntity, TValue>> property, TValue originalValue, TValue newValue)
+    {
+        return this.As<TEntity>().AddPropertyValueUpdatedDomainEvent<TEntity, TValue>(property, originalValue, newValue);
+    }
+
+    public List<TEvent> FindDomainEvents<TEvent>()
+        where TEvent : DomainEvent
+    {
+        return this.As<TEntity>().FindDomainEvents<TEntity, TEvent>();
+    }
+
+    public List<PropertyValueUpdatedDomainEvent<TValue>> FindPropertyValueUpdatedDomainEvents<TValue>(string propertyName)
+    {
+        return this.As<TEntity>().FindPropertyValueUpdatedDomainEvents<TEntity, TValue>(propertyName);
+    }
+
     public virtual TEntity Clone()
     {
         return PlatformJsonSerializer.Deserialize<TEntity>(PlatformJsonSerializer.Serialize(this));
@@ -103,13 +184,6 @@ public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity,
     public virtual PlatformValidator<TEntity> GetValidator()
     {
         return null;
-    }
-
-    protected TEntity AddDomainEvents<TEvent>(TEvent eventActionPayload)
-        where TEvent : DomainEvent
-    {
-        DomainEvents.Add(new KeyValuePair<string, DomainEvent>(typeof(TEvent).Name, eventActionPayload));
-        return (TEntity)this;
     }
 }
 

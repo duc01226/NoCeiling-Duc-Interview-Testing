@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
+using Easy.Platform.Common.Extensions;
 
 namespace Easy.Platform.Common.Utils;
 
@@ -20,11 +21,11 @@ public static partial class Util
         /// <typeparam name="TTarget">Type of the target.</typeparam>
         /// <param name="source">Source to copy properties from.</param>
         /// <param name="target">Target to copy properties to.</param>
-        public static void CopyValues<TSource, TTarget>(TSource source, TTarget target)
+        public static void CopyValues<TSource, TTarget>(TSource source, TTarget target, params Expression<Func<TSource, object>>[] ignoreProperties)
             where TSource : class
             where TTarget : class
         {
-            PropertyCopier<TSource, TTarget>.Copy(source, target);
+            PropertyCopier<TSource, TTarget>.Copy(source, target, ignoreProperties);
         }
 
         /// <summary>
@@ -82,7 +83,7 @@ public static partial class Util
                 return Creator(source);
             }
 
-            internal static void Copy(TSource source, TTarget target)
+            internal static void Copy(TSource source, TTarget target, params Expression<Func<TSource, object>>[] ignoreProperties)
             {
                 if (InitializationException != null)
                     throw InitializationException;
@@ -90,8 +91,12 @@ public static partial class Util
                 if (source == null)
                     throw new ArgumentNullException(nameof(source));
 
-                for (var i = 0; i < SourceProperties.Count; i++)
-                    TargetProperties[i].SetValue(target, SourceProperties[i].GetValue(source, null), null);
+                var ignorePropertiesDic = ignoreProperties.ToDictionary(p => p.GetPropertyName());
+                var filteredSourceProperties = SourceProperties.Where(p => !ignorePropertiesDic.ContainsKey(p.Name)).ToList();
+                var filteredTargetProperties = TargetProperties.Where(p => !ignorePropertiesDic.ContainsKey(p.Name)).ToList();
+
+                for (var i = 0; i < filteredSourceProperties.Count; i++)
+                    filteredTargetProperties[i].SetValue(target, filteredSourceProperties[i].GetValue(source, null), null);
             }
 
             private static Func<TSource, TTarget> BuildCreator()
@@ -112,7 +117,7 @@ public static partial class Util
                             " is not present and accessible in " +
                             typeof(TTarget).FullName);
 
-                    if (!targetProperty.CanWrite)
+                    if (targetProperty.GetSetMethod() == null)
                         throw new ArgumentException(
                             "Property " + sourceProperty.Name + " is not writable in " + typeof(TTarget).FullName);
 

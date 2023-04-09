@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -78,5 +79,54 @@ public static class ObjectGeneralExtension
     public static T GetPropValue<T>(this object source, string propName)
     {
         return GetPropValue(source, propName).Cast<T>();
+    }
+
+    /// <summary>
+    /// Set property of an object event if the property is protected or private
+    /// </summary>
+    public static TObject SetProperty<TObject, TProp>(this TObject obj, Expression<Func<TObject, TProp>> prop, TProp newValue)
+    {
+        var propertyInfo = typeof(TObject).GetProperty(prop.GetPropertyName());
+
+        propertyInfo!.SetValue(obj, newValue);
+
+        return obj;
+    }
+
+    /// <summary>
+    /// Set property of an object event if the property is protected or private
+    /// </summary>
+    public static TObject SetProperty<TObject, TProp>(this TObject obj, string propName, TProp newValue)
+    {
+        var propertyInfo = typeof(TObject).GetProperty(propName);
+
+        propertyInfo!.SetValue(obj, newValue);
+
+        return obj;
+    }
+
+    public static TProp GetProperty<TObject, TProp>(this TObject obj, string propName)
+    {
+        var propertyInfo = typeof(TObject).GetProperty(propName);
+
+        return propertyInfo!.GetValue(obj).Cast<TProp>();
+    }
+
+    public static object GetProperty<TObject>(this TObject obj, string propName)
+    {
+        var propertyInfo = typeof(TObject).GetProperty(propName);
+
+        return propertyInfo!.GetValue(obj);
+    }
+
+    /// <summary>
+    /// Try Set property of an object event if the property is protected or private
+    /// </summary>
+    public static TObject TrySetProperty<TObject, TProp>(this TObject obj, Expression<Func<TObject, TProp>> prop, TProp newValue)
+    {
+        var propertyInfo = typeof(TObject).GetProperty(prop.GetPropertyName());
+        if (propertyInfo?.GetSetMethod() != null) propertyInfo.SetValue(obj, newValue);
+
+        return obj;
     }
 }

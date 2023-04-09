@@ -10,13 +10,17 @@ using static Easy.Platform.Domain.Entities.ISupportDomainEventsEntity;
 
 namespace PlatformExampleApp.TextSnippet.Domain.Entities;
 
+// DEMO USING AutoAddPropertyValueUpdatedDomainEvent to track entity property updated
+[AutoTrackValueUpdatedDomainEvent]
 public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid?>, IRowVersionEntity
 {
     public const int FullTextMaxLength = 4000;
     public const int SnippetTextMaxLength = 100;
 
+    [TrackValueUpdatedDomainEvent]
     public string SnippetText { get; set; }
 
+    [TrackValueUpdatedDomainEvent]
     public string FullText { get; set; }
 
     public TimeOnly TimeOnly { get; set; } = TimeOnly.MaxValue;
@@ -56,6 +60,16 @@ public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid
 
     public Guid? ConcurrencyUpdateToken { get; set; }
 
+    public static TextSnippetEntity Create(Guid id, string snippetText, string fullText)
+    {
+        return new TextSnippetEntity
+        {
+            Id = id,
+            SnippetText = snippetText,
+            FullText = fullText
+        };
+    }
+
     public override PlatformCheckUniqueValidator<TextSnippetEntity> CheckUniqueValidator()
     {
         return new PlatformCheckUniqueValidator<TextSnippetEntity>(
@@ -74,7 +88,7 @@ public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid
 
         SnippetText = Convert.ToBase64String(hash);
 
-        AddDomainEvents(
+        AddDomainEvent(
             new EncryptSnippetTextDomainEvent
             {
                 OriginalSnippetText = originalSnippetText,

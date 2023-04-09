@@ -1,6 +1,9 @@
+using System.Linq.Expressions;
 using Easy.Platform.Common.Cqrs.Events;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Domain.Entities;
+using static Easy.Platform.Domain.Entities.ISupportDomainEventsEntity;
 
 namespace Easy.Platform.Domain.Events;
 
@@ -42,15 +45,25 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent
 
     /// <summary>
     /// DomainEvents is used to give more detail about the domain event action inside entity.<br />
-    /// It is a list of DomainEventTypeName-DomainEventAsJson from entity domain events
+    /// It is a list of DomainEventName-DomainEventAsJson from entity domain events
     /// </summary>
     public List<KeyValuePair<string, string>> DomainEvents { get; set; } = new();
 
-    public List<TEvent> FindDomainEvents<TEvent>()
+    public List<TEvent> FindDomainEvents<TEvent>() where TEvent : DomainEvent
     {
         return DomainEvents
-            .Where(p => p.Key == typeof(TEvent).Name)
+            .Where(p => p.Key == DomainEvent.GetDefaultDomainEventName<TEvent>())
             .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<TEvent>(p.Value))
+            .ToList();
+    }
+
+    public List<PropertyValueUpdatedDomainEvent<TValue>> FindPropertyValueUpdatedDomainEvents<TValue>(
+        Expression<Func<TEntity, TValue>> property)
+    {
+        return DomainEvents
+            .Where(p => p.Key == DomainEvent.GetDefaultDomainEventName<PropertyValueUpdatedDomainEvent>())
+            .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<PropertyValueUpdatedDomainEvent<TValue>>(p.Value))
+            .Where(p => p.PropertyName == property.GetPropertyName())
             .ToList();
     }
 }

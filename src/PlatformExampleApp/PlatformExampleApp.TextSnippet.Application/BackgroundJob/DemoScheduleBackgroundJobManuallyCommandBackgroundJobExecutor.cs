@@ -26,13 +26,10 @@ public class DemoScheduleBackgroundJobManuallyCommandBackgroundJobExecutor
         DemoScheduleBackgroundJobManuallyCommandBackgroundJobExecutorParam param = null)
     {
         await textSnippetEntityRepository.CreateOrUpdateAsync(
-            new TextSnippetEntity
-            {
-                Id = Guid.Parse("90d8898b-c232-461e-9cb0-3242ac6c5b41"),
-                SnippetText =
-                    $"DemoScheduleBackgroundJobManually {Clock.Now.ToShortTimeString()} {param.NewSnippetText ?? ""}",
-                FullText = $"DemoScheduleBackgroundJobManually {param.NewSnippetText ?? ""}"
-            });
+            TextSnippetEntity.Create(
+                id: Guid.Parse("90d8898b-c232-461e-9cb0-3242ac6c5b41"),
+                snippetText: $"DemoScheduleBackgroundJobManually {Clock.Now.ToShortTimeString()} {param.NewSnippetText ?? ""}",
+                fullText: $"DemoScheduleBackgroundJobManually {param.NewSnippetText ?? ""}"));
     }
 }
 

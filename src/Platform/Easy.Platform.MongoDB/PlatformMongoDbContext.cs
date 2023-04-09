@@ -7,7 +7,6 @@ using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
-using Easy.Platform.Domain.Entities.Extensions;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.Exceptions;
 using Easy.Platform.MongoDB.Extensions;
@@ -156,58 +155,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
-
-        var toBeUpdatedEntity = entity
-            .PipeIf(entity is IDateAuditedEntity, p => p.As<IDateAuditedEntity>().With(_ => _.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
-            .PipeIf(
-                entity.IsAuditedUserEntity(),
-                p => p.As<IUserAuditedEntity>()
-                    .SetLastUpdatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
-                    .As<TEntity>());
-
-        if (toBeUpdatedEntity is IRowVersionEntity rowVersionEntity)
-        {
-            var currentInMemoryConcurrencyUpdateToken = rowVersionEntity.ConcurrencyUpdateToken;
-            var newUpdateConcurrencyUpdateToken = Guid.NewGuid();
-
-            rowVersionEntity.ConcurrencyUpdateToken = newUpdateConcurrencyUpdateToken;
-
-            var result = await GetTable<TEntity>()
-                .ReplaceOneAsync(
-                    p => p.Id.Equals(toBeUpdatedEntity.Id) &&
-                         (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
-                          ((IRowVersionEntity)p).ConcurrencyUpdateToken == Guid.Empty ||
-                          ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken),
-                    toBeUpdatedEntity,
-                    new ReplaceOptions { IsUpsert = false },
-                    cancellationToken);
-
-            if (result.MatchedCount <= 0)
-            {
-                if (await GetTable<TEntity>().AsQueryable().AnyAsync(p => p.Id.Equals(toBeUpdatedEntity.Id), cancellationToken))
-                    throw new PlatformDomainRowVersionConflictException(
-                        $"Update {typeof(TEntity).Name} with Id:{toBeUpdatedEntity.Id} has conflicted version.");
-                throw new PlatformDomainEntityNotFoundException<TEntity>(toBeUpdatedEntity.Id.ToString());
-            }
-        }
-        else
-        {
-            var result = await GetTable<TEntity>()
-                .ReplaceOneAsync(
-                    p => p.Id.Equals(toBeUpdatedEntity.Id),
-                    toBeUpdatedEntity,
-                    new ReplaceOptions { IsUpsert = false },
-                    cancellationToken);
-
-            if (result.MatchedCount <= 0)
-                throw new PlatformDomainEntityNotFoundException<TEntity>(toBeUpdatedEntity.Id.ToString());
-        }
-
-        if (!dismissSendEvent)
-            await Cqrs.SendEntityEvent(entity, PlatformCqrsEntityEventCrudAction.Updated, cancellationToken);
-
-        return entity;
+        return await UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, cancellationToken);
     }
 
     public async Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
@@ -291,16 +239,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
             .Execute()
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (existingEntity != null)
-        {
-            entity.Id = existingEntity.Id;
-
-            if (entity is IRowVersionEntity rowVersionEntity &&
-                existingEntity is IRowVersionEntity existingRowVersionEntity)
-                rowVersionEntity.ConcurrencyUpdateToken = existingRowVersionEntity.ConcurrencyUpdateToken;
-
-            return await UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken);
-        }
+        if (existingEntity != null) return await UpdateAsync<TEntity, TPrimaryKey>(entity, existingEntity, dismissSendEvent, cancellationToken);
 
         return await CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, upsert: true, cancellationToken);
     }
@@ -399,6 +338,70 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     {
         Dispose(true);
         GC.SuppressFinalize(this);
+    }
+
+    public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(TEntity entity, TEntity existingEntity, bool dismissSendEvent, CancellationToken cancellationToken)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
+
+        if (existingEntity == null && ((!dismissSendEvent && entity.HasAutoTrackValueUpdatedDomainEventAttribute()) ||
+                                       entity is IRowVersionEntity { ConcurrencyUpdateToken: null }))
+            existingEntity = await GetQuery<TEntity>().Where(p => p.Id.Equals(entity.Id)).FirstOrDefaultAsync(cancellationToken);
+
+        if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })
+            entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = existingEntity.As<IRowVersionEntity>().ConcurrencyUpdateToken;
+
+        var toBeUpdatedEntity = entity
+            .PipeIf(entity is IDateAuditedEntity, p => p.As<IDateAuditedEntity>().With(_ => _.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
+            .PipeIf(
+                entity.IsAuditedUserEntity(),
+                p => p.As<IUserAuditedEntity>()
+                    .SetLastUpdatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
+                    .As<TEntity>());
+
+        if (toBeUpdatedEntity is IRowVersionEntity rowVersionEntity)
+        {
+            var currentInMemoryConcurrencyUpdateToken = rowVersionEntity.ConcurrencyUpdateToken;
+            var newUpdateConcurrencyUpdateToken = Guid.NewGuid();
+
+            rowVersionEntity.ConcurrencyUpdateToken = newUpdateConcurrencyUpdateToken;
+
+            var result = await GetTable<TEntity>()
+                .ReplaceOneAsync(
+                    p => p.Id.Equals(toBeUpdatedEntity.Id) &&
+                         (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
+                          ((IRowVersionEntity)p).ConcurrencyUpdateToken == Guid.Empty ||
+                          ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken),
+                    toBeUpdatedEntity,
+                    new ReplaceOptions { IsUpsert = false },
+                    cancellationToken);
+
+            if (result.MatchedCount <= 0)
+            {
+                if (await GetTable<TEntity>().AsQueryable().AnyAsync(p => p.Id.Equals(toBeUpdatedEntity.Id), cancellationToken))
+                    throw new PlatformDomainRowVersionConflictException(
+                        $"Update {typeof(TEntity).Name} with Id:{toBeUpdatedEntity.Id} has conflicted version.");
+                throw new PlatformDomainEntityNotFoundException<TEntity>(toBeUpdatedEntity.Id.ToString());
+            }
+        }
+        else
+        {
+            var result = await GetTable<TEntity>()
+                .ReplaceOneAsync(
+                    p => p.Id.Equals(toBeUpdatedEntity.Id),
+                    toBeUpdatedEntity,
+                    new ReplaceOptions { IsUpsert = false },
+                    cancellationToken);
+
+            if (result.MatchedCount <= 0)
+                throw new PlatformDomainEntityNotFoundException<TEntity>(toBeUpdatedEntity.Id.ToString());
+        }
+
+        if (!dismissSendEvent)
+            await Cqrs.SendEntityEvent(entity.AutoAddPropertyValueUpdatedDomainEvent(existingEntity), PlatformCqrsEntityEventCrudAction.Updated, cancellationToken);
+
+        return entity;
     }
 
     public virtual async Task EnsureIndexesAsync(bool recreate = false)
@@ -602,7 +605,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                 entity.IsAuditedUserEntity(),
                 p => p.As<IUserAuditedEntity>()
                     .SetCreatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
-                    .As<TEntity>());
+                    .As<TEntity>())
+            .WithIf(
+                entity is IRowVersionEntity { ConcurrencyUpdateToken: null },
+                entity => entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = Guid.NewGuid());
 
         if (upsert == false)
             await GetTable<TEntity>().InsertOneAsync(toBeCreatedEntity, null, cancellationToken);

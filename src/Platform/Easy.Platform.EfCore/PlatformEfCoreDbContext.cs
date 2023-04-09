@@ -5,7 +5,6 @@ using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
-using Easy.Platform.Domain.Entities.Extensions;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.EfCore.EntityConfiguration;
 using Easy.Platform.Persistence;
@@ -196,27 +195,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
-
-        // Run DetachLocalIfAny to prevent
-        // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
-        var result = entity
-            .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
-            .PipeIf(entity is IDateAuditedEntity, p => p.As<IDateAuditedEntity>().With(_ => _.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
-            .PipeIf(
-                entity.IsAuditedUserEntity(),
-                p => p.As<IUserAuditedEntity>()
-                    .SetLastUpdatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
-                    .As<TEntity>())
-            .Pipe(entity => GetTable<TEntity>().Update(entity).Entity);
-
-        if (result is IRowVersionEntity rowVersionEntity)
-            rowVersionEntity.ConcurrencyUpdateToken = Guid.NewGuid();
-
-        if (!dismissSendEvent)
-            await Cqrs.SendEntityEvent(entity, PlatformCqrsEntityEventCrudAction.Updated, cancellationToken);
-
-        return result;
+        return await UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, cancellationToken);
     }
 
     public async Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
@@ -297,7 +276,10 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 entity.IsAuditedUserEntity(),
                 p => p.As<IUserAuditedEntity>()
                     .SetCreatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
-                    .As<TEntity>());
+                    .As<TEntity>())
+            .WithIf(
+                entity is IRowVersionEntity { ConcurrencyUpdateToken: null },
+                entity => entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = Guid.NewGuid());
 
         var result = await GetTable<TEntity>().AddAsync(toBeCreatedEntity, cancellationToken).AsTask().Then(p => toBeCreatedEntity);
 
@@ -320,16 +302,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             .Execute()
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (existingEntity != null)
-        {
-            entity.Id = existingEntity.Id;
-
-            if (entity is IRowVersionEntity rowVersionEntity &&
-                existingEntity is IRowVersionEntity existingRowVersionEntity)
-                rowVersionEntity.ConcurrencyUpdateToken = existingRowVersionEntity.ConcurrencyUpdateToken;
-
-            return await UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken);
-        }
+        if (existingEntity != null) return await UpdateAsync<TEntity, TPrimaryKey>(entity, existingEntity, dismissSendEvent, cancellationToken);
 
         return await CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken);
     }
@@ -344,6 +317,39 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             await entities.ForEachAsync(entity => CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, customCheckExistingPredicate, dismissSendEvent, cancellationToken));
 
         return entities;
+    }
+
+    public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(TEntity entity, TEntity existingEntity, bool dismissSendEvent, CancellationToken cancellationToken)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
+
+        if (existingEntity == null && ((!dismissSendEvent && entity.HasAutoTrackValueUpdatedDomainEventAttribute()) ||
+                                       entity is IRowVersionEntity { ConcurrencyUpdateToken: null }))
+            existingEntity = await GetQuery<TEntity>().Where(p => p.Id.Equals(entity.Id)).FirstOrDefaultAsync(cancellationToken);
+
+        if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })
+            entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = existingEntity.As<IRowVersionEntity>().ConcurrencyUpdateToken;
+
+        // Run DetachLocalIfAny to prevent
+        // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
+        var result = entity
+            .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
+            .PipeIf(entity is IDateAuditedEntity, p => p.As<IDateAuditedEntity>().With(_ => _.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
+            .PipeIf(
+                entity.IsAuditedUserEntity(),
+                p => p.As<IUserAuditedEntity>()
+                    .SetLastUpdatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
+                    .As<TEntity>())
+            .Pipe(entity => GetTable<TEntity>().Update(entity).Entity);
+
+        if (result is IRowVersionEntity rowVersionEntity)
+            rowVersionEntity.ConcurrencyUpdateToken = Guid.NewGuid();
+
+        if (!dismissSendEvent)
+            await Cqrs.SendEntityEvent(entity.AutoAddPropertyValueUpdatedDomainEvent(existingEntity), PlatformCqrsEntityEventCrudAction.Updated, cancellationToken);
+
+        return result;
     }
 
     private TEntity DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(TEntity entity) where TEntity : class, IEntity<TPrimaryKey>, new()

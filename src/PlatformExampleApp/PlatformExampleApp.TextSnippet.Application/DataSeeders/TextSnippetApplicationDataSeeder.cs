@@ -55,29 +55,14 @@ public class TextSnippetApplicationDataSeeder : PlatformApplicationDataSeeder
         for (var i = 0; i < numberOfItemsGroupSeedTextSnippet; i++)
         {
             await textSnippetRepository.CreateOrUpdateAsync(
-                new TextSnippetEntity
-                {
-                    Id = Guid.NewGuid(),
-                    SnippetText = $"Example Abc {i}",
-                    FullText = $"This is full text of Example Abc {i} snippet text"
-                },
-                p => p.SnippetText == $"Example Abc {i}");
+                TextSnippetEntity.Create(id: Guid.NewGuid(), snippetText: $"Example Abc {i}", fullText: $"This is full text of Example Abc {i} snippet text"),
+                customCheckExistingPredicate: p => p.SnippetText == $"Example Abc {i}");
             await textSnippetRepository.CreateOrUpdateAsync(
-                new TextSnippetEntity
-                {
-                    Id = Guid.NewGuid(),
-                    SnippetText = $"Example Def {i}",
-                    FullText = $"This is full text of Example Def {i} snippet text"
-                },
-                p => p.SnippetText == $"Example Def {i}");
+                TextSnippetEntity.Create(id: Guid.NewGuid(), snippetText: $"Example Def {i}", fullText: $"This is full text of Example Def {i} snippet text"),
+                customCheckExistingPredicate: p => p.SnippetText == $"Example Def {i}");
             await textSnippetRepository.CreateOrUpdateAsync(
-                new TextSnippetEntity
-                {
-                    Id = Guid.NewGuid(),
-                    SnippetText = $"Example Ghi {i}",
-                    FullText = $"This is full text of Example Ghi {i} snippet text"
-                },
-                p => p.SnippetText == $"Example Ghi {i}");
+                TextSnippetEntity.Create(id: Guid.NewGuid(), snippetText: $"Example Ghi {i}", fullText: $"This is full text of Example Ghi {i} snippet text"),
+                customCheckExistingPredicate: p => p.SnippetText == $"Example Ghi {i}");
         }
     }
 }

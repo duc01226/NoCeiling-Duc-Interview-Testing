@@ -1,4 +1,3 @@
-using System.Threading;
 using Easy.Platform.Application;
 using Easy.Platform.Infrastructures.BackgroundJob;
 using Hangfire;
