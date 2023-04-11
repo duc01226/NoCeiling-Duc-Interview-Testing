@@ -43,7 +43,9 @@ public interface ISupportDomainEventsEntity
     {
         public static string GetDefaultDomainEventName<TEvent>() where TEvent : DomainEvent
         {
-            return typeof(TEvent).Name;
+            var a = typeof(TEvent).Name;
+
+            return a;
         }
     }
 
@@ -127,9 +129,9 @@ public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity,
         where TEvent : DomainEvent
     {
         DomainEvents.Add(new KeyValuePair<string, DomainEvent>(customDomainEventName ?? DomainEvent.GetDefaultDomainEventName<TEvent>(), eventActionPayload));
+
         return (TEntity)this;
     }
-
 
     public TPrimaryKey Id { get; set; }
 

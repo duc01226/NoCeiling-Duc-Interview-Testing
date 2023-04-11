@@ -326,7 +326,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
         if (existingEntity == null && ((!dismissSendEvent && entity.HasAutoTrackValueUpdatedDomainEventAttribute()) ||
                                        entity is IRowVersionEntity { ConcurrencyUpdateToken: null }))
-            existingEntity = await GetQuery<TEntity>().Where(p => p.Id.Equals(entity.Id)).FirstOrDefaultAsync(cancellationToken);
+            existingEntity = await GetQuery<TEntity>().AsNoTracking().Where(p => p.Id.Equals(entity.Id)).FirstOrDefaultAsync(cancellationToken);
 
         if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })
             entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = existingEntity.As<IRowVersionEntity>().ConcurrencyUpdateToken;
