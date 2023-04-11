@@ -120,7 +120,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             await messageBusProducer.SendAsync(message, routingKey, cancellationToken);
 
             await UpdateExistingOutboxMessageProcessedAsync(
-                existingOutboxMessage.Id,
+                existingOutboxMessage,
                 cancellationToken,
                 outboxBusMessageRepository);
         }
@@ -162,14 +162,10 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
     }
 
     public static async Task UpdateExistingOutboxMessageProcessedAsync(
-        string messageId,
+        PlatformOutboxBusMessage existingOutboxMessage,
         CancellationToken cancellationToken,
         IPlatformOutboxBusMessageRepository outboxBusMessageRepository)
     {
-        var existingOutboxMessage = await outboxBusMessageRepository.GetByIdAsync(
-            messageId,
-            cancellationToken);
-
         existingOutboxMessage.LastSendDate = DateTime.UtcNow;
         existingOutboxMessage.SendStatus = PlatformOutboxBusMessage.SendStatuses.Processed;
 
@@ -243,7 +239,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             routingKey,
             PlatformOutboxBusMessage.SendStatuses.Processing);
 
-        await outboxBusMessageRepository.CreateAsync(
+        var existingProcessingOutboxMessage = await outboxBusMessageRepository.CreateAsync(
             newProcessingOutboxMessage,
             dismissSendEvent: true,
             cancellationToken);
@@ -257,7 +253,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
              currentAggregatedPersistenceUow.IsNoTransactionUow(outboxBusMessageRepository.CurrentActiveUow())))
             await serviceProvider.ExecuteInjectAsync(
                 SendExistingOutboxMessageAsync<TMessage>,
-                newProcessingOutboxMessage,
+                existingProcessingOutboxMessage,
                 message,
                 routingKey,
                 retryProcessFailedMessageInSecondsUnit,
@@ -274,7 +270,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 serviceProvider
                     .ExecuteInjectScopedAsync(
                         SendExistingOutboxMessageInNewUowAsync<TMessage>,
-                        newProcessingOutboxMessage,
+                        existingProcessingOutboxMessage,
                         message,
                         routingKey,
                         retryProcessFailedMessageInSecondsUnit,
