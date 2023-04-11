@@ -13,7 +13,7 @@ import {
 } from './platform.api-error';
 import { PlatformHttpOptionsConfigService } from './platform.http-options-config-service';
 
-const ERR_CONNECTION_REFUSED_STATUSES: HttpStatusCode[] = [0, 504];
+const ERR_CONNECTION_REFUSED_STATUSES: (HttpStatusCode | number)[] = [0, 504];
 const UNAUTHORIZATION_STATUSES: HttpStatusCode[] = [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden];
 
 @Injectable()
@@ -136,12 +136,13 @@ export abstract class PlatformApiService extends PlatformHttpService {
     });
   }
 
-  protected throwError<T>(error: IPlatformApiServiceErrorResponse): Observable<T> {
-    if (error.developerExceptionMessage != null) console.error(error.developerExceptionMessage);
+  protected throwError<T>(errorResponse: IPlatformApiServiceErrorResponse): Observable<T> {
+    if (errorResponse.error.developerExceptionMessage != null)
+      console.error(errorResponse.error.developerExceptionMessage);
 
     return <Observable<T>>of({}).pipe(
       switchMap(() => {
-        return throwError(() => new PlatformApiServiceErrorResponse(error));
+        return throwError(() => new PlatformApiServiceErrorResponse(errorResponse));
       })
     );
   }

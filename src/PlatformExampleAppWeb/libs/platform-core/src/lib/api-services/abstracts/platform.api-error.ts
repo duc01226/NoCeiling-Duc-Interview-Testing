@@ -4,7 +4,6 @@ export interface IPlatformApiServiceErrorResponse {
   error: IPlatformApiServiceErrorInfo;
   statusCode?: HttpStatusCode;
   requestId: string;
-  developerExceptionMessage?: string;
 }
 
 export class PlatformApiServiceErrorResponse {
