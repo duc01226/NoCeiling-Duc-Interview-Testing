@@ -1,4 +1,5 @@
 using Easy.Platform.Application.Persistence;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 
 namespace Easy.Platform.Persistence.Domain;
@@ -14,7 +15,7 @@ public abstract class PlatformPersistenceUnitOfWork<TDbContext> : PlatformUnitOf
 {
     public PlatformPersistenceUnitOfWork(TDbContext dbContext)
     {
-        DbContext = dbContext;
+        DbContext = dbContext.With(_ => _.MappedUnitOfWork = this);
     }
 
     public TDbContext DbContext { get; }

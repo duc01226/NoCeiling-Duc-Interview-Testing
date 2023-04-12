@@ -26,6 +26,8 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     public virtual async Task Handle(TEvent notification, CancellationToken cancellationToken)
     {
+        if (!HandleWhen(notification)) return;
+
         if (ExecuteSeparatelyInBackgroundThread() && !IsCurrentInstanceExecutedInSeparateThread)
             // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
             // so the it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
@@ -50,11 +52,19 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
             await ExecuteHandleAsync(notification, cancellationToken);
     }
 
+    /// <summary>
+    /// Default return True. Override this to define the condition to handle the event
+    /// </summary>
+    protected virtual bool HandleWhen(TEvent @event)
+    {
+        return true;
+    }
+
     protected abstract Task HandleAsync(TEvent @event, CancellationToken cancellationToken);
 
-    protected virtual async Task ExecuteHandleAsync(TEvent request, CancellationToken cancellationToken)
+    protected virtual async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
     {
-        await HandleAsync(request, cancellationToken);
+        await HandleAsync(@event, cancellationToken);
     }
 
     /// <summary>

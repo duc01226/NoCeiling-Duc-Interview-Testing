@@ -81,19 +81,19 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
         return OutboxConfig.ProcessClearMessageRetryCount;
     }
 
-    /// <inheritdoc cref="PlatformOutboxConfig.NumberOfDeleteMessagesBatch"/>
+    /// <inheritdoc cref="PlatformOutboxConfig.NumberOfDeleteMessagesBatch" />
     protected virtual int NumberOfDeleteMessagesBatch()
     {
         return OutboxConfig.NumberOfDeleteMessagesBatch;
     }
 
-    /// <inheritdoc cref="PlatformOutboxConfig.DeleteProcessedMessageInSeconds"/>
+    /// <inheritdoc cref="PlatformOutboxConfig.DeleteProcessedMessageInSeconds" />
     protected virtual double DeleteProcessedMessageInSeconds()
     {
         return OutboxConfig.DeleteProcessedMessageInSeconds;
     }
 
-    /// <inheritdoc cref="PlatformOutboxConfig.DeleteExpiredFailedMessageInSeconds"/>
+    /// <inheritdoc cref="PlatformOutboxConfig.DeleteExpiredFailedMessageInSeconds" />
     protected virtual double DeleteExpiredFailedMessageInSeconds()
     {
         return OutboxConfig.DeleteExpiredFailedMessageInSeconds;
@@ -118,6 +118,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
                                       p.SendStatus == PlatformOutboxBusMessage.SendStatuses.Processed) ||
                                      (p.LastSendDate <= Clock.UtcNow.AddSeconds(-DeleteExpiredFailedMessageInSeconds()) &&
                                       p.SendStatus == PlatformOutboxBusMessage.SendStatuses.Failed))
+                            .OrderBy(p => p.LastSendDate)
                             .Take(NumberOfDeleteMessagesBatch()),
                         cancellationToken);
 

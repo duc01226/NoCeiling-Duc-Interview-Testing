@@ -1,5 +1,6 @@
 using Easy.Platform.Application.Context;
 using Easy.Platform.Application.Context.UserContext;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.UnitOfWork;
@@ -38,11 +39,41 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
             messageAction: @event.EventAction);
     }
 
-    protected virtual bool SendMessageWhen(PlatformCqrsEntityEvent<TEntity> @event) { return true; }
+    /// <summary>
+    /// Override to define when to send message for an event. Return true will send the message
+    /// </summary>
+    protected virtual bool SendMessageWhen(PlatformCqrsEntityEvent<TEntity> @event)
+    {
+        return @event.CrudAction switch
+        {
+            PlatformCqrsEntityEventCrudAction.Created => true,
+            PlatformCqrsEntityEventCrudAction.Updated => true,
+            PlatformCqrsEntityEventCrudAction.Deleted => true,
+            _ => false
+        };
+    }
 
     protected override async Task SendMessage(PlatformCqrsEntityEvent<TEntity> @event, CancellationToken cancellationToken)
     {
-        if (SendMessageWhen(@event)) await base.SendMessage(@event, cancellationToken);
+        if (SendMessageWhen(@event))
+        {
+            // Do not need to send message again if HasOutboxMessageSupport and crud action is IsAfterCompletedUowEntityEvent
+            // because of out box support, we will register the outbox message already before complete uow, with crud action value is mapped from before to after CompletedUowCrudAction
+            // using MapFromBeforeToAfterCompletedUowCrudAction
+            if (!@event.CrudAction.IsCompletedCrudAction() || !ApplicationBusMessageProducer.HasOutboxMessageSupport())
+                await base.SendMessage(@event, cancellationToken);
+        }
+        else
+        {
+            if (@event.CrudAction.IsTrackingCrudAction() &&
+                ApplicationBusMessageProducer.HasOutboxMessageSupport())
+            {
+                var mappedToUowCompletedCrudActionEntityEvent = @event.Clone().With(p => p.CrudAction = p.CrudAction.GetRelevantCompletedCrudAction());
+
+                if (SendMessageWhen(mappedToUowCompletedCrudActionEntityEvent))
+                    await base.SendMessage(mappedToUowCompletedCrudActionEntityEvent, cancellationToken);
+            }
+        }
     }
 }
 

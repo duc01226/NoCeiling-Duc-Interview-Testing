@@ -7,8 +7,8 @@ using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
-using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.Exceptions;
+using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.MongoDB.Extensions;
 using Easy.Platform.MongoDB.Migration;
 using Easy.Platform.Persistence.DataMigration;
@@ -65,7 +65,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
 
     public virtual string DataMigrationHistoryCollectionName => "MigrationHistory";
 
+    public IUnitOfWorkManager CreatedByUnitOfWorkManager => MappedUnitOfWork.CreatedByUnitOfWorkManager;
+
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryCollection.AsQueryable();
+
+    public IUnitOfWork MappedUnitOfWork { get; set; }
 
     public virtual async Task Initialize(IServiceProvider serviceProvider)
     {
@@ -139,17 +143,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        if (entities.Any())
-        {
-            await this.As<IPlatformDbContext>().EnsureEntitiesValid<TEntity, TPrimaryKey>(entities, cancellationToken);
-
-            await GetTable<TEntity>().InsertManyAsync(entities, null, cancellationToken);
-
-            if (!dismissSendEvent)
-                await Cqrs.SendEntityEvents(entities, PlatformCqrsEntityEventCrudAction.Created, cancellationToken);
-        }
-
-        return entities;
+        return await entities.Select(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken)).WhenAll();
     }
 
     public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
@@ -180,10 +174,13 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     public async Task DeleteAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        var result = await GetTable<TEntity>().DeleteOneAsync(p => p.Id.Equals(entity.Id), null, cancellationToken);
-
-        if (result.DeletedCount > 0 && !dismissSendEvent)
-            await Cqrs.SendEntityEvent(entity, PlatformCqrsEntityEventCrudAction.Deleted, cancellationToken);
+        await IPlatformDbContext.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey>(
+            Cqrs,
+            MappedUnitOfWork,
+            entity,
+            entity => GetTable<TEntity>().DeleteOneAsync(p => p.Id.Equals(entity.Id), null, cancellationToken),
+            dismissSendEvent,
+            cancellationToken);
     }
 
     public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
@@ -202,13 +199,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        var ids = entities.Select(p => p.Id).ToList();
-        await GetTable<TEntity>().DeleteManyAsync(p => ids.Contains(p.Id), cancellationToken);
+        await entities.ForEachAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
 
-        if (!dismissSendEvent)
-            await Cqrs.SendEntityEvents(entities, PlatformCqrsEntityEventCrudAction.Deleted, cancellationToken);
-
-        return entities;
+        return await entities.ToTask();
     }
 
     public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
@@ -360,22 +353,29 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                     .SetLastUpdatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
                     .As<TEntity>());
 
-        if (toBeUpdatedEntity is IRowVersionEntity rowVersionEntity)
+        if (toBeUpdatedEntity is IRowVersionEntity toBeUpdatedRowVersionEntity)
         {
-            var currentInMemoryConcurrencyUpdateToken = rowVersionEntity.ConcurrencyUpdateToken;
+            var currentInMemoryConcurrencyUpdateToken = toBeUpdatedRowVersionEntity.ConcurrencyUpdateToken;
             var newUpdateConcurrencyUpdateToken = Guid.NewGuid();
 
-            rowVersionEntity.ConcurrencyUpdateToken = newUpdateConcurrencyUpdateToken;
+            toBeUpdatedRowVersionEntity.ConcurrencyUpdateToken = newUpdateConcurrencyUpdateToken;
 
-            var result = await GetTable<TEntity>()
-                .ReplaceOneAsync(
-                    p => p.Id.Equals(toBeUpdatedEntity.Id) &&
-                         (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
-                          ((IRowVersionEntity)p).ConcurrencyUpdateToken == Guid.Empty ||
-                          ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken),
-                    toBeUpdatedEntity,
-                    new ReplaceOptions { IsUpsert = false },
-                    cancellationToken);
+            var result = await IPlatformDbContext.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, ReplaceOneResult>(
+                Cqrs,
+                MappedUnitOfWork,
+                toBeUpdatedEntity,
+                existingEntity,
+                entity => GetTable<TEntity>()
+                    .ReplaceOneAsync(
+                        p => p.Id.Equals(entity.Id) &&
+                             (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
+                              ((IRowVersionEntity)p).ConcurrencyUpdateToken == Guid.Empty ||
+                              ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken),
+                        entity,
+                        new ReplaceOptions { IsUpsert = false },
+                        cancellationToken),
+                dismissSendEvent,
+                cancellationToken);
 
             if (result.MatchedCount <= 0)
             {
@@ -387,19 +387,23 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         }
         else
         {
-            var result = await GetTable<TEntity>()
-                .ReplaceOneAsync(
-                    p => p.Id.Equals(toBeUpdatedEntity.Id),
-                    toBeUpdatedEntity,
-                    new ReplaceOptions { IsUpsert = false },
-                    cancellationToken);
+            var result = await IPlatformDbContext.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, ReplaceOneResult>(
+                Cqrs,
+                MappedUnitOfWork,
+                toBeUpdatedEntity,
+                existingEntity,
+                entity => GetTable<TEntity>()
+                    .ReplaceOneAsync(
+                        p => p.Id.Equals(toBeUpdatedEntity.Id),
+                        toBeUpdatedEntity,
+                        new ReplaceOptions { IsUpsert = false },
+                        cancellationToken),
+                dismissSendEvent,
+                cancellationToken);
 
             if (result.MatchedCount <= 0)
                 throw new PlatformDomainEntityNotFoundException<TEntity>(toBeUpdatedEntity.Id.ToString());
         }
-
-        if (!dismissSendEvent)
-            await Cqrs.SendEntityEvent(entity.AutoAddPropertyValueUpdatedDomainEvent(existingEntity), PlatformCqrsEntityEventCrudAction.Updated, cancellationToken);
 
         return entity;
     }
@@ -611,17 +615,27 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                 entity => entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = Guid.NewGuid());
 
         if (upsert == false)
-            await GetTable<TEntity>().InsertOneAsync(toBeCreatedEntity, null, cancellationToken);
+            await IPlatformDbContext.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
+                Cqrs,
+                MappedUnitOfWork,
+                toBeCreatedEntity,
+                entity => GetTable<TEntity>().InsertOneAsync(entity, null, cancellationToken).Then(() => entity),
+                dismissSendEvent,
+                cancellationToken);
         else
-            await GetTable<TEntity>()
-                .ReplaceOneAsync(
-                    p => p.Id.Equals(toBeCreatedEntity.Id),
-                    toBeCreatedEntity,
-                    new ReplaceOptions { IsUpsert = true },
-                    cancellationToken);
-
-        if (!dismissSendEvent)
-            await Cqrs.SendEntityEvent(toBeCreatedEntity, PlatformCqrsEntityEventCrudAction.Created, cancellationToken);
+            await IPlatformDbContext.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
+                Cqrs,
+                MappedUnitOfWork,
+                toBeCreatedEntity,
+                entity => GetTable<TEntity>()
+                    .ReplaceOneAsync(
+                        p => p.Id.Equals(entity.Id),
+                        entity,
+                        new ReplaceOptions { IsUpsert = true },
+                        cancellationToken)
+                    .Then(() => entity),
+                dismissSendEvent,
+                cancellationToken);
 
         return toBeCreatedEntity;
     }

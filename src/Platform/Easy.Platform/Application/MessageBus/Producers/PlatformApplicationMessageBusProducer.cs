@@ -44,6 +44,8 @@ public interface IPlatformApplicationBusMessageProducer
         bool forceUseDefaultRoutingKey = false,
         CancellationToken cancellationToken = default)
         where TMessage : class, new();
+
+    public bool HasOutboxMessageSupport();
 }
 
 public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMessageProducer
@@ -107,6 +109,11 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
             cancellationToken);
     }
 
+    public bool HasOutboxMessageSupport()
+    {
+        return ServiceProvider.ExecuteScoped(scope => scope.ServiceProvider.GetService<IPlatformOutboxBusMessageRepository>() != null);
+    }
+
     protected PlatformBusMessageIdentity BuildPlatformEventBusMessageIdentity()
     {
         return new PlatformBusMessageIdentity
@@ -115,11 +122,6 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
             RequestId = UserContextAccessor.Current.RequestId(),
             UserName = UserContextAccessor.Current.UserName()
         };
-    }
-
-    protected bool HasOutboxEventBusMessageRepositoryRegistered()
-    {
-        return ServiceProvider.ExecuteScoped(scope => scope.ServiceProvider.GetService<IPlatformOutboxBusMessageRepository>() != null);
     }
 
     protected virtual async Task<TMessage> SendMessageAsync<TMessage>(
@@ -136,7 +138,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
             trackableBusMessage.CreatedUtcDate ??= DateTime.UtcNow;
         }
 
-        if (autoSaveOutboxMessage && HasOutboxEventBusMessageRepositoryRegistered())
+        if (autoSaveOutboxMessage && HasOutboxMessageSupport())
         {
             var outboxEventBusProducerHelper = ServiceProvider.GetRequiredService<PlatformOutboxMessageBusProducerHelper>();
 

@@ -1,23 +1,124 @@
 using System.Linq.Expressions;
+using Easy.Platform.Common.Cqrs;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
+using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.Exceptions.Extensions;
+using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Persistence.DataMigration;
 
 namespace Easy.Platform.Application.Persistence;
 
 public interface IPlatformDbContext : IDisposable
 {
-    IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery { get; }
+    public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery { get; }
 
-    Task SaveChangesAsync();
+    public IUnitOfWork MappedUnitOfWork { get; set; }
 
-    IQueryable<TEntity> GetQuery<TEntity>() where TEntity : class, IEntity;
+    public static async Task ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey>(
+        IPlatformCqrs cqrs,
+        IUnitOfWork unitOfWork,
+        TEntity entity,
+        Func<TEntity, Task> deleteEntityAction,
+        bool dismissSendEvent,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        if (!dismissSendEvent)
+            await PlatformCqrsEntityEvent.SendEvent<TEntity, TPrimaryKey>(
+                cqrs,
+                unitOfWork,
+                entity,
+                PlatformCqrsEntityEventCrudAction.TrackDeleting,
+                cancellationToken);
 
-    void RunCommand(string command);
+        await deleteEntityAction(entity);
 
-    Task MigrateApplicationDataAsync(IServiceProvider serviceProvider);
+        if (!dismissSendEvent)
+            await PlatformCqrsEntityEvent.SendEvent<TEntity, TPrimaryKey>(
+                cqrs,
+                unitOfWork,
+                entity,
+                PlatformCqrsEntityEventCrudAction.Deleted,
+                cancellationToken);
+    }
 
-    Task Initialize(IServiceProvider serviceProvider);
+    public static async Task<TResult> ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TResult>(
+        IPlatformCqrs cqrs,
+        IUnitOfWork unitOfWork,
+        TEntity entity,
+        Func<TEntity, Task<TResult>> createEntityAction,
+        bool dismissSendEvent,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        if (!dismissSendEvent)
+            await PlatformCqrsEntityEvent.SendEvent<TEntity, TPrimaryKey>(
+                cqrs,
+                unitOfWork,
+                entity,
+                PlatformCqrsEntityEventCrudAction.TrackCreating,
+                cancellationToken);
+
+        var result = await createEntityAction(entity)
+            .ThenSideEffectActionAsync(
+                async _ =>
+                {
+                    if (!dismissSendEvent)
+                        await PlatformCqrsEntityEvent.SendEvent<TEntity, TPrimaryKey>(
+                            cqrs,
+                            unitOfWork,
+                            entity,
+                            PlatformCqrsEntityEventCrudAction.Created,
+                            cancellationToken);
+                });
+
+        return result;
+    }
+
+    public static async Task<TResult> ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, TResult>(
+        IPlatformCqrs cqrs,
+        IUnitOfWork unitOfWork,
+        TEntity entity,
+        TEntity existingEntity,
+        Func<TEntity, Task<TResult>> updateEntityAction,
+        bool dismissSendEvent,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        if (!dismissSendEvent)
+            entity.AutoAddPropertyValueUpdatedDomainEvent(existingEntity);
+
+        if (!dismissSendEvent)
+            await PlatformCqrsEntityEvent.SendEvent<TEntity, TPrimaryKey>(
+                cqrs,
+                unitOfWork,
+                entity,
+                PlatformCqrsEntityEventCrudAction.TrackUpdating,
+                cancellationToken);
+
+        var result = await updateEntityAction(entity)
+            .ThenSideEffectActionAsync(
+                async _ =>
+                {
+                    if (!dismissSendEvent)
+                        await PlatformCqrsEntityEvent.SendEvent<TEntity, TPrimaryKey>(
+                            cqrs,
+                            unitOfWork,
+                            entity,
+                            PlatformCqrsEntityEventCrudAction.Updated,
+                            cancellationToken);
+                });
+
+        return result;
+    }
+
+    public Task SaveChangesAsync();
+
+    public IQueryable<TEntity> GetQuery<TEntity>() where TEntity : class, IEntity;
+
+    public void RunCommand(string command);
+
+    public Task MigrateApplicationDataAsync(IServiceProvider serviceProvider);
+
+    public Task Initialize(IServiceProvider serviceProvider);
 
     public Task<List<TSource>> ToListAsync<TSource>(
         IQueryable<TSource> source,

@@ -5,7 +5,7 @@ using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
-using Easy.Platform.Domain.Events;
+using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.EfCore.EntityConfiguration;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
@@ -37,8 +37,10 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     }
 
     public DbSet<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryDbSet => Set<PlatformDataMigrationHistory>();
+    public IUnitOfWorkManager CreatedByUnitOfWorkManager => MappedUnitOfWork.CreatedByUnitOfWorkManager;
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryDbSet.AsQueryable();
+    public IUnitOfWork MappedUnitOfWork { get; set; }
 
     public async Task SaveChangesAsync()
     {
@@ -179,17 +181,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        if (entities.Any())
-        {
-            await this.As<IPlatformDbContext>().EnsureEntitiesValid<TEntity, TPrimaryKey>(entities, cancellationToken);
-
-            await GetTable<TEntity>().AddRangeAsync(entities, cancellationToken);
-
-            if (!dismissSendEvent)
-                await Cqrs.SendEntityEvents(entities, PlatformCqrsEntityEventCrudAction.Created, cancellationToken);
-        }
-
-        return entities;
+        return await entities.Select(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken)).WhenAll();
     }
 
     public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
@@ -204,9 +196,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        await entities.ForEachAsync((entity, index) => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
-
-        return entities;
+        return await entities.Select(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken)).WhenAll();
     }
 
     public async Task DeleteAsync<TEntity, TPrimaryKey>(
@@ -224,9 +214,13 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         bool dismissSendEvent,
         CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        GetTable<TEntity>().Remove(entity);
-
-        await Cqrs.SendEntityEvent(entity, PlatformCqrsEntityEventCrudAction.Deleted, cancellationToken);
+        await IPlatformDbContext.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey>(
+            Cqrs,
+            MappedUnitOfWork,
+            entity,
+            entity => GetTable<TEntity>().Remove(entity).ToTask(),
+            dismissSendEvent,
+            cancellationToken);
     }
 
     public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
@@ -246,12 +240,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        if (entities.IsEmpty()) return entities;
-
-        GetTable<TEntity>().RemoveRange(entities);
-
-        if (!dismissSendEvent)
-            await Cqrs.SendEntityEvents(entities, PlatformCqrsEntityEventCrudAction.Deleted, cancellationToken);
+        await entities.ForEachAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
 
         return await entities.ToTask();
     }
@@ -281,10 +270,13 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 entity is IRowVersionEntity { ConcurrencyUpdateToken: null },
                 entity => entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = Guid.NewGuid());
 
-        var result = await GetTable<TEntity>().AddAsync(toBeCreatedEntity, cancellationToken).AsTask().Then(p => toBeCreatedEntity);
-
-        if (!dismissSendEvent)
-            await Cqrs.SendEntityEvent(toBeCreatedEntity, PlatformCqrsEntityEventCrudAction.Created, cancellationToken);
+        var result = await IPlatformDbContext.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
+            Cqrs,
+            MappedUnitOfWork,
+            toBeCreatedEntity,
+            entity => GetTable<TEntity>().AddAsync(toBeCreatedEntity, cancellationToken).AsTask().Then(p => toBeCreatedEntity),
+            dismissSendEvent,
+            cancellationToken);
 
         return result;
     }
@@ -333,21 +325,27 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
         // Run DetachLocalIfAny to prevent
         // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
-        var result = entity
+        var toBeUpdatedEntity = entity
             .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
             .PipeIf(entity is IDateAuditedEntity, p => p.As<IDateAuditedEntity>().With(_ => _.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
             .PipeIf(
                 entity.IsAuditedUserEntity(),
                 p => p.As<IUserAuditedEntity>()
                     .SetLastUpdatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
-                    .As<TEntity>())
-            .Pipe(entity => GetTable<TEntity>().Update(entity).Entity);
+                    .As<TEntity>());
 
-        if (result is IRowVersionEntity rowVersionEntity)
-            rowVersionEntity.ConcurrencyUpdateToken = Guid.NewGuid();
-
-        if (!dismissSendEvent)
-            await Cqrs.SendEntityEvent(entity.AutoAddPropertyValueUpdatedDomainEvent(existingEntity), PlatformCqrsEntityEventCrudAction.Updated, cancellationToken);
+        var result = await IPlatformDbContext.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, TEntity>(
+            Cqrs,
+            MappedUnitOfWork,
+            toBeUpdatedEntity,
+            existingEntity,
+            async entity =>
+            {
+                return GetTable<TEntity>().Update(entity).Entity
+                    .PipeIf(entity is IRowVersionEntity, p => p.As<IRowVersionEntity>().With(_ => _.ConcurrencyUpdateToken = Guid.NewGuid()).As<TEntity>());
+            },
+            dismissSendEvent,
+            cancellationToken);
 
         return result;
     }

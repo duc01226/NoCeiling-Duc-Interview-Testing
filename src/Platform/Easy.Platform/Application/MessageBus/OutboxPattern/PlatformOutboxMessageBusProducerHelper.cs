@@ -248,7 +248,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         // WHY: Do not need to wait for uow completed if the uow for db do not handle actually transaction.
         // Can execute it immediately without waiting for uow to complete
         if (currentUow == null ||
-            currentUow.IsNoTransactionUow() ||
+            currentUow.IsPseudoTransactionUow() ||
             (currentUow is IPlatformAggregatedPersistenceUnitOfWork currentAggregatedPersistenceUow &&
              currentAggregatedPersistenceUow.IsNoTransactionUow(outboxBusMessageRepository.CurrentActiveUow())))
             await serviceProvider.ExecuteInjectAsync(
@@ -259,7 +259,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 retryProcessFailedMessageInSecondsUnit,
                 cancellationToken);
         else
-            // Do not use async, just call.Wait()
+            // Do not use async, just call.WaitResult()
             // WHY: Never use async lambda on event handler, because it's equivalent to async void, which fire async task and forget
             // this will lead to a lot of potential bug and issues.
             currentUow.OnCompleted += (sender, args) =>

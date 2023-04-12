@@ -257,22 +257,22 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             uow => GetUowDbContext(uow).CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
     }
 
-    public override Task<TEntity> CreateOrUpdateAsync(
+    public override async Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForWrite(
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, cancellationToken));
     }
 
-    public override Task<TEntity> CreateOrUpdateAsync(
+    public override async Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         Expression<Func<TEntity, bool>> customCheckExistingPredicate = null,
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForWrite(
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, customCheckExistingPredicate, dismissSendEvent, cancellationToken));
     }
 
@@ -296,21 +296,21 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             uow => GetUowDbContext(uow).UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
     }
 
-    public override Task DeleteAsync(
+    public override async Task DeleteAsync(
         TPrimaryKey entityId,
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForWrite(
+        await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).DeleteAsync<TEntity, TPrimaryKey>(entityId, dismissSendEvent, cancellationToken));
     }
 
-    public override Task DeleteAsync(
+    public override async Task DeleteAsync(
         TEntity entity,
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForWrite(
+        await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
     }
 

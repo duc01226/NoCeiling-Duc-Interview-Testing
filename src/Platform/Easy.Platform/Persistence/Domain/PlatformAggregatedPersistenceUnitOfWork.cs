@@ -25,14 +25,14 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
         this.associatedServiceScope = associatedServiceScope;
     }
 
-    public override bool IsNoTransactionUow()
+    public override bool IsPseudoTransactionUow()
     {
-        return InnerUnitOfWorks.All(p => p.IsNoTransactionUow());
+        return InnerUnitOfWorks.All(p => p.IsPseudoTransactionUow());
     }
 
     public bool IsNoTransactionUow<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IUnitOfWork
     {
-        return InnerUnitOfWorks.FirstOrDefault(p => p.Equals(uow))?.IsNoTransactionUow() == true;
+        return InnerUnitOfWorks.FirstOrDefault(p => p.Equals(uow))?.IsPseudoTransactionUow() == true;
     }
 
     protected override void Dispose(bool disposing)

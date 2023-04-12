@@ -11,6 +11,11 @@ public interface IUnitOfWork : IDisposable
     /// </summary>
     public List<IUnitOfWork> InnerUnitOfWorks { get; }
 
+    /// <summary>
+    /// Indicate it's created by UnitOfWorkManager
+    /// </summary>
+    public IUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
+
     public event EventHandler OnCompleted;
     public event EventHandler<UnitOfWorkFailedArgs> OnFailed;
 
@@ -31,7 +36,7 @@ public interface IUnitOfWork : IDisposable
     /// <summary>
     /// If true, the uow actually do not handle real transaction. Repository when create/update data actually save immediately
     /// </summary>
-    public bool IsNoTransactionUow();
+    public bool IsPseudoTransactionUow();
 
     /// <summary>
     /// Get itself or inner uow which is TUnitOfWork.
@@ -61,6 +66,7 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
     public event EventHandler OnCompleted;
     public event EventHandler<UnitOfWorkFailedArgs> OnFailed;
     public List<IUnitOfWork> InnerUnitOfWorks { get; protected set; } = new();
+    public IUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
 
     public virtual async Task CompleteAsync(CancellationToken cancellationToken = default)
     {
@@ -89,7 +95,7 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
         return !Completed && !Disposed;
     }
 
-    public abstract bool IsNoTransactionUow();
+    public abstract bool IsPseudoTransactionUow();
 
     public void Dispose()
     {

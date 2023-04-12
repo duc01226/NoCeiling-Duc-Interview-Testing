@@ -40,7 +40,7 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
         }
     }
 
-    public override bool IsNoTransactionUow()
+    public override bool IsPseudoTransactionUow()
     {
         return false;
     }

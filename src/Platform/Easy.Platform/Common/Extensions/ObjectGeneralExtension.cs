@@ -9,19 +9,19 @@ namespace Easy.Platform.Common.Extensions;
 
 public static class ObjectGeneralExtension
 {
-    public static bool IsValuesDifferent(this object obj1, object obj2)
+    public static bool IsValuesDifferent<T1, T2>(this T1 obj1, T2 obj2)
     {
         if (obj1 == null && obj2 != null)
             return true;
         if (obj2 == null && obj1 != null)
             return true;
         if (obj1 != null)
-            return JsonSerializer.Serialize(obj1) != JsonSerializer.Serialize(obj2);
+            return PlatformJsonSerializer.Serialize(obj1) != PlatformJsonSerializer.Serialize(obj2);
 
         return false;
     }
 
-    public static bool IsValuesEqual(this object obj1, object obj2)
+    public static bool IsValuesEqual<T1, T2>(this T1 obj1, T2 obj2)
     {
         return !IsValuesDifferent(obj1, obj2);
     }
@@ -128,5 +128,10 @@ public static class ObjectGeneralExtension
         if (propertyInfo?.GetSetMethod() != null) propertyInfo.SetValue(obj, newValue);
 
         return obj;
+    }
+
+    public static TObject DeepClone<TObject>(this TObject obj)
+    {
+        return PlatformJsonSerializer.Deserialize<TObject>(PlatformJsonSerializer.Serialize(obj));
     }
 }

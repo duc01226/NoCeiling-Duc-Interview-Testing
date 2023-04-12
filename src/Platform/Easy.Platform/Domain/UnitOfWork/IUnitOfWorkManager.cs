@@ -19,7 +19,7 @@ public interface IUnitOfWorkManager : IDisposable
     public IUnitOfWork GlobalUow { get; }
 
     /// <summary>
-    /// Just create and return a new instance of uow without manage it
+    /// Just create and return a new instance of uow without manage it. It will not affect to <see cref="HasCurrentActiveUow" /> result
     /// </summary>
     public IUnitOfWork CreateNewUow();
 

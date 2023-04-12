@@ -1,8 +1,11 @@
+using System.ComponentModel;
 using System.Linq.Expressions;
+using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Domain.Entities;
+using Easy.Platform.Domain.UnitOfWork;
 using static Easy.Platform.Domain.Entities.ISupportDomainEventsEntity;
 
 namespace Easy.Platform.Domain.Events;
@@ -10,6 +13,25 @@ namespace Easy.Platform.Domain.Events;
 public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
 {
     public const string EventTypeValue = nameof(PlatformCqrsEntityEvent);
+
+    public static async Task SendEvent<TEntity, TPrimaryKey>(
+        IPlatformCqrs cqrs,
+        IUnitOfWork unitOfWork,
+        TEntity entity,
+        PlatformCqrsEntityEventCrudAction crudAction,
+        CancellationToken cancellationToken)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        if (crudAction.IsCompletedCrudAction())
+            unitOfWork.OnCompleted += (object sender, EventArgs e) =>
+            {
+                // Do not use async, just call.WaitResult()
+                // WHY: Never use async lambda on event handler, because it's equivalent to async void, which fire async task and forget
+                // this will lead to a lot of potential bug and issues.
+                cqrs.SendEntityEvent(entity, crudAction, cancellationToken).WaitResult();
+            };
+        else await cqrs.SendEntityEvent(entity, crudAction, cancellationToken);
+    }
 }
 
 /// <summary>
@@ -65,11 +87,71 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent
             .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<PropertyValueUpdatedDomainEvent<TValue>>(p.Value))
             .FirstOrDefault(p => p.PropertyName == property.GetPropertyName());
     }
+
+    public PlatformCqrsEntityEvent<TEntity> Clone()
+    {
+        return MemberwiseClone().As<PlatformCqrsEntityEvent<TEntity>>();
+    }
 }
 
 public enum PlatformCqrsEntityEventCrudAction
 {
+    /// <summary>
+    /// Track Creating Before complete current UOW
+    /// </summary>
+    TrackCreating,
+
+    /// <summary>
+    /// Track Updating Before complete current UOW
+    /// </summary>
+    TrackUpdating,
+
+    /// <summary>
+    /// Track Deleting Before complete current UOW
+    /// </summary>
+    TrackDeleting,
+
+    // After completed UOW
     Created,
     Updated,
     Deleted
+}
+
+public static class PlatformCqrsEntityEventCrudActionExtensions
+{
+    public static bool IsTrackingCrudAction(this PlatformCqrsEntityEventCrudAction crudAction)
+    {
+        return crudAction == PlatformCqrsEntityEventCrudAction.TrackCreating ||
+               crudAction == PlatformCqrsEntityEventCrudAction.TrackUpdating ||
+               crudAction == PlatformCqrsEntityEventCrudAction.TrackDeleting;
+    }
+
+    public static bool IsCompletedCrudAction(this PlatformCqrsEntityEventCrudAction crudAction)
+    {
+        return crudAction == PlatformCqrsEntityEventCrudAction.Created ||
+               crudAction == PlatformCqrsEntityEventCrudAction.Updated ||
+               crudAction == PlatformCqrsEntityEventCrudAction.Deleted;
+    }
+
+    public static PlatformCqrsEntityEventCrudAction GetRelevantCompletedCrudAction(this PlatformCqrsEntityEventCrudAction crudAction)
+    {
+        return crudAction switch
+        {
+            PlatformCqrsEntityEventCrudAction.TrackCreating => PlatformCqrsEntityEventCrudAction.Created,
+            PlatformCqrsEntityEventCrudAction.TrackUpdating => PlatformCqrsEntityEventCrudAction.Updated,
+            PlatformCqrsEntityEventCrudAction.TrackDeleting => PlatformCqrsEntityEventCrudAction.Deleted,
+            _ => throw new InvalidEnumArgumentException($"Invalid CrudAction value:{crudAction}")
+        };
+    }
+
+    public static PlatformCqrsEntityEventCrudAction GetRelevantTrackingCrudAction(this PlatformCqrsEntityEventCrudAction crudAction)
+    {
+        return crudAction switch
+        {
+            PlatformCqrsEntityEventCrudAction.Created => PlatformCqrsEntityEventCrudAction.TrackCreating,
+            PlatformCqrsEntityEventCrudAction.Updated => PlatformCqrsEntityEventCrudAction.TrackUpdating,
+            PlatformCqrsEntityEventCrudAction.Deleted => PlatformCqrsEntityEventCrudAction.TrackDeleting,
+            _ => throw new InvalidEnumArgumentException($"Invalid CrudAction value:{crudAction}")
+        };
+    }
 }

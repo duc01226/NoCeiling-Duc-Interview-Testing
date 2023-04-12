@@ -1,3 +1,4 @@
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,7 +24,7 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
         var newScope = ServiceProvider.CreateScope();
 
         return new PlatformAggregatedPersistenceUnitOfWork(
-            newScope.ServiceProvider.GetServices<IUnitOfWork>().ToList(),
+            newScope.ServiceProvider.GetServices<IUnitOfWork>().Select(p => p.With(_ => _.CreatedByUnitOfWorkManager = this)).ToList(),
             associatedServiceScope: newScope);
     }
 }

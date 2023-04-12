@@ -14,7 +14,7 @@ public class PlatformMongoDbPersistenceUnitOfWork<TDbContext>
     {
     }
 
-    public override bool IsNoTransactionUow()
+    public override bool IsPseudoTransactionUow()
     {
         return true;
     }

@@ -15,4 +15,15 @@ public abstract class PlatformCqrsEntityEventApplicationHandler<TEntity> : Platf
         unitOfWorkManager)
     {
     }
+
+    protected override bool HandleWhen(PlatformCqrsEntityEvent<TEntity> @event)
+    {
+        return @event.CrudAction switch
+        {
+            PlatformCqrsEntityEventCrudAction.Created => true,
+            PlatformCqrsEntityEventCrudAction.Updated => true,
+            PlatformCqrsEntityEventCrudAction.Deleted => true,
+            _ => false
+        };
+    }
 }

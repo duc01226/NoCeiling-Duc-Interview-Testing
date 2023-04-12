@@ -26,28 +26,33 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     /// <summary>
     /// Default is false. Return true to handle event only when the current uow is completed
     /// </summary>
-    protected virtual bool HandleAfterUowCompleted => false;
+    protected virtual bool HandleAfterCurrentUowCompleted => false;
 
-    protected override async Task ExecuteHandleAsync(TEvent request, CancellationToken cancellationToken)
+    protected override async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
     {
-        if (HandleAfterUowCompleted &&
+        if (HandleAfterCurrentUowCompleted &&
             !IsInstanceHandlingAfterSourceUowCompleted &&
             UnitOfWorkManager.HasCurrentActiveUow())
             UnitOfWorkManager.CurrentActiveUow().OnCompleted += (sender, args) =>
             {
-                PlatformApplicationGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
-                    async (IServiceProvider sp) =>
-                    {
-                        var thisHandlerNewInstance = sp.GetServices<INotificationHandler<TEvent>>()
-                            .First(p => p.GetType() == GetType())
-                            .As<PlatformCqrsEventApplicationHandler<TEvent>>()
-                            .With(_ => _.IsInstanceHandlingAfterSourceUowCompleted = true);
+                // Do not use async, just call.WaitResult()
+                // WHY: Never use async lambda on event handler, because it's equivalent to async void, which fire async task and forget
+                // this will lead to a lot of potential bug and issues.
+                PlatformApplicationGlobal.RootServiceProvider
+                    .ExecuteInjectScopedAsync(
+                        async (IServiceProvider sp) =>
+                        {
+                            var thisHandlerNewInstance = sp.GetServices<INotificationHandler<TEvent>>()
+                                .First(p => p.GetType() == GetType())
+                                .As<PlatformCqrsEventApplicationHandler<TEvent>>()
+                                .With(_ => _.IsInstanceHandlingAfterSourceUowCompleted = true);
 
-                        await thisHandlerNewInstance.Handle(request, default);
-                    }).WaitResult();
+                            await thisHandlerNewInstance.Handle(@event, default);
+                        })
+                    .WaitResult();
             };
         else
-            await InternalExecuteHandleAsync(request, cancellationToken);
+            await InternalExecuteHandleAsync(@event, cancellationToken);
     }
 
     private async Task InternalExecuteHandleAsync(TEvent request, CancellationToken cancellationToken)

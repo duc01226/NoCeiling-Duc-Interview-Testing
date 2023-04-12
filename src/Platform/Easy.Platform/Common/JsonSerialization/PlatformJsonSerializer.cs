@@ -61,23 +61,44 @@ public static class PlatformJsonSerializer
 
     public static string Serialize<TValue>(TValue value)
     {
-        return JsonSerializer.Serialize(value, value?.GetType() ?? typeof(TValue), CurrentOptions.Value);
+        try
+        {
+            // Try to use real runtime type to support TValue is abstract base type. Serialize exactly the type.
+            // If not work come back to original type
+            return JsonSerializer.Serialize(value, value.GetType(), CurrentOptions.Value);
+        }
+        catch (Exception)
+        {
+            return JsonSerializer.Serialize(value, typeof(TValue), CurrentOptions.Value);
+        }
     }
 
     public static string Serialize<TValue>(TValue value, JsonSerializerOptions customSerializerOptions)
     {
-        return JsonSerializer.Serialize(
-            value,
-            value?.GetType() ?? typeof(TValue),
-            customSerializerOptions ?? CurrentOptions.Value);
+        try
+        {
+            // Try to use real runtime type to support TValue is abstract base type. Serialize exactly the type.
+            // If not work come back to original type
+            return JsonSerializer.Serialize(value, value.GetType(), customSerializerOptions ?? CurrentOptions.Value);
+        }
+        catch (Exception)
+        {
+            return JsonSerializer.Serialize(value, typeof(TValue), customSerializerOptions ?? CurrentOptions.Value);
+        }
     }
 
     public static string Serialize<TValue>(TValue value, Action<JsonSerializerOptions> customSerializerOptionsConfig)
     {
-        return JsonSerializer.Serialize(
-            value,
-            value?.GetType() ?? typeof(TValue),
-            CurrentOptions.Value.Clone().With(customSerializerOptionsConfig));
+        try
+        {
+            // Try to use real runtime type to support TValue is abstract base type. Serialize exactly the type.
+            // If not work come back to original type
+            return JsonSerializer.Serialize(value, value.GetType(), CurrentOptions.Value.Clone().With(customSerializerOptionsConfig));
+        }
+        catch (Exception)
+        {
+            return JsonSerializer.Serialize(value, typeof(TValue), CurrentOptions.Value.Clone().With(customSerializerOptionsConfig));
+        }
     }
 
     public static string SerializeWithDefaultOptions<TValue>(
@@ -120,10 +141,16 @@ public static class PlatformJsonSerializer
         TValue value,
         JsonSerializerOptions customSerializerOptions = null)
     {
-        return JsonSerializer.SerializeToUtf8Bytes(
-            value,
-            value?.GetType() ?? typeof(TValue),
-            customSerializerOptions ?? CurrentOptions.Value);
+        try
+        {
+            // Try to use real runtime type to support TValue is abstract base type. Serialize exactly the type.
+            // If not work come back to original type
+            return JsonSerializer.SerializeToUtf8Bytes(value, value.GetType(), customSerializerOptions ?? CurrentOptions.Value);
+        }
+        catch (Exception)
+        {
+            return JsonSerializer.SerializeToUtf8Bytes(value, typeof(TValue), customSerializerOptions ?? CurrentOptions.Value);
+        }
     }
 
     public static TValue Deserialize<TValue>(
