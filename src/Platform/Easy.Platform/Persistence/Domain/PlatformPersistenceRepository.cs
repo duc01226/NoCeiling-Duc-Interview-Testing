@@ -72,7 +72,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(query.Where(p => p.Id.Equals(id)), cancellationToken)
-                .EnsureFoundAsync($"{typeof(TEntity).Name} with Id {id} is not found"),
+                .EnsureFound($"{typeof(TEntity).Name} with Id {id} is not found"),
             loadRelatedEntities);
     }
 
@@ -153,7 +153,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(query.WhereIf(predicate != null, predicate), cancellationToken)
-                .EnsureFoundAsync($"{typeof(TEntity).Name} is not found"),
+                .EnsureFound($"{typeof(TEntity).Name} is not found"),
             loadRelatedEntities);
     }
 

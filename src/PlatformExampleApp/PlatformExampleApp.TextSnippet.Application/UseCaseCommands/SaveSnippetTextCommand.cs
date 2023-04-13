@@ -278,7 +278,7 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
         // STEP 1: Build saving entity data from request. Throw not found if update (when id is not null)
         var toSaveEntity = request.Data.IsSubmitToUpdate()
             ? await textSnippetEntityRepository.GetByIdAsync(request.Data.Id!.Value, cancellationToken)
-                .EnsureFoundAsync($"Has not found text snippet for id {request.Data.Id}")
+                .EnsureFound($"Has not found text snippet for id {request.Data.Id}")
                 .Then(existingEntity => request.Data.UpdateToEntity(existingEntity))
             : request.Data.MapToNewEntity();
 

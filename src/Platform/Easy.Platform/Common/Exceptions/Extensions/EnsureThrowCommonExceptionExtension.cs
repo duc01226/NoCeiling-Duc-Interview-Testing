@@ -51,7 +51,7 @@ public static class EnsureThrowCommonExceptionExtension
     [return: NotNull]
     public static T EnsureFound<T>(this T? obj, string errorMsg = null)
     {
-        if (obj is Task) throw new Exception($"Target should not be a task. You might want to use {nameof(EnsureFoundAsync)} instead.");
+        if (obj is Task) throw new Exception($"Target should not be a task. You might want to use {nameof(EnsureFound)} instead.");
         return obj.ValidateFound(errorMsg).WithNotFoundException().EnsureValid();
     }
 
@@ -87,7 +87,7 @@ public static class EnsureThrowCommonExceptionExtension
     [return: NotNull]
     public static T EnsureFound<T>(this T? obj, Func<T, bool> and, string errorMsg = null)
     {
-        if (obj is Task) throw new Exception($"Target should not be a task. You might want to use {nameof(EnsureFoundAsync)} instead.");
+        if (obj is Task) throw new Exception($"Target should not be a task. You might want to use {nameof(EnsureFound)} instead.");
         return obj.ValidateFound(and, errorMsg).WithNotFoundException().EnsureValid();
     }
 
@@ -97,51 +97,51 @@ public static class EnsureThrowCommonExceptionExtension
     }
 
     [return: NotNull]
-    public static async Task<T> EnsureFoundAsync<T>(this Task<T?> objectTask, string errorMessage = null)
+    public static async Task<T> EnsureFound<T>(this Task<T?> objectTask, string errorMessage = null)
     {
         var obj = await objectTask;
         return obj.EnsureFound(errorMessage);
     }
 
     [return: NotNull]
-    public static async Task<T> EnsureFoundAsync<T>(this T? obj, Func<T, Task<bool>> and, string errorMsg = null)
+    public static async Task<T> EnsureFound<T>(this T? obj, Func<T, Task<bool>> and, string errorMsg = null)
     {
         return await obj.ValidateFoundAsync(and, errorMsg).Then(p => p.WithNotFoundException().EnsureValid());
     }
 
     [return: NotNull]
-    public static async Task<T> EnsureFoundAsync<T>(this Task<T?> objectTask, Func<T, bool> and, string errorMsg = null)
+    public static async Task<T> EnsureFound<T>(this Task<T?> objectTask, Func<T, bool> and, string errorMsg = null)
     {
         var obj = await objectTask;
         return obj.EnsureFound(and, errorMsg);
     }
 
     [return: NotNull]
-    public static async Task<T> EnsureFoundAsync<T>(this Task<T?> objectTask, Func<T, Task<bool>> and, string errorMsg = null)
+    public static async Task<T> EnsureFound<T>(this Task<T?> objectTask, Func<T, Task<bool>> and, string errorMsg = null)
     {
         var obj = await objectTask;
-        return await obj.EnsureFoundAsync(and, errorMsg);
+        return await obj.EnsureFound(and, errorMsg);
     }
 
-    public static async Task<IEnumerable<T>> EnsureFoundAsync<T>(this Task<IEnumerable<T>> objectsTask, string errorMessage = null)
+    public static async Task<IEnumerable<T>> EnsureFound<T>(this Task<IEnumerable<T>> objectsTask, string errorMessage = null)
     {
         var objects = await objectsTask;
         return objects.EnsureFound(errorMessage);
     }
 
-    public static async Task<List<T>> EnsureFoundAsync<T>(this Task<List<T>> objectsTask, string errorMessage = null)
+    public static async Task<List<T>> EnsureFound<T>(this Task<List<T>> objectsTask, string errorMessage = null)
     {
         var objects = await objectsTask;
         return objects.EnsureFound(errorMessage);
     }
 
-    public static async Task<List<T>> EnsureFoundAllAsync<T>(this Task<List<T>> objectsTask, List<T> mustFoundAllItems, Func<List<T>, string> errorMsg)
+    public static async Task<List<T>> EnsureFoundAll<T>(this Task<List<T>> objectsTask, List<T> mustFoundAllItems, Func<List<T>, string> errorMsg)
     {
         var objects = await objectsTask;
         return objects.EnsureFoundAll(mustFoundAllItems, errorMsg);
     }
 
-    public static async Task<ICollection<T>> EnsureFoundAsync<T>(this Task<ICollection<T>> objectsTask, string errorMessage = null)
+    public static async Task<ICollection<T>> EnsureFound<T>(this Task<ICollection<T>> objectsTask, string errorMessage = null)
     {
         var objects = await objectsTask;
         return objects.EnsureFound(errorMessage);
