@@ -1,7 +1,7 @@
 using Easy.Platform.Application.Dtos;
 using Easy.Platform.Common.ValueObjects;
-using PlatformExampleApp.TextSnippet.Application.ValueObjectDtos;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
+using PlatformExampleApp.TextSnippet.Domain.ValueObjects;
 
 namespace PlatformExampleApp.TextSnippet.Application.EntityDtos;
 
@@ -14,7 +14,7 @@ public class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, Guid>
         Id = entity.Id;
         SnippetText = entity.SnippetText;
         FullText = entity.FullText;
-        Address = entity.Address != null ? ExampleAddressValueObjectDto.Create(entity.Address) : null;
+        Address = entity.Address;
         CreatedDate = entity.CreatedDate;
         TimeOnly = entity.TimeOnly;
     }
@@ -27,7 +27,7 @@ public class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, Guid>
 
     public TimeOnly? TimeOnly { get; set; }
 
-    public ExampleAddressValueObjectDto Address { get; set; }
+    public ExampleAddressValueObject? Address { get; set; }
 
     public DateTime? CreatedDate { get; set; }
 
@@ -54,7 +54,7 @@ public class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, Guid>
 
         // Demo do not update address on submit. Only when create new entity or mapping data to return to client
         if (mode != MapToEntityModes.MapToUpdateExistingEntity)
-            entity.Address = Address?.MapToObject();
+            entity.Address = Address;
         entity.TimeOnly = TimeOnly ?? default;
 
         return entity;

@@ -1,4 +1,4 @@
-using Easy.Platform.Application.Cqrs.Commands;
+using Easy.Platform.Application.Cqrs.Events;
 using Easy.Platform.Common.Cqrs.Commands;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.Caching;
