@@ -13,15 +13,24 @@ public interface IPlatformDataMigrationExecutor : IDisposable
 public interface IPlatformDataMigrationExecutor<in TDbContext> : IPlatformDataMigrationExecutor
     where TDbContext : IPlatformDbContext
 {
+    /// <summary>
+    /// The unique name of the migration. The name will be used to order. Convention should be: YYYYMMDDhhmmss_MigrationName
+    /// </summary>
     string Name { get; }
-    int Order { get; }
 
     /// <summary>
-    /// Set this data to state that the data migration only valid if db initialized before a certain date
+    /// Set this data to state that the data migration only valid if db initialized before a certain date. <br />
+    /// Implement this prop define the date, usually the date you define your data migration. <br />
+    /// When define it, for example CreationDate = 2000/12/31, mean that after 2000/12/31,
+    /// if you run a fresh new system with no db, db is init created after 2000/12/31, the migration will be not executed.
+    /// This will help to prevent run not necessary data migration for a new system fresh db
     /// </summary>
-    DateTime? RunOnlyForDbInitializedBeforeDate { get; }
+    DateTime CreationDate { get; }
 
-    DateTime? ExpiredAt { get; }
+    /// <summary>
+    /// The find the date that this migration will not be executed after a given date.
+    /// </summary>
+    DateTime? ExpirationDate { get; }
 
     Task Execute(TDbContext dbContext);
 
@@ -44,26 +53,16 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
     where TDbContext : IPlatformDbContext
 {
     public abstract string Name { get; }
-    public virtual int Order => 0;
 
-    /// <summary>
-    /// The find the date that this migration will not be executed after a given date
-    /// </summary>
-    public virtual DateTime? ExpiredAt => null;
+    public virtual DateTime? ExpirationDate => null;
 
-    /// <summary>
-    /// Override this prop define the date, usually the date you define your data migration. <br />
-    /// When define it, for example RunOnlyDbInitializedBeforeDate = 2000/12/31, mean that after 2000/12/31,
-    /// if you run a fresh new system with no db, db is init created after 2000/12/31, the migration will be not executed.
-    /// This will help to prevent run not necessary data migration for a new system fresh db
-    /// </summary>
-    public virtual DateTime? RunOnlyForDbInitializedBeforeDate => null;
+    public abstract DateTime CreationDate { get; }
 
     public abstract Task Execute(TDbContext dbContext);
 
     public bool IsExpired()
     {
-        return ExpiredAt.HasValue && ExpiredAt < DateTime.UtcNow;
+        return ExpirationDate.HasValue && ExpirationDate < DateTime.UtcNow;
     }
 
     /// <summary>
@@ -73,7 +72,7 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
     /// </summary>
     public string GetOrderByValue()
     {
-        return $"{Order:D5}_{Name}";
+        return Name;
     }
 
     public void Dispose()

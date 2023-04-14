@@ -14,16 +14,13 @@ internal class DemoMigrateDataCrossDb : PlatformDataMigrationExecutor<TextSnippe
         this.demoMigrateDataCrossDbContext = demoMigrateDataCrossDbContext;
     }
 
-    public override string Name => GetType().Name;
-    public override int Order => 0;
-
-    // Set this data to state that the data migration only valid if db initialized before a certain date
-    //public override DateTime? RunOnlyDbInitializedBeforeDate { get; }
+    public override string Name => "20500101000000_DemoMigrateDataCrossDb";
+    public override DateTime CreationDate => new DateTime(2050, 01, 01);
 
     /// <summary>
     /// This application data migration only valid until 2022/12/01
     /// </summary>
-    public override DateTime? ExpiredAt => new DateTime(2022, 12, 1);
+    public override DateTime? ExpirationDate => new DateTime(2050, 01, 01);
 
     public override async Task Execute(TextSnippetMultiDbDemoDbContext dbContext)
     {

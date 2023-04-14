@@ -16,13 +16,13 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
 
     public static async Task SendEvent<TEntity, TPrimaryKey>(
         IPlatformCqrs cqrs,
-        IUnitOfWork unitOfWork,
+        IUnitOfWork? unitOfWork,
         TEntity entity,
         PlatformCqrsEntityEventCrudAction crudAction,
         CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        if (crudAction.IsCompletedCrudAction())
+        if (crudAction.IsCompletedCrudAction() && unitOfWork != null)
             unitOfWork.OnCompleted += (object sender, EventArgs e) =>
             {
                 // Do not use async, just call.WaitResult()
@@ -31,6 +31,101 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
                 cqrs.SendEntityEvent(entity, crudAction, cancellationToken).WaitResult();
             };
         else await cqrs.SendEntityEvent(entity, crudAction, cancellationToken);
+    }
+
+    public static async Task ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey>(
+        IPlatformCqrs cqrs,
+        IUnitOfWork? unitOfWork,
+        TEntity entity,
+        Func<TEntity, Task> deleteEntityAction,
+        bool dismissSendEvent,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        if (!dismissSendEvent)
+            await SendEvent<TEntity, TPrimaryKey>(
+                cqrs,
+                unitOfWork,
+                entity,
+                PlatformCqrsEntityEventCrudAction.TrackDeleting,
+                cancellationToken);
+
+        await deleteEntityAction(entity);
+
+        if (!dismissSendEvent)
+            await SendEvent<TEntity, TPrimaryKey>(
+                cqrs,
+                unitOfWork,
+                entity,
+                PlatformCqrsEntityEventCrudAction.Deleted,
+                cancellationToken);
+    }
+
+    public static async Task<TResult> ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TResult>(
+        IPlatformCqrs cqrs,
+        IUnitOfWork? unitOfWork,
+        TEntity entity,
+        Func<TEntity, Task<TResult>> createEntityAction,
+        bool dismissSendEvent,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        if (!dismissSendEvent)
+            await SendEvent<TEntity, TPrimaryKey>(
+                cqrs,
+                unitOfWork,
+                entity,
+                PlatformCqrsEntityEventCrudAction.TrackCreating,
+                cancellationToken);
+
+        var result = await createEntityAction(entity)
+            .ThenSideEffectActionAsync(
+                async _ =>
+                {
+                    if (!dismissSendEvent)
+                        await SendEvent<TEntity, TPrimaryKey>(
+                            cqrs,
+                            unitOfWork,
+                            entity,
+                            PlatformCqrsEntityEventCrudAction.Created,
+                            cancellationToken);
+                });
+
+        return result;
+    }
+
+    public static async Task<TResult> ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, TResult>(
+        IPlatformCqrs cqrs,
+        IUnitOfWork? unitOfWork,
+        TEntity entity,
+        TEntity existingEntity,
+        Func<TEntity, Task<TResult>> updateEntityAction,
+        bool dismissSendEvent,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        if (!dismissSendEvent)
+            entity.AutoAddPropertyValueUpdatedDomainEvent(existingEntity);
+
+        if (!dismissSendEvent)
+            await SendEvent<TEntity, TPrimaryKey>(
+                cqrs,
+                unitOfWork,
+                entity,
+                PlatformCqrsEntityEventCrudAction.TrackUpdating,
+                cancellationToken);
+
+        var result = await updateEntityAction(entity)
+            .ThenSideEffectActionAsync(
+                async _ =>
+                {
+                    if (!dismissSendEvent)
+                        await SendEvent<TEntity, TPrimaryKey>(
+                            cqrs,
+                            unitOfWork,
+                            entity,
+                            PlatformCqrsEntityEventCrudAction.Updated,
+                            cancellationToken);
+                });
+
+        return result;
     }
 }
 

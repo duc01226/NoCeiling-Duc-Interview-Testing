@@ -7,6 +7,7 @@ using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
+using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.Exceptions;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.MongoDB.Extensions;
@@ -65,11 +66,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
 
     public virtual string DataMigrationHistoryCollectionName => "MigrationHistory";
 
-    public IUnitOfWorkManager CreatedByUnitOfWorkManager => MappedUnitOfWork.CreatedByUnitOfWorkManager;
-
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryCollection.AsQueryable();
 
-    public IUnitOfWork MappedUnitOfWork { get; set; }
+    public IUnitOfWork? MappedUnitOfWork { get; set; }
 
     public virtual async Task Initialize(IServiceProvider serviceProvider)
     {
@@ -174,7 +173,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     public async Task DeleteAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        await IPlatformDbContext.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey>(
+        await PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey>(
             Cqrs,
             MappedUnitOfWork,
             entity,
@@ -232,32 +231,21 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
             .Execute()
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (existingEntity != null) return await UpdateAsync<TEntity, TPrimaryKey>(entity, existingEntity, dismissSendEvent, cancellationToken);
+        if (existingEntity != null)
+            return await UpdateAsync<TEntity, TPrimaryKey>(entity.With(_ => _.Id = existingEntity.Id), existingEntity, dismissSendEvent, cancellationToken);
 
         return await CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, upsert: true, cancellationToken);
     }
 
     public async Task<List<TEntity>> CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
-        Expression<Func<TEntity, bool>> customCheckExistingPredicate = null,
+        Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        var entityIds = entities.Select(p => p.Id);
-
-        var existingEntityIds = await GetTable<TEntity>()
-            .AsQueryable()
-            .Where(p => entityIds.Contains(p.Id))
-            .Select(p => p.Id)
-            .Distinct()
-            .ToListAsync(cancellationToken)
-            .Then(_ => _.ToHashSet());
-
-        var toCreateEntities = entities.Where(p => !existingEntityIds.Contains(p.Id)).ToList();
-        var toUpdateEntities = entities.Where(p => existingEntityIds.Contains(p.Id)).ToList();
-
-        await CreateManyAsync<TEntity, TPrimaryKey>(toCreateEntities, dismissSendEvent, cancellationToken);
-        await UpdateManyAsync<TEntity, TPrimaryKey>(toUpdateEntities, dismissSendEvent, cancellationToken);
+        if (entities.Any())
+            await entities.ForEachAsync(
+                entity => CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, customCheckExistingPredicateBuilder?.Invoke(entity), dismissSendEvent, cancellationToken));
 
         return entities;
     }
@@ -289,8 +277,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                         var dbInitializedMigrationHistory = ApplicationDataMigrationHistoryCollection.AsQueryable()
                             .First(p => p.Name == DbInitializedApplicationDataMigrationHistoryName);
 
-                        if (migrationExecution.RunOnlyForDbInitializedBeforeDate == null ||
-                            dbInitializedMigrationHistory.CreatedDate < migrationExecution.RunOnlyForDbInitializedBeforeDate)
+                        if (migrationExecution.CreationDate == null ||
+                            dbInitializedMigrationHistory.CreatedDate < migrationExecution.CreationDate)
                         {
                             await migrationExecution.Execute((TDbContext)this);
 
@@ -360,7 +348,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
 
             toBeUpdatedRowVersionEntity.ConcurrencyUpdateToken = newUpdateConcurrencyUpdateToken;
 
-            var result = await IPlatformDbContext.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, ReplaceOneResult>(
+            var result = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, ReplaceOneResult>(
                 Cqrs,
                 MappedUnitOfWork,
                 toBeUpdatedEntity,
@@ -387,7 +375,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         }
         else
         {
-            var result = await IPlatformDbContext.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, ReplaceOneResult>(
+            var result = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, ReplaceOneResult>(
                 Cqrs,
                 MappedUnitOfWork,
                 toBeUpdatedEntity,
@@ -447,8 +435,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
             .ForEachAsync(
                 async migrationExecutor =>
                 {
-                    if (migrationExecutor.RunOnlyDbInitializedBeforeDate == null ||
-                        dbInitializedDate < migrationExecutor.RunOnlyDbInitializedBeforeDate)
+                    if (migrationExecutor.OnlyForDbInitBeforeDate == null ||
+                        dbInitializedDate < migrationExecutor.OnlyForDbInitBeforeDate)
                     {
                         Logger.LogInformation($"Migration {migrationExecutor.Name} started.");
 
@@ -615,7 +603,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                 entity => entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = Guid.NewGuid());
 
         if (upsert == false)
-            await IPlatformDbContext.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
+            await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
                 Cqrs,
                 MappedUnitOfWork,
                 toBeCreatedEntity,
@@ -623,7 +611,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                 dismissSendEvent,
                 cancellationToken);
         else
-            await IPlatformDbContext.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
+            await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
                 Cqrs,
                 MappedUnitOfWork,
                 toBeCreatedEntity,
