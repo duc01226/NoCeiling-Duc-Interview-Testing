@@ -22,7 +22,7 @@ public interface IPlatformApplicationDataSeeder
     /// </summary>
     public int DelaySeedingInBackgroundBySeconds { get; }
 
-    public Task SeedData();
+    public Task SeedData(bool isReplaceNewSeedData = false);
 }
 
 /// <summary>
@@ -64,7 +64,7 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
     /// </summary>
     protected virtual bool AutoBeginUow => false;
 
-    public virtual async Task SeedData()
+    public virtual async Task SeedData(bool isReplaceNewSeedData = false)
     {
         if (AutoBeginUow)
             using (var uow = UnitOfWorkManager.Begin())
@@ -80,5 +80,5 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
 
     public virtual int DelaySeedingInBackgroundBySeconds => 0;
 
-    protected abstract Task InternalSeedData();
+    protected abstract Task InternalSeedData(bool isReplaceNewSeed = false);
 }

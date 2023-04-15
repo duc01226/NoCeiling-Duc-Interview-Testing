@@ -22,7 +22,7 @@ public class TextSnippetApplicationDataSeeder : PlatformApplicationDataSeeder
         this.multiDbDemoEntityRepository = multiDbDemoEntityRepository;
     }
 
-    protected override async Task InternalSeedData()
+    protected override async Task InternalSeedData(bool isReplaceNewSeed = false)
     {
         await SeedTextSnippet();
 

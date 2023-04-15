@@ -1,6 +1,7 @@
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.MongoDB;
+using Easy.Platform.Persistence;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
@@ -15,7 +16,14 @@ public class TextSnippetMultiDbDemoDbContext : PlatformMongoDbContext<TextSnippe
         IPlatformMongoClient<TextSnippetMultiDbDemoDbContext> client,
         ILoggerFactory loggerFactory,
         IPlatformCqrs cqrs,
-        IPlatformApplicationUserContextAccessor userContextAccessor) : base(options, client, loggerFactory, cqrs, userContextAccessor)
+        IPlatformApplicationUserContextAccessor userContextAccessor,
+        PlatformPersistenceConfiguration<TextSnippetMultiDbDemoDbContext> persistenceConfiguration) : base(
+        options,
+        client,
+        loggerFactory,
+        cqrs,
+        userContextAccessor,
+        persistenceConfiguration)
     {
     }
 
@@ -31,7 +39,7 @@ public class TextSnippetMultiDbDemoDbContext : PlatformMongoDbContext<TextSnippe
             MultiDbDemoEntityCollection.Indexes.CreateManyAsync(
                 new List<CreateIndexModel<MultiDbDemoEntity>>
                 {
-                    new CreateIndexModel<MultiDbDemoEntity>(
+                    new(
                         Builders<MultiDbDemoEntity>.IndexKeys.Ascending(p => p.Name))
                 }));
     }
@@ -40,7 +48,7 @@ public class TextSnippetMultiDbDemoDbContext : PlatformMongoDbContext<TextSnippe
     {
         return new List<KeyValuePair<Type, string>>
         {
-            new KeyValuePair<Type, string>(typeof(MultiDbDemoEntity), "MultiDbDemoEntity")
+            new(typeof(MultiDbDemoEntity), "MultiDbDemoEntity")
         };
     }
 }

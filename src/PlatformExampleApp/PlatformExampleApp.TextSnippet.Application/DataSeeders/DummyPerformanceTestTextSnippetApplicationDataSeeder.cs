@@ -21,7 +21,7 @@ public class DummyPerformanceTestTextSnippetApplicationDataSeeder : PlatformAppl
 
     public override int DelaySeedingInBackgroundBySeconds => 30;
 
-    protected override async Task InternalSeedData()
+    protected override async Task InternalSeedData(bool isReplaceNewSeed = false)
     {
         if (Configuration.GetSection("SeedDummyPerformanceTest").Get<bool?>() == true)
             await SeedTextSnippet();

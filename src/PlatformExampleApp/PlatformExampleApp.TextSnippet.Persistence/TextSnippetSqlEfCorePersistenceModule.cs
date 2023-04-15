@@ -1,8 +1,10 @@
 using System.Linq.Expressions;
 using Easy.Platform.EfCore;
 using Easy.Platform.EfCore.Services;
+using Easy.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using PlatformExampleApp.TextSnippet.Domain.Entities;
 
 namespace PlatformExampleApp.TextSnippet.Persistence;
 
@@ -28,6 +30,20 @@ public class TextSnippetSqlEfCorePersistenceModule : PlatformEfCorePersistenceMo
     protected override bool EnableOutboxBusMessage()
     {
         return true;
+    }
+
+    // override to Config PlatformPersistenceConfiguration
+    protected override PlatformPersistenceConfiguration<TextSnippetDbContext> ConfigurePersistenceConfiguration(
+        PlatformPersistenceConfiguration<TextSnippetDbContext> config,
+        IConfiguration configuration)
+    {
+        return base.ConfigurePersistenceConfiguration(config, configuration)
+            .With(p => p.BadMemoryDataWarning.IsEnabled = true)
+            .With(p => p.BadMemoryDataWarning.DefaultBadMemoryDataWarningThreshold = 100) // Demo warning for getting a lot of data in to memory
+            .With(p => p.BadMemoryDataWarning.IsLogWarningAsError = true) // Demo logging warning as error message
+            .With(
+                p => p.BadMemoryDataWarning.CustomThresholdBadMemoryDataWarningItems = Util.DictionaryBuilder.New(
+                    (typeof(TextSnippetEntity), 10)));
     }
 
     // This example config help to override to config outbox config

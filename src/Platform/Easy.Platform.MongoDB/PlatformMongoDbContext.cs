@@ -12,6 +12,7 @@ using Easy.Platform.Domain.Exceptions;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.MongoDB.Extensions;
 using Easy.Platform.MongoDB.Migration;
+using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -34,6 +35,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     protected readonly IPlatformCqrs Cqrs;
     protected readonly Lazy<Dictionary<Type, string>> EntityTypeToCollectionNameDictionary;
     protected readonly ILogger Logger;
+    protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
     protected readonly IPlatformApplicationUserContextAccessor UserContextAccessor;
 
     public PlatformMongoDbContext(
@@ -41,10 +43,12 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         IPlatformMongoClient<TDbContext> client,
         ILoggerFactory loggerFactory,
         IPlatformCqrs cqrs,
-        IPlatformApplicationUserContextAccessor userContextAccessor)
+        IPlatformApplicationUserContextAccessor userContextAccessor,
+        PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration)
     {
         Cqrs = cqrs;
         UserContextAccessor = userContextAccessor;
+        PersistenceConfiguration = persistenceConfiguration;
         Database = client.MongoClient.GetDatabase(options.Value.Database);
         EntityTypeToCollectionNameDictionary = new Lazy<Dictionary<Type, string>>(BuildEntityTypeToCollectionNameDictionary);
         Logger = loggerFactory.CreateLogger(GetType());
@@ -326,8 +330,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     {
         await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
 
-        if (existingEntity == null && ((!dismissSendEvent && entity.HasAutoTrackValueUpdatedDomainEventAttribute()) ||
-                                       entity is IRowVersionEntity { ConcurrencyUpdateToken: null }))
+        if (existingEntity == null &&
+            ((!dismissSendEvent && entity.HasAutoTrackValueUpdatedDomainEventAttribute()) ||
+             entity is IRowVersionEntity { ConcurrencyUpdateToken: null }))
             existingEntity = await GetQuery<TEntity>().Where(p => p.Id.Equals(entity.Id)).FirstOrDefaultAsync(cancellationToken);
 
         if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })

@@ -6,6 +6,8 @@ using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Repositories;
 using Easy.Platform.Domain.UnitOfWork;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Persistence.Domain;
 
@@ -19,6 +21,8 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         IPlatformCqrs cqrs,
         IServiceProvider serviceProvider) : base(unitOfWorkManager, cqrs, serviceProvider)
     {
+        PersistenceConfiguration = serviceProvider.GetService<PlatformPersistenceConfiguration<TDbContext>>();
+        Logger = serviceProvider.GetService<ILoggerFactory>().CreateLogger(GetType());
     }
 
     /// <summary>
@@ -28,16 +32,38 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     /// </summary>
     protected virtual TDbContext DbContext => GetUowDbContext(TryGetCurrentActiveUow() ?? UnitOfWorkManager.GlobalUow);
 
+    protected PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration { get; }
+
+    protected ILogger Logger { get; }
+
     public TDbContext GetUowDbContext(IUnitOfWork uow)
     {
         return uow.UowOfType<TUow>().DbContext;
     }
 
-    public virtual Task<List<TSource>> ToListAsync<TSource>(
+    public virtual async Task<List<TSource>> ToListAsync<TSource>(
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default)
     {
-        return ToAsyncEnumerable(source, cancellationToken).ToListAsync(cancellationToken).AsTask();
+        var result = await ToAsyncEnumerable(source, cancellationToken).ToListAsync(cancellationToken).AsTask();
+
+        if (PersistenceConfiguration.BadMemoryDataWarning.IsEnabled) LogBadMemoryDataWarning(result);
+
+        return result;
+    }
+
+    protected virtual void LogBadMemoryDataWarning<TSource>(List<TSource> result)
+    {
+        var threshold = PersistenceConfiguration.GetBadMemoryDataWarningThreshold<TSource>();
+
+        if (result.Count >= threshold)
+            Logger.Log(
+                PersistenceConfiguration.BadMemoryDataWarning.IsLogWarningAsError ? LogLevel.Error : LogLevel.Warning,
+                "[BadMemoryDataWarning][IsLogWarningAsError:{IsLogWarningAsError}] Get too much of data into memory. TSource:{TSource}. Threshold:{Threshold}. TrackTrace:{TrackTrace}",
+                PersistenceConfiguration.BadMemoryDataWarning.IsLogWarningAsError,
+                typeof(TSource).Name,
+                threshold,
+                Environment.StackTrace);
     }
 
     /// <summary>
@@ -96,9 +122,9 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             loadRelatedEntities);
     }
 
-    public override Task<List<TEntity>> GetAllAsync(IQueryable<TEntity> query, CancellationToken cancellationToken = default)
+    public override async Task<List<TEntity>> GetAllAsync(IQueryable<TEntity> query, CancellationToken cancellationToken = default)
     {
-        return ToListAsync(query, cancellationToken);
+        return await ToListAsync(query, cancellationToken);
     }
 
     public override IEnumerable<TEntity> GetAllEnumerable(

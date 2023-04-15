@@ -242,9 +242,15 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
     protected void RegisterPersistenceConfiguration(IServiceCollection serviceCollection)
     {
         serviceCollection.Register(
-            sp => new PlatformPersistenceConfiguration<TDbContext>
-            {
-                ForCrossDbMigrationOnly = ForCrossDbMigrationOnly
-            });
+            sp => new PlatformPersistenceConfiguration<TDbContext>()
+                .With(_ => _.ForCrossDbMigrationOnly = ForCrossDbMigrationOnly)
+                .Pipe(_ => ConfigurePersistenceConfiguration(_, Configuration)));
+    }
+
+    protected virtual PlatformPersistenceConfiguration<TDbContext> ConfigurePersistenceConfiguration(
+        PlatformPersistenceConfiguration<TDbContext> config,
+        IConfiguration configuration)
+    {
+        return config;
     }
 }

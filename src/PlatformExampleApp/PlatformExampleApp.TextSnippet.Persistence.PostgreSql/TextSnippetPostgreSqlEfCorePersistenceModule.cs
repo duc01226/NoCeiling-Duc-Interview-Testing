@@ -1,7 +1,9 @@
 using Easy.Platform.EfCore;
 using Easy.Platform.EfCore.Services;
+using Easy.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using PlatformExampleApp.TextSnippet.Domain.Entities;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql;
 
@@ -35,6 +37,20 @@ public class TextSnippetPostgreSqlEfCorePersistenceModule : PlatformEfCorePersis
         // UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery) for best practice increase performance
         return options =>
             options.UseNpgsql(Configuration.GetConnectionString("PostgreSqlConnection"), options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+    }
+
+    // override to Config PlatformPersistenceConfiguration
+    protected override PlatformPersistenceConfiguration<TextSnippetDbContext> ConfigurePersistenceConfiguration(
+        PlatformPersistenceConfiguration<TextSnippetDbContext> config,
+        IConfiguration configuration)
+    {
+        return base.ConfigurePersistenceConfiguration(config, configuration)
+            .With(p => p.BadMemoryDataWarning.IsEnabled = true) 
+            .With(p => p.BadMemoryDataWarning.DefaultBadMemoryDataWarningThreshold = 5) // Demo warning for getting a lot of data in to memory
+            .With(p => p.BadMemoryDataWarning.IsLogWarningAsError = true) // Demo logging warning as error message
+            .With(
+                p => p.BadMemoryDataWarning.CustomThresholdBadMemoryDataWarningItems = Util.DictionaryBuilder.New(
+                    (typeof(TextSnippetEntity), 10)));
     }
 }
 

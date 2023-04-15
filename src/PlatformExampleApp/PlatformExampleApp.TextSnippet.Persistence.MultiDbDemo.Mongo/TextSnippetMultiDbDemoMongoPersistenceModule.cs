@@ -1,4 +1,7 @@
+using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.Utils;
 using Easy.Platform.MongoDB;
+using Easy.Platform.Persistence;
 using Microsoft.Extensions.Configuration;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Persistence.MultiDbDemo.Mongo.DemoMigrateDataCrossDb;
@@ -38,5 +41,19 @@ public class TextSnippetMultiDbDemoMongoPersistenceModule : PlatformMongoDbPersi
         {
             p => typeof(DemoMigrateDataCrossDbPersistenceModule)
         };
+    }
+
+    // override to Config PlatformPersistenceConfiguration
+    protected override PlatformPersistenceConfiguration<TextSnippetMultiDbDemoDbContext> ConfigurePersistenceConfiguration(
+        PlatformPersistenceConfiguration<TextSnippetMultiDbDemoDbContext> config,
+        IConfiguration configuration)
+    {
+        return base.ConfigurePersistenceConfiguration(config, configuration)
+            .With(p => p.BadMemoryDataWarning.IsEnabled = true) 
+            .With(p => p.BadMemoryDataWarning.DefaultBadMemoryDataWarningThreshold = 100) // Demo warning for getting a lot of data in to memory
+            .With(p => p.BadMemoryDataWarning.IsLogWarningAsError = true) // Demo logging warning as error message
+            .With(
+                p => p.BadMemoryDataWarning.CustomThresholdBadMemoryDataWarningItems = Util.DictionaryBuilder.New(
+                    (typeof(TextSnippetEntity), 10)));
     }
 }
