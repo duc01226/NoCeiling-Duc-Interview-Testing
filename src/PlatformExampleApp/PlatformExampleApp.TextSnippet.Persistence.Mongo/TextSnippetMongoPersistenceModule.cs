@@ -37,7 +37,7 @@ public class TextSnippetMongoPersistenceModule : PlatformMongoDbPersistenceModul
         IConfiguration configuration)
     {
         return base.ConfigurePersistenceConfiguration(config, configuration)
-            .With(p => p.BadMemoryDataWarning.IsEnabled = true) 
+            .With(p => p.BadMemoryDataWarning.IsEnabled = true)
             .With(
                 p => p.BadMemoryDataWarning.DefaultBadMemoryDataWarningThreshold = 100) // Demo warning for getting a lot of data in to memory
             .With(p => p.BadMemoryDataWarning.IsLogWarningAsError = true) // Demo logging warning as error message
