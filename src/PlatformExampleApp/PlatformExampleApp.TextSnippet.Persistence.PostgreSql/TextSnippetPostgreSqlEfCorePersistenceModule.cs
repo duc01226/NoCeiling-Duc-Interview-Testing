@@ -74,7 +74,6 @@ public class TextSnippetPostgreSqlEfCorePlatformFullTextSearchPersistenceService
                 .Matches(removedSpecialCharacterSearchTextWords.JoinToString(exactMatch ? " & " : " | ")));
     }
 
-    // For postgres, should use fulltext index for start with support for prefix-search <=> to_tsvector(mycol) @@ to_tsquery('search:*')
     // Need to execute: CREATE EXTENSION IF NOT EXISTS pg_trgm; => create extension for postgreSQL to support ILike
     // Need to "create index Index_Name on "TableName" using gin("ColumnName" gin_trgm_ops)" <=> builder.HasIndex(p => p.ColName).HasMethod("gin").HasOperators("gin_trgm_ops")
     protected override IQueryable<T> BuildStartWithSearchForSinglePropQueryPart<T>(IQueryable<T> originalQuery, string startWithPropName, string searchText)
