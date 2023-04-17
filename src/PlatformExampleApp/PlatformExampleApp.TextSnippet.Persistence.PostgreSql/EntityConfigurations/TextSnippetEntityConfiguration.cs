@@ -37,20 +37,22 @@ internal class TextSnippetEntityConfiguration : PlatformAuditedEntityConfigurati
         // If all nullable properties contain a null value in database then an object instance won't be created in the query. Add a required property to create instances with null values for other properties or mark the incoming navigation as required to always create an instance.
         //builder.Navigation(p => p.Address).IsRequired(); // Allow Address to be nullable
 
-        // Support fulltext search index. References: https://www.npgsql.org/efcore/mapping/full-text-search.html#method-2-expression-index
+        // Note that column for full-text search must be not null to ensure it works
+        // If null => index created will be "(to_tsvector('english'::regconfig, COALESCE("FullName", ''::text)))" => with COALESCE it doesn't work
+        // Correct must be "(to_tsvector('english'::regconfig, "FullName"))"
         builder
             .HasIndex(p => new { p.SnippetText }, "IX_TextSnippet_SnippetText_FullTextSearch")
+            .HasOperators("gin_trgm_ops") // gin_trgm_ops support search start_with ILIKE
             .HasMethod("GIN")
             .IsTsVectorExpressionIndex("english");
-        // Not that column for full-text search must be not null to ensure it works
-        // If null => index created will be "(to_tsvector('english'::regconfig, COALESCE("FullText", ''::text)))" => with COALESCE it doesn't work
-        // Correct must be "(to_tsvector('english'::regconfig, "FullText"))"
+
+        // Note that column for full-text search must be not null to ensure it works
+        // If null => index created will be "(to_tsvector('english'::regconfig, COALESCE("FullName", ''::text)))" => with COALESCE it doesn't work
+        // Correct must be "(to_tsvector('english'::regconfig, "FullName"))"
         builder
             .HasIndex(p => new { p.FullText }, "IX_TextSnippet_FullText_FullTextSearch")
             .HasMethod("GIN")
             .IsTsVectorExpressionIndex("english");
-
-        builder.HasIndex(p => p.SnippetText);
 
         builder
             .HasIndex(p => p.Addresses)

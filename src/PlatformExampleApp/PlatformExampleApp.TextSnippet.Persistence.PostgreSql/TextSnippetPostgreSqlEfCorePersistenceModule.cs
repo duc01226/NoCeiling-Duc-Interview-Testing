@@ -61,6 +61,7 @@ public class TextSnippetPostgreSqlEfCorePlatformFullTextSearchPersistenceService
     }
 
     // https://www.npgsql.org/efcore/mapping/full-text-search.html#method-2-expression-index
+    // builder.HasIndex(p => p.ColName).HasMethod("gin").IsTsVectorExpressionIndex("english");
     public override IQueryable<T> BuildFullTextSearchForSinglePropQueryPart<T>(
         IQueryable<T> originalQuery,
         string fullTextSearchSinglePropName,
@@ -74,11 +75,11 @@ public class TextSnippetPostgreSqlEfCorePlatformFullTextSearchPersistenceService
     }
 
     // For postgres, should use fulltext index for start with support for prefix-search <=> to_tsvector(mycol) @@ to_tsquery('search:*')
+    // Need to execute: CREATE EXTENSION IF NOT EXISTS pg_trgm; => create extension for postgreSQL to support ILike
+    // Need to "create index Index_Name on "TableName" using gin("ColumnName" gin_trgm_ops)" <=> builder.HasIndex(p => p.ColName).HasMethod("gin").HasOperators("gin_trgm_ops")
     protected override IQueryable<T> BuildStartWithSearchForSinglePropQueryPart<T>(IQueryable<T> originalQuery, string startWithPropName, string searchText)
     {
         return originalQuery.Where(
-            entity => EF.Functions
-                .ToTsVector("english", EF.Property<string>(entity, startWithPropName))
-                .Matches($"{searchText}:*"));
+            entity => EF.Functions.ILike(EF.Property<string>(entity, startWithPropName), $"{searchText}%"));
     }
 }
