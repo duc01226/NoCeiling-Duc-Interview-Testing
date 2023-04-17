@@ -1,3 +1,4 @@
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Extensions.WhenCases;
 using Easy.Platform.HangfireBackgroundJob;
 using Microsoft.Extensions.Configuration;
@@ -33,8 +34,7 @@ public class TextSnippetHangfireBackgroundJobModule : PlatformHangfireBackground
 
     protected override PlatformHangfireUseMongoStorageOptions UseMongoStorageOptions()
     {
-        var options = base.UseMongoStorageOptions();
-        options.DatabaseName = Configuration.GetSection("MongoDB:Database").Get<string>();
-        return options;
+        return base.UseMongoStorageOptions()
+            .With(_ => _.DatabaseName = Configuration.GetSection("MongoDB:Database").Get<string>());
     }
 }
