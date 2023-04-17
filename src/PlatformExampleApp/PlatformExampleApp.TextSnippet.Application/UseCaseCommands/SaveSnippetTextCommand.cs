@@ -26,6 +26,8 @@ public class SaveSnippetTextCommand : PlatformCqrsCommand<SaveSnippetTextCommand
 
     public PlatformCqrsEntityEventCrudAction StatusToDemoWhenValueCases { get; set; }
 
+    public bool AutoCreateIfNotExisting { get; set; }
+
     public override PlatformValidationResult<IPlatformCqrsRequest> Validate()
     {
         return this
@@ -277,9 +279,9 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
 
         // STEP 1: Build saving entity data from request. Throw not found if update (when id is not null)
         var toSaveEntity = request.Data.IsSubmitToUpdate()
-            ? await textSnippetEntityRepository.GetByIdAsync(request.Data.Id!.Value, cancellationToken)
-                .EnsureFound($"Has not found text snippet for id {request.Data.Id}")
-                .Then(existingEntity => request.Data.UpdateToEntity(existingEntity))
+            ? await textSnippetEntityRepository.FirstOrDefaultAsync(predicate: p => p.Id == request.Data.Id, cancellationToken)
+                .PipeIf(request.AutoCreateIfNotExisting == false, p => p.EnsureFound($"Has not found text snippet for id {request.Data.Id}"))
+                .Then(existingEntity => existingEntity != null ? request.Data.UpdateToEntity(existingEntity) : request.Data.MapToEntity())
             : request.Data.MapToNewEntity();
 
         // STEP 2: Do validation and ensure that all logic is valid

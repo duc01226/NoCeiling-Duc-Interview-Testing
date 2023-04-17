@@ -260,6 +260,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
 
         var toBeCreatedEntity = entity
+            .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
             .PipeIf(
                 entity.IsAuditedUserEntity(),
                 p => p.As<IUserAuditedEntity>()
@@ -317,8 +318,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     {
         await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
 
-        if (existingEntity == null && ((!dismissSendEvent && entity.HasAutoTrackValueUpdatedDomainEventAttribute()) ||
-                                       entity is IRowVersionEntity { ConcurrencyUpdateToken: null }))
+        if (existingEntity == null &&
+            ((!dismissSendEvent && entity.HasAutoTrackValueUpdatedDomainEventAttribute()) ||
+             entity is IRowVersionEntity { ConcurrencyUpdateToken: null }))
             existingEntity = await GetQuery<TEntity>().AsNoTracking().Where(p => p.Id.Equals(entity.Id)).FirstOrDefaultAsync(cancellationToken);
 
         if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })
@@ -342,7 +344,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             existingEntity,
             async entity =>
             {
-                return GetTable<TEntity>().Update(entity).Entity
+                return GetTable<TEntity>()
+                    .Update(entity)
+                    .Entity
                     .PipeIf(entity is IRowVersionEntity, p => p.As<IRowVersionEntity>().With(_ => _.ConcurrencyUpdateToken = Guid.NewGuid()).As<TEntity>());
             },
             dismissSendEvent,

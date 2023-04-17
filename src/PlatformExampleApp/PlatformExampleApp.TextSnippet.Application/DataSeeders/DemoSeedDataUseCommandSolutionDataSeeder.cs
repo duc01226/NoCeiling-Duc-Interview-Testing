@@ -50,7 +50,8 @@ public class DemoSeedDataUseCommandSolutionDataSeeder : PlatformApplicationDataS
                     Id = Guid.Parse("671e5fff-2282-4d57-ac93-9dd4ea50985d"),
                     SnippetText = "Dummy Seed SnippetText",
                     FullText = "Dummy Seed FullText"
-                }
+                },
+                AutoCreateIfNotExisting = true
             });
     }
 }
