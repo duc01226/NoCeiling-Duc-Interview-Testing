@@ -78,17 +78,33 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
                 });
     }
 
-    protected Task ReplaceAllLatestRecurringBackgroundJobs(IServiceScope serviceScope)
+    protected async Task ReplaceAllLatestRecurringBackgroundJobs(IServiceScope serviceScope)
     {
-        var scheduler = serviceScope.ServiceProvider.GetRequiredService<IPlatformBackgroundJobScheduler>();
+        await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+            async () =>
+            {
+                var scheduler = serviceScope.ServiceProvider.GetRequiredService<IPlatformBackgroundJobScheduler>();
 
-        var allCurrentRecurringJobExecutors = serviceScope.ServiceProvider
-            .GetServices<IPlatformBackgroundJobExecutor>()
-            .Where(p => PlatformRecurringJobAttribute.GetCronExpressionInfo(p.GetType()).IsNotNullOrEmpty())
-            .ToList();
+                var allCurrentRecurringJobExecutors = serviceScope.ServiceProvider
+                    .GetServices<IPlatformBackgroundJobExecutor>()
+                    .Where(p => PlatformRecurringJobAttribute.GetCronExpressionInfo(p.GetType()).IsNotNullOrEmpty())
+                    .ToList();
 
-        scheduler.ReplaceAllRecurringBackgroundJobs(allCurrentRecurringJobExecutors);
+                scheduler.ReplaceAllRecurringBackgroundJobs(allCurrentRecurringJobExecutors);
+            },
+            sleepDurationProvider: retryAttempt => 10.Seconds(),
+            retryCount: DefaultStartBackgroundJobProcessingRetryCount,
+            onRetry: (exception, timeSpan, currentRetry, ctx) =>
+            {
+                var logger = serviceScope.ServiceProvider.GetService<ILoggerFactory>()!.CreateLogger(GetType());
 
-        return Task.CompletedTask;
+                logger.LogWarning(
+                    exception,
+                    "[Init][ReplaceAllLatestRecurringBackgroundJobs] Exception {ExceptionType} with message {Message} detected on attempt ReplaceAllLatestRecurringBackgroundJobs {Retry} of {Retries}",
+                    exception.GetType().Name,
+                    exception.Message,
+                    currentRetry,
+                    DefaultStartBackgroundJobProcessingRetryCount);
+            });
     }
 }

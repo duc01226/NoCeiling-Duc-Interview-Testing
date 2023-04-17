@@ -62,7 +62,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development.Docker
       - ASPNETCORE_URLS=http://0.0.0.0:80
-      - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection:-Server=localhost,14330;Database=TextSnippedDb;User Id=sa;Password=123456Abc}
+      - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection:-Server=sql-data;Database=TextSnippedDb;User Id=sa;Password=123456Abc;Encrypt=False}
       - ConnectionStrings__PostgreSqlConnection=${ConnectionStrings__PostgreSqlConnection:-Host=localhost;Port=54320;Username=postgres;Password=postgres;Database=TextSnippedDb}
       - RedisCacheOptions__Connection=${RedisCacheOptions__Connection:-localhost:6379,ConnectTimeout=5000,abortConnect=false}
       - MongoDB__ConnectionString=${MongoDB__ConnectionString:-mongodb://root:rootPassXXX@localhost:27017?authSource=admin}

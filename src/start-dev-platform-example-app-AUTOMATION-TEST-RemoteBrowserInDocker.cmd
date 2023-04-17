@@ -9,9 +9,11 @@ set RandomThrowExceptionForTesting=true
 docker-compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example kill
 docker-compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example build
 docker-compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example up selenium-hub chrome1 chrome2 edge firefox --remove-orphans --detach
-docker-compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example up sql-data mongo-data postgres-sql rabbitmq redis-cache text-snippet-api text-snippet-webspa --remove-orphans --detach
+REM Waiting for the infrastructure started successfully
+timeout 10
+docker-compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example up text-snippet-api text-snippet-webspa --remove-orphans --detach
 REM Waiting for the docker remote web browser started successfully
-timeout 30
+timeout 10
 
 start "" "http://localhost:4444/ui"
 

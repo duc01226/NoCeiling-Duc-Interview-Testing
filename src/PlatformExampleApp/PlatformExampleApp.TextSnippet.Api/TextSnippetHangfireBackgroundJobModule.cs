@@ -28,7 +28,7 @@ public class TextSnippetHangfireBackgroundJobModule : PlatformHangfireBackground
             .Get<string>()
             .WhenValue("MongoDb", _ => Configuration.GetSection("MongoDB:ConnectionString").Get<string>())
             .WhenValue("Postgres", _ => Configuration.GetSection("ConnectionStrings:PostgreSqlConnection").Get<string>())
-            .Else(_ => Configuration.GetSection("ConnectionStrings:DefaultConnection").Get<string>())
+            .Else(_ => Configuration.GetConnectionString("DefaultConnection"))
             .Execute();
     }
 
