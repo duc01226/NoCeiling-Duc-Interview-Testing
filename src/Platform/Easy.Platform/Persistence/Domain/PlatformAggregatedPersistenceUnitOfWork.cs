@@ -5,7 +5,7 @@ namespace Easy.Platform.Persistence.Domain;
 
 public interface IPlatformAggregatedPersistenceUnitOfWork : IUnitOfWork
 {
-    public bool IsNoTransactionUow<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IUnitOfWork;
+    public bool IsPseudoTransactionUow<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IUnitOfWork;
 }
 
 /// <summary>
@@ -30,7 +30,7 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
         return InnerUnitOfWorks.All(p => p.IsPseudoTransactionUow());
     }
 
-    public bool IsNoTransactionUow<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IUnitOfWork
+    public bool IsPseudoTransactionUow<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IUnitOfWork
     {
         return InnerUnitOfWorks.FirstOrDefault(p => p.Equals(uow))?.IsPseudoTransactionUow() == true;
     }

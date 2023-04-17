@@ -250,7 +250,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         if (currentUow == null ||
             currentUow.IsPseudoTransactionUow() ||
             (currentUow is IPlatformAggregatedPersistenceUnitOfWork currentAggregatedPersistenceUow &&
-             currentAggregatedPersistenceUow.IsNoTransactionUow(outboxBusMessageRepository.CurrentActiveUow())))
+             currentAggregatedPersistenceUow.IsPseudoTransactionUow(outboxBusMessageRepository.CurrentActiveUow())))
             await serviceProvider.ExecuteInjectAsync(
                 SendExistingOutboxMessageAsync<TMessage>,
                 existingProcessingOutboxMessage,

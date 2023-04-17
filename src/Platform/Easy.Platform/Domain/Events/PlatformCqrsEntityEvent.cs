@@ -22,7 +22,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
         CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        if (crudAction.IsCompletedCrudAction() && unitOfWork != null)
+        if (crudAction.IsCompletedCrudAction() && unitOfWork != null && !unitOfWork.IsPseudoTransactionUow())
             unitOfWork.OnCompleted += (object sender, EventArgs e) =>
             {
                 // Do not use async, just call.WaitResult()
