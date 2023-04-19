@@ -35,7 +35,7 @@ public interface IPlatformDbContext : IDisposable
         CancellationToken cancellationToken = default);
 
     public Task<int> CountAsync<TEntity>(
-        Expression<Func<TEntity, bool>> predicate,
+        Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity;
 
     public Task<int> CountAsync<TSource>(
@@ -43,7 +43,7 @@ public interface IPlatformDbContext : IDisposable
         CancellationToken cancellationToken = default);
 
     public Task<bool> AnyAsync<TEntity>(
-        Expression<Func<TEntity, bool>> predicate,
+        Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity;
 
     public Task<bool> AnyAsync<TSource>(

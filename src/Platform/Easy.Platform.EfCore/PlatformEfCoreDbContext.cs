@@ -132,9 +132,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         return source.FirstAsync(cancellationToken);
     }
 
-    public Task<int> CountAsync<TEntity>(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default) where TEntity : class, IEntity
+    public Task<int> CountAsync<TEntity>(Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default) where TEntity : class, IEntity
     {
-        return GetQuery<TEntity>().Where(predicate).CountAsync(cancellationToken);
+        return GetQuery<TEntity>().WhereIf(predicate != null, predicate).CountAsync(cancellationToken);
     }
 
     public Task<TResult> FirstOrDefaultAsync<TEntity, TResult>(Func<IQueryable<TEntity>, IQueryable<TResult>> queryBuilder, CancellationToken cancellationToken = default)
@@ -148,9 +148,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         return source.CountAsync(cancellationToken);
     }
 
-    public Task<bool> AnyAsync<TEntity>(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default) where TEntity : class, IEntity
+    public Task<bool> AnyAsync<TEntity>(Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default) where TEntity : class, IEntity
     {
-        return GetQuery<TEntity>().Where(predicate).AnyAsync(cancellationToken);
+        return GetQuery<TEntity>().WhereIf(predicate != null, predicate).AnyAsync(cancellationToken);
     }
 
     public Task<bool> AnyAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
