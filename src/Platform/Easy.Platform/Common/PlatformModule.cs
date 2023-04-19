@@ -10,7 +10,6 @@ using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -22,7 +21,7 @@ public interface IPlatformModule
     /// <summary>
     /// Higher Priority value mean the module init will be executed before lower Priority value in the same level module dependencies
     /// <br />
-    /// Default is 10. For the default priority should be: PermissionModule (Priority 1000) => InfrastructureModule (100) => Others Module (10)
+    /// Default is 10. For the default priority should be: PersistenceModule (Priority 1000) => InfrastructureModule (100) => Others Module (10)
     /// </summary>
     public int ExecuteInitPriority { get; }
 
@@ -208,6 +207,18 @@ public abstract class PlatformModule : IPlatformModule
     public virtual string[] TracingSources() { return Array.Empty<string>(); }
     public virtual Action<TracerProviderBuilder> AdditionalTracingConfigure => null;
 
+    /// <summary>
+    /// Define list of any modules that this module depend on. The type must be assigned to <see cref="PlatformModule" />.
+    /// Example from a XXXServiceAspNetCoreModule could depend on XXXPlatformApplicationModule and
+    /// XXXPlatformPersistenceModule.
+    /// Example code : return new { config => typeof(XXXPlatformApplicationModule), config =>
+    /// typeof(XXXPlatformPersistenceModule) };
+    /// </summary>
+    public virtual List<Func<IConfiguration, Type>> ModuleTypeDependencies()
+    {
+        return new List<Func<IConfiguration, Type>>();
+    }
+
     protected void RegisterDistributedTracing(IServiceCollection serviceCollection)
     {
         if (IsRootModule)
@@ -256,18 +267,6 @@ public abstract class PlatformModule : IPlatformModule
     protected virtual Task InternalInit(IServiceScope serviceScope)
     {
         return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Define list of any modules that this module depend on. The type must be assigned to <see cref="PlatformModule" />.
-    /// Example from a XXXServiceAspNetCoreModule could depend on XXXPlatformApplicationModule and
-    /// XXXPlatformPersistenceModule.
-    /// Example code : return new { config => typeof(XXXPlatformApplicationModule), config =>
-    /// typeof(XXXPlatformPersistenceModule) };
-    /// </summary>
-    public virtual List<Func<IConfiguration, Type>> ModuleTypeDependencies()
-    {
-        return new List<Func<IConfiguration, Type>>();
     }
 
     /// <summary>

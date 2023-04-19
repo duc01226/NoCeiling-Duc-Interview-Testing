@@ -33,17 +33,17 @@ public static partial class Util
             }
         }
 
-        public static Stream ReadAsStreamFromBase64(string base64)
+        public static Stream ReadBase64AsStream(string base64)
         {
             return new MemoryStream(Convert.FromBase64String(base64));
         }
 
-        public static string ReadCurrentDirectoryFileAsString(string filePathFromCurrentExecutingDirectory)
+        public static string ReadApplicationFileAsString(string applicationRelativeFilePath)
         {
             return ReadFileAsString(
                 PathBuilder.ConcatRelativePath(
                     Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
-                    filePathFromCurrentExecutingDirectory));
+                    applicationRelativeFilePath));
         }
     }
 }

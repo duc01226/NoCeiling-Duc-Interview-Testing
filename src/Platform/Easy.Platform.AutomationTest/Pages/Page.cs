@@ -628,7 +628,7 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         string waitForMsg = "Page Global Spinner is stopped")
     {
         return WaitUntil(
-            condition: _ => GlobalSpinnerElement?.IsClickable() != true,
+            until: _ => GlobalSpinnerElement?.IsClickable() != true,
             maxWaitSeconds: maxWaitForLoadingDataSeconds ?? DefaultMaxWaitSeconds,
             waitForMsg: waitForMsg);
     }
@@ -638,19 +638,19 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         string waitForMsg = "Page Content is loaded and displayed successfully")
     {
         return WaitUntil(
-                condition: _ => WebDriver.TryFindElement(PageContentLoadedElementIndicatorSelector)?.Displayed == true,
+                until: _ => WebDriver.TryFindElement(PageContentLoadedElementIndicatorSelector)?.Displayed == true,
                 maxWaitSeconds: maxWaitForLoadingDataSeconds ?? DefaultMaxWaitSeconds,
                 waitForMsg: waitForMsg)
             .WaitGlobalSpinnerStopped(maxWaitForLoadingDataSeconds);
     }
 
     public TPage WaitUntil(
-        Func<TPage, bool> condition,
+        Func<TPage, bool> until,
         Func<TPage, object> continueWaitOnlyWhen,
         string? waitForMsg = null,
         double? maxWaitSeconds = null)
     {
-        return Util.TaskRunner.WaitUntil(this.As<TPage>(), () => condition(this.As<TPage>()), continueWaitOnlyWhen, maxWaitSeconds ?? DefaultMaxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntil(this.As<TPage>(), () => until(this.As<TPage>()), continueWaitOnlyWhen, maxWaitSeconds ?? DefaultMaxWaitSeconds, waitForMsg);
     }
 
     public TResult WaitUntilGetSuccess<TResult, TAny>(
@@ -668,24 +668,24 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
     }
 
     public TPage WaitUntil(
-        Func<TPage, bool> condition,
+        Func<TPage, bool> until,
         string? waitForMsg = null,
         double? maxWaitSeconds = null)
     {
-        Util.TaskRunner.WaitUntil(() => condition(this.As<TPage>()), maxWaitSeconds ?? DefaultMaxWaitSeconds, waitForMsg: waitForMsg);
+        Util.TaskRunner.WaitUntil(() => until(this.As<TPage>()), maxWaitSeconds ?? DefaultMaxWaitSeconds, waitForMsg: waitForMsg);
 
         return this.As<TPage>();
     }
 
     public TPage WaitRetryDoUntil(
         Action<TPage> action,
-        Func<TPage, bool> condition,
+        Func<TPage, bool> until,
         string? waitForMsg = null,
         double? maxWaitSeconds = null)
     {
         Util.TaskRunner.WaitRetryDoUntil(
             action: () => action(this.As<TPage>()),
-            condition: () => condition(this.As<TPage>()),
+            until: () => until(this.As<TPage>()),
             maxWaitSeconds ?? DefaultMaxWaitSeconds,
             waitForMsg: waitForMsg);
 

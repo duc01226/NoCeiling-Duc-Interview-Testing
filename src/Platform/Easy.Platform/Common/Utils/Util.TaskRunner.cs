@@ -850,17 +850,17 @@ public static partial class Util
 
         public static void WaitRetryDoUntil(
             Action action,
-            Func<bool> condition,
+            Func<bool> until,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
-            WaitRetryDoUntil(action.ToFunc(), condition, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
+            WaitRetryDoUntil(action.ToFunc(), until, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
         }
 
         public static T WaitRetryDoUntil<T>(
             Func<T> action,
-            Func<bool> condition,
+            Func<bool> until,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
@@ -870,7 +870,7 @@ public static partial class Util
 
             var result = action();
 
-            while (!condition())
+            while (!until())
             {
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     Thread.Sleep((int)(waitIntervalSeconds * 1000));
@@ -887,17 +887,17 @@ public static partial class Util
 
         public static async Task WaitRetryDoUntilAsync(
             Func<Task> action,
-            Func<Task<bool>> condition,
+            Func<Task<bool>> until,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
-            await WaitRetryDoUntilAsync(action.ToAsyncFunc(), condition, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
+            await WaitRetryDoUntilAsync(action.ToAsyncFunc(), until, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
         }
 
         public static async Task<T> WaitRetryDoUntilAsync<T>(
             Func<Task<T>> action,
-            Func<Task<bool>> condition,
+            Func<Task<bool>> until,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
@@ -907,7 +907,7 @@ public static partial class Util
 
             var result = await action();
 
-            while (!await condition())
+            while (!await until())
             {
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     Thread.Sleep((int)(waitIntervalSeconds * 1000));

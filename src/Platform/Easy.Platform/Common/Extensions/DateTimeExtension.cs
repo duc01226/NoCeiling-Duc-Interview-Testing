@@ -53,6 +53,7 @@ public static class DateTimeExtension
     public static DateTime ConvertToTimeZone(this DateTime dateTime, int timeZoneOffset)
     {
         var hours = -timeZoneOffset / 60;
+
         return dateTime.ToUniversalTime().AddHours(hours);
     }
 
@@ -75,6 +76,11 @@ public static class DateTimeExtension
     public static DateTimeOffset ConvertToDateTimeOffset(this DateTime dateTime, string ianaTimeZone)
     {
         return new DateTimeOffset(dateTime.ConvertToTimeZone(ianaTimeZone));
+    }
+
+    public static DateOnly ToDateOnly(this DateTime dateTime)
+    {
+        return DateOnly.FromDateTime(dateTime);
     }
 
     public enum MonToSunDayOfWeeks
