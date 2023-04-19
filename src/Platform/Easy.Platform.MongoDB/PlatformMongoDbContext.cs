@@ -274,21 +274,22 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
             .ForEachAsync(
                 async migrationExecution =>
                 {
-                    Logger.LogInformation($"Migration {migrationExecution.Name} started.");
-
                     try
                     {
                         var dbInitializedMigrationHistory = ApplicationDataMigrationHistoryCollection.AsQueryable()
                             .First(p => p.Name == DbInitializedApplicationDataMigrationHistoryName);
 
-                        if (migrationExecution.CreationDate == null ||
-                            dbInitializedMigrationHistory.CreatedDate < migrationExecution.CreationDate)
+                        if (dbInitializedMigrationHistory.CreatedDate < migrationExecution.CreationDate)
                         {
+                            Logger.LogInformation($"Migration {migrationExecution.Name} started.");
+
                             await migrationExecution.Execute((TDbContext)this);
 
                             await ApplicationDataMigrationHistoryCollection.InsertOneAsync(new PlatformDataMigrationHistory(migrationExecution.Name));
 
                             await SaveChangesAsync();
+
+                            Logger.LogInformation($"Migration {migrationExecution.Name} finished.");
                         }
 
                         migrationExecution.Dispose();
@@ -309,8 +310,6 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                         if (!PlatformEnvironment.IsDevelopment)
                             throw new Exception($"MigrateApplicationDataAsync for migration {migrationExecution.Name} has errors", ex);
                     }
-
-                    Logger.LogInformation($"Migration {migrationExecution.Name} finished.");
                 });
     }
 

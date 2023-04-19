@@ -67,8 +67,6 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             .ForEachAsync(
                 async migrationExecution =>
                 {
-                    Logger.LogInformation($"PlatformDataMigrationExecutor {migrationExecution.Name} started.");
-
                     try
                     {
                         var dbInitializedMigrationHistory = ApplicationDataMigrationHistoryDbSet.AsQueryable()
@@ -76,12 +74,16 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
                         if (dbInitializedMigrationHistory.CreatedDate < migrationExecution.CreationDate)
                         {
+                            Logger.LogInformation($"PlatformDataMigrationExecutor {migrationExecution.Name} started.");
+
                             await migrationExecution.Execute((TDbContext)this);
 
                             Set<PlatformDataMigrationHistory>()
                                 .Add(new PlatformDataMigrationHistory(migrationExecution.Name));
 
                             await base.SaveChangesAsync();
+
+                            Logger.LogInformation($"PlatformDataMigrationExecutor {migrationExecution.Name} finished.");
                         }
 
                         migrationExecution.Dispose();
@@ -102,8 +104,6 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                         if (!(ex is DbException && PlatformEnvironment.IsDevelopment))
                             throw new Exception($"MigrateApplicationDataAsync for migration {migrationExecution.Name} has errors", ex);
                     }
-
-                    Logger.LogInformation($"PlatformDataMigrationExecutor {migrationExecution.Name} finished.");
                 });
     }
 
