@@ -11,6 +11,7 @@ using Easy.Platform.MongoDB.Serializer.Abstract;
 using Easy.Platform.MongoDB.Services;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
+using Easy.Platform.Persistence.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson.Serialization;
@@ -65,7 +66,20 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
         BsonClassMapHelper.TryRegisterClassMapWithDefaultInitializer<PlatformMongoMigrationHistory>();
         AutoRegisterAllSerializers();
         AutoRegisterAllClassMap();
-        RegisterBuiltInPersistenceServices(serviceCollection);
+
+        if (!ForCrossDbMigrationOnly || serviceCollection.All(p => p.ServiceType != typeof(IPlatformFullTextSearchPersistenceService)))
+            serviceCollection.Register<IPlatformFullTextSearchPersistenceService>(FullTextSearchPersistenceServiceProvider);
+    }
+
+    /// <summary>
+    /// Default return <see cref="MongoDbPlatformFullTextSearchPersistenceService" />
+    /// Override the default instance with new class to NOT USE DEFAULT LIKE OPERATION FOR BETTER PERFORMANCE
+    /// </summary>
+    /// <param name="serviceProvider"></param>
+    /// <returns></returns>
+    protected virtual MongoDbPlatformFullTextSearchPersistenceService FullTextSearchPersistenceServiceProvider(IServiceProvider serviceProvider)
+    {
+        return new MongoDbPlatformFullTextSearchPersistenceService(serviceProvider);
     }
 
     protected virtual void AutoRegisterAllClassMap()
@@ -153,11 +167,6 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
             .Assembly.GetTypes()
             .Where(p => p.IsAssignableTo(typeof(IPlatformMongoClassMapping)) && !p.IsAbstract && p.IsClass)
             .ToList();
-    }
-
-    private static void RegisterBuiltInPersistenceServices(IServiceCollection serviceCollection)
-    {
-        serviceCollection.RegisterAllForImplementation<MongoDbPlatformFullTextSearchPersistenceService>();
     }
 
     private void RegisterMongoDbUow(IServiceCollection serviceCollection)
