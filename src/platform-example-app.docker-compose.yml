@@ -40,18 +40,18 @@ services:
       dockerfile: apps/playground-text-snippet/Dockerfile
 
   chrome1:
-    image: selenium/node-chrome:4.4.0-20220831
+    image: selenium/node-chrome:111.0
   chrome2:
-    image: selenium/node-chrome:4.4.0-20220831
+    image: selenium/node-chrome:111.0
 
   edge:
-    image: selenium/node-edge:4.4.0-20220831
+    image: selenium/node-edge:111.0
 
   firefox:
-    image: selenium/node-firefox:4.4.0-20220831
+    image: selenium/node-firefox:111.0
 
   selenium-hub:
-    image: selenium/hub:4.4.0-20220831
+    image: selenium/hub:4.8.3
 
   text-snippet-automation-test:
     image: ${REGISTRY:-duc01226}/easy-platform-example-app-text-snippet-automation-test:${PLATFORM:-linux}-${TAG:-latest}
