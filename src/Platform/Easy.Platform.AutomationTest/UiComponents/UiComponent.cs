@@ -112,7 +112,7 @@ public interface IUiComponent<out TComponent> : IUiComponent
 public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
     where TComponent : UiComponent<TComponent>
 {
-    public const double DefaultMinimumDelayWaitSeconds = 0.3;
+    public const double DefaultMinimumDelayWaitSeconds = 0.5;
 
     public UiComponent(IWebDriver webDriver, Func<IWebElement>? directReferenceRootElement, IUiComponent? parent = null)
     {

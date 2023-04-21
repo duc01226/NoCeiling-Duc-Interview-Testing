@@ -13,6 +13,18 @@ public static class UrlExtension
         return new Uri(url);
     }
 
+    public static Uri? TryParseUri(this string str)
+    {
+        try
+        {
+            return str.ToUri();
+        }
+        catch (Exception e)
+        {
+            return null;
+        }
+    }
+
     public static string Origin(this Uri url)
     {
         return $"{url.Scheme}://{url.Host}".PipeIf(url.Port is not DefaultHttpPort and not DefaultHttpsPort, _ => $"{_}:{url.Port}");

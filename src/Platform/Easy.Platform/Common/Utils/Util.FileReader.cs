@@ -45,5 +45,12 @@ public static partial class Util
                     Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
                     applicationRelativeFilePath));
         }
+
+        public static bool CheckExistsByRelativeToEntryExecutionPath(string relativeToEntryExecutionFilePath)
+        {
+            var fullPath = PathBuilder.GetFullPathByRelativeToEntryExecutionPath(relativeToEntryExecutionFilePath);
+
+            return File.Exists(fullPath);
+        }
     }
 }

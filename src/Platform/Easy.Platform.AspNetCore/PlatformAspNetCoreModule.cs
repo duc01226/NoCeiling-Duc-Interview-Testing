@@ -10,6 +10,7 @@ using Easy.Platform.Persistence;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OpenTelemetry.Trace;
 
 namespace Easy.Platform.AspNetCore;
@@ -51,6 +52,14 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
             ServiceProvider);
 
         if (IsRootModule && AutoSeedApplicationDataOnInit) await ExecuteDependencyApplicationModuleSeedData();
+
+        LogCommonAspEnvironmentVariableValues();
+
+        void LogCommonAspEnvironmentVariableValues()
+        {
+            Logger.LogInformation("[PlatformModule] EnvironmentVariable AspCoreEnvironmentValue={AspCoreEnvironmentValue}", PlatformEnvironment.AspCoreEnvironmentValue);
+            Logger.LogInformation("[PlatformModule] EnvironmentVariable AspCoreUrlsValue={AspCoreUrlsValue}", PlatformEnvironment.AspCoreUrlsValue);
+        }
     }
 
     public async Task ExecuteDependencyApplicationModuleSeedData()

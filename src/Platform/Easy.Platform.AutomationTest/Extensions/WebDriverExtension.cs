@@ -267,4 +267,10 @@ public static class WebDriverExtension
 
         return webDriver;
     }
+
+    public static IWebDriver SwitchToBrowserTab(this IWebDriver webDriver, int tabIndex)
+    {
+        webDriver.SwitchTo().Window(webDriver.WindowHandles[tabIndex]);
+        return webDriver;
+    }
 }

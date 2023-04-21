@@ -2,6 +2,7 @@ using Easy.Platform.AspNetCore;
 using Easy.Platform.AspNetCore.Extensions;
 using Easy.Platform.Common;
 using Easy.Platform.Common.DependencyInjection;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -27,7 +28,17 @@ try
 
     builder.Host.UseSerilog();
 
-    builder.WebHost.UseConfiguration(configuration);
+    // UseCustomHttpsCert: Demo can do this to help solve using https both in docker and outside machine in local still works by make it use the same https cert.
+    // Fix for case api server to server call https trusting problem
+    // In docker binding https cert out by Example: volumes: - ./GenerateHttpsCertForDocker/https:/https:rw; - ./GenerateHttpsCertForDocker/https/cert:/usr/local/share/ca-certificates:rw;
+    builder.WebHost
+        .UseConfiguration(configuration)
+        .PipeIf(
+            PlatformEnvironment.IsDevelopment && configuration["LocalDockerHttpsCert:FilePath"] != null,
+            p => p.UseCustomHttpsCert(
+                httpsCertFileRelativePath: configuration["LocalDockerHttpsCert:FilePath"],
+                httpsCertPassword: configuration["LocalDockerHttpsCert:Password"],
+                ignoreIfFileNotExisting: true));
 
     // BUILD AND CONFIG APP
     var webApplication = builder.Build();

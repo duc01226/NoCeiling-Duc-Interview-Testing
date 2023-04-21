@@ -4,11 +4,17 @@ namespace Easy.Platform.Common;
 
 public static class PlatformEnvironment
 {
-    public static string DevelopmentEnvironmentIndicatorText { get; set; } = "Development";
+    public const string DefaultAspCoreDevelopmentEnvironmentValue = "Development";
 
-    public static string AspCoreEnvironmentVariableName { get; set; } = "ASPNETCORE_ENVIRONMENT";
+    public const string AspCoreEnvironmentVariableName = "ASPNETCORE_ENVIRONMENT";
 
-    public static string AspCoreEnvironmentValue => Environment.GetEnvironmentVariable(AspCoreEnvironmentVariableName);
+    public const string AspCoreUrlsVariableName = "ASPNETCORE_URLS";
+
+    public const string DevelopmentEnvironmentIndicatorText = DefaultAspCoreDevelopmentEnvironmentValue;
+
+    public static string? AspCoreEnvironmentValue => Environment.GetEnvironmentVariable(AspCoreEnvironmentVariableName);
+
+    public static string? AspCoreUrlsValue => Environment.GetEnvironmentVariable(AspCoreUrlsVariableName);
 
     public static bool IsDevelopment => AspCoreEnvironmentValue.ContainsIgnoreCase(DevelopmentEnvironmentIndicatorText);
 }

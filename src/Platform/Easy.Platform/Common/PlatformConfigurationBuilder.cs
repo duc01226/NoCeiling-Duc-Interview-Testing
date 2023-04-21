@@ -13,7 +13,7 @@ public static class PlatformConfigurationBuilder
     /// </summary>
     public static IConfigurationBuilder GetConfigurationBuilder(
         string appSettingsJsonFileName = "appsettings.json",
-        string fallbackAspCoreEnv = "Development")
+        string fallbackAspCoreEnv = PlatformEnvironment.DefaultAspCoreDevelopmentEnvironmentValue)
     {
         return new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
