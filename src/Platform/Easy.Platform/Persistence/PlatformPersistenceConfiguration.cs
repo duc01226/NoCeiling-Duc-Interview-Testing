@@ -4,37 +4,39 @@ public class PlatformPersistenceConfiguration<TDbContext>
 {
     public bool ForCrossDbMigrationOnly { get; set; }
 
-    public BadMemoryDataWarningConfig BadMemoryDataWarning { get; set; } = new();
+    public BadQueryWarningConfig BadQueryWarning { get; set; } = new();
 
-    public int GetBadMemoryDataWarningThreshold<TSource>()
+    public int GetBadQueryWarningTotalItemsThreshold<TSource>()
     {
-        return BadMemoryDataWarning.GetBadMemoryDataWarningThreshold<TSource>();
+        return BadQueryWarning.GetTotalItemsThreshold<TSource>();
     }
 
-    public class BadMemoryDataWarningConfig
+    public class BadQueryWarningConfig
     {
         public bool IsEnabled { get; set; }
 
         /// <summary>
-        /// The configuration for when count of total items data get from context into memory is equal or more than DefaultBadMemoryDataWarningThreshold, the system will log warning
+        /// The configuration for when count of total items data get from context into memory is equal or more than DefaultBadQueryWarningThreshold, the system will log warning
         /// </summary>
-        public int DefaultBadMemoryDataWarningThreshold { get; set; } = 1000;
+        public int DefaultTotalItemsThreshold { get; set; } = 1000;
 
         /// <summary>
         /// If true, the warning log will be logged as Error level message
         /// </summary>
         public bool IsLogWarningAsError { get; set; }
 
+        public int SlowQueryMillisecondsThreshold { get; set; } = 1000;
+
         /// <summary>
         /// Map from DataItemType => WarningThreshold
         /// </summary>
-        public Dictionary<Type, int> CustomThresholdBadMemoryDataWarningItems { get; set; } = new();
+        public Dictionary<Type, int> CustomTotalItemsThresholds { get; set; } = new();
 
-        public int GetBadMemoryDataWarningThreshold<TSource>()
+        public int GetTotalItemsThreshold<TSource>()
         {
-            return CustomThresholdBadMemoryDataWarningItems.GetValueOrDefault(
+            return CustomTotalItemsThresholds.GetValueOrDefault(
                 typeof(TSource),
-                defaultValue: DefaultBadMemoryDataWarningThreshold);
+                defaultValue: DefaultTotalItemsThreshold);
         }
     }
 }

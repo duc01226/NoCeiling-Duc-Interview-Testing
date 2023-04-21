@@ -386,7 +386,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         }
     }
 
-    private static bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result)
+    protected static bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result)
     {
         return result != null &&
                (result.GetType().IsAssignableToGenericType(typeof(IQueryable<>)) ||

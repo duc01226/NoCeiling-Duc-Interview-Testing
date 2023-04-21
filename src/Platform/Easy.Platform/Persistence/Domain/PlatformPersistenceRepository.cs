@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Linq.Expressions;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common.Cqrs;
@@ -22,7 +23,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         IServiceProvider serviceProvider) : base(unitOfWorkManager, cqrs, serviceProvider)
     {
         PersistenceConfiguration = serviceProvider.GetService<PlatformPersistenceConfiguration<TDbContext>>();
-        Logger = serviceProvider.GetService<ILoggerFactory>().CreateLogger(GetType());
+        Logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType());
     }
 
     /// <summary>
@@ -36,6 +37,54 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
 
     protected ILogger Logger { get; }
 
+    protected override Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(
+        Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> readDataFn,
+        Expression<Func<TEntity, object>>[] loadRelatedEntities)
+    {
+        if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+        {
+            var startQueryTimeStamp = Stopwatch.GetTimestamp();
+
+            var result = base.ExecuteAutoOpenUowUsingOnceTimeForRead(readDataFn, loadRelatedEntities);
+
+            var queryElapsedTime = Stopwatch.GetElapsedTime(startQueryTimeStamp);
+
+            if (result?.GetType().IsAssignableToGenericType(typeof(IEnumerable<>)) == true)
+                LogTooMuchDataInMemoryBadQueryWarning(result.As<IEnumerable<object>>());
+            LogSlowQueryBadQueryWarning(queryElapsedTime);
+
+            return result;
+        }
+
+        return base.ExecuteAutoOpenUowUsingOnceTimeForRead(readDataFn, loadRelatedEntities);
+    }
+
+    protected virtual void LogSlowQueryBadQueryWarning(TimeSpan queryElapsedTime)
+    {
+        if (queryElapsedTime.TotalMilliseconds >= PersistenceConfiguration.BadQueryWarning.SlowQueryMillisecondsThreshold)
+            Logger.Log(
+                PersistenceConfiguration.BadQueryWarning.IsLogWarningAsError ? LogLevel.Error : LogLevel.Warning,
+                "[BadQueryWarning][IsLogWarningAsError:{IsLogWarningAsError}] Slow query execution. QueryElapsedTime.TotalMilliseconds:{QueryElapsedTime} SlowQueryMillisecondsThreshold:{SlowQueryMillisecondsThreshold}. TrackTrace:{TrackTrace}",
+                PersistenceConfiguration.BadQueryWarning.IsLogWarningAsError,
+                queryElapsedTime.TotalMilliseconds,
+                PersistenceConfiguration.BadQueryWarning.SlowQueryMillisecondsThreshold,
+                Environment.StackTrace);
+    }
+
+    protected virtual void LogTooMuchDataInMemoryBadQueryWarning<TSource>(IEnumerable<TSource> result)
+    {
+        var threshold = PersistenceConfiguration.GetBadQueryWarningTotalItemsThreshold<TSource>();
+
+        if (result.Count() >= threshold)
+            Logger.Log(
+                PersistenceConfiguration.BadQueryWarning.IsLogWarningAsError ? LogLevel.Error : LogLevel.Warning,
+                "[BadQueryWarning][IsLogWarningAsError:{IsLogWarningAsError}] Get too much of items into memory query execution. TSource:{TSource}. Threshold:{Threshold}. TrackTrace:{TrackTrace}",
+                PersistenceConfiguration.BadQueryWarning.IsLogWarningAsError,
+                typeof(TSource).Name,
+                threshold,
+                Environment.StackTrace);
+    }
+
     public TDbContext GetUowDbContext(IUnitOfWork uow)
     {
         return uow.UowOfType<TUow>().DbContext;
@@ -45,25 +94,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default)
     {
-        var result = await ToAsyncEnumerable(source, cancellationToken).ToListAsync(cancellationToken).AsTask();
-
-        if (PersistenceConfiguration.BadMemoryDataWarning.IsEnabled) LogBadMemoryDataWarning(result);
-
-        return result;
-    }
-
-    protected virtual void LogBadMemoryDataWarning<TSource>(List<TSource> result)
-    {
-        var threshold = PersistenceConfiguration.GetBadMemoryDataWarningThreshold<TSource>();
-
-        if (result.Count >= threshold)
-            Logger.Log(
-                PersistenceConfiguration.BadMemoryDataWarning.IsLogWarningAsError ? LogLevel.Error : LogLevel.Warning,
-                "[BadMemoryDataWarning][IsLogWarningAsError:{IsLogWarningAsError}] Get too much of data into memory. TSource:{TSource}. Threshold:{Threshold}. TrackTrace:{TrackTrace}",
-                PersistenceConfiguration.BadMemoryDataWarning.IsLogWarningAsError,
-                typeof(TSource).Name,
-                threshold,
-                Environment.StackTrace);
+        return await ToAsyncEnumerable(source, cancellationToken).ToListAsync(cancellationToken).AsTask();
     }
 
     /// <summary>

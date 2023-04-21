@@ -45,11 +45,11 @@ public class TextSnippetPostgreSqlEfCorePersistenceModule : PlatformEfCorePersis
         IConfiguration configuration)
     {
         return base.ConfigurePersistenceConfiguration(config, configuration)
-            .With(p => p.BadMemoryDataWarning.IsEnabled = true)
-            .With(p => p.BadMemoryDataWarning.DefaultBadMemoryDataWarningThreshold = 5) // Demo warning for getting a lot of data in to memory
-            .With(p => p.BadMemoryDataWarning.IsLogWarningAsError = true) // Demo logging warning as error message
+            .With(p => p.BadQueryWarning.IsEnabled = true)
+            .With(p => p.BadQueryWarning.DefaultTotalItemsThreshold = 5) // Demo warning for getting a lot of data in to memory
+            .With(p => p.BadQueryWarning.IsLogWarningAsError = true) // Demo logging warning as error message
             .With(
-                p => p.BadMemoryDataWarning.CustomThresholdBadMemoryDataWarningItems = Util.DictionaryBuilder.New(
+                p => p.BadQueryWarning.CustomTotalItemsThresholds = Util.DictionaryBuilder.New(
                     (typeof(TextSnippetEntity), 10)));
     }
 }
