@@ -311,7 +311,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(
         Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> readDataFn,
-        Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        Expression<Func<TEntity, object>>[]? loadRelatedEntities)
     {
         if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
         {
@@ -327,11 +327,11 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
             UnitOfWorkManager.CurrentActiveUow(),
             GetQuery(UnitOfWorkManager.CurrentActiveUow(), loadRelatedEntities));
 
-        static void HandleDisposeContextBeforeReturnLogic<TResult>(IUnitOfWork uow, Expression<Func<TEntity, object>>[] loadRelatedEntities, TResult result)
+        static void HandleDisposeContextBeforeReturnLogic<TResult>(IUnitOfWork uow, Expression<Func<TEntity, object>>[]? loadRelatedEntities, TResult result)
         {
             var needDisposeContext = !DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result);
 
-            if (loadRelatedEntities.Any() && !DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result))
+            if (loadRelatedEntities?.Any() == true && !DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result))
             {
                 // Fix Eager loading include with using UseLazyLoadingProxies of EfCore by try to access the entity before dispose context
                 if (result is TEntity entity) loadRelatedEntities.ForEach(loadRelatedEntityFn => loadRelatedEntityFn.Compile()(entity));
@@ -345,7 +345,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(
         Func<IUnitOfWork, IQueryable<TEntity>, TResult> readDataFn,
-        Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        Expression<Func<TEntity, object>>[]? loadRelatedEntities)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(ReadDataFnAsync, loadRelatedEntities);
 
