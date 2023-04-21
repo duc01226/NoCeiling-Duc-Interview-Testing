@@ -44,7 +44,11 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     public async Task SaveChangesAsync()
     {
-        await base.SaveChangesAsync();
+        await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
+            () => base.SaveChangesAsync(),
+            Logger,
+            PersistenceConfiguration,
+            forWriteQuery: true);
     }
 
     public IQueryable<TEntity> GetQuery<TEntity>() where TEntity : class, IEntity

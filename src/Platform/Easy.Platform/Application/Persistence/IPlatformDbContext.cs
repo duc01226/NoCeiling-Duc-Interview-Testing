@@ -1,8 +1,12 @@
+using System.Diagnostics;
 using System.Linq.Expressions;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Exceptions.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
+using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
+using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.Persistence;
 
@@ -11,6 +15,50 @@ public interface IPlatformDbContext : IDisposable
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery { get; }
 
     public IUnitOfWork? MappedUnitOfWork { get; set; }
+
+    public static async Task<TResult> ExecuteWithBadQueryWarningHandling<TResult>(
+        Func<Task<TResult>> fn,
+        ILogger logger,
+        IPlatformPersistenceConfiguration persistenceConfiguration,
+        bool forWriteQuery)
+    {
+        var startQueryTimeStamp = Stopwatch.GetTimestamp();
+
+        var result = await fn();
+
+        var queryElapsedTime = Stopwatch.GetElapsedTime(startQueryTimeStamp);
+
+        if (result?.GetType().IsAssignableToGenericType(typeof(IEnumerable<>)) == true &&
+            result.As<IEnumerable<object>>().Any() &&
+            result.As<IEnumerable<object>>().Count() >=
+            persistenceConfiguration.GetBadQueryWarningTotalItemsThreshold(result.As<IEnumerable<object>>().First().GetType()))
+            LogTooMuchDataInMemoryBadQueryWarning(result.As<IEnumerable<object>>(), logger, persistenceConfiguration);
+        if (queryElapsedTime.TotalMilliseconds >= persistenceConfiguration.BadQueryWarning.GetSlowQueryMillisecondsThreshold(forWriteQuery))
+            LogSlowQueryBadQueryWarning(queryElapsedTime, logger, persistenceConfiguration);
+
+        return result;
+    }
+
+    public static void LogSlowQueryBadQueryWarning(TimeSpan queryElapsedTime, ILogger logger, IPlatformPersistenceConfiguration persistenceConfiguration)
+    {
+        logger.Log(
+            persistenceConfiguration.BadQueryWarning.IsLogWarningAsError ? LogLevel.Error : LogLevel.Warning,
+            "[BadQueryWarning][IsLogWarningAsError:{IsLogWarningAsError}] Slow query execution. QueryElapsedTime.TotalMilliseconds:{QueryElapsedTime} SlowQueryMillisecondsThreshold:{SlowQueryMillisecondsThreshold}. TrackTrace:{TrackTrace}",
+            persistenceConfiguration.BadQueryWarning.IsLogWarningAsError,
+            queryElapsedTime.TotalMilliseconds,
+            persistenceConfiguration.BadQueryWarning.SlowQueryMillisecondsThreshold,
+            Environment.StackTrace);
+    }
+
+    public static void LogTooMuchDataInMemoryBadQueryWarning(IEnumerable<object> result, ILogger logger, IPlatformPersistenceConfiguration persistenceConfiguration)
+    {
+        logger.Log(
+            persistenceConfiguration.BadQueryWarning.IsLogWarningAsError ? LogLevel.Error : LogLevel.Warning,
+            "[BadQueryWarning][IsLogWarningAsError:{IsLogWarningAsError}] Get too much of items into memory query execution. Threshold:{Threshold}. TrackTrace:{TrackTrace}",
+            persistenceConfiguration.BadQueryWarning.IsLogWarningAsError,
+            persistenceConfiguration.GetBadQueryWarningTotalItemsThreshold(result.First().GetType()),
+            Environment.StackTrace);
+    }
 
     public Task SaveChangesAsync();
 
