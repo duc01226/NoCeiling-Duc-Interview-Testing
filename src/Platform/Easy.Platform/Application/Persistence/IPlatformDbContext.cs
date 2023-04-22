@@ -29,6 +29,7 @@ public interface IPlatformDbContext : IDisposable
         var queryElapsedTime = Stopwatch.GetElapsedTime(startQueryTimeStamp);
 
         if (result?.GetType().IsAssignableToGenericType(typeof(IEnumerable<>)) == true &&
+            result.As<IEnumerable<object>>()?.Any() == true &&
             result.As<IEnumerable<object>>()?.Count() >=
             persistenceConfiguration.GetBadQueryWarningTotalItemsThreshold(result.As<IEnumerable<object>>().First().GetType()))
             LogTooMuchDataInMemoryBadQueryWarning(result.As<IEnumerable<object>>(), logger, persistenceConfiguration);
