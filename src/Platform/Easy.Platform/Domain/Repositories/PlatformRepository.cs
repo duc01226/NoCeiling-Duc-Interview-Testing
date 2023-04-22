@@ -50,7 +50,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => GetAllAsync(queryBuilder(uow, query), cancellationToken),
+            async (uow, query) => await GetAllAsync(queryBuilder(uow, query), cancellationToken),
             loadRelatedEntities);
     }
 
@@ -122,7 +122,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryBuilder(query), loadRelatedEntities);
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(async (uow, query) => await queryBuilder(query), loadRelatedEntities);
     }
 
     public async Task<TResult> GetAsync<TResult>(
@@ -138,7 +138,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryBuilder(uow, query), loadRelatedEntities);
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(async (uow, query) => await queryBuilder(uow, query), loadRelatedEntities);
     }
 
     public async Task<List<TEntity>> GetAllAsync(
@@ -349,9 +349,9 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(ReadDataFnAsync, loadRelatedEntities);
 
-        Task<TResult> ReadDataFnAsync(IUnitOfWork unitOfWork, IQueryable<TEntity> entities)
+        async Task<TResult> ReadDataFnAsync(IUnitOfWork unitOfWork, IQueryable<TEntity> entities)
         {
-            return readDataFn(unitOfWork, entities).ToTask();
+            return await readDataFn(unitOfWork, entities).ToTask();
         }
     }
 

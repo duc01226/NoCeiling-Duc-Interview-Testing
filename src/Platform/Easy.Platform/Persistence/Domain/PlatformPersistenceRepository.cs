@@ -42,7 +42,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     {
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
-                () => base.ExecuteAutoOpenUowUsingOnceTimeForRead(readDataFn, loadRelatedEntities),
+                async () => await base.ExecuteAutoOpenUowUsingOnceTimeForRead(readDataFn, loadRelatedEntities),
                 Logger,
                 PersistenceConfiguration,
                 forWriteQuery: false);
@@ -54,7 +54,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     {
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
-                () => base.ExecuteAutoOpenUowUsingOnceTimeForWrite(action),
+                async () => await base.ExecuteAutoOpenUowUsingOnceTimeForWrite(action),
                 Logger,
                 PersistenceConfiguration,
                 forWriteQuery: true);
@@ -105,7 +105,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => FirstOrDefaultAsync(query.Where(p => p.Id.Equals(id)), cancellationToken)
+            async (uow, query) => await FirstOrDefaultAsync(query.Where(p => p.Id.Equals(id)), cancellationToken)
                 .EnsureFound($"{typeof(TEntity).Name} with Id {id} is not found"),
             loadRelatedEntities);
     }
@@ -116,7 +116,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => ToListAsync(query.Where(p => ids.Contains(p.Id)), cancellationToken),
+            async (uow, query) => await ToListAsync(query.Where(p => ids.Contains(p.Id)), cancellationToken),
             loadRelatedEntities);
     }
 
@@ -126,7 +126,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => ToListAsync(query.WhereIf(predicate != null, predicate), cancellationToken),
+            async (uow, query) => await ToListAsync(query.WhereIf(predicate != null, predicate), cancellationToken),
             loadRelatedEntities);
     }
 
@@ -186,7 +186,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => FirstOrDefaultAsync(query.WhereIf(predicate != null, predicate), cancellationToken)
+            async (uow, query) => await FirstOrDefaultAsync(query.WhereIf(predicate != null, predicate), cancellationToken)
                 .EnsureFound($"{typeof(TEntity).Name} is not found"),
             loadRelatedEntities);
     }
@@ -197,7 +197,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => FirstOrDefaultAsync(query.WhereIf(predicate != null, predicate), cancellationToken),
+            async (uow, query) => await FirstOrDefaultAsync(query.WhereIf(predicate != null, predicate), cancellationToken),
             loadRelatedEntities);
     }
 
@@ -206,7 +206,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         CancellationToken cancellationToken = default)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => CountAsync(query.WhereIf(predicate != null, predicate), cancellationToken),
+            async (uow, query) => await CountAsync(query.WhereIf(predicate != null, predicate), cancellationToken),
             Array.Empty<Expression<Func<TEntity, object>>>());
     }
 
@@ -220,7 +220,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         CancellationToken cancellationToken = default)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => AnyAsync(query.WhereIf(predicate != null, predicate), cancellationToken),
+            async (uow, query) => await AnyAsync(query.WhereIf(predicate != null, predicate), cancellationToken),
             Array.Empty<Expression<Func<TEntity, object>>>());
     }
 
@@ -229,7 +229,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         CancellationToken cancellationToken = default)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => CountAsync(queryBuilder(query), cancellationToken),
+            async (uow, query) => await CountAsync(queryBuilder(query), cancellationToken),
             Array.Empty<Expression<Func<TEntity, object>>>());
     }
 
@@ -238,7 +238,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         CancellationToken cancellationToken = default)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => CountAsync(queryBuilder(uow, query), cancellationToken),
+            async (uow, query) => await CountAsync(queryBuilder(uow, query), cancellationToken),
             Array.Empty<Expression<Func<TEntity, object>>>());
     }
 
@@ -248,7 +248,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => ToListAsync(queryBuilder(query), cancellationToken),
+            async (uow, query) => await ToListAsync(queryBuilder(query), cancellationToken),
             loadRelatedEntities);
     }
 
@@ -258,7 +258,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => ToListAsync(queryBuilder(uow, query), cancellationToken),
+            async (uow, query) => await ToListAsync(queryBuilder(uow, query), cancellationToken),
             loadRelatedEntities);
     }
 
@@ -268,7 +268,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => FirstOrDefaultAsync(queryBuilder(query), cancellationToken),
+            async (uow, query) => await FirstOrDefaultAsync(queryBuilder(query), cancellationToken),
             loadRelatedEntities);
     }
 
@@ -278,7 +278,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => FirstOrDefaultAsync(queryBuilder(uow, query), cancellationToken),
+            async (uow, query) => await FirstOrDefaultAsync(queryBuilder(uow, query), cancellationToken),
             loadRelatedEntities);
     }
 
