@@ -277,12 +277,12 @@ public static partial class Util
 
         public static async Task<List<T>> WhenAll<T>(IEnumerable<Task<T>> tasks)
         {
-            return await tasks.WhenAll();
+            return tasks.Select(p => p.GetResult()).ToList();
         }
 
         public static async Task<List<T>> WhenAll<T>(params Task<T>[] tasks)
         {
-            return await tasks.WhenAll();
+            return tasks.Select(p => p.GetResult()).ToList();
         }
 
         public static async Task<ValueTuple<T1, T2>> WhenAll<T1, T2>(Task<T1> task1, Task<T2> task2)
