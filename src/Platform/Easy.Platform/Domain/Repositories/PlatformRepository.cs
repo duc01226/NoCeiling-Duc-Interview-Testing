@@ -66,7 +66,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
                 (uow, query) => GetAllAsyncEnumerable(queryBuilder(query), cancellationToken),
                 loadRelatedEntities)
-            .Result;
+            .GetResult();
     }
 
     public IAsyncEnumerable<TEntity> GetAllAsyncEnumerable(
@@ -77,7 +77,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
                 (uow, query) => GetAllAsyncEnumerable(queryBuilder(uow, query), cancellationToken),
                 loadRelatedEntities)
-            .Result;
+            .GetResult();
     }
 
     public abstract IAsyncEnumerable<TEntity> GetAllAsyncEnumerable(IQueryable<TEntity> query, CancellationToken cancellationToken = default);

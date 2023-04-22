@@ -143,7 +143,7 @@ public class WhenCase<TSource, TTarget> : WhenCase
 
     public bool HasMatchedCase()
     {
-        return Cases.Any(@case => @case.IsMatch(Source).Result);
+        return Cases.Any(@case => @case.IsMatch(Source).GetResult());
     }
 
     public async Task<TTarget> ExecuteAsync()
@@ -157,7 +157,7 @@ public class WhenCase<TSource, TTarget> : WhenCase
 
     public TTarget Execute()
     {
-        return ExecuteAsync().Result;
+        return ExecuteAsync().GetResult();
     }
 
     protected WhenCase<TSource, TTarget> EnsureCanAddElseCase()

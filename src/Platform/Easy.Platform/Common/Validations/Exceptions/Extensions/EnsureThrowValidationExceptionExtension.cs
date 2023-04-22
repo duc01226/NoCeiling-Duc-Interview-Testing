@@ -1,3 +1,5 @@
+using Easy.Platform.Common.Extensions;
+
 namespace Easy.Platform.Common.Validations.Exceptions.Extensions;
 
 public static class EnsureThrowValidationExceptionExtension
@@ -14,7 +16,7 @@ public static class EnsureThrowValidationExceptionExtension
 
     public static T EnsureValidationValid<T>(this T value, Func<T, Task<bool>> must, string errorMsg)
     {
-        return must(value).Result ? value : throw new PlatformValidationException(errorMsg);
+        return must(value).GetResult() ? value : throw new PlatformValidationException(errorMsg);
     }
 
     public static async Task<T> EnsureValidationValidAsync<T>(this Task<PlatformValidationResult<T>> valTask)

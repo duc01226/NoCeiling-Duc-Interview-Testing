@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.UnitOfWork;
 
@@ -208,7 +209,7 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return GetAsync(queryBuilder, cancellationToken, loadRelatedEntities).Result;
+        return GetAsync(queryBuilder, cancellationToken, loadRelatedEntities).GetResult();
     }
 
     public TResult Get<TResult>(
@@ -216,7 +217,7 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return GetAsync(queryBuilder, cancellationToken, loadRelatedEntities).Result;
+        return GetAsync(queryBuilder, cancellationToken, loadRelatedEntities).GetResult();
     }
 
     public TResult Get<TResult>(
@@ -224,7 +225,7 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return GetAsync(queryBuilder, cancellationToken, loadRelatedEntities).Result;
+        return GetAsync(queryBuilder, cancellationToken, loadRelatedEntities).GetResult();
     }
 
     public TResult Get<TResult>(
@@ -232,7 +233,7 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return GetAsync(queryBuilder, cancellationToken, loadRelatedEntities).Result;
+        return GetAsync(queryBuilder, cancellationToken, loadRelatedEntities).GetResult();
     }
 
     public Task<List<TEntity>> GetAllAsync(

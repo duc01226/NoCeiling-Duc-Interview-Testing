@@ -243,7 +243,7 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
         try
         {
             return GetAsync<List<PlatformCacheKey>>(GetGlobalAllRequestCachedKeysCacheKey())
-                       .Result?
+                       .GetResult()?
                        .Select(p => new KeyValuePair<PlatformCacheKey, object>(p, null))
                        .Pipe(_ => new ConcurrentDictionary<PlatformCacheKey, object>(_)) ??
                    new ConcurrentDictionary<PlatformCacheKey, object>();

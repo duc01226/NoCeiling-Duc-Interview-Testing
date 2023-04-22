@@ -226,7 +226,7 @@ public static class PlatformValidateObjectExtension
 
     public static PlatformValidationResult<T> ValidateFound<T>(this T? obj, Func<T, Task<bool>> and, string errorMsg = null)
     {
-        return obj.ValidateFound(p => and(obj).Result, errorMsg);
+        return obj.ValidateFound(p => and(obj).GetResult(), errorMsg);
     }
 
     public static async Task<PlatformValidationResult<T>> ValidateFoundAsync<T>(this T? obj, Func<T, Task<bool>> and, string errorMsg = null)

@@ -143,7 +143,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
                 (uow, query) => ToAsyncEnumerable(query.WhereIf(predicate != null, predicate), cancellationToken).ToEnumerable(),
                 loadRelatedEntities)
-            .Result;
+            .GetResult();
     }
 
     public override IAsyncEnumerable<TEntity> GetAllAsyncEnumerable(IQueryable<TEntity> query, CancellationToken cancellationToken = default)
@@ -159,7 +159,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
                 (uow, query) => ToAsyncEnumerable(queryBuilder(query), cancellationToken),
                 loadRelatedEntities)
-            .Result;
+            .GetResult();
     }
 
     public override IAsyncEnumerable<TSelector> GetAllAsyncEnumerable<TSelector>(
@@ -170,7 +170,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
                 (uow, query) => ToAsyncEnumerable(queryBuilder(uow, query), cancellationToken),
                 loadRelatedEntities)
-            .Result;
+            .GetResult();
     }
 
     public override async Task<TEntity> FirstOrDefaultAsync(
