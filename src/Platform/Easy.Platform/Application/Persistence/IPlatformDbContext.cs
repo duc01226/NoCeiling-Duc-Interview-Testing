@@ -31,7 +31,7 @@ public interface IPlatformDbContext : IDisposable
         if (result?.GetType().IsAssignableToGenericType(typeof(IEnumerable<>)) == true &&
             result.As<IEnumerable<object>>()?.Any() == true &&
             result.As<IEnumerable<object>>()?.Count() >=
-            persistenceConfiguration.GetBadQueryWarningTotalItemsThreshold(result.As<IEnumerable<object>>().First().GetType()))
+            persistenceConfiguration.GetBadQueryWarningTotalItemsThreshold(result.As<IEnumerable<object>>().FirstOrDefault()?.GetType()))
             LogTooMuchDataInMemoryBadQueryWarning(result.As<IEnumerable<object>>(), logger, persistenceConfiguration);
         if (queryElapsedTime.TotalMilliseconds >= persistenceConfiguration.BadQueryWarning.GetSlowQueryMillisecondsThreshold(forWriteQuery))
             LogSlowQueryBadQueryWarning(queryElapsedTime, logger, persistenceConfiguration);

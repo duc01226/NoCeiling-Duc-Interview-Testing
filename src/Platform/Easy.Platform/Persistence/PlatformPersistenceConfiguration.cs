@@ -50,6 +50,8 @@ public class PlatformPersistenceConfigurationBadQueryWarningConfig
 
     public int GetTotalItemsThreshold(Type itemType)
     {
+        if (itemType == null) return DefaultTotalItemsThreshold;
+
         return CustomTotalItemsThresholds.GetValueOrDefault(
             itemType,
             defaultValue: DefaultTotalItemsThreshold);
