@@ -32,7 +32,7 @@ public class PlatformPersistenceConfigurationBadQueryWarningConfig
     /// <summary>
     /// The configuration for when count of total items data get from context into memory is equal or more than DefaultBadQueryWarningThreshold, the system will log warning
     /// </summary>
-    public int DefaultTotalItemsThreshold { get; set; } = 1000;
+    public int DefaultTotalItemsThreshold { get; set; } = 100;
 
     /// <summary>
     /// If true, the warning log will be logged as Error level message
