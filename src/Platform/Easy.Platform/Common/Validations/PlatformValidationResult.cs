@@ -249,26 +249,26 @@ public class PlatformValidationResult<TValue> : ValidationResult
     }
 
 
-    public Task<PlatformValidationResult<T>> ThenAsync<T>(
+    public async Task<PlatformValidationResult<T>> ThenAsync<T>(
         Func<Task<PlatformValidationResult<T>>> nextVal)
     {
-        return MatchAsync(
+        return await MatchAsync(
             valid: value => nextVal(),
             invalid: err => Of<T>(default).ToTask());
     }
 
-    public Task<PlatformValidationResult<T>> ThenAsync<T>(
+    public async Task<PlatformValidationResult<T>> ThenAsync<T>(
         Func<TValue, Task<PlatformValidationResult<T>>> nextVal)
     {
-        return MatchAsync(
+        return await MatchAsync(
             valid: value => nextVal(Value),
             invalid: err => Of<T>(default).ToTask());
     }
 
-    public Task<PlatformValidationResult<T>> ThenAsync<T>(
+    public async Task<PlatformValidationResult<T>> ThenAsync<T>(
         Func<TValue, Task<T>> next)
     {
-        return MatchAsync(
+        return await MatchAsync(
             valid: async value => new PlatformValidationResult<T>(await next(value), null),
             invalid: err => Of<T>(default).ToTask());
     }
@@ -281,11 +281,11 @@ public class PlatformValidationResult<TValue> : ValidationResult
         return IsValid ? valid(Value) : invalid(Errors);
     }
 
-    public Task<PlatformValidationResult<T>> MatchAsync<T>(
+    public async Task<PlatformValidationResult<T>> MatchAsync<T>(
         Func<TValue, Task<PlatformValidationResult<T>>> valid,
         Func<IEnumerable<PlatformValidationError>, Task<PlatformValidationResult<T>>> invalid)
     {
-        return IsValid ? valid(Value) : invalid(Errors);
+        return IsValid ? await valid(Value) : await invalid(Errors);
     }
 
     public PlatformValidationResult<TValue> And(Func<TValue, PlatformValidationResult<TValue>> nextValidation)

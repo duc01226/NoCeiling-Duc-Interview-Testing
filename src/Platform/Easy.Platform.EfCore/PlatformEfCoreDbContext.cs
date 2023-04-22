@@ -126,40 +126,44 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         }
     }
 
-    public Task<List<TSource>> ToListAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public async Task<List<TSource>> ToListAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
-        return source.ToListAsync(cancellationToken);
+        return await source.ToListAsync(cancellationToken);
     }
 
-    public Task<TSource> FirstAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public async Task<TSource> FirstAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
-        return source.FirstAsync(cancellationToken);
+        return await source.FirstAsync(cancellationToken);
     }
 
-    public Task<int> CountAsync<TEntity>(Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default) where TEntity : class, IEntity
-    {
-        return GetQuery<TEntity>().WhereIf(predicate != null, predicate).CountAsync(cancellationToken);
-    }
-
-    public Task<TResult> FirstOrDefaultAsync<TEntity, TResult>(Func<IQueryable<TEntity>, IQueryable<TResult>> queryBuilder, CancellationToken cancellationToken = default)
+    public async Task<int> CountAsync<TEntity>(Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default)
         where TEntity : class, IEntity
     {
-        return queryBuilder(GetQuery<TEntity>()).FirstOrDefaultAsync(cancellationToken);
+        return await GetQuery<TEntity>().WhereIf(predicate != null, predicate).CountAsync(cancellationToken);
     }
 
-    public Task<int> CountAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
+    public async Task<TResult> FirstOrDefaultAsync<TEntity, TResult>(
+        Func<IQueryable<TEntity>, IQueryable<TResult>> queryBuilder,
+        CancellationToken cancellationToken = default)
+        where TEntity : class, IEntity
     {
-        return source.CountAsync(cancellationToken);
+        return await queryBuilder(GetQuery<TEntity>()).FirstOrDefaultAsync(cancellationToken);
     }
 
-    public Task<bool> AnyAsync<TEntity>(Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default) where TEntity : class, IEntity
+    public async Task<int> CountAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
     {
-        return GetQuery<TEntity>().WhereIf(predicate != null, predicate).AnyAsync(cancellationToken);
+        return await source.CountAsync(cancellationToken);
     }
 
-    public Task<bool> AnyAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
+    public async Task<bool> AnyAsync<TEntity>(Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default)
+        where TEntity : class, IEntity
     {
-        return source.AnyAsync(cancellationToken);
+        return await GetQuery<TEntity>().WhereIf(predicate != null, predicate).AnyAsync(cancellationToken);
+    }
+
+    public async Task<bool> AnyAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
+    {
+        return await source.AnyAsync(cancellationToken);
     }
 
     public async Task<List<T>> GetAllAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
@@ -167,15 +171,17 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         return await source.ToListAsync(cancellationToken);
     }
 
-    public Task<T> FirstOrDefaultAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
+    public async Task<T> FirstOrDefaultAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
     {
-        return source.FirstOrDefaultAsync(cancellationToken);
+        return await source.FirstOrDefaultAsync(cancellationToken);
     }
 
-    public Task<List<TResult>> GetAllAsync<TEntity, TResult>(Func<IQueryable<TEntity>, IQueryable<TResult>> queryBuilder, CancellationToken cancellationToken = default)
+    public async Task<List<TResult>> GetAllAsync<TEntity, TResult>(
+        Func<IQueryable<TEntity>, IQueryable<TResult>> queryBuilder,
+        CancellationToken cancellationToken = default)
         where TEntity : class, IEntity
     {
-        return queryBuilder(GetQuery<TEntity>()).ToListAsync(cancellationToken);
+        return await queryBuilder(GetQuery<TEntity>()).ToListAsync(cancellationToken);
     }
 
     public async Task<List<TEntity>> CreateManyAsync<TEntity, TPrimaryKey>(

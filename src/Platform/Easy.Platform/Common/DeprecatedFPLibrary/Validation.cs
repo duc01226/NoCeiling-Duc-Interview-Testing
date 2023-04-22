@@ -145,50 +145,50 @@ public static class Validation
             r => valNext);
     }
 
-    public static Task<Validation<TR>> Then<T, TR>(
+    public static async Task<Validation<TR>> Then<T, TR>(
         this Validation<T> val,
         Func<T, Task<Validation<TR>>> f)
     {
-        return val.Match(
+        return await val.Match(
             reasons => F.Invalid<TR>(reasons).ToTask(),
             t => f(t));
     }
 
-    public static Task<Validation<TR>> Then<T, TR>(
+    public static async Task<Validation<TR>> Then<T, TR>(
         this Validation<T> @this,
         Func<T, Task<TR>> func)
     {
-        return @this.Match(
+        return await @this.Match(
             reasons => F.Invalid<TR>(reasons).ToTask(),
             t => func(t).Then(_ => F.Valid(_)));
     }
 
-    public static Task<Validation<TR>> ThenAsync<T, TR>(
+    public static async Task<Validation<TR>> ThenAsync<T, TR>(
         this Task<Validation<T>> valTask,
         Func<T, Task<TR>> f)
     {
-        return valTask.Then(valT => valT.Then(f));
+        return await valTask.Then(valT => valT.Then(f));
     }
 
-    public static Task<Validation<TR>> ThenAsync<T, TR>(
+    public static async Task<Validation<TR>> ThenAsync<T, TR>(
         this Task<Validation<T>> valTask,
         Func<T, TR> f)
     {
-        return valTask.Then(valT => valT.Then(f));
+        return await valTask.Then(valT => valT.Then(f));
     }
 
-    public static Task<Validation<TR>> ThenAsync<T, TR>(
+    public static async Task<Validation<TR>> ThenAsync<T, TR>(
         this Task<Validation<T>> valTask,
         Func<T, Task<Validation<TR>>> f)
     {
-        return valTask.Then(valT => valT.Then(f));
+        return await valTask.Then(valT => valT.Then(f));
     }
 
-    public static Task<Validation<TR>> ThenAsync<T, TR>(
+    public static async Task<Validation<TR>> ThenAsync<T, TR>(
         this Task<Validation<T>> valTask,
         Func<T, Validation<TR>> f)
     {
-        return valTask.Then(valT => valT.And(f));
+        return await valTask.Then(valT => valT.And(f));
     }
 
     public struct Invalid

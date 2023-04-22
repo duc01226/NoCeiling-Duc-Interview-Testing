@@ -29,9 +29,9 @@ public class DemoMigrateDataCrossDbContext : PlatformMongoDbContext<DemoMigrateD
 
     public IMongoCollection<TextSnippetEntity> TextSnippetEntityCollection => GetCollection<TextSnippetEntity>();
 
-    public override Task InternalEnsureIndexesAsync(bool recreate = false)
+    public override async Task InternalEnsureIndexesAsync(bool recreate = false)
     {
-        return Task.CompletedTask;
+        await Task.CompletedTask;
     }
 
     public override async Task Initialize(IServiceProvider serviceProvider)

@@ -39,13 +39,13 @@ internal class FcmSender : IFcmSender
     /// <param name="deviceId">Device token (will add `to` to the payload)</param>
     /// <param name="payload">Notification payload that will be serialized using Newtonsoft.Json package</param>
     /// <param name="cancellationToken">cancellationToken</param>
-    public Task<FcmResponse> SendAsync(
+    public async Task<FcmResponse> SendAsync(
         string deviceId,
         GoogleNotification payload,
         CancellationToken cancellationToken = default)
     {
         payload.To = deviceId;
-        return SendAsync(payload, cancellationToken);
+        return await SendAsync(payload, cancellationToken);
     }
 
     /// <summary>

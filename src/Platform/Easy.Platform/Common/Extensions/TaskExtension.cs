@@ -91,12 +91,12 @@ public static class TaskExtension
         return targetValue;
     }
 
-    public static Task<TR> Then<T, TR>(
+    public static async Task<TR> Then<T, TR>(
         this Task<T> task,
         Func<Exception, TR> faulted,
         Func<T, TR> completed)
     {
-        return task.ContinueWith(
+        return await task.ContinueWith(
             t => t.Status == TaskStatus.Faulted
                 ? faulted(t.Exception)
                 : completed(t.GetResult()));
@@ -121,9 +121,9 @@ public static class TaskExtension
         return @if(targetValue) ? await nextTask(targetValue) : defaultValue;
     }
 
-    public static Task<ValueTuple<T, T1>> ThenGetWith<T, T1>(this Task<T> task, Func<T, T1> getWith)
+    public static async Task<ValueTuple<T, T1>> ThenGetWith<T, T1>(this Task<T> task, Func<T, T1> getWith)
     {
-        return task.Then(p => (p, getWith(p)));
+        return await task.Then(p => (p, getWith(p)));
     }
 
     public static async Task<ValueTuple<T, T1>> ThenGetWith<T, T1>(this Task<T> task, Func<T, Task<T1>> getWith)
@@ -145,16 +145,16 @@ public static class TaskExtension
         return (value, value1, await getWith2(value, value1));
     }
 
-    public static Task<List<T>> WhenAll<T>(this IEnumerable<Task<T>> tasks)
+    public static async Task<List<T>> WhenAll<T>(this IEnumerable<Task<T>> tasks)
     {
-        return Task.WhenAll(tasks.ToList()).Then(x => x.ToList());
+        return await Task.WhenAll(tasks.ToList()).Then(x => x.ToList());
     }
 
-    public static Task WhenAll(this IEnumerable<Task> tasks)
+    public static async Task WhenAll(this IEnumerable<Task> tasks)
     {
         var tasksList = tasks.ToList();
 
-        return tasksList.Any() ? Task.WhenAll(tasksList.ToList()) : Task.CompletedTask;
+        if (tasksList.Any()) await Task.WhenAll(tasksList.ToList());
     }
 
     /// <summary>
@@ -172,19 +172,19 @@ public static class TaskExtension
         return task.GetAwaiter().GetResult();
     }
 
-    public static Task<T> Recover<T>(
+    public static async Task<T> Recover<T>(
         this Task<T> task,
         Func<Exception, T> fallback)
     {
-        return task.ContinueWith(
+        return await task.ContinueWith(
             t => t.Status == TaskStatus.Faulted
                 ? fallback(t.Exception)
                 : t.GetResult());
     }
 
-    public static Task<T> ToTask<T>(this T t)
+    public static async Task<T> ToTask<T>(this T t)
     {
-        return Task.FromResult(t);
+        return await Task.FromResult(t);
     }
 
     public static T Wait<T>(this T target, double maxWaitSeconds)

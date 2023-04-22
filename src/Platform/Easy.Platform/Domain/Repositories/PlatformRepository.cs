@@ -151,22 +151,22 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
             loadRelatedEntities);
     }
 
-    public Task<TEntity> FirstOrDefaultAsync(
+    public async Task<TEntity> FirstOrDefaultAsync(
         Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(queryBuilder(query), cancellationToken),
             loadRelatedEntities);
     }
 
-    public Task<TEntity> FirstOrDefaultAsync(
+    public async Task<TEntity> FirstOrDefaultAsync(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(queryBuilder(uow, query), cancellationToken),
             loadRelatedEntities);
     }

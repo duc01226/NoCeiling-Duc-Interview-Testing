@@ -36,13 +36,13 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         return GetTable(uow).AsQueryable();
     }
 
-    public override Task<List<TSource>> ToListAsync<TSource>(
+    public override async Task<List<TSource>> ToListAsync<TSource>(
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default)
     {
         // Use ToAsyncEnumerable behind the scene to support true enumerable like ef-core. Then can select anything and it will work.
         // Default as Enumerable from IQueryable still like Queryable which cause error query could not be translated for free select using constructor map for example
-        return ToAsyncEnumerable(source.As<IMongoQueryable<TSource>>(), cancellationToken).ToListAsync(cancellationToken).AsTask();
+        return await ToAsyncEnumerable(source.As<IMongoQueryable<TSource>>(), cancellationToken).ToListAsync(cancellationToken).AsTask();
     }
 
     public override async IAsyncEnumerable<TSource> ToAsyncEnumerable<TSource>(
@@ -54,38 +54,35 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
             Ensure.IsNotNull(cursor, nameof(source));
             while (await cursor.MoveNextAsync(cancellationToken))
             {
-                foreach (var item in cursor.Current)
-                {
-                    yield return item;
-                }
+                foreach (var item in cursor.Current) yield return item;
 
                 cancellationToken.ThrowIfCancellationRequested();
             }
         }
     }
 
-    public override Task<TSource> FirstOrDefaultAsync<TSource>(
+    public override async Task<TSource> FirstOrDefaultAsync<TSource>(
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default)
     {
-        return source.As<IMongoQueryable<TSource>>().FirstOrDefaultAsync(cancellationToken);
+        return await source.As<IMongoQueryable<TSource>>().FirstOrDefaultAsync(cancellationToken);
     }
 
-    public override Task<TSource> FirstAsync<TSource>(
+    public override async Task<TSource> FirstAsync<TSource>(
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default)
     {
-        return source.As<IMongoQueryable<TSource>>().FirstAsync(cancellationToken);
+        return await source.As<IMongoQueryable<TSource>>().FirstAsync(cancellationToken);
     }
 
-    public override Task<int> CountAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public override async Task<int> CountAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
-        return source.As<IMongoQueryable<TSource>>().CountAsync(cancellationToken);
+        return await source.As<IMongoQueryable<TSource>>().CountAsync(cancellationToken);
     }
 
-    public override Task<bool> AnyAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public override async Task<bool> AnyAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
-        return source.As<IMongoQueryable<TSource>>().AnyAsync(cancellationToken);
+        return await source.As<IMongoQueryable<TSource>>().AnyAsync(cancellationToken);
     }
 }
 

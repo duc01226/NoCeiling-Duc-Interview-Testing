@@ -43,7 +43,7 @@ public interface IPlatformDbContext : IDisposable
     {
         logger.Log(
             persistenceConfiguration.BadQueryWarning.IsLogWarningAsError ? LogLevel.Error : LogLevel.Warning,
-            "[BadQueryWarning][IsLogWarningAsError:{IsLogWarningAsError}] Slow query execution. QueryElapsedTime.TotalMilliseconds:{QueryElapsedTime} SlowQueryMillisecondsThreshold:{SlowQueryMillisecondsThreshold}. TrackTrace:{TrackTrace}",
+            "[BadQueryWarning][IsLogWarningAsError:{IsLogWarningAsError}] Slow query execution. QueryElapsedTime.TotalMilliseconds:{QueryElapsedTime}. SlowQueryMillisecondsThreshold:{SlowQueryMillisecondsThreshold}. TrackTrace:{TrackTrace}",
             persistenceConfiguration.BadQueryWarning.IsLogWarningAsError,
             queryElapsedTime.TotalMilliseconds,
             persistenceConfiguration.BadQueryWarning.SlowQueryMillisecondsThreshold,

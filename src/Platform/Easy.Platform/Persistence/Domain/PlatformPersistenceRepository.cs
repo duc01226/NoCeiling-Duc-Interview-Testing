@@ -99,33 +99,33 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default);
 
-    public override Task<TEntity> GetByIdAsync(
+    public override async Task<TEntity> GetByIdAsync(
         TPrimaryKey id,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(query.Where(p => p.Id.Equals(id)), cancellationToken)
                 .EnsureFound($"{typeof(TEntity).Name} with Id {id} is not found"),
             loadRelatedEntities);
     }
 
-    public override Task<List<TEntity>> GetByIdsAsync(
+    public override async Task<List<TEntity>> GetByIdsAsync(
         List<TPrimaryKey> ids,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => ToListAsync(query.Where(p => ids.Contains(p.Id)), cancellationToken),
             loadRelatedEntities);
     }
 
-    public override Task<List<TEntity>> GetAllAsync(
+    public override async Task<List<TEntity>> GetAllAsync(
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => ToListAsync(query.WhereIf(predicate != null, predicate), cancellationToken),
             loadRelatedEntities);
     }
@@ -173,111 +173,111 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             .Result;
     }
 
-    public override Task<TEntity> FirstOrDefaultAsync(
+    public override async Task<TEntity> FirstOrDefaultAsync(
         IQueryable<TEntity> query,
         CancellationToken cancellationToken = default)
     {
-        return FirstOrDefaultAsync(query, cancellationToken);
+        return await FirstOrDefaultAsync(query, cancellationToken);
     }
 
-    public override Task<TEntity> FirstAsync(
+    public override async Task<TEntity> FirstAsync(
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(query.WhereIf(predicate != null, predicate), cancellationToken)
                 .EnsureFound($"{typeof(TEntity).Name} is not found"),
             loadRelatedEntities);
     }
 
-    public override Task<TEntity> FirstOrDefaultAsync(
+    public override async Task<TEntity> FirstOrDefaultAsync(
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(query.WhereIf(predicate != null, predicate), cancellationToken),
             loadRelatedEntities);
     }
 
-    public override Task<int> CountAsync(
+    public override async Task<int> CountAsync(
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => CountAsync(query.WhereIf(predicate != null, predicate), cancellationToken),
             Array.Empty<Expression<Func<TEntity, object>>>());
     }
 
-    public override Task<int> CountAsync(IQueryable<TEntity> query, CancellationToken cancellationToken = default)
+    public override async Task<int> CountAsync(IQueryable<TEntity> query, CancellationToken cancellationToken = default)
     {
-        return CountAsync(query, cancellationToken);
+        return await CountAsync(query, cancellationToken);
     }
 
-    public override Task<bool> AnyAsync(
+    public override async Task<bool> AnyAsync(
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => AnyAsync(query.WhereIf(predicate != null, predicate), cancellationToken),
             Array.Empty<Expression<Func<TEntity, object>>>());
     }
 
-    public override Task<int> CountAsync<TQueryItemResult>(
+    public override async Task<int> CountAsync<TQueryItemResult>(
         Func<IQueryable<TEntity>, IQueryable<TQueryItemResult>> queryBuilder,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => CountAsync(queryBuilder(query), cancellationToken),
             Array.Empty<Expression<Func<TEntity, object>>>());
     }
 
-    public override Task<int> CountAsync<TQueryItemResult>(
+    public override async Task<int> CountAsync<TQueryItemResult>(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TQueryItemResult>> queryBuilder,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => CountAsync(queryBuilder(uow, query), cancellationToken),
             Array.Empty<Expression<Func<TEntity, object>>>());
     }
 
-    public override Task<List<TSelector>> GetAllAsync<TSelector>(
+    public override async Task<List<TSelector>> GetAllAsync<TSelector>(
         Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => ToListAsync(queryBuilder(query), cancellationToken),
             loadRelatedEntities);
     }
 
-    public override Task<List<TSelector>> GetAllAsync<TSelector>(
+    public override async Task<List<TSelector>> GetAllAsync<TSelector>(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => ToListAsync(queryBuilder(uow, query), cancellationToken),
             loadRelatedEntities);
     }
 
-    public override Task<TSelector> FirstOrDefaultAsync<TSelector>(
+    public override async Task<TSelector> FirstOrDefaultAsync<TSelector>(
         Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(queryBuilder(query), cancellationToken),
             loadRelatedEntities);
     }
 
-    public override Task<TSelector> FirstOrDefaultAsync<TSelector>(
+    public override async Task<TSelector> FirstOrDefaultAsync<TSelector>(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(queryBuilder(uow, query), cancellationToken),
             loadRelatedEntities);
     }

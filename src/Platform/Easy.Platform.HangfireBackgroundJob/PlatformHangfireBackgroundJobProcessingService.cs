@@ -28,15 +28,13 @@ public sealed class PlatformHangfireBackgroundJobProcessingService : IPlatformBa
         return currentBackgroundJobServer != null;
     }
 
-    public Task Start(CancellationToken cancellationToken = default)
+    public async Task Start(CancellationToken cancellationToken = default)
     {
         PlatformApplicationGlobal.LoggerFactory.CreateLogger(GetType()).LogInformation($"{GetType().Name} starting");
 
         currentBackgroundJobServer ??= new BackgroundJobServer(options);
 
         PlatformApplicationGlobal.LoggerFactory.CreateLogger(GetType()).LogInformation($"{GetType().Name} started");
-
-        return Task.CompletedTask;
     }
 
     public async Task Stop(CancellationToken cancellationToken = default)

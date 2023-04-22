@@ -56,12 +56,12 @@ public static partial class Util
         }
 
         /// <see cref="ExecuteScrollingPagingAsync{TItem}(Func{Task{IEnumerable{TItem}}},Func{IEnumerable{TItem},Task},ulong)" />
-        public static Task ExecuteScrollingPagingAsync<TItem>(
+        public static async Task ExecuteScrollingPagingAsync<TItem>(
             Func<Task<List<TItem>>> getItemsPackageFn,
             Func<List<TItem>, Task> executeFn,
             ulong maxExecutionCount = ulong.MaxValue)
         {
-            return ExecuteScrollingPagingAsync(
+            await ExecuteScrollingPagingAsync(
                 GetItemsPackageFacadeFn,
                 items => executeFn(items.ToList()),
                 maxExecutionCount);
