@@ -46,7 +46,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
             await ValidateRequestAsync(request.Validate().Of<TCommand>(), cancellationToken).EnsureValidAsync();
 
             var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
-                () => ExecuteHandleAsync(request, cancellationToken),
+                async () => await ExecuteHandleAsync(request, cancellationToken),
                 onException: ex =>
                 {
                     PlatformApplicationGlobal.LoggerFactory.CreateLogger(GetType())
@@ -82,6 +82,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
         CancellationToken cancellationToken)
     {
         TResult result;
+
         using (usingUow)
         {
             result = await HandleAsync(request, cancellationToken);

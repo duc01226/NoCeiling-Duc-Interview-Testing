@@ -147,14 +147,14 @@ public static class TaskExtension
 
     public static async Task<List<T>> WhenAll<T>(this IEnumerable<Task<T>> tasks)
     {
-        return await Task.WhenAll(tasks.ToList()).Then(x => x.ToList());
+        return await Util.TaskRunner.WhenAll(tasks.ToList()).Then(x => x.ToList());
     }
 
     public static async Task WhenAll(this IEnumerable<Task> tasks)
     {
         var tasksList = tasks.ToList();
 
-        if (tasksList.Any()) await Task.WhenAll(tasksList.ToList());
+        if (tasksList.Any()) await Util.TaskRunner.WhenAll(tasksList.ToList());
     }
 
     /// <summary>

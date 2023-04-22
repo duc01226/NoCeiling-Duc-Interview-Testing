@@ -43,7 +43,7 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
             await ValidateRequestAsync(request.Validate().Of<TQuery>(), cancellationToken).EnsureValidAsync();
 
             return await Util.TaskRunner.CatchExceptionContinueThrowAsync(
-                () => HandleAsync(request, cancellationToken),
+                async () => await HandleAsync(request, cancellationToken),
                 onException: ex =>
                 {
                     PlatformApplicationGlobal.LoggerFactory.CreateLogger(GetType())

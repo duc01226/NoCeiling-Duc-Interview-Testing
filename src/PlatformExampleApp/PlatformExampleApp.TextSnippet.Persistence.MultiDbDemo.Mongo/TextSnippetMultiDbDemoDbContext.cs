@@ -1,5 +1,6 @@
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Common.Cqrs;
+using Easy.Platform.Common.Utils;
 using Easy.Platform.MongoDB;
 using Easy.Platform.Persistence;
 using Microsoft.Extensions.Logging;
@@ -32,10 +33,10 @@ public class TextSnippetMultiDbDemoDbContext : PlatformMongoDbContext<TextSnippe
     public override async Task InternalEnsureIndexesAsync(bool recreate = false)
     {
         if (recreate)
-            await Task.WhenAll(
+            await Util.TaskRunner.WhenAll(
                 MultiDbDemoEntityCollection.Indexes.DropAllAsync());
 
-        await Task.WhenAll(
+        await Util.TaskRunner.WhenAll(
             MultiDbDemoEntityCollection.Indexes.CreateManyAsync(
                 new List<CreateIndexModel<MultiDbDemoEntity>>
                 {
