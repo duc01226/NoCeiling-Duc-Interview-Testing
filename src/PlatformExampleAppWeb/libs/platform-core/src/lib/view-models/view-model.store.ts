@@ -8,164 +8,165 @@ import { immutableUpdate } from '../utils';
 import { PlatformVm } from './generic.view-model';
 
 export abstract class PlatformVmStore<TViewModel extends PlatformVm> extends ComponentStore<TViewModel> {
-  private storedSubscriptionsMap: Map<string, Subscription> = new Map();
-  private storedAnonymousSubscriptions: Subscription[] = [];
+    private storedSubscriptionsMap: Map<string, Subscription> = new Map();
+    private storedAnonymousSubscriptions: Subscription[] = [];
 
-  constructor(defaultState?: TViewModel) {
-    super(defaultState);
-    this.destroy$.subscribe(() => this.cancelAllStoredSubscriptions());
-  }
+    constructor(defaultState?: TViewModel) {
+        super(defaultState);
+        this.destroy$.subscribe(() => this.cancelAllStoredSubscriptions());
+    }
 
-  public abstract readonly vm$: Observable<TViewModel>;
+    public abstract readonly vm$: Observable<TViewModel>;
 
-  public updateState(
-    partialStateOrUpdaterFn:
-      | PartialDeep<TViewModel>
-      | Partial<TViewModel>
-      | ((state: TViewModel) => void | PartialDeep<TViewModel> | Partial<TViewModel>)
-  ): void {
-    super.setState(state => {
-      return immutableUpdate(state, partialStateOrUpdaterFn);
-    });
-  }
+    public updateState(
+        partialStateOrUpdaterFn:
+            | PartialDeep<TViewModel>
+            | Partial<TViewModel>
+            | ((state: TViewModel) => void | PartialDeep<TViewModel> | Partial<TViewModel>)
+    ): void {
+        super.setState(state => {
+            return immutableUpdate(state, partialStateOrUpdaterFn);
+        });
+    }
 
-  public readonly updateApiErrorState = (errorResponse: PlatformApiServiceErrorResponse | Error) => {
-    this.updateState(<PartialDeep<TViewModel>>{
-      status: 'Error',
-      error: PlatformApiServiceErrorResponse.getDefaultFormattedMessage(errorResponse)
-    });
-  };
-
-  public get currentVm(): TViewModel {
-    return this.get();
-  }
-
-  /**
-   *
-   *  Changes state based on observable request
-   *
-   * @template T Type of observable
-   * @returns
-   * @usage
-   *  ** TS:
-   *  apiService.loadData().pipe(this.observerLoadingState()).subscribe()
-   */
-  public observerLoadingState<T>(
-    requestKey: string = PlatformVm.requestStateDefaultKey,
-    deferSetLoading: boolean = false
-  ): (source: Observable<T>) => Observable<T> {
-    const setLoadingState = () => {
-      this.updateState(<Partial<TViewModel>>{ status: 'Loading' });
-
-      this.setLoading(true, requestKey);
-      this.setErrorMsg(null, requestKey);
+    public readonly updateApiErrorState = (errorResponse: PlatformApiServiceErrorResponse | Error) => {
+        this.updateState(<PartialDeep<TViewModel>>{
+            status: 'Error',
+            error: PlatformApiServiceErrorResponse.getDefaultFormattedMessage(errorResponse)
+        });
     };
 
-    return (source: Observable<T>) => {
-      if (!deferSetLoading) setLoadingState();
+    public get currentVm(): TViewModel {
+        return this.get();
+    }
 
-      return defer(() => {
-        if (deferSetLoading) setLoadingState();
+    /**
+     *
+     *  Changes state based on observable request
+     *
+     * @template T Type of observable
+     * @returns
+     * @usage
+     *  ** TS:
+     *  apiService.loadData().pipe(this.observerLoadingState()).subscribe()
+     */
+    public observerLoadingState<T>(
+        requestKey: string = PlatformVm.requestStateDefaultKey,
+        deferSetLoading: boolean = false
+    ): (source: Observable<T>) => Observable<T> {
+        const setLoadingState = () => {
+            this.updateState(<Partial<TViewModel>>{ status: 'Loading' });
 
-        return source.pipe(
-          tap({
-            next: () => {
-              if (this.get().status != 'Error') this.updateState(<Partial<TViewModel>>{ status: 'Success' });
-              this.setLoading(false, requestKey);
-            },
-            error: (err: PlatformApiServiceErrorResponse | Error) => {
-              this.updateApiErrorState(err);
+            this.setLoading(true, requestKey);
+            this.setErrorMsg(null, requestKey);
+        };
 
-              this.setLoading(false, requestKey);
-              this.setErrorMsg(err, requestKey);
-            }
-          })
-        );
-      });
+        return (source: Observable<T>) => {
+            if (!deferSetLoading) setLoadingState();
+
+            return defer(() => {
+                if (deferSetLoading) setLoadingState();
+
+                return source.pipe(
+                    tap({
+                        next: () => {
+                            if (this.get().status != 'Error')
+                                this.updateState(<Partial<TViewModel>>{ status: 'Success' });
+                            this.setLoading(false, requestKey);
+                        },
+                        error: (err: PlatformApiServiceErrorResponse | Error) => {
+                            this.updateApiErrorState(err);
+
+                            this.setLoading(false, requestKey);
+                            this.setErrorMsg(err, requestKey);
+                        }
+                    })
+                );
+            });
+        };
+    }
+
+    public setErrorMsg = (
+        error: string | null | PlatformApiServiceErrorResponse | Error,
+        requestKey: string = PlatformVm.requestStateDefaultKey
+    ) => {
+        const errorMsg =
+            typeof error == 'string' || error == null
+                ? <string | null>error
+                : PlatformApiServiceErrorResponse.getDefaultFormattedMessage(error);
+
+        this.updateState(<Partial<TViewModel>>{ errorMsgMap: { [requestKey]: errorMsg } });
     };
-  }
 
-  public setErrorMsg = (
-    error: string | null | PlatformApiServiceErrorResponse | Error,
-    requestKey: string = PlatformVm.requestStateDefaultKey
-  ) => {
-    const errorMsg =
-      typeof error == 'string' || error == null
-        ? <string | null>error
-        : PlatformApiServiceErrorResponse.getDefaultFormattedMessage(error);
+    public setLoading = (value: boolean | null, requestKey: string = PlatformVm.requestStateDefaultKey) => {
+        this.updateState(<Partial<TViewModel>>{ loadingMap: { [requestKey]: value } });
+    };
 
-    this.updateState(<Partial<TViewModel>>{ errorMsgMap: { [requestKey]: errorMsg } });
-  };
+    public override effect<
+        ProvidedType,
+        OriginType extends Observable<ProvidedType> | unknown = Observable<ProvidedType>,
+        ObservableType = OriginType extends Observable<infer A> ? A : never,
+        ReturnType = ProvidedType | ObservableType extends void
+            ? (observableOrValue?: ObservableType | Observable<ObservableType> | undefined) => Subscription
+            : (observableOrValue: ObservableType | Observable<ObservableType>) => Subscription
+    >(generator: (origin$: OriginType) => Observable<unknown>): ReturnType {
+        let previousEffectSub: Subscription = new Subscription();
 
-  public setLoading = (value: boolean | null, requestKey: string = PlatformVm.requestStateDefaultKey) => {
-    this.updateState(<Partial<TViewModel>>{ loadingMap: { [requestKey]: value } });
-  };
+        return ((observableOrValue?: ObservableType | Observable<ObservableType>): Subscription => {
+            previousEffectSub.unsubscribe();
 
-  public override effect<
-    ProvidedType,
-    OriginType extends Observable<ProvidedType> | unknown = Observable<ProvidedType>,
-    ObservableType = OriginType extends Observable<infer A> ? A : never,
-    ReturnType = ProvidedType | ObservableType extends void
-      ? (observableOrValue?: ObservableType | Observable<ObservableType> | undefined) => Subscription
-      : (observableOrValue: ObservableType | Observable<ObservableType>) => Subscription
-  >(generator: (origin$: OriginType) => Observable<unknown>): ReturnType {
-    let previousEffectSub: Subscription = new Subscription();
+            const observable$ = isObservable(observableOrValue) ? observableOrValue : of(observableOrValue);
 
-    return ((observableOrValue?: ObservableType | Observable<ObservableType>): Subscription => {
-      previousEffectSub.unsubscribe();
+            const newEffectSub: Subscription = generator(<OriginType>(<any>observable$))
+                .pipe(takeUntil(this.destroy$))
+                .subscribe();
 
-      const observable$ = isObservable(observableOrValue) ? observableOrValue : of(observableOrValue);
+            this.storeAnonymousSubscription(newEffectSub);
+            previousEffectSub = newEffectSub;
 
-      const newEffectSub: Subscription = generator(<OriginType>(<any>observable$))
-        .pipe(takeUntil(this.destroy$))
-        .subscribe();
+            return newEffectSub;
+        }) as unknown as ReturnType;
+    }
 
-      this.storeAnonymousSubscription(newEffectSub);
-      previousEffectSub = newEffectSub;
+    protected tapResponse<T>(
+        nextFn: (next: T) => void,
+        errorFn?: (error: any) => void,
+        completeFn?: () => void
+    ): (source: Observable<T>) => Observable<T> {
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        return tapResponse(nextFn, errorFn ?? (() => {}), completeFn);
+    }
 
-      return newEffectSub;
-    }) as unknown as ReturnType;
-  }
+    protected storeSubscription(key: string, subscription: Subscription): void {
+        this.storedSubscriptionsMap.set(key, subscription);
+    }
 
-  protected tapResponse<T>(
-    nextFn: (next: T) => void,
-    errorFn?: (error: any) => void,
-    completeFn?: () => void
-  ): (source: Observable<T>) => Observable<T> {
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    return tapResponse(nextFn, errorFn ?? (() => {}), completeFn);
-  }
+    protected storeAnonymousSubscription(subscription: Subscription): void {
+        this.storedAnonymousSubscriptions.push(subscription);
+    }
 
-  protected storeSubscription(key: string, subscription: Subscription): void {
-    this.storedSubscriptionsMap.set(key, subscription);
-  }
+    protected cancelStoredSubscription(key: string): void {
+        this.storedSubscriptionsMap.get(key)?.unsubscribe();
+        this.storedSubscriptionsMap.delete(key);
+    }
 
-  protected storeAnonymousSubscription(subscription: Subscription): void {
-    this.storedAnonymousSubscriptions.push(subscription);
-  }
+    protected cancelAllStoredSubscriptions(): void {
+        this.storedSubscriptionsMap.forEach((sub, key) => this.cancelStoredSubscription(key));
+        this.storedAnonymousSubscriptions.forEach(sub => sub.unsubscribe());
+    }
 
-  protected cancelStoredSubscription(key: string): void {
-    this.storedSubscriptionsMap.get(key)?.unsubscribe();
-    this.storedSubscriptionsMap.delete(key);
-  }
+    public override patchState(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        partialStateOrUpdaterFn:
+            | Partial<TViewModel>
+            | Observable<Partial<TViewModel>>
+            | ((state: TViewModel) => Partial<TViewModel>)
+    ): void {
+        throw new Error('Do not use this function from the library. Use updateState instead to handle immutable case');
+    }
 
-  protected cancelAllStoredSubscriptions(): void {
-    this.storedSubscriptionsMap.forEach((sub, key) => this.cancelStoredSubscription(key));
-    this.storedAnonymousSubscriptions.forEach(sub => sub.unsubscribe());
-  }
-
-  public override patchState(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    partialStateOrUpdaterFn:
-      | Partial<TViewModel>
-      | Observable<Partial<TViewModel>>
-      | ((state: TViewModel) => Partial<TViewModel>)
-  ): void {
-    throw new Error('Do not use this function from the library. Use updateState instead to handle immutable case');
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public override setState(stateOrUpdaterFn: TViewModel | ((state: TViewModel) => TViewModel)): void {
-    throw new Error('Do not use this function from the library. Use updateState instead to handle immutable case');
-  }
+    public override setState(stateOrUpdaterFn: TViewModel | ((state: TViewModel) => TViewModel)): void {
+        throw new Error('Do not use this function from the library. Use updateState instead to handle immutable case');
+    }
 }

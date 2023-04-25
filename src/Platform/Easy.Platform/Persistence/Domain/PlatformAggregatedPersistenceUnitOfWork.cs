@@ -6,6 +6,8 @@ namespace Easy.Platform.Persistence.Domain;
 public interface IPlatformAggregatedPersistenceUnitOfWork : IUnitOfWork
 {
     public bool IsPseudoTransactionUow<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IUnitOfWork;
+    public bool MustKeepUowForQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IUnitOfWork;
+    public bool DoesSupportParallelQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IUnitOfWork;
 }
 
 /// <summary>
@@ -30,9 +32,29 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
         return InnerUnitOfWorks.All(p => p.IsPseudoTransactionUow());
     }
 
+    public override bool MustKeepUowForQuery()
+    {
+        return InnerUnitOfWorks.Any(p => p.MustKeepUowForQuery());
+    }
+
+    public override bool DoesSupportParallelQuery()
+    {
+        return InnerUnitOfWorks.All(p => p.DoesSupportParallelQuery());
+    }
+
     public bool IsPseudoTransactionUow<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IUnitOfWork
     {
         return InnerUnitOfWorks.FirstOrDefault(p => p.Equals(uow))?.IsPseudoTransactionUow() == true;
+    }
+
+    public bool MustKeepUowForQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IUnitOfWork
+    {
+        return InnerUnitOfWorks.FirstOrDefault(p => p.Equals(uow))?.MustKeepUowForQuery() == true;
+    }
+
+    public bool DoesSupportParallelQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IUnitOfWork
+    {
+        return InnerUnitOfWorks.FirstOrDefault(p => p.Equals(uow))?.DoesSupportParallelQuery() == true;
     }
 
     protected override void Dispose(bool disposing)

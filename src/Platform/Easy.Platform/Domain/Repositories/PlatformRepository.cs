@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.UnitOfWork;
 
@@ -20,6 +21,11 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     public IUnitOfWorkManager UnitOfWorkManager { get; }
     protected IPlatformCqrs Cqrs { get; }
     protected IServiceProvider ServiceProvider { get; }
+
+    /// <summary>
+    /// Override this return True to force using the same current active uow for query. May only needed to support old legacy code using platform repository.
+    /// </summary>
+    protected virtual bool ForceUseSameCurrentActiveUowIfExistingForQuery => false;
 
     /// <summary>
     /// Return current active uow. May throw exception if not existing one.
@@ -110,35 +116,35 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
     public async Task<TResult> GetAsync<TResult>(
-        Func<IQueryable<TEntity>, TResult> queryBuilder,
+        Func<IQueryable<TEntity>, TResult> resultBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryBuilder(query), loadRelatedEntities);
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => resultBuilder(query), loadRelatedEntities);
     }
 
     public async Task<TResult> GetAsync<TResult>(
-        Func<IQueryable<TEntity>, Task<TResult>> queryBuilder,
+        Func<IQueryable<TEntity>, Task<TResult>> resultBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return await ExecuteAutoOpenUowUsingOnceTimeForRead(async (uow, query) => await queryBuilder(query), loadRelatedEntities);
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(async (uow, query) => await resultBuilder(query), loadRelatedEntities);
     }
 
     public async Task<TResult> GetAsync<TResult>(
-        Func<IUnitOfWork, IQueryable<TEntity>, TResult> queryBuilder,
+        Func<IUnitOfWork, IQueryable<TEntity>, TResult> resultBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => queryBuilder(uow, query), loadRelatedEntities);
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead((uow, query) => resultBuilder(uow, query), loadRelatedEntities);
     }
 
     public async Task<TResult> GetAsync<TResult>(
-        Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> queryBuilder,
+        Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> resultBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return await ExecuteAutoOpenUowUsingOnceTimeForRead(async (uow, query) => await queryBuilder(uow, query), loadRelatedEntities);
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(async (uow, query) => await resultBuilder(uow, query), loadRelatedEntities);
     }
 
     public async Task<List<TEntity>> GetAllAsync(
@@ -309,38 +315,53 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default);
 
+    protected abstract void HandleDisposeUsingOnceTimeContextLogic<TResult>(
+        IUnitOfWork uow,
+        bool doesNeedKeepUowForQueryOrEnumerableExecutionLater,
+        Expression<Func<TEntity, object>>[]? loadRelatedEntities,
+        TResult result);
+
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(
         Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> readDataFn,
         Expression<Func<TEntity, object>>[]? loadRelatedEntities)
     {
-        if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
+        if (UnitOfWorkManager.TryGetCurrentActiveUow() == null ||
+            (!UnitOfWorkManager.CurrentActiveUow().IsPseudoTransactionUow() && !ForceUseSameCurrentActiveUowIfExistingForQuery))
         {
             var uow = UnitOfWorkManager.CreateNewUow();
 
-            var result = await readDataFn(uow, GetQuery(uow, loadRelatedEntities))
-                .ThenSideEffectAction(result => HandleDisposeContextBeforeReturnLogic(uow, loadRelatedEntities, result));
+            var result = await readDataFn(uow, GetQuery(uow, loadRelatedEntities));
+
+            HandleDisposeUsingOnceTimeContextLogic(uow, DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result, uow), loadRelatedEntities, result);
 
             return result;
         }
 
-        return await readDataFn(
-            UnitOfWorkManager.CurrentActiveUow(),
-            GetQuery(UnitOfWorkManager.CurrentActiveUow(), loadRelatedEntities));
+        // Do retry if the uow do not support parallel query so that if there's other uow running query in parallel, it could retry get data again to have chance to make it work
+        if (UnitOfWorkManager.CurrentActiveUow().DoesSupportParallelQuery() == false)
+            return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                async () => await ExecuteReadDataUsingCurrentActiveUow(readDataFn, loadRelatedEntities),
+                retryAttempt => NotSupportParallelQueryRetrySleepTime(),
+                retryCount: NotSupportParallelQueryRetryCount());
 
-        static void HandleDisposeContextBeforeReturnLogic<TResult>(IUnitOfWork uow, Expression<Func<TEntity, object>>[]? loadRelatedEntities, TResult result)
-        {
-            var needDisposeContext = !DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result);
+        return await ExecuteReadDataUsingCurrentActiveUow(readDataFn, loadRelatedEntities);
+    }
 
-            if (loadRelatedEntities?.Any() == true && !DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result))
-            {
-                // Fix Eager loading include with using UseLazyLoadingProxies of EfCore by try to access the entity before dispose context
-                if (result is TEntity entity) loadRelatedEntities.ForEach(loadRelatedEntityFn => loadRelatedEntityFn.Compile()(entity));
-                if (result is IEnumerable<TEntity> entities)
-                    entities.ForEach(entity => loadRelatedEntities.ForEach(loadRelatedEntityFn => loadRelatedEntityFn.Compile()(entity)));
-            }
+    protected virtual int NotSupportParallelQueryRetryCount()
+    {
+        return 20;
+    }
 
-            if (needDisposeContext) uow.Dispose();
-        }
+    protected virtual TimeSpan NotSupportParallelQueryRetrySleepTime()
+    {
+        return 100.Milliseconds();
+    }
+
+    protected virtual async Task<TResult> ExecuteReadDataUsingCurrentActiveUow<TResult>(
+        Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> readDataFn,
+        Expression<Func<TEntity, object>>[]? loadRelatedEntities)
+    {
+        return await readDataFn(UnitOfWorkManager.CurrentActiveUow(), GetQuery(UnitOfWorkManager.CurrentActiveUow(), loadRelatedEntities));
     }
 
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(
@@ -358,14 +379,14 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForWrite<TResult>(
         Func<IUnitOfWork, Task<TResult>> action)
     {
-        if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
+        if (UnitOfWorkManager.TryGetCurrentActiveUow() == null || !UnitOfWorkManager.CurrentActiveUow().IsPseudoTransactionUow())
         {
             var uow = UnitOfWorkManager.CreateNewUow();
 
             var result = await action(uow);
             await uow.CompleteAsync();
 
-            if (!DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result)) uow.Dispose();
+            if (!DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result, uow)) uow.Dispose();
 
             return result;
         }
@@ -386,15 +407,5 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         }
     }
 
-    protected static bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result)
-    {
-        return result != null &&
-               (result.GetType().IsAssignableToGenericType(typeof(IQueryable<>)) ||
-                result.GetType().IsAssignableToGenericType(typeof(IAsyncEnumerable<>)) ||
-                (result.GetType().IsAssignableToGenericType(typeof(IEnumerable<>)) &&
-                 !(result.GetType().IsAssignableToGenericType(typeof(IList<>)) ||
-                   result.GetType().IsArray ||
-                   result.GetType().IsAssignableToGenericType(typeof(IDictionary<,>)) ||
-                   result.GetType().IsAssignableToGenericType(typeof(ISet<>)))));
-    }
+    protected abstract bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IUnitOfWork uow);
 }

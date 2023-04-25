@@ -6,8 +6,8 @@
     "ng": "nx",
     "postinstall": "node ./decorate-angular-cli.js && ngcc --properties es2020 browser module main",
     "start": "nx serve",
-    "build": "nx build",
-    "dev-start:playground-text-snippet":"nx serve playground-text-snippet -c development --port=4001",
+    "build": "nx lint apps-domains-text-snippet-domain && nx lint platform-core && nx lint playground-text-snippet && nx build playground-text-snippet",
+    "dev-start:playground-text-snippet": "nx serve playground-text-snippet -c development --port=4001",
     "test": "nx test"
   },
   "private": true,

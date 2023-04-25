@@ -53,12 +53,13 @@ public interface IUnitOfWorkManager : IDisposable
     public bool HasCurrentActiveUow();
 
     /// <summary>
-    /// Begin a new last registered unit of work.
-    /// If current active unit of work existed, return it.
+    /// Start a new unit of work. <br />
+    /// If current active unit of work is existing, return it. <br />
+    /// When suppressCurrentUow=true, new uow will be created even if current uow is existing. When false, use
+    /// current active uow if possible. <br />
+    /// Default is true.
     /// </summary>
     /// <param name="suppressCurrentUow">
-    /// When true, new uow will be created event if current uow existed. When false, use
-    /// current active uow if possible. Default is true.
     /// </param>
     public IUnitOfWork Begin(bool suppressCurrentUow = true);
 }
@@ -145,5 +146,33 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
         CurrentUnitOfWorks.RemoveWhere(p => !p.IsActive(), out _);
 
         return CurrentUnitOfWorks;
+    }
+}
+
+public static class UnitOfWorkManagerExtension
+{
+    public static async Task ExecuteInNewUow(this IUnitOfWorkManager unitOfWorkManager, Func<IUnitOfWork, Task> actionFn, bool suppressCurrentUow = true)
+    {
+        using (var uow = unitOfWorkManager.Begin(suppressCurrentUow))
+        {
+            await actionFn(uow);
+
+            await uow.CompleteAsync();
+        }
+    }
+
+    public static async Task<TResult> ExecuteInNewUow<TResult>(
+        this IUnitOfWorkManager unitOfWorkManager,
+        Func<IUnitOfWork, Task<TResult>> actionFn,
+        bool suppressCurrentUow = true)
+    {
+        using (var uow = unitOfWorkManager.Begin(suppressCurrentUow))
+        {
+            var result = await actionFn(uow);
+
+            await uow.CompleteAsync();
+
+            return result;
+        }
     }
 }

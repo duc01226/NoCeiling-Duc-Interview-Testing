@@ -17,4 +17,14 @@ internal sealed class PlatformPseudoApplicationUnitOfWork : PlatformUnitOfWork
     {
         return true;
     }
+
+    public override bool MustKeepUowForQuery()
+    {
+        return false;
+    }
+
+    public override bool DoesSupportParallelQuery()
+    {
+        return true;
+    }
 }

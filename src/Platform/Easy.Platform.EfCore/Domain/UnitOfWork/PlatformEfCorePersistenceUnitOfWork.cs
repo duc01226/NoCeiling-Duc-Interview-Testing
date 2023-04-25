@@ -1,5 +1,6 @@
 using Easy.Platform.Domain.Exceptions;
 using Easy.Platform.Domain.UnitOfWork;
+using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,9 +14,18 @@ public interface IPlatformEfCorePersistenceUnitOfWork<out TDbContext> : IPlatfor
 public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
     : PlatformPersistenceUnitOfWork<TDbContext>, IPlatformEfCorePersistenceUnitOfWork<TDbContext> where TDbContext : PlatformEfCoreDbContext<TDbContext>
 {
-    public PlatformEfCorePersistenceUnitOfWork(TDbContext dbContext) : base(dbContext)
+    public PlatformEfCorePersistenceUnitOfWork(
+        TDbContext dbContext,
+        PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
+        DbContextOptions<TDbContext> dbContextOptions) : base(dbContext)
     {
+        PersistenceConfiguration = persistenceConfiguration;
+        DbContextOptions = dbContextOptions;
     }
+
+    protected IPlatformPersistenceConfiguration PersistenceConfiguration { get; }
+
+    protected DbContextOptions<TDbContext> DbContextOptions { get; }
 
     public override async Task CompleteAsync(CancellationToken cancellationToken = default)
     {
@@ -41,6 +51,19 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
     }
 
     public override bool IsPseudoTransactionUow()
+    {
+        return false;
+    }
+
+    public override bool MustKeepUowForQuery()
+    {
+        if (PersistenceConfiguration.MustKeepUowForQuery == null)
+            return DbContextOptions.IsUsingLazyLoadingProxy();
+
+        return PersistenceConfiguration.MustKeepUowForQuery == true;
+    }
+
+    public override bool DoesSupportParallelQuery()
     {
         return false;
     }

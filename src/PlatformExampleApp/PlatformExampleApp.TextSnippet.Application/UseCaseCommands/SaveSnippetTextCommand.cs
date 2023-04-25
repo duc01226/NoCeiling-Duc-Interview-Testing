@@ -266,6 +266,16 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
             // THIS IS NOT RELATED to SaveSnippetText logic. Test support suppress uow works
             using (var uow = UnitOfWorkManager.Begin())
             {
+                var (testGetDataParallel1, testGetDataParallel2, testGetDataParallel3, testGetDataParallel4) = await Util.TaskRunner.WhenAll(
+                    textSnippetEntityRepository.FirstOrDefaultAsync(cancellationToken: cancellationToken),
+                    textSnippetEntityRepository.GetAllAsync(queryBuilder: query => query.Take(1), cancellationToken),
+                    textSnippetEntityRepository.GetAsync(
+                        resultBuilder: query => query.Take(1).ToDictionary(p => p.Id, p => p),
+                        cancellationToken),
+                    textSnippetEntityRepository.GetAsync(
+                        resultBuilder: query => query.Take(1).GroupBy(p => p.Id, (key, entities) => entities.OrderBy(_ => _.Id).First()),
+                        cancellationToken));
+
                 await textSnippetEntityRepository.UpdateAsync(
                     await textSnippetEntityRepository.FirstOrDefaultAsync(cancellationToken: cancellationToken),
                     cancellationToken: cancellationToken);

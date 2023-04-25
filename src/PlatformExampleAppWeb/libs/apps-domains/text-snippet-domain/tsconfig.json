@@ -1,17 +1,17 @@
 {
-  "compilerOptions": {
-    "target": "es2022",
-    "useDefineForClassFields": false
-  },
-  "files": [],
-  "include": [],
-  "references": [
-    {
-      "path": "./tsconfig.lib.json"
+    "compilerOptions": {
+        "target": "es2022",
+        "useDefineForClassFields": false
     },
-    {
-      "path": "./tsconfig.spec.json"
-    }
-  ],
-  "extends": "../../../tsconfig.base.json"
+    "files": [],
+    "include": [],
+    "references": [
+        {
+            "path": "./tsconfig.lib.json"
+        },
+        {
+            "path": "./tsconfig.spec.json"
+        }
+    ],
+    "extends": "../../../tsconfig.base.json"
 }

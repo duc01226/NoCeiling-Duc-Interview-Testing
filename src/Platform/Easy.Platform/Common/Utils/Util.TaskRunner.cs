@@ -373,7 +373,7 @@ public static partial class Util
                 .Handle<TException>()
                 .WaitAndRetryAsync(
                     retryCount,
-                    sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
+                    sleepDurationProvider ?? (retryAttempt => DefaultWaitIntervalSeconds.Seconds()),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndThrowFinalExceptionAsync(
                     executeFunc,

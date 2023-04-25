@@ -151,6 +151,11 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
         return RootElement?.IsClickable() == true;
     }
 
+    public bool IsSelected()
+    {
+        return RootElement?.IsSelected() == true;
+    }
+
     public bool IsDisplayed()
     {
         return RootElement?.Displayed == true;

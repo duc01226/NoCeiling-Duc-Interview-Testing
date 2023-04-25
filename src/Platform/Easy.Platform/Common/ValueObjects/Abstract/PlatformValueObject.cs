@@ -3,20 +3,25 @@ using Easy.Platform.Common.Validations;
 
 namespace Easy.Platform.Common.ValueObjects.Abstract;
 
+public interface IPlatformValueObject
+{
+    bool Equals(object obj);
+    int GetHashCode();
+    string ToString();
+    PlatformValidationResult<IPlatformValueObject> Validate();
+}
+
 /// <summary>
 /// ValueObject is the concept that the object is equal and unique by it's all property value.
 /// Example: An entity like User, two User is different even if they have the same values like name, age, etc ... But two Address value object is the same Address if they have the same value
 /// </summary>
-public interface IPlatformValueObject<TValueObject> : IEquatable<TValueObject>
+public interface IPlatformValueObject<TValueObject> : IPlatformValueObject, IEquatable<TValueObject>
     where TValueObject : IPlatformValueObject<TValueObject>
 {
-    bool Equals(object obj);
-    int GetHashCode();
-    PlatformValidationResult<TValueObject> Validate();
-    string ToString();
+    new PlatformValidationResult<TValueObject> Validate();
 }
 
-/// <inheritdoc cref="IPlatformValueObject{TValueObject}"/>
+/// <inheritdoc cref="IPlatformValueObject{TValueObject}" />
 public abstract class PlatformValueObject<TValueObject> : IPlatformValueObject<TValueObject>, IEquatable<PlatformValueObject<TValueObject>>
     where TValueObject : PlatformValueObject<TValueObject>, new()
 {
@@ -46,6 +51,11 @@ public abstract class PlatformValueObject<TValueObject> : IPlatformValueObject<T
     public override string ToString()
     {
         return PlatformJsonSerializer.Serialize(this);
+    }
+
+    PlatformValidationResult<IPlatformValueObject> IPlatformValueObject.Validate()
+    {
+        return Validate().Of<IPlatformValueObject>();
     }
 
     public virtual PlatformValidationResult<TValueObject> Validate()

@@ -1,57 +1,57 @@
 @mixin flex-layout-media($media-type) {
-  @if ($media-type== 'xs' or $media-type== 'lt-sm') {
-    @media (max-width: $platform-media-breakpoint-xs) {
-      @content;
+    @if ($media-type== 'xs' or $media-type== 'lt-sm') {
+        @media (max-width: $platform-media-breakpoint-xs) {
+            @content;
+        }
+    } @else if($media-type== 'gt-xs') {
+        @media (min-width: $platform-media-breakpoint-gt-xs) {
+            @content;
+        }
+    } @else if($media-type== 'sm') {
+        @media (min-width: $platform-media-breakpoint-gt-xs) and (max-width: $platform-media-breakpoint-sm) {
+            @content;
+        }
+    } @else if($media-type== 'gt-sm') {
+        @media (min-width: $platform-media-breakpoint-gt-sm) {
+            @content;
+        }
+    } @else if($media-type== 'lt-md') {
+        @media (max-width: $platform-media-breakpoint-sm) {
+            @content;
+        }
+    } @else if($media-type== 'md') {
+        @media (min-width: $platform-media-breakpoint-gt-sm) and (max-width: $platform-media-breakpoint-md) {
+            @content;
+        }
+    } @else if($media-type== 'gt-md') {
+        @media (min-width: $platform-media-breakpoint-gt-md) {
+            @content;
+        }
+    } @else if($media-type== 'lt-lg') {
+        @media (max-width: $platform-media-breakpoint-md) {
+            @content;
+        }
+    } @else if($media-type== 'lg') {
+        @media (min-width: $platform-media-breakpoint-gt-md) and (max-width: $platform-media-breakpoint-lg) {
+            @content;
+        }
+    } @else if($media-type== 'gt-lg') {
+        @media (min-width: $platform-media-breakpoint-gt-lg) {
+            @content;
+        }
+    } @else if($media-type== 'lt-xl') {
+        @media (max-width: $platform-media-breakpoint-lg) {
+            @content;
+        }
+    } @else if($media-type== 'xl') {
+        @media (min-width: $platform-media-breakpoint-gt-lg) and (max-width: $platform-media-breakpoint-xl) {
+            @content;
+        }
     }
-  } @else if($media-type== 'gt-xs') {
-    @media (min-width: $platform-media-breakpoint-gt-xs) {
-      @content;
-    }
-  } @else if($media-type== 'sm') {
-    @media (min-width: $platform-media-breakpoint-gt-xs) and (max-width: $platform-media-breakpoint-sm) {
-      @content;
-    }
-  } @else if($media-type== 'gt-sm') {
-    @media (min-width: $platform-media-breakpoint-gt-sm) {
-      @content;
-    }
-  } @else if($media-type== 'lt-md') {
-    @media (max-width: $platform-media-breakpoint-sm) {
-      @content;
-    }
-  } @else if($media-type== 'md') {
-    @media (min-width: $platform-media-breakpoint-gt-sm) and (max-width: $platform-media-breakpoint-md) {
-      @content;
-    }
-  } @else if($media-type== 'gt-md') {
-    @media (min-width: $platform-media-breakpoint-gt-md) {
-      @content;
-    }
-  } @else if($media-type== 'lt-lg') {
-    @media (max-width: $platform-media-breakpoint-md) {
-      @content;
-    }
-  } @else if($media-type== 'lg') {
-    @media (min-width: $platform-media-breakpoint-gt-md) and (max-width: $platform-media-breakpoint-lg) {
-      @content;
-    }
-  } @else if($media-type== 'gt-lg') {
-    @media (min-width: $platform-media-breakpoint-gt-lg) {
-      @content;
-    }
-  } @else if($media-type== 'lt-xl') {
-    @media (max-width: $platform-media-breakpoint-lg) {
-      @content;
-    }
-  } @else if($media-type== 'xl') {
-    @media (min-width: $platform-media-breakpoint-gt-lg) and (max-width: $platform-media-breakpoint-xl) {
-      @content;
-    }
-  }
 }
 
 @mixin truncate-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }

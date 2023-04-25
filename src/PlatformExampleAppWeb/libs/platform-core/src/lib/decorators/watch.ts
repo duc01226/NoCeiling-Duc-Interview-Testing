@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface SimpleChange<T> {
-  previousValue: T;
-  currentValue: T;
+    previousValue: T;
+    currentValue: T;
 }
 
 export type WatchCallBackFunction<T, TTargetObj> = (value: T, change: SimpleChange<T>, targetObj: TTargetObj) => void;
@@ -29,47 +29,47 @@ export type WatchCallBackFunction<T, TTargetObj> = (value: T, change: SimpleChan
  * }
  */
 export function Watch<TProp = object, TTargetObj extends object = object>(
-  callbackFnOrName: WatchCallBackFunction<TProp, TTargetObj> | string
+    callbackFnOrName: WatchCallBackFunction<TProp, TTargetObj> | string
 ) {
-  return (target: TTargetObj, key: PropertyKey) => {
-    EnsureNotExistingSetterForKey(target, key);
+    return (target: TTargetObj, key: PropertyKey) => {
+        EnsureNotExistingSetterForKey(target, key);
 
-    const privatePropKey = `_${key.toString()}`;
+        const privatePropKey = `_${key.toString()}`;
 
-    Object.defineProperty(target, key, {
-      set: function (value: object) {
-        const oldValue = this[privatePropKey];
-        this[privatePropKey] = value;
-        const simpleChange: SimpleChange<TProp> = {
-          previousValue: oldValue,
-          currentValue: this[privatePropKey]
-        };
+        Object.defineProperty(target, key, {
+            set: function (value: object) {
+                const oldValue = this[privatePropKey];
+                this[privatePropKey] = value;
+                const simpleChange: SimpleChange<TProp> = {
+                    previousValue: oldValue,
+                    currentValue: this[privatePropKey]
+                };
 
-        if (typeof callbackFnOrName === 'string') {
-          const callBackMethod = (target as any)[callbackFnOrName];
-          if (callBackMethod == null) {
-            throw new Error(`Cannot find method ${callbackFnOrName} in class ${target.constructor.name}`);
-          }
+                if (typeof callbackFnOrName === 'string') {
+                    const callBackMethod = (target as any)[callbackFnOrName];
+                    if (callBackMethod == null) {
+                        throw new Error(`Cannot find method ${callbackFnOrName} in class ${target.constructor.name}`);
+                    }
 
-          callBackMethod.call(this, this[privatePropKey], simpleChange, this);
-        } else {
-          callbackFnOrName(this[privatePropKey], simpleChange, this);
-        }
-      },
-      get: function () {
-        return this[privatePropKey];
-      },
-      enumerable: true,
-      configurable: true
-    });
-  };
+                    callBackMethod.call(this, this[privatePropKey], simpleChange, this);
+                } else {
+                    callbackFnOrName(this[privatePropKey], simpleChange, this);
+                }
+            },
+            get: function () {
+                return this[privatePropKey];
+            },
+            enumerable: true,
+            configurable: true
+        });
+    };
 
-  function EnsureNotExistingSetterForKey<TTargetObj extends object>(target: TTargetObj, key: PropertyKey) {
-    const existingTargetKeyProp = Object.getOwnPropertyDescriptors(target)[key.toString()];
+    function EnsureNotExistingSetterForKey<TTargetObj extends object>(target: TTargetObj, key: PropertyKey) {
+        const existingTargetKeyProp = Object.getOwnPropertyDescriptors(target)[key.toString()];
 
-    if (existingTargetKeyProp?.set != null || existingTargetKeyProp?.get != null)
-      throw Error(
-        'Could not use watch decorator on a existing get/set property. Should only use one solution, either get/set property or @Watch decorator'
-      );
-  }
+        if (existingTargetKeyProp?.set != null || existingTargetKeyProp?.get != null)
+            throw Error(
+                'Could not use watch decorator on a existing get/set property. Should only use one solution, either get/set property or @Watch decorator'
+            );
+    }
 }

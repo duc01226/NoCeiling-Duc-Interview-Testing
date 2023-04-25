@@ -2,6 +2,11 @@ namespace Easy.Platform.Common.Extensions;
 
 public static class ToTimeSpanExtension
 {
+    public static TimeSpan Milliseconds(this int value)
+    {
+        return TimeSpan.FromMilliseconds(value);
+    }
+
     public static TimeSpan Seconds(this int value)
     {
         return TimeSpan.FromSeconds(value);
@@ -27,6 +32,11 @@ public static class ToTimeSpanExtension
         return TimeSpan.FromDays(value * 365);
     }
 
+    public static TimeSpan Milliseconds(this long value)
+    {
+        return TimeSpan.FromMilliseconds(value);
+    }
+
     public static TimeSpan Seconds(this long value)
     {
         return TimeSpan.FromSeconds(value);
@@ -50,6 +60,11 @@ public static class ToTimeSpanExtension
     public static TimeSpan Years(this long value)
     {
         return TimeSpan.FromDays(value * 365);
+    }
+
+    public static TimeSpan Milliseconds(this double value)
+    {
+        return TimeSpan.FromMilliseconds(value);
     }
 
     public static TimeSpan Seconds(this double value)

@@ -1,4 +1,4 @@
 export const environment = {
-  production: true,
-  textSnippetApiHost: 'http://localhost:5001'
+    production: true,
+    textSnippetApiHost: 'http://localhost:5001'
 };

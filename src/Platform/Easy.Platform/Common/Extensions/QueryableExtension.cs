@@ -18,25 +18,16 @@ public static class QueryableExtension
             : query;
     }
 
-    public static Expression<T> Compose<T>(this Expression<T> firstExpr, Expression<T> secondExpr, Func<Expression, Expression, Expression> merge)
+    public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> query, Expression<Func<T, object>> keySelector, QueryOrderDirection orderDirection)
     {
-        // replace parameters in the second lambda expression with parameters from the first
-        var secondExprBody = ParameterRebinder.ReplaceParameters(secondExpr, firstExpr);
-
-        // apply composition of lambda expression bodies to parameters from the first expression
-        return Expression.Lambda<T>(merge(firstExpr.Body, secondExprBody), firstExpr.Parameters);
-    }
-
-    public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> query, Expression<Func<T, object>> keySelector, OrderDirection orderDirection)
-    {
-        return orderDirection == OrderDirection.Desc
+        return orderDirection == QueryOrderDirection.Desc
             ? query.OrderByDescending(keySelector)
             : query.OrderBy(keySelector);
     }
 
-    public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> query, string propertyName, OrderDirection orderDirection = OrderDirection.Asc)
+    public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> query, string propertyName, QueryOrderDirection orderDirection = QueryOrderDirection.Asc)
     {
-        return orderDirection == OrderDirection.Desc
+        return orderDirection == QueryOrderDirection.Desc
             ? query.OrderByDescending(GetSortExpression<T>(propertyName))
             : query.OrderBy(GetSortExpression<T>(propertyName));
     }
@@ -51,7 +42,7 @@ public static class QueryableExtension
     }
 }
 
-public enum OrderDirection
+public enum QueryOrderDirection
 {
     Asc,
     Desc

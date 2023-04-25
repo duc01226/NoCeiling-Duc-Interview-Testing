@@ -5,15 +5,15 @@ import { AppUiStateStore } from '../app-ui-state';
 
 @Injectable()
 export class RepositoryErrorEventHandler extends PlatformEventHandler<PlatformRepositoryErrorEvent> {
-  public constructor(public uiState: AppUiStateStore) {
-    super();
-  }
-
-  public handle(event: PlatformRepositoryErrorEvent): void {
-    if (!event.apiError.error.isApplicationError()) {
-      this.uiState.updateState({
-        appError: event.apiError
-      });
+    public constructor(public uiState: AppUiStateStore) {
+        super();
     }
-  }
+
+    public handle(event: PlatformRepositoryErrorEvent): void {
+        if (!event.apiError.error.isApplicationError()) {
+            this.uiState.updateState({
+                appError: event.apiError
+            });
+        }
+    }
 }

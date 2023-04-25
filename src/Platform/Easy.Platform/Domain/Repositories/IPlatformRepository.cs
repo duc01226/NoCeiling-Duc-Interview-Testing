@@ -185,22 +185,22 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
     public IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
     public Task<TResult> GetAsync<TResult>(
-        Func<IQueryable<TEntity>, TResult> queryBuilder,
+        Func<IQueryable<TEntity>, TResult> resultBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
     public Task<TResult> GetAsync<TResult>(
-        Func<IQueryable<TEntity>, Task<TResult>> queryBuilder,
+        Func<IQueryable<TEntity>, Task<TResult>> resultBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
     public Task<TResult> GetAsync<TResult>(
-        Func<IUnitOfWork, IQueryable<TEntity>, TResult> queryBuilder,
+        Func<IUnitOfWork, IQueryable<TEntity>, TResult> resultBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
     public Task<TResult> GetAsync<TResult>(
-        Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> queryBuilder,
+        Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> resultBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 

@@ -35,8 +35,11 @@ public class TextSnippetPostgreSqlEfCorePersistenceModule : PlatformEfCorePersis
         IServiceProvider serviceProvider)
     {
         // UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery) for best practice increase performance
-        return options =>
-            options.UseNpgsql(Configuration.GetConnectionString("PostgreSqlConnection"), options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+        return options => options
+            .UseNpgsql(
+                Configuration.GetConnectionString("PostgreSqlConnection"),
+                options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
+            .UseLazyLoadingProxies();
     }
 
     // override to Config PlatformPersistenceConfiguration

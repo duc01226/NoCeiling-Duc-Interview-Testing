@@ -9,9 +9,9 @@
 // margin-top: var(--space-5);
 
 :root {
-  --space-unit: 4px;
+    --space-unit: 4px;
 
-  each(range(30), {
+    each(range(30), {
     --space-@{value}: calc(@value * var(--space-unit));
   });
 }

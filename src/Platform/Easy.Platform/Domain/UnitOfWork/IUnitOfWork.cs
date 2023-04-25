@@ -39,6 +39,16 @@ public interface IUnitOfWork : IDisposable
     public bool IsPseudoTransactionUow();
 
     /// <summary>
+    /// Return True to determine that the uow should not be disposed, must be kept for data has been query from it.
+    /// </summary>
+    public bool MustKeepUowForQuery();
+
+    /// <summary>
+    /// Return True to determine that this uow is Thread Safe and could support multiple parallel query
+    /// </summary>
+    public bool DoesSupportParallelQuery();
+
+    /// <summary>
     /// Get itself or inner uow which is TUnitOfWork.
     /// </summary>
     public TUnitOfWork UowOfType<TUnitOfWork>() where TUnitOfWork : class, IUnitOfWork
@@ -96,6 +106,10 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
     }
 
     public abstract bool IsPseudoTransactionUow();
+
+    public abstract bool MustKeepUowForQuery();
+
+    public abstract bool DoesSupportParallelQuery();
 
     public void Dispose()
     {

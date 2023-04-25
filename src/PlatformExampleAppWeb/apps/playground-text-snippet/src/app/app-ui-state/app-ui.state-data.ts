@@ -1,41 +1,41 @@
 import { PlatformApiServiceErrorResponse, PlatformVm } from '@libs/platform-core';
 
 export class AppUiStateData extends PlatformVm {
-  public constructor(data?: Partial<AppUiStateData>) {
-    super(data);
+    public constructor(data?: Partial<AppUiStateData>) {
+        super(data);
 
-    this.selectedSnippetTextId = data?.selectedSnippetTextId;
-    this.appError = data?.appError;
-  }
-  public selectedSnippetTextId?: string;
-  public appError?: PlatformApiServiceErrorResponse | Error;
+        this.selectedSnippetTextId = data?.selectedSnippetTextId;
+        this.appError = data?.appError;
+    }
+    public selectedSnippetTextId?: string;
+    public appError?: PlatformApiServiceErrorResponse | Error;
 
-  public get appErrorMsg(): string | undefined {
-    return this.appError != undefined
-      ? PlatformApiServiceErrorResponse.getDefaultFormattedMessage(this.appError)
-      : undefined;
-  }
+    public get appErrorMsg(): string | undefined {
+        return this.appError != undefined
+            ? PlatformApiServiceErrorResponse.getDefaultFormattedMessage(this.appError)
+            : undefined;
+    }
 
-  // Demo get/set using platform watch decorator
-  // Shorthand execute a target function doing something directly if on change only do this logic
-  // @Watch('pagedResultWatch')
-  // public pagedResult?: PlatformPagedResultDto<LeaveType>;
+    // Demo get/set using platform watch decorator
+    // Shorthand execute a target function doing something directly if on change only do this logic
+    // @Watch('pagedResultWatch')
+    // public pagedResult?: PlatformPagedResultDto<LeaveType>;
 
-  // // Full syntax execute a NORMAL FUNCTION
-  // @Watch<PlatformPagedQueryDto, LeaveTypesState>((value, change, targetObj) => {
-  //   targetObj.updatePageInfo();
-  // })
-  // public pagedQuery: PlatformPagedQueryDto = new PlatformPagedQueryDto();
+    // // Full syntax execute a NORMAL FUNCTION
+    // @Watch<PlatformPagedQueryDto, LeaveTypesState>((value, change, targetObj) => {
+    //   targetObj.updatePageInfo();
+    // })
+    // public pagedQuery: PlatformPagedQueryDto = new PlatformPagedQueryDto();
 
-  // public pagedResultWatch(
-  //   value: PlatformPagedResultDto<LeaveType> | undefined,
-  //   change: SimpleChange<PlatformPagedResultDto<LeaveType> | undefined>
-  // ) {
-  //   this.updatePageInfo();
-  // }
+    // public pagedResultWatch(
+    //   value: PlatformPagedResultDto<LeaveType> | undefined,
+    //   change: SimpleChange<PlatformPagedResultDto<LeaveType> | undefined>
+    // ) {
+    //   this.updatePageInfo();
+    // }
 
-  // Demo using validation object
-  /** 
+    // Demo using validation object
+    /**
    * return Validation.validateNot(remainingLeave, remainingLeave.totalRemainingLeaveDays <= 0, {
                     code: LeaveRequestDetailFormValidationKeys.notEnoughRemainingLeave,
                     errorMsg:

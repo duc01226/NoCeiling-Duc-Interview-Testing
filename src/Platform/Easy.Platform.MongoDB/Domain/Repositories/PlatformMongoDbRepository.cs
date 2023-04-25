@@ -84,6 +84,20 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
     {
         return await source.As<IMongoQueryable<TSource>>().AnyAsync(cancellationToken);
     }
+
+    protected override bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IUnitOfWork uow)
+    {
+        return false;
+    }
+
+    protected override void HandleDisposeUsingOnceTimeContextLogic<TResult>(
+        IUnitOfWork uow,
+        bool doesNeedKeepUowForQueryOrEnumerableExecutionLater,
+        Expression<Func<TEntity, object>>[] loadRelatedEntities,
+        TResult result)
+    {
+        uow.Dispose();
+    }
 }
 
 public abstract class PlatformMongoDbRootRepository<TEntity, TPrimaryKey, TDbContext>

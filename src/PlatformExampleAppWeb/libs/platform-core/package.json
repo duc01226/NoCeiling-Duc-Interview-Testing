@@ -1,13 +1,13 @@
 {
-  "name": "@libs/platform-core",
-  "version": "0.0.1",
-  "peerDependencies": {
-    "@angular/common": "^14.2.0",
-    "@angular/core": "^14.2.0",
-    "lodash-es": "4.17.21",
-    "moment": "2.29.4"
-  },
-  "dependencies": {
-    "tslib": "^2.3.0"
-  }
+    "name": "@libs/platform-core",
+    "version": "0.0.1",
+    "peerDependencies": {
+        "@angular/common": "^14.2.0",
+        "@angular/core": "^14.2.0",
+        "lodash-es": "4.17.21",
+        "moment": "2.29.4"
+    },
+    "dependencies": {
+        "tslib": "^2.3.0"
+    }
 }

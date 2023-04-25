@@ -81,7 +81,9 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
 
         // Register Default OutboxEventBusMessageRepository if not existed custom inherited IPlatformOutboxEventBusMessageRepository in assembly
         if (serviceCollection.All(p => p.ServiceType != typeof(IPlatformOutboxBusMessageRepository)))
-            serviceCollection.Register<IPlatformOutboxBusMessageRepository, PlatformDefaultEfCoreOutboxBusMessageRepository<TDbContext>>();
+            serviceCollection.Register(
+                typeof(IPlatformOutboxBusMessageRepository),
+                typeof(PlatformDefaultEfCoreOutboxBusMessageRepository<TDbContext>));
     }
 
     private void RegisterDbContextOptions(IServiceCollection serviceCollection)

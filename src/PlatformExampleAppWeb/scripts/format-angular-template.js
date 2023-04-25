@@ -7,55 +7,54 @@ const glob = require('glob');
 
 const argv = require('yargs-parser')(process.argv.slice(2));
 const attrSortOptions = {
-  order: [
-    '\\#\\w+',
-    '\\*ngIf',
-    '\\*\\w+',
-    'class',
-    'id',
-    'name',
-    'data-.+',
-    'src',
-    'for',
-    'type',
-    'href',
-    'values',
-    'title',
-    'alt',
-    'role',
-    'aria-.+',
-    '\\[ngClass]',
-    '\\[class.[\\w\\-]+\\]',
-    '\\[ngStyle]',
-    '\\[style.[\\w\\-]+\\]',
-    '\\[\\(\\w+\\)\\]',
-    '\\[\\w+\\]',
-    '\\(\\w+\\)',
-    'let-.+',
-    '$unknown$'
-  ]
+    order: [
+        '\\#\\w+',
+        '\\*ngIf',
+        '\\*\\w+',
+        'class',
+        'id',
+        'name',
+        'data-.+',
+        'src',
+        'for',
+        'type',
+        'href',
+        'values',
+        'title',
+        'alt',
+        'role',
+        'aria-.+',
+        '\\[ngClass]',
+        '\\[class.[\\w\\-]+\\]',
+        '\\[ngStyle]',
+        '\\[style.[\\w\\-]+\\]',
+        '\\[\\(\\w+\\)\\]',
+        '\\[\\w+\\]',
+        '\\(\\w+\\)',
+        'let-.+',
+        '$unknown$'
+    ]
 };
 const jsBeautyOptions = {
-  indent_size: 2,
-  eol: '\r\n',
-  wrap_attributes: 'force-aligned',
-  end_with_newline: false,
-  wrap_line_length: 140
+    indent_size: 2,
+    eol: '\r\n',
+    wrap_attributes: 'force-aligned',
+    end_with_newline: false,
+    wrap_line_length: 140
 };
 
 const files = [];
 
 if (argv.staged) {
-  files.push(...process.argv.slice(3));
+    files.push(...process.argv.slice(3));
 } else {
-  files.push(
-    ...glob.sync('**/*.component.html', {
-      ignore: ['**/node_modules/**']
-    })
-  );
+    files.push(
+        ...glob.sync('**/*.component.html', {
+            ignore: ['**/node_modules/**']
+        })
+    );
 }
 
-// Optional custom html style. Do not use but let it here for example
 // var promises = files
 //   .filter((file) => file.endsWith('.component.html'))
 //   .map((file) =>

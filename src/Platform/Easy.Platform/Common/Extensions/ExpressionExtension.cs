@@ -83,13 +83,22 @@ public static class ExpressionExtension
         return Expression.Lambda<Func<T, bool>>(body, candidateExpr);
     }
 
-    public static bool IsConstantTrue(this LambdaExpression lambda)
+    public static bool IsConstantTrue<T, TResult>(this Expression<Func<T, TResult>> expr)
     {
-        return lambda.Body.NodeType == ExpressionType.Constant && true.Equals(((ConstantExpression)lambda.Body).Value);
+        return expr.Body.NodeType == ExpressionType.Constant && true.Equals(((ConstantExpression)expr.Body).Value);
     }
 
-    public static bool IsConstantFalse(this LambdaExpression lambda)
+    public static bool IsConstantFalse<T, TResult>(this Expression<Func<T, TResult>> expr)
     {
-        return lambda.Body.NodeType == ExpressionType.Constant && false.Equals(((ConstantExpression)lambda.Body).Value);
+        return expr.Body.NodeType == ExpressionType.Constant && false.Equals(((ConstantExpression)expr.Body).Value);
+    }
+
+    public static Expression<T> Compose<T>(this Expression<T> firstExpr, Expression<T> secondExpr, Func<Expression, Expression, Expression> merge)
+    {
+        // replace parameters in the second lambda expression with parameters from the first
+        var secondExprBody = ParameterRebinder.ReplaceParameters(secondExpr, firstExpr);
+
+        // apply composition of lambda expression bodies to parameters from the first expression
+        return Expression.Lambda<T>(merge(firstExpr.Body, secondExprBody), firstExpr.Parameters);
     }
 }

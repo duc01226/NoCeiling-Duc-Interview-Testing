@@ -35,10 +35,19 @@ public static class WebElementExtension
         }
     }
 
-    public static IWebElement? FocusOut(
-        this IWebElement? element,
-        IWebDriver webDriver,
-        params IWebElement[] additionalFocusToOtherElements)
+    public static bool IsSelected(this IWebElement? element)
+    {
+        try
+        {
+            return element?.Pipe(fn: _ => _ is { Selected: true }) ?? false;
+        }
+        catch (StaleElementReferenceException)
+        {
+            return false;
+        }
+    }
+
+    public static IWebElement? FocusOut(this IWebElement? element, IWebDriver webDriver, params IWebElement[] additionalFocusToOtherElements)
     {
         element?.WaitRetryDoUntil(
             action: element =>
@@ -50,10 +59,12 @@ public static class WebElementExtension
                         element,
                         webDriver,
                         additionalFocusToOtherElements,
-                        otherElement => new Actions(webDriver).SendKeys(Keys.Escape).Perform());
+                        otherElement => new Actions(webDriver).SendKeys(Keys.Escape).Perform()
+                    );
             },
             until: _ => !element.IsFocused(webDriver),
-            maxWaitSeconds: DefaultShortWaitUiUpdateSeconds);
+            maxWaitSeconds: DefaultShortWaitUiUpdateSeconds
+        );
 
         return element;
     }
@@ -62,21 +73,15 @@ public static class WebElementExtension
         IWebElement targetElement,
         IWebDriver webDriver,
         IWebElement[] additionalFocusToOtherElements,
-        Action<IWebElement> otherElementAction)
+        Action<IWebElement> otherElementAction
+    )
     {
         webDriver.TryFindElement(cssSelector: "body")?.Pipe(otherElementAction);
 
         if (IsFocused(targetElement, webDriver))
         {
-            var otherElementActions = Util.ListBuilder.New(
-                    "body",
-                    "body > *",
-                    "p",
-                    "header",
-                    "footer",
-                    "h1",
-                    "h2",
-                    "h3")
+            var otherElementActions = Util.ListBuilder
+                .New("body", "body > *", "p", "header", "footer", "h1", "h2", "h3")
                 .SelectMany(otherElementSelector => webDriver.FindElements(cssSelector: otherElementSelector))
                 .Where(p => p.IsClickable())
                 .Select<IWebElement, Action>(otherElement => () => otherElementAction(otherElement))
@@ -115,8 +120,10 @@ public static class WebElementExtension
     public static string? ElementClassSelector(this IWebElement? element)
     {
         return element?.PipeIfNotNull(
-            thenPipe: _ => element.TagName +
-                           element.GetCssValue(propertyName: "class").Split(separator: " ").Select(selector: className => $".{className}").JoinToString());
+            thenPipe: _ =>
+                element.TagName
+                + element.GetCssValue(propertyName: "class").Split(separator: " ").Select(selector: className => $".{className}").JoinToString()
+        );
     }
 
     public static IWebElement SelectDropdownByText(this IWebElement element, string text)
@@ -151,9 +158,7 @@ public static class WebElementExtension
         return new SelectElement(element).SelectedOption.Text;
     }
 
-    public static bool ContainsText(
-        this IWebElement element,
-        string text)
+    public static bool ContainsText(this IWebElement element, string text)
     {
         try
         {
@@ -165,9 +170,7 @@ public static class WebElementExtension
         }
     }
 
-    public static bool ContainsValue(
-        this IWebElement element,
-        string value)
+    public static bool ContainsValue(this IWebElement element, string value)
     {
         try
         {

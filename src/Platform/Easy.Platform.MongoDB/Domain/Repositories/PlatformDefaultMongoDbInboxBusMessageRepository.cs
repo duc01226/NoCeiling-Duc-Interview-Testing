@@ -14,4 +14,9 @@ public class PlatformDefaultMongoDbInboxBusMessageRepository<TDbContext>
         serviceProvider)
     {
     }
+
+    protected override bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IUnitOfWork uow)
+    {
+        return false;
+    }
 }

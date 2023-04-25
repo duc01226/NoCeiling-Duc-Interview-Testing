@@ -6,63 +6,63 @@ import { task_delay } from '../../utils';
 
 @Directive()
 export abstract class PlatformDirective implements OnInit, AfterViewInit, OnDestroy {
-  public static get defaultDetectChangesDelay(): number {
-    return 100;
-  }
-
-  public constructor(protected changeDetector: ChangeDetectorRef) {}
-
-  public initiated$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
-  public viewInitiated$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
-  public destroyed$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
-
-  private detectChangesDelaySubs: Subscription = new Subscription();
-
-  public detectChanges(delayTime?: number, onDone?: () => unknown, checkParentForHostBinding: boolean = false): void {
-    this.detectChangesDelaySubs.unsubscribe();
-    if (!this.canDetectChanges) {
-      return;
+    public static get defaultDetectChangesDelay(): number {
+        return 100;
     }
 
-    const finalDelayTime = delayTime == null ? PlatformDirective.defaultDetectChangesDelay : delayTime;
-    this.detectChangesDelaySubs = task_delay(() => {
-      if (this.canDetectChanges) {
-        this.changeDetector.detectChanges();
-        if (checkParentForHostBinding) {
-          this.changeDetector.markForCheck();
+    public constructor(protected changeDetector: ChangeDetectorRef) {}
+
+    public initiated$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+    public viewInitiated$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+    public destroyed$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+
+    private detectChangesDelaySubs: Subscription = new Subscription();
+
+    public detectChanges(delayTime?: number, onDone?: () => unknown, checkParentForHostBinding: boolean = false): void {
+        this.detectChangesDelaySubs.unsubscribe();
+        if (!this.canDetectChanges) {
+            return;
         }
-        if (onDone != null) {
-          onDone();
-        }
-      }
-    }, finalDelayTime);
-  }
 
-  public untilDestroyed<T>(): MonoTypeOperatorFunction<T> {
-    return takeUntil(this.destroyed$.pipe(filter(destroyed => destroyed == true)));
-  }
+        const finalDelayTime = delayTime == null ? PlatformDirective.defaultDetectChangesDelay : delayTime;
+        this.detectChangesDelaySubs = task_delay(() => {
+            if (this.canDetectChanges) {
+                this.changeDetector.detectChanges();
+                if (checkParentForHostBinding) {
+                    this.changeDetector.markForCheck();
+                }
+                if (onDone != null) {
+                    onDone();
+                }
+            }
+        }, finalDelayTime);
+    }
 
-  public ngOnInit(): void {
-    this.initiated$.next(true);
-  }
+    public untilDestroyed<T>(): MonoTypeOperatorFunction<T> {
+        return takeUntil(this.destroyed$.pipe(filter(destroyed => destroyed == true)));
+    }
 
-  public ngAfterViewInit(): void {
-    this.viewInitiated$.next(true);
-  }
+    public ngOnInit(): void {
+        this.initiated$.next(true);
+    }
 
-  public ngOnDestroy(): void {
-    this.destroyed$.next(true);
+    public ngAfterViewInit(): void {
+        this.viewInitiated$.next(true);
+    }
 
-    this.destroyAllSubjects();
-  }
+    public ngOnDestroy(): void {
+        this.destroyed$.next(true);
 
-  protected get canDetectChanges(): boolean {
-    return this.initiated$.value && !this.destroyed$.value;
-  }
+        this.destroyAllSubjects();
+    }
 
-  private destroyAllSubjects(): void {
-    this.initiated$.complete();
-    this.viewInitiated$.complete();
-    this.destroyed$.complete();
-  }
+    protected get canDetectChanges(): boolean {
+        return this.initiated$.value && !this.destroyed$.value;
+    }
+
+    private destroyAllSubjects(): void {
+        this.initiated$.complete();
+        this.viewInitiated$.complete();
+        this.destroyed$.complete();
+    }
 }

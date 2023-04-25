@@ -40,7 +40,7 @@ public class TextSnippetSqlEfCorePersistenceModule : PlatformEfCorePersistenceMo
         return base.ConfigurePersistenceConfiguration(config, configuration)
             .With(p => p.BadQueryWarning.IsEnabled = true)
             .With(p => p.BadQueryWarning.DefaultTotalItemsThreshold = 100) // Demo warning for getting a lot of data in to memory
-            .With(p => p.BadQueryWarning.SlowQueryMillisecondsThreshold = 500)
+            .With(p => p.BadQueryWarning.SlowQueryMillisecondsThreshold = 300)
             .With(p => p.BadQueryWarning.SlowWriteQueryMillisecondsThreshold = 2000)
             .With(p => p.BadQueryWarning.IsLogWarningAsError = true) // Demo logging warning as error message
             .With(
@@ -65,8 +65,11 @@ public class TextSnippetSqlEfCorePersistenceModule : PlatformEfCorePersistenceMo
         IServiceProvider serviceProvider)
     {
         // UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery) for best practice increase performance
-        return options =>
-            options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"), options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+        return options => options
+            .UseSqlServer(
+                Configuration.GetConnectionString("DefaultConnection"),
+                options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
+            .UseLazyLoadingProxies();
     }
 }
 

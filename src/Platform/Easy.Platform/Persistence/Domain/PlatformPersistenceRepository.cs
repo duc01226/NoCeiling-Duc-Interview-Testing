@@ -173,7 +173,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             .GetResult();
     }
 
-    public override async Task<TEntity> FirstOrDefaultAsync(
+    public override async Task<TEntity?> FirstOrDefaultAsync(
         IQueryable<TEntity> query,
         CancellationToken cancellationToken = default)
     {
