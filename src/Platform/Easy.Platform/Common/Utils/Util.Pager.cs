@@ -1,3 +1,5 @@
+using Easy.Platform.Common.Extensions;
+
 namespace Easy.Platform.Common.Utils;
 
 public static partial class Util
@@ -28,47 +30,31 @@ public static partial class Util
         }
 
         /// <summary>
-        /// Support execute async action paged until no items left or reach to maxExecutionCount.
+        /// Execute until the executeFn return no items
         /// </summary>
-        /// <typeparam name="TItem">The item type to be processed</typeparam>
-        /// <param name="getItemsPackageFn">Get a partial/page/package items</param>
-        /// <param name="executeFn">Execute function async. Input is: items.</param>
-        /// <param name="maxExecutionCount">Max execution count. Default is <see cref="ulong.MaxValue" /></param>
-        /// <returns></returns>
         public static async Task ExecuteScrollingPagingAsync<TItem>(
-            Func<Task<IEnumerable<TItem>>> getItemsPackageFn,
-            Func<IEnumerable<TItem>, Task> executeFn,
+            Func<Task<IEnumerable<TItem>>> executeFn,
+            ulong maxExecutionCount = ulong.MaxValue)
+        {
+            await ExecuteScrollingPagingAsync(executeFn: () => executeFn().Then(_ => _.ToList()), maxExecutionCount);
+        }
+
+        /// <summary>
+        /// Execute until the executeFn return no items
+        /// </summary>
+        public static async Task ExecuteScrollingPagingAsync<TItem>(
+            Func<Task<List<TItem>>> executeFn,
             ulong maxExecutionCount = ulong.MaxValue)
         {
             ulong totalExecutionCount = 0;
-            var currentPackageItems = (await getItemsPackageFn()).ToList();
+            var executionItemsResult = await executeFn();
 
-            while (totalExecutionCount < maxExecutionCount && currentPackageItems.Any())
+            while (totalExecutionCount < maxExecutionCount && executionItemsResult.Any())
             {
-                await executeFn(currentPackageItems);
-
+                executionItemsResult = await executeFn();
                 totalExecutionCount += 1;
-                if (totalExecutionCount < maxExecutionCount)
-                    currentPackageItems = (await getItemsPackageFn()).ToList();
 
                 GC.Collect();
-            }
-        }
-
-        /// <see cref="ExecuteScrollingPagingAsync{TItem}(Func{Task{IEnumerable{TItem}}},Func{IEnumerable{TItem},Task},ulong)" />
-        public static async Task ExecuteScrollingPagingAsync<TItem>(
-            Func<Task<List<TItem>>> getItemsPackageFn,
-            Func<List<TItem>, Task> executeFn,
-            ulong maxExecutionCount = ulong.MaxValue)
-        {
-            await ExecuteScrollingPagingAsync(
-                GetItemsPackageFacadeFn,
-                items => executeFn(items.ToList()),
-                maxExecutionCount);
-
-            async Task<IEnumerable<TItem>> GetItemsPackageFacadeFn()
-            {
-                return await getItemsPackageFn();
             }
         }
     }

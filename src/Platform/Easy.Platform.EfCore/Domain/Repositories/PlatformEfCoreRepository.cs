@@ -109,12 +109,20 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
     {
         var needDisposeContext = !doesNeedKeepUowForQueryOrEnumerableExecutionLater;
 
-        if (loadRelatedEntities?.Any() == true && !needDisposeContext && DbContextOptions.IsUsingLazyLoadingProxy())
+        if (loadRelatedEntities?.Any() == true && needDisposeContext && DbContextOptions.IsUsingLazyLoadingProxy())
         {
             // Fix Eager loading include with using UseLazyLoadingProxies of EfCore by try to access the entity before dispose context
-            if (result is TEntity entity) loadRelatedEntities.ForEach(loadRelatedEntityFn => loadRelatedEntityFn.Compile()(entity));
-            if (result is IEnumerable<TEntity> entities)
+            if (result is TEntity entity)
+                loadRelatedEntities.ForEach(loadRelatedEntityFn => loadRelatedEntityFn.Compile()(entity));
+            else if (result is IEnumerable<TEntity> entities)
                 entities.ForEach(entity => loadRelatedEntities.ForEach(loadRelatedEntityFn => loadRelatedEntityFn.Compile()(entity)));
+            else
+                result?.GetType()
+                    .GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                    .Where(p => p.PropertyType == typeof(TEntity))
+                    .ForEach(
+                        entityPropertyInfo => loadRelatedEntities
+                            .ForEach(loadRelatedEntityFn => loadRelatedEntityFn.Compile()(entityPropertyInfo.GetValue(result).As<TEntity>())));
         }
 
         if (needDisposeContext) uow.Dispose();
@@ -157,7 +165,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         {
             var result = data is IEntity ||
                          data.As<IEnumerable<IEntity>>()?.Any() == true ||
-                         data.GetType().GetProperties(BindingFlags.Instance & BindingFlags.Public).Any(p => p.PropertyType.IsAssignableTo(typeof(IEntity)));
+                         data.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public).Any(p => p.PropertyType.IsAssignableTo(typeof(IEntity)));
 
             return result;
         }
