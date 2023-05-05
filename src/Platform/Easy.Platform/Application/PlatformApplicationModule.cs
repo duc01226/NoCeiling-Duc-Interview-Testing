@@ -79,7 +79,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                                 $"[SeedData] {seeder.GetType().Name} is scheduled running in background after {seeder.DelaySeedingInBackgroundBySeconds} seconds.");
 
                             Util.TaskRunner.QueueActionInBackground(
-                                action: () => ExecuteSeedingWithNewScopeInBackground(seeder.GetType()),
+                                action: async () => await ExecuteSeedingWithNewScopeInBackground(seeder.GetType()),
                                 Logger,
                                 delayTimeSeconds: seeder.DelaySeedingInBackgroundBySeconds);
                         }

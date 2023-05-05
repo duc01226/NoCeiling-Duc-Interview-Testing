@@ -28,7 +28,14 @@ public sealed class PlatformRabbitMqProcessInitializerService
     public const int AckMessageRetryCount = CheckToRestartProcessMaxFailedCounter * 3;
     public const int AckMessageRetryDelaySeconds = 6;
     public static readonly ActivitySource ActivitySource = new(nameof(PlatformRabbitMqProcessInitializerService));
+
     public static readonly TextMapPropagator TracingActivityPropagator = Propagators.DefaultTextMapPropagator;
+
+    // Instantiate a Singleton of the Semaphore with a value of 1. This means that only 1 thread can be granted access at a time.
+    private static readonly SemaphoreSlim StartProcessLock = new(initialCount: 1, maxCount: 1);
+
+    // Instantiate a Singleton of the Semaphore with a value of 1. This means that only 1 thread can be granted access at a time.
+    private static readonly SemaphoreSlim StopProcessLock = new(initialCount: 1, maxCount: 1);
 
     private readonly IPlatformApplicationSettingContext applicationSettingContext;
     private readonly object checkToRestartProcessRunningLock = new();
@@ -44,8 +51,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
     private bool processStarted;
     private readonly ConcurrentDictionary<string, List<Type>> routingKeyToCanProcessConsumerTypesCacheMap = new();
     private readonly IServiceProvider serviceProvider;
-    private readonly object startProcessLock = new();
-    private readonly object stopProcessLock = new();
+
     private readonly ConcurrentDictionary<string, object> waitingAckMessages = new();
 
     public PlatformRabbitMqProcessInitializerService(
@@ -63,16 +69,18 @@ public sealed class PlatformRabbitMqProcessInitializerService
         this.mqChannelPool = mqChannelPool;
         this.options = options;
         this.serviceProvider = serviceProvider;
-        Logger = loggerFactory.CreateLogger<PlatformRabbitMqProcessInitializerService>();
+        Logger = loggerFactory.CreateLogger($"{DefaultPlatformMessageBusLogSuffix.Value}.{GetType().Name}");
     }
 
-    private ILogger<PlatformRabbitMqProcessInitializerService> Logger { get; }
+    private ILogger Logger { get; }
 
     public IModel CurrentChannel => mqChannelPool.GlobalChannel;
 
-    public void StartProcess(CancellationToken cancellationToken)
+    public async Task StartProcess(CancellationToken cancellationToken)
     {
-        lock (startProcessLock)
+        await StartProcessLock.WaitAsync(cancellationToken);
+
+        try
         {
             currentCancellationToken = cancellationToken;
 
@@ -84,7 +92,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
             StartConsumers();
 
             Util.TaskRunner.QueueActionInBackground(
-                () => StartCheckToRestartProcessInterval(cancellationToken),
+                async () => await StartCheckToRestartProcessInterval(cancellationToken),
                 Logger,
                 cancellationToken: cancellationToken);
 
@@ -92,17 +100,25 @@ public sealed class PlatformRabbitMqProcessInitializerService
 
             Logger.LogInformation($"[{GetType().Name}] RabbitMq process has started successfully");
         }
+        finally
+        {
+            //When the task is ready, release the semaphore. It is vital to ALWAYS release the semaphore when we are ready, or else we will end up with a Semaphore that is forever locked.
+            //This is why it is important to do the Release within a try...finally clause; program execution may crash or take a different path, this way you are guaranteed execution
+            StartProcessLock.Release();
+        }
     }
 
-    public void RestartProcess(CancellationToken cancellationToken)
+    public async Task RestartProcess(CancellationToken cancellationToken)
     {
-        StopProcess();
-        StartProcess(cancellationToken);
+        await StopProcess(cancellationToken);
+        await StartProcess(cancellationToken);
     }
 
     public async Task<bool> CheckShouldRestartProcess(CancellationToken cancellationToken)
     {
-        lock (startProcessLock)
+        await StartProcessLock.WaitAsync(cancellationToken);
+
+        try
         {
             if (processStarted && !cancellationToken.IsCancellationRequested)
             {
@@ -113,7 +129,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
                 {
                     if (CurrentChannel.IsClosed || !CurrentChannel.IsOpen)
                     {
-                        Task.Delay(CheckToRestartProcessDelaySeconds.Seconds(), cancellationToken).WaitResult();
+                        await Task.Delay(CheckToRestartProcessDelaySeconds.Seconds(), cancellationToken);
 
                         if (i == CheckToRestartProcessMaxFailedCounter && (CurrentChannel.IsClosed || !CurrentChannel.IsOpen)) return true;
                     }
@@ -125,6 +141,12 @@ public sealed class PlatformRabbitMqProcessInitializerService
             }
 
             return false;
+        }
+        finally
+        {
+            //When the task is ready, release the semaphore. It is vital to ALWAYS release the semaphore when we are ready, or else we will end up with a Semaphore that is forever locked.
+            //This is why it is important to do the Release within a try...finally clause; program execution may crash or take a different path, this way you are guaranteed execution
+            StartProcessLock.Release();
         }
     }
 
@@ -143,7 +165,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
         while (isCheckToRestartProcessIntervalRunning && !cancellationToken.IsCancellationRequested)
         {
             if (await CheckShouldRestartProcess(cancellationToken))
-                RestartProcess(cancellationToken);
+                await RestartProcess(cancellationToken);
 
             await Task.Delay(10.Seconds(), cancellationToken);
         }
@@ -159,17 +181,25 @@ public sealed class PlatformRabbitMqProcessInitializerService
         }
     }
 
-    public void StopProcess()
+    public async Task StopProcess(CancellationToken cancellationToken)
     {
-        lock (stopProcessLock)
+        await StopProcessLock.WaitAsync(cancellationToken);
+
+        try
         {
             if (!processStarted) return;
 
-            StopCheckToRestartProcessInterval().WaitResult();
+            await StopCheckToRestartProcessInterval();
             mqChannelPool.ResetGlobalChannel();
             processStarted = false;
             declareRabbitMqConfigurationFinished = false;
             waitingAckMessages.Clear();
+        }
+        finally
+        {
+            //When the task is ready, release the semaphore. It is vital to ALWAYS release the semaphore when we are ready, or else we will end up with a Semaphore that is forever locked.
+            //This is why it is important to do the Release within a try...finally clause; program execution may crash or take a different path, this way you are guaranteed execution
+            StopProcessLock.Release();
         }
     }
 
@@ -423,7 +453,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
                     {
                         CurrentChannel.BasicNack(rabbitMqMessage.DeliveryTag, multiple: true, requeue: true);
 
-                        Logger.LogInformation(
+                        Logger.LogWarning(
                             message: $"RabbitMQ retry queue message for the routing key: {rabbitMqMessage.RoutingKey}.{Environment.NewLine}" +
                                      "Message: {BusMessage}",
                             busMessage.ToJson());
@@ -438,7 +468,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
 
                 return Task.CompletedTask;
             },
-            PlatformApplicationGlobal.RootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType()),
+            PlatformApplicationGlobal.LoggerFactory.CreateLogger($"{DefaultPlatformMessageBusLogSuffix.Value}.{GetType().Name}"),
             cancellationToken: currentCancellationToken);
 
         return true;

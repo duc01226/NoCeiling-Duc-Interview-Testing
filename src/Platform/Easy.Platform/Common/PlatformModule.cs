@@ -6,6 +6,7 @@ using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
+using Easy.Platform.Constants;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -88,7 +89,7 @@ public abstract class PlatformModule : IPlatformModule
     {
         ServiceProvider = serviceProvider;
         Configuration = configuration;
-        Logger = serviceProvider?.GetService<ILoggerFactory>()?.CreateLogger(GetType());
+        Logger = serviceProvider?.GetService<ILoggerFactory>()?.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}");
     }
 
     protected ILogger Logger { get; init; }
@@ -173,7 +174,7 @@ public abstract class PlatformModule : IPlatformModule
 
             using (var scope = ServiceProvider.CreateScope())
             {
-                InternalInit(scope).GetAwaiter().GetResult();
+                InternalInit(scope).WaitResult();
             }
 
             Initiated = true;

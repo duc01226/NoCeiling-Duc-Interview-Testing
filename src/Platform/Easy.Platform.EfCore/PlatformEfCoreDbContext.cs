@@ -34,7 +34,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         Cqrs = cqrs;
         PersistenceConfiguration = persistenceConfiguration;
         UserContextAccessor = userContextAccessor;
-        Logger = loggerFactory.CreateLogger(GetType());
+        Logger = loggerFactory.CreateLogger($"{DefaultPlatformPersistenceLogSuffix.Value}.{GetType().Name}");
     }
 
     public DbSet<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryDbSet => Set<PlatformDataMigrationHistory>();
@@ -45,7 +45,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     public async Task SaveChangesAsync()
     {
         await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
-            () => base.SaveChangesAsync(),
+            async () => await base.SaveChangesAsync(),
             Logger,
             PersistenceConfiguration,
             forWriteQuery: true);
@@ -113,9 +113,20 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     public virtual async Task Initialize(IServiceProvider serviceProvider)
     {
-        await Database.MigrateAsync();
-        await InsertDbInitializedApplicationDataMigrationHistory();
-        await SaveChangesAsync();
+        // Store stack trace before call Database.MigrateAsync() to keep the original stack trace to log
+        // after Database.MigrateAsync() will lose full stack trace (may because it connect async to other external service)
+        var stackTrace = Environment.StackTrace;
+
+        try
+        {
+            await Database.MigrateAsync();
+            await InsertDbInitializedApplicationDataMigrationHistory();
+            await SaveChangesAsync();
+        }
+        catch (Exception e)
+        {
+            throw new Exception($"{GetType().Name} Initialize failed. FullStackTrace: {stackTrace}", e);
+        }
 
         async Task InsertDbInitializedApplicationDataMigrationHistory()
         {

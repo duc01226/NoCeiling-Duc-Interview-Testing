@@ -6,6 +6,7 @@ using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
+using Easy.Platform.Constants;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.Exceptions;
@@ -51,7 +52,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         PersistenceConfiguration = persistenceConfiguration;
         Database = client.MongoClient.GetDatabase(options.Value.Database);
         EntityTypeToCollectionNameDictionary = new Lazy<Dictionary<Type, string>>(BuildEntityTypeToCollectionNameDictionary);
-        Logger = loggerFactory.CreateLogger(GetType());
+        Logger = loggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}");
     }
 
     public IMongoCollection<PlatformInboxBusMessage> InboxBusMessageCollection =>
@@ -76,9 +77,20 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
 
     public virtual async Task Initialize(IServiceProvider serviceProvider)
     {
-        await Migrate();
-        await InsertDbInitializedApplicationDataMigrationHistory();
-        await SaveChangesAsync();
+        // Store stack trace before call Migrate() to keep the original stack trace to log
+        // after Migrate() will lose full stack trace (may because it connect async to other external service)
+        var stackTrace = Environment.StackTrace;
+
+        try
+        {
+            await Migrate();
+            await InsertDbInitializedApplicationDataMigrationHistory();
+            await SaveChangesAsync();
+        }
+        catch (Exception e)
+        {
+            throw new Exception($"{GetType().Name} Initialize failed. FullStackTrace: {stackTrace}", e);
+        }
 
         async Task InsertDbInitializedApplicationDataMigrationHistory()
         {

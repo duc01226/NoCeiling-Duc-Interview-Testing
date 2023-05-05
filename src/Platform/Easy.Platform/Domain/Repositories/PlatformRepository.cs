@@ -153,7 +153,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => GetAllAsync(queryBuilder(query), cancellationToken),
+            async (uow, query) => await GetAllAsync(queryBuilder(query), cancellationToken),
             loadRelatedEntities);
     }
 
@@ -163,7 +163,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => FirstOrDefaultAsync(queryBuilder(query), cancellationToken),
+            async (uow, query) => await FirstOrDefaultAsync(queryBuilder(query), cancellationToken),
             loadRelatedEntities);
     }
 
@@ -173,7 +173,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => FirstOrDefaultAsync(queryBuilder(uow, query), cancellationToken),
+            async (uow, query) => await FirstOrDefaultAsync(queryBuilder(uow, query), cancellationToken),
             loadRelatedEntities);
     }
 
@@ -341,18 +341,18 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         if (UnitOfWorkManager.CurrentActiveUow().DoesSupportParallelQuery() == false)
             return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                 async () => await ExecuteReadDataUsingCurrentActiveUow(readDataFn, loadRelatedEntities),
-                retryAttempt => NotSupportParallelQueryRetrySleepTime(),
-                retryCount: NotSupportParallelQueryRetryCount());
+                retryAttempt => SupportParallelQueryRetrySleepTime(),
+                retryCount: SupportParallelQueryRetryCount());
 
         return await ExecuteReadDataUsingCurrentActiveUow(readDataFn, loadRelatedEntities);
     }
 
-    protected virtual int NotSupportParallelQueryRetryCount()
+    protected virtual int SupportParallelQueryRetryCount()
     {
         return 20;
     }
 
-    protected virtual TimeSpan NotSupportParallelQueryRetrySleepTime()
+    protected virtual TimeSpan SupportParallelQueryRetrySleepTime()
     {
         return 100.Milliseconds();
     }
@@ -368,7 +368,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Func<IUnitOfWork, IQueryable<TEntity>, TResult> readDataFn,
         Expression<Func<TEntity, object>>[]? loadRelatedEntities)
     {
-        return await ExecuteAutoOpenUowUsingOnceTimeForRead(ReadDataFnAsync, loadRelatedEntities);
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(async (uow, entities) => await ReadDataFnAsync(uow, entities), loadRelatedEntities);
 
         async Task<TResult> ReadDataFnAsync(IUnitOfWork unitOfWork, IQueryable<TEntity> entities)
         {
@@ -384,6 +384,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
             var uow = UnitOfWorkManager.CreateNewUow();
 
             var result = await action(uow);
+
             await uow.CompleteAsync();
 
             if (!DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result, uow)) uow.Dispose();
@@ -397,7 +398,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     protected async Task ExecuteAutoOpenUowUsingOnceTimeForWrite(
         Func<IUnitOfWork, Task> action)
     {
-        await ExecuteAutoOpenUowUsingOnceTimeForWrite(ActionWithResult);
+        await ExecuteAutoOpenUowUsingOnceTimeForWrite(async uow => ActionWithResult(uow));
 
         async Task<object> ActionWithResult(IUnitOfWork unitOfWork)
         {

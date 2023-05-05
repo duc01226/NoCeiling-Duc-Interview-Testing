@@ -22,11 +22,11 @@ public class PlatformRabbitMqStartProcessHostedService : PlatformHostedService
 
     protected override async Task StartProcess(CancellationToken cancellationToken)
     {
-        rabbitMqProcessInitializerService.StartProcess(cancellationToken);
+        await rabbitMqProcessInitializerService.StartProcess(cancellationToken);
     }
 
     protected override async Task StopProcess(CancellationToken cancellationToken)
     {
-        rabbitMqProcessInitializerService.StopProcess();
+        await rabbitMqProcessInitializerService.StopProcess(cancellationToken);
     }
 }

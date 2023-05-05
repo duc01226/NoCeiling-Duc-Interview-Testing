@@ -54,7 +54,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
         {
             // WHY: Retry in case of the db is not started, initiated or restarting
             await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                () => SendOutboxEventBusMessages(cancellationToken),
+                async () => await SendOutboxEventBusMessages(cancellationToken),
                 retryAttempt => 10.Seconds(),
                 retryCount: ProcessSendMessageRetryCount(),
                 onRetry: (ex, timeSpan, currentRetry, ctx) =>

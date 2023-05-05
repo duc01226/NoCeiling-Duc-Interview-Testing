@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Constants;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -131,7 +132,7 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
     public PlatformCacheRepository(IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
     {
         this.serviceProvider = serviceProvider;
-        Logger = loggerFactory.CreateLogger(GetType());
+        Logger = loggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}");
         GlobalAllRequestCachedKeys = new Lazy<ConcurrentDictionary<PlatformCacheKey, object>>(LoadGlobalAllRequestCachedKeys);
     }
 
@@ -243,7 +244,8 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
         try
         {
             return GetAsync<List<PlatformCacheKey>>(GetGlobalAllRequestCachedKeysCacheKey())
-                       .GetResult()?
+                       .GetResult()
+                       ?
                        .Select(p => new KeyValuePair<PlatformCacheKey, object>(p, null))
                        .Pipe(_ => new ConcurrentDictionary<PlatformCacheKey, object>(_)) ??
                    new ConcurrentDictionary<PlatformCacheKey, object>();

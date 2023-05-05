@@ -42,6 +42,16 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
                      p.LastSendDate <= Clock.UtcNow.AddSeconds(-messageProcessingMaximumTimeInSeconds));
     }
 
+    public static Expression<Func<PlatformOutboxBusMessage, bool>> ToCleanInboxEventBusMessagesExpr(
+        double deleteProcessedMessageInSeconds,
+        double deleteExpiredFailedMessageInSeconds)
+    {
+        return p => (p.LastSendDate <= Clock.UtcNow.AddSeconds(-deleteProcessedMessageInSeconds()) &&
+                     p.SendStatus == SendStatuses.Processed) ||
+                    (p.LastSendDate <= Clock.UtcNow.AddSeconds(-deleteExpiredFailedMessageInSeconds()) &&
+                     p.SendStatus == SendStatuses.Failed);
+    }
+
     public static PlatformOutboxBusMessage Create<TMessage>(
         TMessage message,
         string trackId,

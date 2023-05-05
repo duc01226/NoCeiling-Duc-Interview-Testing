@@ -16,15 +16,15 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
     private readonly BlobServiceClient blobServiceClient;
     private readonly PlatformAzureFileStorageConfiguration fileStorageConfiguration;
     private readonly PlatformFileStorageOptions fileStorageOptions;
-    private readonly ILogger<PlatformAzureFileStorageService> logger;
+    private readonly ILogger logger;
 
     public PlatformAzureFileStorageService(
         PlatformAzureFileStorageConfiguration fileStorageConfigurationOptions,
-        ILogger<PlatformAzureFileStorageService> logger,
+        ILoggerFactory loggerFactory,
         BlobServiceClient blobServiceClient,
         PlatformFileStorageOptions fileStorageOptions)
     {
-        this.logger = logger;
+        logger = loggerFactory.CreateLogger($"{DefaultPlatformFileStorageLogSuffix.Value}.{GetType().Name}");
         this.blobServiceClient = blobServiceClient;
         this.fileStorageOptions = fileStorageOptions;
         fileStorageConfiguration = fileStorageConfigurationOptions;
@@ -82,8 +82,6 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
 
                 throw new Exception(errContent);
             }
-
-            logger.LogInformation($"[{GetType().FullName}] Upload {pureFilePath} in {rootDirectory} container blob successfully");
 
             return new PlatformAzureFileStorageFileItem
             {

@@ -1,4 +1,5 @@
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Constants;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -21,7 +22,7 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
     public PlatformHostedService(IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
     {
         ServiceProvider = serviceProvider;
-        Logger = loggerFactory.CreateLogger(GetType());
+        Logger = loggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}");
     }
 
     public void Dispose()
@@ -50,7 +51,7 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
         {
             if (!ProcessStarted || ProcessStopped) return;
 
-            StopProcess(cancellationToken).Wait(cancellationToken);
+            StopProcess(cancellationToken).WaitResult();
 
             ProcessStopped = true;
 

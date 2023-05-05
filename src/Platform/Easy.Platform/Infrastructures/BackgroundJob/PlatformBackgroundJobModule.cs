@@ -2,6 +2,7 @@ using Easy.Platform.Common;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
+using Easy.Platform.Constants;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -66,7 +67,8 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
                 retryCount: DefaultStartBackgroundJobProcessingRetryCount,
                 onRetry: (exception, timeSpan, currentRetry, ctx) =>
                 {
-                    var logger = serviceScope.ServiceProvider.GetService<ILoggerFactory>()!.CreateLogger(GetType());
+                    var logger = serviceScope.ServiceProvider.GetService<ILoggerFactory>()!.CreateLogger(
+                        $"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}");
 
                     logger.LogWarning(
                         exception,
@@ -96,7 +98,7 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
             retryCount: DefaultStartBackgroundJobProcessingRetryCount,
             onRetry: (exception, timeSpan, currentRetry, ctx) =>
             {
-                var logger = serviceScope.ServiceProvider.GetService<ILoggerFactory>()!.CreateLogger(GetType());
+                var logger = serviceScope.ServiceProvider.GetService<ILoggerFactory>()!.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}");
 
                 logger.LogWarning(
                     exception,

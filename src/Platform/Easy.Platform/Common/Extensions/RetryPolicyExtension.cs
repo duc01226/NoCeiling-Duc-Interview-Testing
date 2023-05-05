@@ -9,6 +9,10 @@ public static class RetryPolicyExtension
         Action action,
         Action<Exception> onBeforeThrowFinalExceptionFn = null)
     {
+        // Store stack trace before call retryPolicy.ExecuteAsync to keep the original stack trace to log
+        // after retryPolicy.ExecuteAsync will lose full stack trace (may because of the library issues)
+        var stackTrace = Environment.StackTrace;
+
         try
         {
             retryPolicy.Execute(action);
@@ -16,7 +20,8 @@ public static class RetryPolicyExtension
         catch (Exception e)
         {
             onBeforeThrowFinalExceptionFn?.Invoke(e);
-            throw;
+
+            throw new Exception($"{retryPolicy.GetType().Name} ExecuteAndThrowFinalException failed. FullStackTrace: {stackTrace}", e);
         }
     }
 
@@ -25,6 +30,10 @@ public static class RetryPolicyExtension
         Func<T> action,
         Action<Exception> onBeforeThrowFinalExceptionFn = null)
     {
+        // Store stack trace before call retryPolicy.ExecuteAsync to keep the original stack trace to log
+        // after retryPolicy.ExecuteAsync will lose full stack trace (may because of the library issues)
+        var stackTrace = Environment.StackTrace;
+
         try
         {
             return retryPolicy.Execute(action);
@@ -32,7 +41,8 @@ public static class RetryPolicyExtension
         catch (Exception e)
         {
             onBeforeThrowFinalExceptionFn?.Invoke(e);
-            throw;
+
+            throw new Exception($"{retryPolicy.GetType().Name} ExecuteAndThrowFinalException failed. FullStackTrace: {stackTrace}", e);
         }
     }
 
@@ -41,6 +51,10 @@ public static class RetryPolicyExtension
         Action action,
         Action<TException> onBeforeThrowFinalExceptionFn = null) where TException : Exception
     {
+        // Store stack trace before call retryPolicy.ExecuteAsync to keep the original stack trace to log
+        // after retryPolicy.ExecuteAsync will lose full stack trace (may because of the library issues)
+        var stackTrace = Environment.StackTrace;
+
         try
         {
             retryPolicy.Execute(action);
@@ -48,7 +62,8 @@ public static class RetryPolicyExtension
         catch (Exception e)
         {
             if (e.As<TException>() != null) onBeforeThrowFinalExceptionFn?.Invoke(e.As<TException>());
-            throw;
+
+            throw new Exception($"{retryPolicy.GetType().Name} ExecuteAndThrowFinalException failed. FullStackTrace: {stackTrace}", e);
         }
     }
 
@@ -57,6 +72,10 @@ public static class RetryPolicyExtension
         Func<T> action,
         Action<TException> onBeforeThrowFinalExceptionFn = null) where TException : Exception
     {
+        // Store stack trace before call retryPolicy.ExecuteAsync to keep the original stack trace to log
+        // after retryPolicy.ExecuteAsync will lose full stack trace (may because of the library issues)
+        var stackTrace = Environment.StackTrace;
+
         try
         {
             return retryPolicy.Execute(action);
@@ -64,7 +83,8 @@ public static class RetryPolicyExtension
         catch (Exception e)
         {
             if (e.As<TException>() != null) onBeforeThrowFinalExceptionFn?.Invoke(e.As<TException>());
-            throw;
+
+            throw new Exception($"{retryPolicy.GetType().Name} ExecuteAndThrowFinalException failed. FullStackTrace: {stackTrace}", e);
         }
     }
 
@@ -73,14 +93,19 @@ public static class RetryPolicyExtension
         Func<Task> action,
         Action<Exception> onBeforeThrowFinalExceptionFn = null)
     {
+        // Store stack trace before call retryPolicy.ExecuteAsync to keep the original stack trace to log
+        // after retryPolicy.ExecuteAsync will lose full stack trace (may because of the library issues)
+        var stackTrace = Environment.StackTrace;
+
         try
         {
-            await retryPolicy.ExecuteAsync(action);
+            await retryPolicy.ExecuteAsync(async () => await action());
         }
         catch (Exception e)
         {
             onBeforeThrowFinalExceptionFn?.Invoke(e);
-            throw;
+
+            throw new Exception($"{retryPolicy.GetType().Name} ExecuteAndThrowFinalExceptionAsync failed. FullStackTrace: {stackTrace}", e);
         }
     }
 
@@ -89,14 +114,19 @@ public static class RetryPolicyExtension
         Func<Task<T>> action,
         Action<Exception> onBeforeThrowFinalExceptionFn = null)
     {
+        // Store stack trace before call retryPolicy.ExecuteAsync to keep the original stack trace to log
+        // after retryPolicy.ExecuteAsync will lose full stack trace (may because of the library issues)
+        var stackTrace = Environment.StackTrace;
+
         try
         {
-            return await retryPolicy.ExecuteAsync(action);
+            return await retryPolicy.ExecuteAsync(async () => await action());
         }
         catch (Exception e)
         {
             onBeforeThrowFinalExceptionFn?.Invoke(e);
-            throw;
+
+            throw new Exception($"{retryPolicy.GetType().Name} ExecuteAndThrowFinalExceptionAsync failed. FullStackTrace: {stackTrace}", e);
         }
     }
 }

@@ -3,6 +3,7 @@ using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Exceptions.Extensions;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Constants;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Repositories;
 using Easy.Platform.Domain.UnitOfWork;
@@ -22,7 +23,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         IServiceProvider serviceProvider) : base(unitOfWorkManager, cqrs, serviceProvider)
     {
         PersistenceConfiguration = serviceProvider.GetService<PlatformPersistenceConfiguration<TDbContext>>();
-        Logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType());
+        Logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}");
     }
 
     /// <summary>

@@ -748,7 +748,11 @@ public static class DependencyInjectionExtension
     {
         using (var scope = serviceProvider.CreateScope())
         {
-            return method(scope);
+            var result = method(scope);
+
+            result.As<Task>()?.WaitResult();
+
+            return result;
         }
     }
 
@@ -790,13 +794,13 @@ public static class DependencyInjectionExtension
     /// <inheritdoc cref="ExecuteInjectScoped" />
     public static async Task ExecuteInjectScopedAsync(this IServiceProvider serviceProvider, Delegate method, params object[] manuallyParams)
     {
-        await serviceProvider.ExecuteScopedAsync(scope => scope.ExecuteInjectAsync(method, manuallyParams));
+        await serviceProvider.ExecuteScopedAsync(async scope => await scope.ExecuteInjectAsync(method, manuallyParams));
     }
 
     /// <inheritdoc cref="ExecuteInjectScoped" />
     public static async Task<TResult> ExecuteInjectScopedAsync<TResult>(this IServiceProvider serviceProvider, Delegate method, params object[] manuallyParams)
     {
-        return await serviceProvider.ExecuteScopedAsync(scope => scope.ExecuteInjectAsync<TResult>(method, manuallyParams));
+        return await serviceProvider.ExecuteScopedAsync(async scope => await scope.ExecuteInjectAsync<TResult>(method, manuallyParams));
     }
 
     public enum ReplaceServiceStrategy

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Easy.Platform.Common.Exceptions.Extensions;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Microsoft.Extensions.Logging;
@@ -105,9 +106,8 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
             busMessage.As<IPlatformTrackableBusMessage>()?.TrackingId ?? "n/a");
 
         if (isLogConsumerProcessTime && !consumer.DisableSlowProcessWarning())
-        {
-            await Util.TaskRunner.ProfilingAsync(
-                asyncTask: () => DoInvokeConsumer(consumer, busMessage, routingKey, cancellationToken),
+            await Util.TaskRunner.ProfileExecutionAsync(
+                asyncTask: async () => await DoInvokeConsumer(consumer, busMessage, routingKey, cancellationToken),
                 afterExecution: elapsedMilliseconds =>
                 {
                     var logMessage =
@@ -119,24 +119,19 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
                         logger?.LogWarning(
                             $"[MessageBus] SlowProcessWarningTimeMilliseconds:{toCheckSlowProcessWarningTimeMilliseconds}. {logMessage}. MessageContent: {{BusMessage}}",
                             busMessage.ToJson());
-                    else
-                        logger?.LogInformation($"[MessageBus] Finished invoking consumer. {logMessage}");
                 });
-        }
         else
-        {
             await DoInvokeConsumer(
                 consumer,
                 busMessage,
                 routingKey,
                 cancellationToken);
 
-            logger?.LogDebug(
-                "[MessageBus] Finished invoking consumer. Name: {ConsumerName}. RoutingKey: {RoutingKey}. TrackingId: {TrackingId}",
-                consumer.GetType().FullName,
-                routingKey,
-                busMessage.As<IPlatformTrackableBusMessage>()?.TrackingId ?? "n/a");
-        }
+        logger?.LogDebug(
+            "[MessageBus] Finished invoking consumer. Name: {ConsumerName}. RoutingKey: {RoutingKey}. TrackingId: {TrackingId}",
+            consumer.GetType().FullName,
+            routingKey,
+            busMessage.As<IPlatformTrackableBusMessage>()?.TrackingId ?? "n/a");
     }
 
     private static async Task DoInvokeConsumer(
@@ -147,18 +142,17 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
     {
         var handleMethodName = nameof(IPlatformMessageBusConsumer<object>.HandleAsync);
 
-        var methodInfo = consumer.GetType().GetMethod(handleMethodName);
-        if (methodInfo == null)
-            throw new Exception(
-                $"Can not find execution handle method {handleMethodName} from {consumer.GetType().FullName}");
+        var methodInfo = consumer.GetType()
+            .GetMethod(handleMethodName)
+            .EnsureFound($"Can not find execution handle method {handleMethodName} from {consumer.GetType().FullName}");
 
         try
         {
             var invokeResult = methodInfo.Invoke(
                 consumer,
                 Util.ListBuilder.NewArray(eventBusMessage, routingKey));
-            if (invokeResult is Task invokeTask)
-                await invokeTask.WaitAsync(cancellationToken);
+
+            if (invokeResult is Task invokeTask) await invokeTask;
         }
         catch (Exception e)
         {
@@ -174,7 +168,7 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
 
     public PlatformMessageBusConsumer(ILoggerFactory loggerFactory)
     {
-        Logger = loggerFactory.CreateLogger(GetType());
+        Logger = loggerFactory.CreateLogger($"{DefaultPlatformMessageBusLogSuffix.Value}.{GetType().Name}");
     }
 
     public virtual async Task HandleAsync(TMessage message, string routingKey)

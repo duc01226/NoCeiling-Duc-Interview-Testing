@@ -39,7 +39,19 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
 
     public override async Task<T> GetAsync<T>(PlatformCacheKey cacheKey, CancellationToken token = default)
     {
-        var result = await redisCache.Value.GetAsync(cacheKey, token);
+        // Store stack trace before call redisCache.Value.GetAsync to keep the original stack trace to log
+        // after redisCache.Value.GetAsync will lose full stack trace (may because it connect async to other external service)
+        var stackTrace = Environment.StackTrace;
+
+        byte[] result;
+        try
+        {
+            result = await redisCache.Value.GetAsync(cacheKey, token);
+        }
+        catch (Exception e)
+        {
+            throw new Exception($"{GetType().Name} GetAsync failed. FullStackTrace: {stackTrace}", e);
+        }
 
         try
         {
@@ -71,7 +83,17 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
 
     public override async Task RemoveAsync(PlatformCacheKey cacheKey, CancellationToken token = default)
     {
-        await redisCache.Value.RemoveAsync(cacheKey, token);
+        // Store stack trace before call redisCache.Value.GetAsync to keep the original stack trace to log
+        // after redisCache.Value.GetAsync will lose full stack trace (may because it connect async to other external service)
+        var stackTrace = Environment.StackTrace;
+        try
+        {
+            await redisCache.Value.RemoveAsync(cacheKey, token);
+        }
+        catch (Exception e)
+        {
+            throw new Exception($"{GetType().Name} RemoveAsync failed. FullStackTrace: {stackTrace}", e);
+        }
 
         await UpdateGlobalCachedKeys(p => p.TryRemove(cacheKey, out var _));
     }
@@ -130,6 +152,10 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         PlatformCacheEntryOptions cacheOptions = null,
         CancellationToken token = default)
     {
+        // Store stack trace before call redisCache.Value.SetAsync to keep the original stack trace to log
+        // after redisCache.Value.SetAsync will lose full stack trace (may because it connect async to other external service)
+        var stackTrace = Environment.StackTrace;
+
         try
         {
             await redisCache.Value.SetAsync(
@@ -142,10 +168,11 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         {
             Logger.LogError(
                 ex,
-                $"[{GetType().Name}] SetToRedisCache has errors. CacheKey: {{CacheKey}}. Value: {{CacheValue}}",
+                $"[{GetType().Name}] SetToRedisCache has errors. CacheKey: {{CacheKey}}. Value: {{CacheValue}}. StackTrace:{stackTrace}",
                 cacheKey,
                 value.ToJson());
-            throw;
+
+            throw new Exception($"{GetType().Name} SetToRedisCacheAsync failed. FullStackTrace: {stackTrace}", ex);
         }
     }
 

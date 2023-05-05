@@ -7,6 +7,7 @@ using Easy.Platform.Common.Cqrs.Commands;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Common.Validations.Extensions;
+using Easy.Platform.Constants;
 using Easy.Platform.Domain.UnitOfWork;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -49,7 +50,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                 async () => await ExecuteHandleAsync(request, cancellationToken),
                 onException: ex =>
                 {
-                    PlatformApplicationGlobal.LoggerFactory.CreateLogger(GetType())
+                    PlatformApplicationGlobal.LoggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}")
                         .Log(
                             ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
                             ex,

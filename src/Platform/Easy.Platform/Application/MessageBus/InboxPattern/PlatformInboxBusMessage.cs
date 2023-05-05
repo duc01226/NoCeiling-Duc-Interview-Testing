@@ -50,6 +50,16 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
                      p.LastConsumeDate <= Clock.UtcNow.AddSeconds(-messageProcessingMaximumTimeInSeconds));
     }
 
+    public static Expression<Func<PlatformInboxBusMessage, bool>> ToCleanInboxEventBusMessagesExpr(
+        double deleteProcessedMessageInSeconds,
+        double deleteExpiredFailedMessageInSeconds)
+    {
+        return p => (p.LastConsumeDate <= Clock.UtcNow.AddSeconds(-deleteProcessedMessageInSeconds) &&
+                     p.ConsumeStatus == ConsumeStatuses.Processed) ||
+                    (p.LastConsumeDate <= Clock.UtcNow.AddSeconds(-deleteExpiredFailedMessageInSeconds) &&
+                     p.ConsumeStatus == ConsumeStatuses.Failed);
+    }
+
     public static string BuildId(string trackId, string consumerBy)
     {
         return $"{trackId ?? Guid.NewGuid().ToString()}{BuildIdSeparator}{consumerBy}";

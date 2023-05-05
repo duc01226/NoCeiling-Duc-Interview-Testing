@@ -52,7 +52,7 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         using (var cursor = await source.As<IMongoQueryable<TSource>>().ToCursorAsync(cancellationToken).ConfigureAwait(false))
         {
             Ensure.IsNotNull(cursor, nameof(source));
-            while (await cursor.MoveNextAsync(cancellationToken))
+            while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
             {
                 foreach (var item in cursor.Current) yield return item;
 

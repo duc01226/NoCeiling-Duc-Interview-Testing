@@ -38,8 +38,9 @@ public class TextSnippetMongoPersistenceModule : PlatformMongoDbPersistenceModul
     {
         return base.ConfigurePersistenceConfiguration(config, configuration)
             .With(p => p.BadQueryWarning.IsEnabled = true)
-            .With(
-                p => p.BadQueryWarning.DefaultTotalItemsThreshold = 100) // Demo warning for getting a lot of data in to memory
+            .With(p => p.BadQueryWarning.DefaultTotalItemsThreshold = 100) // Demo warning for getting a lot of data in to memory
+            .With(p => p.BadQueryWarning.SlowQueryMillisecondsThreshold = 300)
+            .With(p => p.BadQueryWarning.SlowWriteQueryMillisecondsThreshold = 2000)
             .With(p => p.BadQueryWarning.IsLogWarningAsError = true) // Demo logging warning as error message
             .With(
                 p => p.BadQueryWarning.CustomTotalItemsThresholds = Util.DictionaryBuilder.New(

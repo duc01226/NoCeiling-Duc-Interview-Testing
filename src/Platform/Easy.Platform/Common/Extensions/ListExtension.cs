@@ -227,11 +227,11 @@ public static class ListExtension
     /// <summary>
     /// Example: var listB = await Task{list}.ThenSelect((item, itemIndex) => get B)
     /// </summary>
-    public static Task<List<TActionResult>> ThenSelect<T, TActionResult>(
+    public static async Task<List<TActionResult>> ThenSelect<T, TActionResult>(
         this Task<IEnumerable<T>> itemsTask,
         Func<T, int, TActionResult> selector)
     {
-        return itemsTask.Then(items => items.Select(selector).ToList());
+        return await itemsTask.Then(items => items.Select(selector).ToList());
     }
 
     /// <inheritdoc cref="ThenSelect{T,TResult}(Task{IEnumerable{T}},Func{T,int,Task{TResult}})" />
@@ -243,11 +243,11 @@ public static class ListExtension
     }
 
     /// <inheritdoc cref="ThenSelect{T,TResult}(Task{IEnumerable{T}},Func{T,int,Task{TResult}})" />
-    public static Task<List<TActionResult>> ThenSelect<T, TActionResult>(
+    public static async Task<List<TActionResult>> ThenSelect<T, TActionResult>(
         this Task<List<T>> itemsTask,
         Func<T, int, TActionResult> selector)
     {
-        return itemsTask.Then(items => items.Select(selector).ToList());
+        return await itemsTask.Then(items => items.Select(selector).ToList());
     }
 
     /// <inheritdoc cref="ThenSelect{T,TResult}(Task{IEnumerable{T}},Func{T,int,Task{TResult}})" />

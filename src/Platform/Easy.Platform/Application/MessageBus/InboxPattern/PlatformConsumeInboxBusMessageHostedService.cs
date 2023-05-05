@@ -59,7 +59,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         {
             // WHY: Retry in case of the database is not started, initiated or restarting
             await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                () => ConsumeInboxEventBusMessages(cancellationToken),
+                async () => await ConsumeInboxEventBusMessages(cancellationToken),
                 retryAttempt => 10.Seconds(),
                 retryCount: ProcessConsumeMessageRetryCount(),
                 onRetry: (ex, timeSpan, currentRetry, ctx) =>

@@ -1,5 +1,6 @@
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
+using Easy.Platform.Constants;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Infrastructures.BackgroundJob;
@@ -41,7 +42,7 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
     public PlatformBackgroundJobExecutor(
         ILoggerFactory loggerFactory)
     {
-        Logger = loggerFactory.CreateLogger(GetType());
+        Logger = loggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.BackgroundJob.{GetType().Name}");
     }
 
     /// <summary>
@@ -61,7 +62,7 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
                 Logger.LogInformation($"[PlatformApplicationBackgroundJobExecutor] Started invoking background job. {GetType().FullName}");
 
                 Util.TaskRunner
-                    .ProfilingAsync(
+                    .ProfileExecutionAsync(
                         asyncTask: () => InternalExecuteAsync(param),
                         afterExecution: elapsedMilliseconds =>
                         {

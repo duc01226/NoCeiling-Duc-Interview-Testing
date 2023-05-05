@@ -1,6 +1,7 @@
 using Easy.Platform.Application;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
+using Easy.Platform.Constants;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -19,7 +20,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     protected PlatformCqrsEventHandler(ILoggerFactory loggerFactory)
     {
-        Logger = loggerFactory.CreateLogger(GetType());
+        Logger = loggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.PlatformSuffix}.{GetType().Name}");
     }
 
     public bool IsCurrentInstanceExecutedInSeparateThread { get; set; }
@@ -46,7 +47,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                                 await thisHandlerNewInstance.Handle(notification, default);
                             });
                 },
-                PlatformApplicationGlobal.RootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType()),
+                PlatformApplicationGlobal.LoggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}"),
                 cancellationToken: default);
         else
             await ExecuteHandleAsync(notification, cancellationToken);

@@ -13,6 +13,8 @@ public static partial class Util
         public const int DefaultWaitUntilMaxSeconds = 60;
         public const double DefaultWaitIntervalSeconds = 0.3;
 
+        public const int DefaultWhenAllWaitEachItemsToKeepStackTraceMaxTasksCount = 5;
+
         /// <summary>
         /// Execute an action after a given of time.
         /// </summary>
@@ -48,7 +50,7 @@ public static partial class Util
                 {
                     try
                     {
-                        await QueueDelayAsyncAction(action, TimeSpan.FromSeconds(delayTimeSeconds), cancellationToken);
+                        await QueueDelayAsyncAction(async token => await action(token), TimeSpan.FromSeconds(delayTimeSeconds), cancellationToken);
                     }
                     catch (Exception ex)
                     {
@@ -65,7 +67,7 @@ public static partial class Util
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default)
         {
-            QueueActionInBackground(_ => action(), logger, delayTimeSeconds, cancellationToken);
+            QueueActionInBackground(async _ => await action(), logger, delayTimeSeconds, cancellationToken);
         }
 
         public static void QueueActionInBackground(
@@ -183,7 +185,7 @@ public static partial class Util
 
         public static async Task<T> CatchExceptionContinueThrowAsync<T>(Func<Task<T>> func, Action<Exception> onException)
         {
-            return await CatchExceptionContinueThrowAsync<T, Exception>(func, onException);
+            return await CatchExceptionContinueThrowAsync<T, Exception>(async () => await func(), onException);
         }
 
         public static void CatchExceptionContinueThrow(Action action, Action<Exception> onException)
@@ -246,10 +248,10 @@ public static partial class Util
         }
 
         /// <summary>
-        /// Help to profiling an asyncTask.
-        /// afterExecution is an optional action to execute. It's input is the task ElapsedMilliseconds of asyncTask execution.
+        /// Help to profiling an asyncTask. <br/>
+        /// afterExecution: elapsedMilliseconds => { } is an optional action to execute. It's input is the task ElapsedMilliseconds of asyncTask execution.
         /// </summary>
-        public static async Task ProfilingAsync(
+        public static async Task ProfileExecutionAsync(
             Func<Task> asyncTask,
             Action<double> afterExecution = null,
             Action beforeExecution = null)
@@ -265,29 +267,117 @@ public static partial class Util
             afterExecution?.Invoke(elapsedTime.TotalMilliseconds);
         }
 
+        /// <summary>
+        /// Help to profiling an asyncTask. <br/>
+        /// afterExecution: (result, elapsedMilliseconds) => { } is an optional action to execute. It's input is the task ElapsedMilliseconds of asyncTask execution.
+        /// </summary>
+        public static async Task<TResult> ProfileExecutionAsync<TResult>(
+            Func<Task<TResult>> asyncTask,
+            Action<TResult, double> afterExecution = null,
+            Action beforeExecution = null)
+        {
+            beforeExecution?.Invoke();
+
+            var startTime = Stopwatch.GetTimestamp();
+
+            var result = await asyncTask();
+
+            var elapsedTime = Stopwatch.GetElapsedTime(startTime);
+
+            afterExecution?.Invoke(result, elapsedTime.TotalMilliseconds);
+
+            return result;
+        }
+
+        /// <summary>
+        /// Help to profiling an action.
+        /// afterExecution: elapsedMilliseconds => { } is an optional action to execute. It's input is the task ElapsedMilliseconds of asyncTask execution.
+        /// </summary>
+        public static void ProfileExecution(
+            Action action,
+            Action<double> afterExecution = null,
+            Action beforeExecution = null)
+        {
+            beforeExecution?.Invoke();
+
+            var startTime = Stopwatch.GetTimestamp();
+
+            action();
+
+            var elapsedTime = Stopwatch.GetElapsedTime(startTime);
+
+            afterExecution?.Invoke(elapsedTime.TotalMilliseconds);
+        }
+
+        /// <summary>
+        /// Help to profiling an action.
+        /// afterExecution: elapsedMilliseconds => { } is an optional action to execute. It's input is the task ElapsedMilliseconds of asyncTask execution.
+        /// </summary>
+        public static TResult ProfileExecution<TResult>(
+            Func<TResult> action,
+            Action<TResult, double> afterExecution = null,
+            Action beforeExecution = null)
+        {
+            beforeExecution?.Invoke();
+
+            var startTime = Stopwatch.GetTimestamp();
+
+            var result = action();
+
+            var elapsedTime = Stopwatch.GetElapsedTime(startTime);
+
+            afterExecution?.Invoke(result, elapsedTime.TotalMilliseconds);
+
+            return result;
+        }
+
         public static async Task WhenAll(params Task[] tasks)
         {
-            tasks.ForEach(p => p.WaitResult());
+            // If not too much task using WaitResult for keeping the track trace
+            // Too much task using this locking could lead to Deadlocks or Threadpool Starvation
+            // https://www.nikouusitalo.com/blog/why-is-getawaiter-getresult-bad-in-c/
+            if (tasks.Length <= DefaultWhenAllWaitEachItemsToKeepStackTraceMaxTasksCount)
+                await tasks.ForEachAsync(async p => await p);
+            else await Task.WhenAll(tasks);
         }
 
         public static async Task WhenAll(IEnumerable<Task> tasks)
         {
-            tasks.ForEach(p => p.WaitResult());
+            var taskList = tasks.ToList();
+
+            // If not too much task using WaitResult for keeping the track trace
+            // Too much task using this locking could lead to Deadlocks or Threadpool Starvation
+            // https://www.nikouusitalo.com/blog/why-is-getawaiter-getresult-bad-in-c/
+            if (taskList.Count <= DefaultWhenAllWaitEachItemsToKeepStackTraceMaxTasksCount)
+                await taskList.ForEachAsync(async p => await p);
+            else await Task.WhenAll(taskList);
         }
 
         public static async Task<List<T>> WhenAll<T>(IEnumerable<Task<T>> tasks)
         {
-            return tasks.Select(p => p.GetResult()).ToList();
+            var taskList = tasks.ToList();
+
+            // If not too much task using WaitResult for keeping the track trace
+            // Too much task using this locking could lead to Deadlocks or Threadpool Starvation
+            // https://www.nikouusitalo.com/blog/why-is-getawaiter-getresult-bad-in-c/
+            if (taskList.Count <= DefaultWhenAllWaitEachItemsToKeepStackTraceMaxTasksCount)
+                return await taskList.SelectAsync(async p => await p);
+            return await Task.WhenAll(taskList).Then(_ => _.ToList());
         }
 
         public static async Task<List<T>> WhenAll<T>(params Task<T>[] tasks)
         {
-            return tasks.Select(p => p.GetResult()).ToList();
+            // If not too much task using WaitResult for keeping the track trace
+            // Too much task using this locking could lead to Deadlocks or Threadpool Starvation
+            // https://www.nikouusitalo.com/blog/why-is-getawaiter-getresult-bad-in-c/
+            if (tasks.Length <= DefaultWhenAllWaitEachItemsToKeepStackTraceMaxTasksCount)
+                return await tasks.SelectAsync(async p => await p);
+            return await Task.WhenAll(tasks).Then(_ => _.ToList());
         }
 
         public static async Task<ValueTuple<T1, T2>> WhenAll<T1, T2>(Task<T1> task1, Task<T2> task2)
         {
-            return (task1.GetResult(), task2.GetResult());
+            return (await task1, await task2);
         }
 
         public static async Task<ValueTuple<T1, T2, T3>> WhenAll<T1, T2, T3>(
@@ -295,7 +385,7 @@ public static partial class Util
             Task<T2> task2,
             Task<T3> task3)
         {
-            return (task1.GetResult(), task2.GetResult(), task3.GetResult());
+            return (await task1, await task2, await task3);
         }
 
         public static async Task<ValueTuple<T1, T2, T3, T4>> WhenAll<T1, T2, T3, T4>(
@@ -304,7 +394,7 @@ public static partial class Util
             Task<T3> task3,
             Task<T4> task4)
         {
-            return (task1.GetResult(), task2.GetResult(), task3.GetResult(), task4.GetResult());
+            return (await task1, await task2, await task3, await task4);
         }
 
         public static async Task<ValueTuple<T1, T2, T3, T4, T5>> WhenAll<T1, T2, T3, T4, T5>(
@@ -314,7 +404,7 @@ public static partial class Util
             Task<T4> task4,
             Task<T5> task5)
         {
-            return (task1.GetResult(), task2.GetResult(), task3.GetResult(), task4.GetResult(), task5.GetResult());
+            return (await task1, await task2, await task3, await task4, await task5);
         }
 
         public static async Task<ValueTuple<T1, T2, T3, T4, T5, T6>> WhenAll<T1, T2, T3, T4, T5, T6>(
@@ -325,7 +415,7 @@ public static partial class Util
             Task<T5> task5,
             Task<T6> task6)
         {
-            return (task1.GetResult(), task2.GetResult(), task3.GetResult(), task4.GetResult(), task5.GetResult(), task6.GetResult());
+            return (await task1, await task2, await task3, await task4, await task5, await task6);
         }
 
         public static async Task<T> Async<T>(T t)
@@ -357,7 +447,7 @@ public static partial class Util
                     sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndThrowFinalExceptionAsync(
-                    executeFunc,
+                    async () => await executeFunc(),
                     onBeforeThrowFinalExceptionFn ?? (exception => { }));
         }
 
@@ -376,7 +466,7 @@ public static partial class Util
                     sleepDurationProvider ?? (retryAttempt => DefaultWaitIntervalSeconds.Seconds()),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndThrowFinalExceptionAsync(
-                    executeFunc,
+                    async () => await executeFunc(),
                     onBeforeThrowFinalExceptionFn ?? (exception => { }));
         }
 
@@ -388,7 +478,12 @@ public static partial class Util
             Action<Exception> onBeforeThrowFinalExceptionFn = null,
             Action<Exception, TimeSpan, int, Context> onRetry = null)
         {
-            await WaitRetryThrowFinalExceptionAsync<Exception>(executeFunc, sleepDurationProvider, retryCount, onBeforeThrowFinalExceptionFn, onRetry);
+            await WaitRetryThrowFinalExceptionAsync<Exception>(
+                async () => await executeFunc(),
+                sleepDurationProvider,
+                retryCount,
+                onBeforeThrowFinalExceptionFn,
+                onRetry);
         }
 
         /// <inheritdoc cref="WaitRetryThrowFinalExceptionAsync{TException}(Func{Task},Func{int,TimeSpan},int,Action{Exception},Action{Exception,TimeSpan,int,Context})" />
@@ -399,7 +494,12 @@ public static partial class Util
             Action<Exception> onBeforeThrowFinalExceptionFn = null,
             Action<Exception, TimeSpan, int, Context> onRetry = null)
         {
-            return await WaitRetryThrowFinalExceptionAsync<T, Exception>(executeFunc, sleepDurationProvider, retryCount, onBeforeThrowFinalExceptionFn, onRetry);
+            return await WaitRetryThrowFinalExceptionAsync<T, Exception>(
+                async () => await executeFunc(),
+                sleepDurationProvider,
+                retryCount,
+                onBeforeThrowFinalExceptionFn,
+                onRetry);
         }
 
         public static async Task<PolicyResult> WaitRetryAsync(
@@ -415,7 +515,7 @@ public static partial class Util
                     sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndCaptureAsync(
-                    executeFunc);
+                    async () => await executeFunc());
         }
 
         public static async Task<PolicyResult<T>> WaitRetryAsync<T>(
@@ -431,7 +531,7 @@ public static partial class Util
                     sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndCaptureAsync(
-                    executeFunc);
+                    async () => await executeFunc());
         }
 
         /// <summary>

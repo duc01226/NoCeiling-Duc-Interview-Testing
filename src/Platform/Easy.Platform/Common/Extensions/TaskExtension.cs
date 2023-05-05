@@ -147,28 +147,42 @@ public static class TaskExtension
 
     public static async Task<List<T>> WhenAll<T>(this IEnumerable<Task<T>> tasks)
     {
-        return await Util.TaskRunner.WhenAll(tasks.ToList()).Then(x => x.ToList());
+        return await Util.TaskRunner.WhenAll(tasks);
     }
 
     public static async Task WhenAll(this IEnumerable<Task> tasks)
     {
-        var tasksList = tasks.ToList();
-
-        if (tasksList.Any()) await Util.TaskRunner.WhenAll(tasksList.ToList());
+        await Util.TaskRunner.WhenAll(tasks);
     }
 
     /// <summary>
     /// Use WaitResult to help if exception to see the stack trace. <br />
     /// Task.Wait() will lead to stack trace lost. <br />
-    /// Because the stack trace is technically about where the code is returning to, not where the code came from
+    /// Because the stack trace is technically about where the code is returning to, not where the code came from <br />
+    /// When you write “await task;”, the compiler translates that into usage of the Task.GetAwaiter() method, <br />
+    /// which returns an instance that has a GetResult() method. When used on a faulted Task, GetResult() will propagate the original exception (this is how “await task;” gets its behavior). <br />
+    /// You can thus use “task.GetAwaiter().GetResult()” if you want to directly invoke this propagation logic.
     /// </summary>
-    public static void WaitResult(this Task task)
+    public static void WaitResult(this Task task, bool? continueOnCapturedContext = null)
     {
-        task.GetAwaiter().GetResult();
+        if (continueOnCapturedContext != null)
+            task.ConfigureAwait(continueOnCapturedContext!.Value).GetAwaiter().GetResult();
+        else
+            task.GetAwaiter().GetResult();
     }
 
-    public static T GetResult<T>(this Task<T> task)
+    /// <summary>
+    /// Use WaitResult to help if exception to see the stack trace. <br />
+    /// Task.Wait() will lead to stack trace lost. <br />
+    /// Because the stack trace is technically about where the code is returning to, not where the code came from <br />
+    /// When you write “await task;”, the compiler translates that into usage of the Task.GetAwaiter() method, <br />
+    /// which returns an instance that has a GetResult() method. When used on a faulted Task, GetResult() will propagate the original exception (this is how “await task;” gets its behavior). <br />
+    /// You can thus use “task.GetAwaiter().GetResult()” if you want to directly invoke this propagation logic.
+    /// </summary>
+    public static T GetResult<T>(this Task<T> task, bool? continueOnCapturedContext = null)
     {
+        if (continueOnCapturedContext != null)
+            return task.ConfigureAwait(continueOnCapturedContext!.Value).GetAwaiter().GetResult();
         return task.GetAwaiter().GetResult();
     }
 

@@ -143,10 +143,21 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>
 
     private IConnection CreateConnection()
     {
-        var hostNames = options.HostNames.Split(',')
-            .Where(hostName => hostName.IsNotNullOrEmpty())
-            .ToArray();
+        // Store stack trace before call CreateConnection to keep the original stack trace to log
+        // after CreateConnection will lose full stack trace (may because it connect async to other external service)
+        var stackTrace = Environment.StackTrace;
 
-        return connectionFactory.CreateConnection(hostNames);
+        try
+        {
+            var hostNames = options.HostNames.Split(',')
+                .Where(hostName => hostName.IsNotNullOrEmpty())
+                .ToArray();
+
+            return connectionFactory.CreateConnection(hostNames);
+        }
+        catch (Exception e)
+        {
+            throw new Exception($"{GetType().Name} CreateConnection failed. FullStackTrace: {stackTrace}", e);
+        }
     }
 }

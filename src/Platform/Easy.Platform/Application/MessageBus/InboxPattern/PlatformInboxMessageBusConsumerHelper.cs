@@ -59,7 +59,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         }
     }
 
-    public static Task TriggerHandleWaitingProcessingInboxMessageConsumer<TMessage>(
+    public static async Task TriggerHandleWaitingProcessingInboxMessageConsumer<TMessage>(
         IPlatformMessageBusConsumer<TMessage> consumer,
         TMessage message,
         PlatformInboxBusMessage newInboxMessage,
@@ -68,7 +68,7 @@ public static class PlatformInboxMessageBusConsumerHelper
     {
         var consumerType = consumer.GetType();
 
-        return PlatformApplicationGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
+        await PlatformApplicationGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
             async (IServiceProvider serviceProvider) =>
             {
                 try
