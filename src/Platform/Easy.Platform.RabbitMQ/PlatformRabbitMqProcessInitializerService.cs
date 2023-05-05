@@ -252,7 +252,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
                         // autoAck: false -> the Consumer will ack manually.
                         CurrentChannel.BasicConsume(queueName, autoAck: false, applicationRabbitConsumer);
 
-                        Logger.LogDebug(message: $"Consumer connected to queue {queueName}");
+                        Logger.LogInformation(message: $"Consumer connected to queue {queueName}");
                     });
         }
         catch (Exception ex)
@@ -616,7 +616,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
             exchange,
             $"{consumerBindingRoutingKey}.{PlatformRabbitMqConstants.FanoutBindingChar}");
 
-        Logger.LogDebug(
+        Logger.LogInformation(
             message:
             $"Queue {queueName} has been declared and bound to Exchange {exchange} with routing key {consumerBindingRoutingKey} and {consumerBindingRoutingKey}.{PlatformRabbitMqConstants.FanoutBindingChar}");
     }

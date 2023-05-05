@@ -46,9 +46,9 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
         double deleteProcessedMessageInSeconds,
         double deleteExpiredFailedMessageInSeconds)
     {
-        return p => (p.LastSendDate <= Clock.UtcNow.AddSeconds(-deleteProcessedMessageInSeconds()) &&
+        return p => (p.LastSendDate <= Clock.UtcNow.AddSeconds(-deleteProcessedMessageInSeconds) &&
                      p.SendStatus == SendStatuses.Processed) ||
-                    (p.LastSendDate <= Clock.UtcNow.AddSeconds(-deleteExpiredFailedMessageInSeconds()) &&
+                    (p.LastSendDate <= Clock.UtcNow.AddSeconds(-deleteExpiredFailedMessageInSeconds) &&
                      p.SendStatus == SendStatuses.Failed);
     }
 

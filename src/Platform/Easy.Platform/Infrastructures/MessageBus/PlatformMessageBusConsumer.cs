@@ -99,7 +99,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
         ILogger logger = null,
         CancellationToken cancellationToken = default)
     {
-        logger?.LogDebug(
+        logger?.LogInformation(
             "[MessageBus] Start invoking consumer. Name: {ConsumerName}. RoutingKey: {RoutingKey}. TrackingId: {TrackingId}",
             consumer.GetType().FullName,
             routingKey,
@@ -127,7 +127,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
                 routingKey,
                 cancellationToken);
 
-        logger?.LogDebug(
+        logger?.LogInformation(
             "[MessageBus] Finished invoking consumer. Name: {ConsumerName}. RoutingKey: {RoutingKey}. TrackingId: {TrackingId}",
             consumer.GetType().FullName,
             routingKey,

@@ -16,13 +16,15 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
     protected bool ProcessStarted;
     protected bool ProcessStopped;
     protected readonly IServiceProvider ServiceProvider;
+    protected readonly ILogger SystemLogger;
     private readonly object startProcessLock = new();
     private readonly object stopProcessLock = new();
 
     public PlatformHostedService(IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
     {
         ServiceProvider = serviceProvider;
-        Logger = loggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}");
+        Logger = loggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.PlatformSuffix}.{GetType().Name}");
+        SystemLogger = loggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}");
     }
 
     public void Dispose()
@@ -41,7 +43,7 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
 
             ProcessStarted = true;
 
-            Logger.LogInformation($"Process of {GetType().Name} Started");
+            SystemLogger.LogInformation($"Process of {GetType().Name} Started");
         }
     }
 
@@ -55,7 +57,7 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
 
             ProcessStopped = true;
 
-            Logger.LogInformation($"Process of {GetType().Name} Stopped");
+            SystemLogger.LogInformation($"Process of {GetType().Name} Stopped");
         }
     }
 
