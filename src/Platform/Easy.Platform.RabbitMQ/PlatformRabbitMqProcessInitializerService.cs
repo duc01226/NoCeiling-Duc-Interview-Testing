@@ -288,7 +288,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
                 });
 
             await canProcessConsumerTypes
-                .Select(
+                .ForEachAsync(
                     async consumerType =>
                     {
                         if (cancellationToken.IsCancellationRequested) return;
@@ -311,8 +311,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
                                     await ExecuteConsumer(rabbitMqMessage, consumer, activity);
                             }
                         }
-                    })
-                .WhenAll();
+                    });
 
             // WHY: After consumed message successfully, ack the message is handled to rabbitmq so that message could be removed.
             Util.TaskRunner.QueueActionInBackground(
