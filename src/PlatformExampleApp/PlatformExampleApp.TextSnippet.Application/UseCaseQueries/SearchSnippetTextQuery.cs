@@ -67,7 +67,9 @@ public class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicationHandler
         //    cancellationToken);
 
         // NOT RELATED TO MAIN LOGIC. TEST GET DYNAMIC DATA LAZY_LOADING STILL WORKS
-        var testDynamicDataHasPropIsEntityHavingLazyLoading = await repository.GetAsync(resultBuilder: query => query.Select(p => new { entity = p }).FirstOrDefault());
+        var testDynamicDataHasPropIsEntityHavingLazyLoading = await repository.FirstOrDefaultAsync(
+            queryBuilder: query => query.Select(p => new { entity = p }),
+            cancellationToken: cancellationToken);
 
         // STEP 1: Build Queries
         var fullItemsQueryBuilder = repository.GetQueryBuilder(

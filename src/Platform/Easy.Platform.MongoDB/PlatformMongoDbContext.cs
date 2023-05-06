@@ -100,11 +100,6 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         }
     }
 
-    public async Task<List<TSource>> ToListAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
-    {
-        return await source.ToListAsync(cancellationToken);
-    }
-
     public async Task<TSource> FirstAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
         return await source.FirstAsync(cancellationToken);
@@ -225,16 +220,6 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         return await entities.ToTask();
     }
 
-    public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
-        Expression<Func<TEntity, bool>> predicate,
-        bool dismissSendEvent = false,
-        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
-    {
-        var entities = await GetQuery<TEntity>().Where(predicate).ToListAsync(cancellationToken);
-
-        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, cancellationToken);
-    }
-
     public async Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
@@ -272,7 +257,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         return entities;
     }
 
-    public async Task SaveChangesAsync()
+    public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         // Not support real transaction tracking. No need to do anything
     }

@@ -3,7 +3,6 @@ using Easy.Platform.EfCore.Services;
 using Easy.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using PlatformExampleApp.TextSnippet.Domain.Entities;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql;
 
@@ -48,14 +47,19 @@ public class TextSnippetPostgreSqlEfCorePersistenceModule : PlatformEfCorePersis
         IConfiguration configuration)
     {
         return base.ConfigurePersistenceConfiguration(config, configuration)
-            .With(p => p.BadQueryWarning.IsEnabled = true)
-            .With(p => p.BadQueryWarning.DefaultTotalItemsThreshold = 100) // Demo warning for getting a lot of data in to memory
-            .With(p => p.BadQueryWarning.SlowQueryMillisecondsThreshold = 300)
-            .With(p => p.BadQueryWarning.SlowWriteQueryMillisecondsThreshold = 2000)
-            .With(p => p.BadQueryWarning.IsLogWarningAsError = true) // Demo logging warning as error message
+            .With(p => p.BadQueryWarning.IsEnabled = configuration.GetValue<bool>("PersistenceConfiguration:BadQueryWarning:IsEnabled"))
             .With(
-                p => p.BadQueryWarning.CustomTotalItemsThresholds = Util.DictionaryBuilder.New(
-                    (typeof(TextSnippetEntity), 10)));
+                p => p.BadQueryWarning.TotalItemsThreshold =
+                    configuration.GetValue<int>("PersistenceConfiguration:BadQueryWarning:TotalItemsThreshold")) // Demo warning for getting a lot of data in to memory
+            .With(
+                p => p.BadQueryWarning.SlowQueryMillisecondsThreshold =
+                    configuration.GetValue<int>("PersistenceConfiguration:BadQueryWarning:SlowQueryMillisecondsThreshold"))
+            .With(
+                p => p.BadQueryWarning.SlowWriteQueryMillisecondsThreshold =
+                    configuration.GetValue<int>("PersistenceConfiguration:BadQueryWarning:SlowWriteQueryMillisecondsThreshold"))
+            .With(
+                p => p.BadQueryWarning.IsLogWarningAsError =
+                    configuration.GetValue<bool>("PersistenceConfiguration:BadQueryWarning:IsLogWarningAsError")); // Demo logging warning as error message;
     }
 }
 

@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.UnitOfWork;
 
@@ -11,9 +12,10 @@ namespace Easy.Platform.Domain.Repositories;
 public interface IPlatformRepository
 {
     public IUnitOfWork CurrentActiveUow();
+    public IUnitOfWorkManager UowManager();
 }
 
-public interface IPlatformBasicRepository<TEntity, TPrimaryKey> : IPlatformRepository
+public interface IPlatformRepository<TEntity, TPrimaryKey> : IPlatformRepository
     where TEntity : class, IEntity<TPrimaryKey>, new()
 {
     public Task<TEntity> GetByIdAsync(TPrimaryKey id, CancellationToken cancellationToken = default, params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
@@ -22,11 +24,7 @@ public interface IPlatformBasicRepository<TEntity, TPrimaryKey> : IPlatformRepos
         List<TPrimaryKey> ids,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
-}
 
-public interface IPlatformRepository<TEntity, TPrimaryKey> : IPlatformBasicRepository<TEntity, TPrimaryKey>
-    where TEntity : class, IEntity<TPrimaryKey>, new()
-{
     public Task<List<TEntity>> GetAllAsync(
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default,
@@ -56,7 +54,7 @@ public interface IPlatformRepository<TEntity, TPrimaryKey> : IPlatformBasicRepos
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 }
 
-public interface IPlatformBasicRootRepository<TEntity, TPrimaryKey> : IPlatformBasicRepository<TEntity, TPrimaryKey>
+public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformRepository<TEntity, TPrimaryKey>
     where TEntity : class, IRootEntity<TPrimaryKey>, new()
 {
     public Task<TEntity> CreateAsync(
@@ -116,15 +114,10 @@ public interface IPlatformBasicRootRepository<TEntity, TPrimaryKey> : IPlatformB
         Expression<Func<TEntity, bool>> predicate,
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default);
-}
 
-public interface IPlatformRootRepository<TEntity, TPrimaryKey>
-    : IPlatformBasicRootRepository<TEntity, TPrimaryKey>, IPlatformRepository<TEntity, TPrimaryKey>
-    where TEntity : class, IRootEntity<TPrimaryKey>, new()
-{
     public Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
-        Expression<Func<TEntity, bool>> customCheckExistingPredicate = null,
+        Expression<Func<TEntity, bool>> customCheckExistingPredicate,
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default);
 
@@ -184,58 +177,6 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
     /// </summary>
     public IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
-    public Task<TResult> GetAsync<TResult>(
-        Func<IQueryable<TEntity>, TResult> resultBuilder,
-        CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
-
-    public Task<TResult> GetAsync<TResult>(
-        Func<IQueryable<TEntity>, Task<TResult>> resultBuilder,
-        CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
-
-    public Task<TResult> GetAsync<TResult>(
-        Func<IUnitOfWork, IQueryable<TEntity>, TResult> resultBuilder,
-        CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
-
-    public Task<TResult> GetAsync<TResult>(
-        Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> resultBuilder,
-        CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
-
-    public TResult Get<TResult>(
-        Func<IQueryable<TEntity>, TResult> queryBuilder,
-        CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
-    {
-        return GetAsync(queryBuilder, cancellationToken, loadRelatedEntities).GetResult();
-    }
-
-    public TResult Get<TResult>(
-        Func<IQueryable<TEntity>, Task<TResult>> queryBuilder,
-        CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
-    {
-        return GetAsync(queryBuilder, cancellationToken, loadRelatedEntities).GetResult();
-    }
-
-    public TResult Get<TResult>(
-        Func<IUnitOfWork, IQueryable<TEntity>, TResult> queryBuilder,
-        CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
-    {
-        return GetAsync(queryBuilder, cancellationToken, loadRelatedEntities).GetResult();
-    }
-
-    public TResult Get<TResult>(
-        Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> queryBuilder,
-        CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
-    {
-        return GetAsync(queryBuilder, cancellationToken, loadRelatedEntities).GetResult();
-    }
-
     public Task<List<TEntity>> GetAllAsync(
         Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
         CancellationToken cancellationToken = default,
@@ -275,6 +216,16 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
 
     public Task<TEntity?> FirstOrDefaultAsync(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
+
+    public Task<TSelector?> FirstOrDefaultAsync<TSelector>(
+        Func<IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
+
+    public Task<TSelector?> FirstOrDefaultAsync<TSelector>(
+        Func<IUnitOfWork, IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
@@ -285,6 +236,16 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
 
     public Task<List<TSelector>> GetAllAsync<TSelector>(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
+
+    public Task<List<TSelector>> GetAllAsync<TSelector>(
+        Func<IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
+
+    public Task<List<TSelector>> GetAllAsync<TSelector>(
+        Func<IUnitOfWork, IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
@@ -361,4 +322,77 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
     : IPlatformQueryableRepository<TEntity, TPrimaryKey>, IPlatformRootRepository<TEntity, TPrimaryKey>
     where TEntity : class, IRootEntity<TPrimaryKey>, new()
 {
+    public async Task DeleteManyScrollingPagingAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        int pageSize,
+        bool dismissSendEvent = false,
+        CancellationToken cancellationToken = default)
+    {
+        await Util.Pager.ExecuteScrollingPagingAsync(
+            async () =>
+            {
+                using (var uow = UowManager().CreateNewUow())
+                {
+                    var pagingDeleteItems = await GetAllAsync(
+                        GetQuery(uow).Where(predicate).Take(pageSize),
+                        cancellationToken: cancellationToken);
+
+                    await DeleteManyAsync(pagingDeleteItems, dismissSendEvent, cancellationToken);
+
+                    return pagingDeleteItems;
+                }
+            });
+    }
+
+    /// <summary>
+    /// Use paging when every time to update will NOT decrease the total items get from the "predicate"
+    /// </summary>
+    public async Task UpdateManyPagingAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Action<TEntity> updateAction,
+        int pageSize,
+        bool dismissSendEvent = false,
+        CancellationToken cancellationToken = default)
+    {
+        await Util.Pager.ExecutePagingAsync(
+            async (skipCount, pageSize) =>
+            {
+                using (var uow = UowManager().CreateNewUow())
+                {
+                    var pagingUpdateItems = await GetAllAsync(
+                            GetQuery(uow).Where(predicate).Skip(skipCount).Take(pageSize),
+                            cancellationToken: cancellationToken)
+                        .ThenSideEffectAction(items => items.ForEach(updateAction));
+
+                    await UpdateManyAsync(pagingUpdateItems, dismissSendEvent, cancellationToken);
+                }
+            },
+            maxItemCounts: await CountAsync(predicate, cancellationToken),
+            pageSize: pageSize);
+    }
+
+    /// <summary>
+    /// Use scrolling paging when every time to update will decrease the total items get from the "predicate"
+    /// </summary>
+    public async Task UpdateManyScrollingPagingAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        Action<TEntity> updateAction,
+        int pageSize,
+        bool dismissSendEvent = false,
+        CancellationToken cancellationToken = default)
+    {
+        await Util.Pager.ExecuteScrollingPagingAsync(
+            async () =>
+            {
+                using (var uow = UowManager().CreateNewUow())
+                {
+                    var pagingUpdateItems = await GetAllAsync(
+                            GetQuery(uow).Where(predicate).Take(pageSize),
+                            cancellationToken: cancellationToken)
+                        .ThenSideEffectAction(items => items.ForEach(updateAction));
+
+                    return await UpdateManyAsync(pagingUpdateItems, dismissSendEvent, cancellationToken);
+                }
+            });
+    }
 }

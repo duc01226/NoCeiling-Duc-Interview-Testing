@@ -42,13 +42,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryDbSet.AsQueryable();
     public IUnitOfWork? MappedUnitOfWork { get; set; }
 
-    public async Task SaveChangesAsync()
+    public new Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
-            async () => await base.SaveChangesAsync(),
-            Logger,
-            PersistenceConfiguration,
-            forWriteQuery: true);
+        return base.SaveChangesAsync(cancellationToken);
     }
 
     public IQueryable<TEntity> GetQuery<TEntity>() where TEntity : class, IEntity
@@ -135,11 +131,6 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 await ApplicationDataMigrationHistoryDbSet.AddAsync(
                     new PlatformDataMigrationHistory(DbInitializedApplicationDataMigrationHistoryName));
         }
-    }
-
-    public async Task<List<TSource>> ToListAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
-    {
-        return await source.ToListAsync(cancellationToken);
     }
 
     public async Task<TSource> FirstAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
@@ -263,16 +254,6 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         await entities.ForEachAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
 
         return await entities.ToTask();
-    }
-
-    public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
-        Expression<Func<TEntity, bool>> predicate,
-        bool dismissSendEvent = false,
-        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
-    {
-        var entities = await GetQuery<TEntity>().Where(predicate).ToListAsync(cancellationToken);
-
-        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, cancellationToken);
     }
 
     public async Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)

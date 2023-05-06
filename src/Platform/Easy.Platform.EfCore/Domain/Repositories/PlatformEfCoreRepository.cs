@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
+using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.ValueObjects.Abstract;
 using Easy.Platform.Domain.Entities;
@@ -69,6 +70,14 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default)
     {
+        if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+            return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
+                async () => await source.ToListAsync(cancellationToken),
+                Logger,
+                PersistenceConfiguration,
+                forWriteQuery: false,
+                source);
+
         return await source.ToListAsync(cancellationToken);
     }
 

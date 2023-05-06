@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
@@ -16,32 +17,53 @@ public interface IPlatformDbContext : IDisposable
 
     public IUnitOfWork? MappedUnitOfWork { get; set; }
 
-    public static async Task<TResult> ExecuteWithBadQueryWarningHandling<TResult>(
+    public static async Task<TResult> ExecuteWithBadQueryWarningHandling<TResult, TSource>(
         Func<Task<TResult>> fn,
         ILogger logger,
         IPlatformPersistenceConfiguration persistenceConfiguration,
-        bool forWriteQuery)
+        bool forWriteQuery,
+        [AllowNull] IQueryable<TSource> queryForResult)
     {
         // Must use stack trace BEFORE await fn() BECAUSE after call get data function, the stack trace get lost because
         // some unknown reason (ToListAsync, FirstOrDefault, XXAsync from ef-core, mongo-db). Could be the thread/task context has been changed
         // after get data from database, it switched to I/O thread pool
         var loggingFullStackTrace = Environment.StackTrace;
 
-        var startQueryTimeStamp = Stopwatch.GetTimestamp();
+        HandleLogTooMuchDataInMemoryBadQueryWarning(queryForResult, persistenceConfiguration, logger, loggingFullStackTrace);
 
-        var result = await fn();
-
-        var queryElapsedTime = Stopwatch.GetElapsedTime(startQueryTimeStamp);
-
-        if (result?.GetType().IsAssignableToGenericType(typeof(IEnumerable<>)) == true &&
-            result.As<IEnumerable<object>>()?.Any() == true &&
-            result.As<IEnumerable<object>>()?.Count() >=
-            persistenceConfiguration.GetBadQueryWarningTotalItemsThreshold(result.As<IEnumerable<object>>().FirstOrDefault()?.GetType()))
-            LogTooMuchDataInMemoryBadQueryWarning(result.As<IEnumerable<object>>(), logger, persistenceConfiguration, loggingFullStackTrace);
-        if (queryElapsedTime.TotalMilliseconds >= persistenceConfiguration.BadQueryWarning.GetSlowQueryMillisecondsThreshold(forWriteQuery))
-            LogSlowQueryBadQueryWarning(queryElapsedTime, logger, persistenceConfiguration, loggingFullStackTrace);
+        var result = await HandleLogSlowQueryBadQueryWarning(fn, persistenceConfiguration, logger, loggingFullStackTrace, forWriteQuery);
 
         return result;
+
+        static void HandleLogTooMuchDataInMemoryBadQueryWarning(
+            [AllowNull] IQueryable<TSource> queryForResult,
+            IPlatformPersistenceConfiguration persistenceConfiguration,
+            ILogger logger,
+            string loggingFullStackTrace)
+        {
+            var queryResultCount = queryForResult?.Count();
+
+            if (queryForResult?.Count() >= persistenceConfiguration.BadQueryWarning.TotalItemsThreshold)
+                LogTooMuchDataInMemoryBadQueryWarning(queryResultCount.Value, logger, persistenceConfiguration, loggingFullStackTrace);
+        }
+
+        static async Task<TResult> HandleLogSlowQueryBadQueryWarning(
+            Func<Task<TResult>> fn,
+            IPlatformPersistenceConfiguration persistenceConfiguration,
+            ILogger logger,
+            string loggingFullStackTrace,
+            bool forWriteQuery)
+        {
+            var startQueryTimeStamp = Stopwatch.GetTimestamp();
+
+            var result = await fn();
+
+            var queryElapsedTime = Stopwatch.GetElapsedTime(startQueryTimeStamp);
+
+            if (queryElapsedTime.TotalMilliseconds >= persistenceConfiguration.BadQueryWarning.GetSlowQueryMillisecondsThreshold(forWriteQuery))
+                LogSlowQueryBadQueryWarning(queryElapsedTime, logger, persistenceConfiguration, loggingFullStackTrace);
+            return result;
+        }
     }
 
     public static void LogSlowQueryBadQueryWarning(
@@ -60,20 +82,21 @@ public interface IPlatformDbContext : IDisposable
     }
 
     public static void LogTooMuchDataInMemoryBadQueryWarning(
-        IEnumerable<object> result,
+        int totalCount,
         ILogger logger,
         IPlatformPersistenceConfiguration persistenceConfiguration,
         string loggingStackTrace)
     {
         logger.Log(
             persistenceConfiguration.BadQueryWarning.IsLogWarningAsError ? LogLevel.Error : LogLevel.Warning,
-            "[BadQueryWarning][IsLogWarningAsError:{IsLogWarningAsError}] Get too much of items into memory query execution. Threshold:{Threshold}. FullTrackTrace:{TrackTrace}",
+            "[BadQueryWarning][IsLogWarningAsError:{IsLogWarningAsError}] Get too much of items into memory query execution. TotalItems:{TotalItems}; Threshold:{Threshold}. FullTrackTrace:{TrackTrace}",
             persistenceConfiguration.BadQueryWarning.IsLogWarningAsError,
-            persistenceConfiguration.GetBadQueryWarningTotalItemsThreshold(result.First().GetType()),
+            totalCount,
+            persistenceConfiguration.BadQueryWarning.TotalItemsThreshold,
             loggingStackTrace);
     }
 
-    public Task SaveChangesAsync();
+    public Task SaveChangesAsync(CancellationToken cancellationToken = default);
 
     public IQueryable<TEntity> GetQuery<TEntity>() where TEntity : class, IEntity;
 
@@ -82,10 +105,6 @@ public interface IPlatformDbContext : IDisposable
     public Task MigrateApplicationDataAsync(IServiceProvider serviceProvider);
 
     public Task Initialize(IServiceProvider serviceProvider);
-
-    public Task<List<TSource>> ToListAsync<TSource>(
-        IQueryable<TSource> source,
-        CancellationToken cancellationToken = default);
 
     public Task<TSource> FirstOrDefaultAsync<TSource>(
         IQueryable<TSource> source,
@@ -144,11 +163,10 @@ public interface IPlatformDbContext : IDisposable
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        var entities = await GetAllAsync<TEntity, TEntity>(query => query.Where(predicate), cancellationToken);
+        var toUpdateEntities = await GetAllAsync<TEntity, TEntity>(query => query.Where(predicate), cancellationToken)
+            .ThenSideEffectAction(items => items.ForEach(updateAction));
 
-        entities.ForEach(updateAction);
-
-        return await UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, cancellationToken);
+        return await UpdateManyAsync<TEntity, TPrimaryKey>(toUpdateEntities, dismissSendEvent, cancellationToken);
     }
 
     public Task DeleteAsync<TEntity, TPrimaryKey>(
@@ -171,10 +189,15 @@ public interface IPlatformDbContext : IDisposable
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
-    public Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
+    public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
         Expression<Func<TEntity, bool>> predicate,
         bool dismissSendEvent = false,
-        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        var toDeleteEntities = await GetAllAsync(GetQuery<TEntity>().Where(predicate), cancellationToken);
+
+        return await DeleteManyAsync<TEntity, TPrimaryKey>(toDeleteEntities, dismissSendEvent, cancellationToken);
+    }
 
     public Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
