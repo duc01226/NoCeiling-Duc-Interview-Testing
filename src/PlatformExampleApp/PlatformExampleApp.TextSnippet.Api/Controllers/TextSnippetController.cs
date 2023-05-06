@@ -52,7 +52,7 @@ public class TextSnippetController : PlatformBaseController
         // Test case use default CacheEntryOptions. Could be configured via override DefaultPlatformCacheEntryOptions in module
         return await CacheRepositoryProvider.GetCollection<TextSnippetCollectionCacheKeyProvider>()
             .CacheRequestAsync(
-                () => Cqrs.SendQuery(request),
+                async () => await Cqrs.SendQuery(request),
                 requestKeyParts: new object[]
                 {
                     nameof(Search), request

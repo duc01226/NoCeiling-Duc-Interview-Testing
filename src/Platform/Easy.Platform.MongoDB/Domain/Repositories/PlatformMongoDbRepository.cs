@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
+using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Repositories;
@@ -37,16 +38,33 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
     }
 
     public override async Task<List<TSource>> ToListAsync<TSource>(
-        IQueryable<TSource> source,
+        IEnumerable<TSource> source,
         CancellationToken cancellationToken = default)
     {
-        // Use ToAsyncEnumerable behind the scene to support true enumerable like ef-core. Then can select anything and it will work.
-        // Default as Enumerable from IQueryable still like Queryable which cause error query could not be translated for free select using constructor map for example
-        return await ToAsyncEnumerable(source.As<IMongoQueryable<TSource>>(), cancellationToken).ToListAsync(cancellationToken).AsTask();
+        if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+            return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
+                async () => await DoToListAsync(source, cancellationToken),
+                Logger,
+                PersistenceConfiguration,
+                forWriteQuery: false,
+                source);
+
+        return await DoToListAsync(source, cancellationToken);
+
+        async Task<List<TSource>> DoToListAsync<TSource>(
+            IEnumerable<TSource> source,
+            CancellationToken cancellationToken = default)
+        {
+            if (source.As<IMongoQueryable<TSource>>() == null) return source.ToList();
+
+            // Use ToAsyncEnumerable behind the scene to support true enumerable like ef-core. Then can select anything and it will work.
+            // Default as Enumerable from IQueryable still like Queryable which cause error query could not be translated for free select using constructor map for example
+            return await ToAsyncEnumerable(source, cancellationToken).ToListAsync(cancellationToken).AsTask();
+        }
     }
 
     public override async IAsyncEnumerable<TSource> ToAsyncEnumerable<TSource>(
-        IQueryable<TSource> source,
+        IEnumerable<TSource> source,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         using (var cursor = await source.As<IMongoQueryable<TSource>>().ToCursorAsync(cancellationToken).ConfigureAwait(false))
@@ -66,6 +84,16 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         CancellationToken cancellationToken = default)
     {
         return await source.As<IMongoQueryable<TSource>>().FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public override async Task<TSource> FirstOrDefaultAsync<TSource>(
+        IEnumerable<TSource> query,
+        CancellationToken cancellationToken = default)
+    {
+        if (query.As<IMongoQueryable<TSource>>() != null)
+            return await FirstOrDefaultAsync(query.As<IMongoQueryable<TSource>>(), cancellationToken);
+
+        return query.FirstOrDefault();
     }
 
     public override async Task<TSource> FirstAsync<TSource>(

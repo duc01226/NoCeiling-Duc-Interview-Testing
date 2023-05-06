@@ -55,20 +55,9 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         return uow.UowOfType<TUow>().DbContext;
     }
 
-    public virtual async Task<List<TSource>> ToListAsync<TSource>(
-        IQueryable<TSource> source,
-        CancellationToken cancellationToken = default)
-    {
-        if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
-            return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
-                async () => await ToAsyncEnumerable(source, cancellationToken).ToListAsync(cancellationToken).AsTask(),
-                Logger,
-                PersistenceConfiguration,
-                forWriteQuery: false,
-                source);
-
-        return await ToAsyncEnumerable(source, cancellationToken).ToListAsync(cancellationToken).AsTask();
-    }
+    public abstract Task<List<TSource>> ToListAsync<TSource>(
+        IEnumerable<TSource> source,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Use ToAsyncEnumerable to convert IQueryable to IAsyncEnumerable to help return data like a stream. Also help
@@ -76,7 +65,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     /// Default as Enumerable from IQueryable still like Queryable which cause error query could not be translated for free select using constructor map for example
     /// </summary>
     public abstract IAsyncEnumerable<TSource> ToAsyncEnumerable<TSource>(
-        IQueryable<TSource> source,
+        IEnumerable<TSource> source,
         CancellationToken cancellationToken = default);
 
     public abstract Task<TSource?> FirstOrDefaultAsync<TSource>(
@@ -159,13 +148,6 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             .GetResult();
     }
 
-    public override async Task<TEntity?> FirstOrDefaultAsync(
-        IQueryable<TEntity> query,
-        CancellationToken cancellationToken = default)
-    {
-        return await FirstOrDefaultAsync(query, cancellationToken);
-    }
-
     public override async Task<TEntity> FirstAsync(
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default,
@@ -242,6 +224,26 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
+    {
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
+            async (uow, query) => await ToListAsync(queryBuilder(uow, query), cancellationToken),
+            loadRelatedEntities);
+    }
+
+    public override async Task<List<TSelector>> GetAllAsync<TSelector>(
+        Func<IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+    {
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
+            async (uow, query) => await ToListAsync(queryBuilder(query), cancellationToken),
+            loadRelatedEntities);
+    }
+
+    public override async Task<List<TSelector>> GetAllAsync<TSelector>(
+        Func<IUnitOfWork, IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForRead(
             async (uow, query) => await ToListAsync(queryBuilder(uow, query), cancellationToken),

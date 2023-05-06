@@ -22,7 +22,7 @@ public interface IPlatformDbContext : IDisposable
         ILogger logger,
         IPlatformPersistenceConfiguration persistenceConfiguration,
         bool forWriteQuery,
-        [AllowNull] IQueryable<TSource> queryForResult)
+        [AllowNull] IEnumerable<TSource> queryForResult)
     {
         // Must use stack trace BEFORE await fn() BECAUSE after call get data function, the stack trace get lost because
         // some unknown reason (ToListAsync, FirstOrDefault, XXAsync from ef-core, mongo-db). Could be the thread/task context has been changed
@@ -36,7 +36,7 @@ public interface IPlatformDbContext : IDisposable
         return result;
 
         static void HandleLogTooMuchDataInMemoryBadQueryWarning(
-            [AllowNull] IQueryable<TSource> queryForResult,
+            [AllowNull] IEnumerable<TSource> queryForResult,
             IPlatformPersistenceConfiguration persistenceConfiguration,
             ILogger logger,
             string loggingFullStackTrace)
