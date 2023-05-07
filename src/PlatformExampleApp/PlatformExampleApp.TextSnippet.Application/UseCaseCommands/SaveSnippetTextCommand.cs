@@ -273,7 +273,7 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
                         queryBuilder: query => query.Take(1).ToDictionary(p => p.Id, p => p),
                         cancellationToken),
                     textSnippetEntityRepository.GetAllAsync(
-                        queryBuilder: query => query.Take(1).GroupBy(p => p.Id, (key, entities) => entities.OrderBy(_ => _.Id).First()),
+                        queryBuilder: query => query.Take(1).GroupBy(p => p.Id, (key, entities) => new { id = key, count = entities.Count() }),
                         cancellationToken));
 
                 await textSnippetEntityRepository.UpdateAsync(
