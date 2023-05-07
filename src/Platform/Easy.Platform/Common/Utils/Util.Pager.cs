@@ -7,15 +7,16 @@ public static partial class Util
     public static class Pager
     {
         /// <summary>
-        /// Support execute async action paged.
+        /// Support execute async action paged. <br />
+        /// executeFn: (int skipCount, int pageSize) =>
         /// </summary>
         /// <param name="executeFn">Execute function async. Input is: skipCount, pageSize.</param>
-        /// <param name="maxItemCounts">Max items count</param>
+        /// <param name="maxItemCount">Max items count</param>
         /// <param name="pageSize">Page size to execute.</param>
         /// <returns>Task.</returns>
         public static async Task ExecutePagingAsync(
             Func<int, int, Task> executeFn,
-            long maxItemCounts,
+            long maxItemCount,
             int pageSize)
         {
             var currentSkipItems = 0;
@@ -26,19 +27,19 @@ public static partial class Util
                 currentSkipItems += pageSize;
 
                 GC.Collect();
-            } while (currentSkipItems < maxItemCounts);
+            } while (currentSkipItems < maxItemCount);
         }
 
         /// <summary>
         /// Support execute async action paged with return value
         /// </summary>
         /// <param name="executeFn">Execute function async. Input is: skipCount, pageSize.</param>
-        /// <param name="maxItemCounts">Max items count</param>
+        /// <param name="maxItemCount">Max items count</param>
         /// <param name="pageSize">Page size to execute.</param>
         /// <returns>Task.</returns>
         public static async Task<List<TPagedResult>> ExecutePagingAsync<TPagedResult>(
             Func<int, int, Task<TPagedResult>> executeFn,
-            long maxItemCounts,
+            long maxItemCount,
             int pageSize)
         {
             var currentSkipItems = 0;
@@ -53,7 +54,7 @@ public static partial class Util
                 currentSkipItems += pageSize;
 
                 GC.Collect();
-            } while (currentSkipItems < maxItemCounts);
+            } while (currentSkipItems < maxItemCount);
 
             return result;
         }

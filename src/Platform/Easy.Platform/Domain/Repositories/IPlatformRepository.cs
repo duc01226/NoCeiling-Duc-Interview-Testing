@@ -367,7 +367,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                     await UpdateManyAsync(pagingUpdateItems, dismissSendEvent, cancellationToken);
                 }
             },
-            maxItemCounts: await CountAsync(predicate, cancellationToken),
+            maxItemCount: await CountAsync(predicate, cancellationToken),
             pageSize: pageSize);
     }
 

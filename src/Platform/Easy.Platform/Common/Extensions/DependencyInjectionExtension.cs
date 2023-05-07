@@ -1,5 +1,7 @@
 using System.Reflection;
 using Easy.Platform.Common.DependencyInjection;
+using Easy.Platform.Common.Utils;
+using Easy.Platform.Common.Validations.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -723,6 +725,13 @@ public static class DependencyInjectionExtension
     /// <inheritdoc cref="ExecuteInject(IServiceProvider,Delegate,object[])" />
     public static async Task<TResult> ExecuteInjectAsync<TResult>(this IServiceScope scope, Delegate method, params object[] manuallyParams)
     {
+        method.Method
+            .Validate(
+                must: methodInfo => methodInfo.GetParameters().Length >= manuallyParams.Length && manuallyParams.All(
+                    (manuallyParam, index) => manuallyParam?.GetType() == null || manuallyParam.GetType() == methodInfo.GetParameters()[index].ParameterType),
+                errorMsg: "Delegate method parameters signature must start with all parameters correspond to manuallyParams")
+            .EnsureValid();
+
         var parameters = scope.ResolveMethodParameters(method, manuallyParams);
 
         var result = method.DynamicInvoke(parameters);
@@ -801,6 +810,69 @@ public static class DependencyInjectionExtension
     public static async Task<TResult> ExecuteInjectScopedAsync<TResult>(this IServiceProvider serviceProvider, Delegate method, params object[] manuallyParams)
     {
         return await serviceProvider.ExecuteScopedAsync(async scope => await scope.ExecuteInjectAsync<TResult>(method, manuallyParams));
+    }
+
+    /// <summary>
+    /// Support ExecuteInjectScopedAsync paged. <br />
+    /// Method to be executed, the First two parameter MUST BE (int skipCount, int pageSize). <br />
+    /// Then the "manuallyParams" for the method. And the last will be the object you want to be dependency injected
+    /// </summary>
+    /// <param name="maxItemCount">Max items count</param>
+    /// <param name="serviceProvider">serviceProvider</param>
+    /// <param name="pageSize">Page size to execute.</param>
+    /// <param name="method">method to be executed. First two parameter MUST BE (int skipCount, int pageSize)</param>
+    /// <param name="manuallyParams"></param>
+    /// <returns>Task.</returns>
+    public static async Task ExecuteInjectScopedPagingAsync(
+        this IServiceProvider serviceProvider,
+        long maxItemCount,
+        int pageSize,
+        Delegate method,
+        params object[] manuallyParams)
+    {
+        method.Method
+            .Validate(
+                must: p => p.GetParameters().Length >= 2 && p.GetParameters().Take(2).All(_ => _.ParameterType == typeof(int)),
+                "Method parameters must start with (int skipCount, int pageSize)")
+            .EnsureValid();
+
+        await Util.Pager.ExecutePagingAsync(
+            async (skipCount, pageSize) =>
+            {
+                await serviceProvider.ExecuteInjectScopedAsync(
+                    method,
+                    manuallyParams: Util.ListBuilder.NewArray<object>(skipCount, pageSize).Concat(manuallyParams).ToArray());
+            },
+            maxItemCount: maxItemCount,
+            pageSize: pageSize);
+    }
+
+    /// <summary>
+    /// Support ExecuteInjectScopedAsync scrolling paging. <br />
+    /// Then the "manuallyParams" for the method. And the last will be the object you want to be dependency injected
+    /// </summary>
+    public static async Task ExecuteInjectScopedScrollingPagingAsync<TItem>(
+        this IServiceProvider serviceProvider,
+        Delegate method,
+        params object[] manuallyParams)
+    {
+        await Util.Pager.ExecuteScrollingPagingAsync(
+            async () => await serviceProvider.ExecuteInjectScopedAsync<List<TItem>>(method, manuallyParams: manuallyParams));
+    }
+
+    /// <summary>
+    /// Support ExecuteInjectScopedAsync scrolling paging. <br />
+    /// Then the "manuallyParams" for the method. And the last will be the object you want to be dependency injected
+    /// </summary>
+    public static async Task ExecuteInjectScopedScrollingPagingAsync<TItem>(
+        this IServiceProvider serviceProvider,
+        int maxExecutionCount,
+        Delegate method,
+        params object[] manuallyParams)
+    {
+        await Util.Pager.ExecuteScrollingPagingAsync(
+            async () => await serviceProvider.ExecuteInjectScopedAsync<List<TItem>>(method, manuallyParams: manuallyParams),
+            maxExecutionCount: maxExecutionCount);
     }
 
     public enum ReplaceServiceStrategy
