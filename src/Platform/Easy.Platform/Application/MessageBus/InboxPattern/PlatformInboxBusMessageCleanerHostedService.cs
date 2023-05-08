@@ -105,10 +105,11 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
 
     protected async Task CleanInboxEventBusMessage(CancellationToken cancellationToken)
     {
-        var toCleanMessageCount = await ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>()
-            .CountAsync(
-                PlatformInboxBusMessage.ToCleanInboxEventBusMessagesExpr(DeleteProcessedMessageInSeconds(), DeleteExpiredFailedMessageInSeconds()),
-                cancellationToken);
+        var toCleanMessageCount = await ServiceProvider.ExecuteScopedAsync(
+            p => p.ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>()
+                .CountAsync(
+                    PlatformInboxBusMessage.ToCleanInboxEventBusMessagesExpr(DeleteProcessedMessageInSeconds(), DeleteExpiredFailedMessageInSeconds()),
+                    cancellationToken));
 
         if (toCleanMessageCount > 0)
         {
