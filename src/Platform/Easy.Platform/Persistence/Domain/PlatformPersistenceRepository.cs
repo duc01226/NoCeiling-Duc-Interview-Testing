@@ -45,7 +45,8 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                 Logger,
                 PersistenceConfiguration,
                 forWriteQuery: true,
-                queryForResult: null);
+                resultQuery: null,
+                resultQueryStringBuilder: null);
 
         return await base.ExecuteAutoOpenUowUsingOnceTimeForWrite(action);
     }

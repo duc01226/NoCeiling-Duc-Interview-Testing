@@ -50,4 +50,10 @@ public static class MongoQueryableExtensions
     {
         return await MongoQueryable.AnyAsync(source.As<IMongoQueryable<TSource>>(), predicate, cancellationToken);
     }
+
+    public static string ToQueryString<TSource>(
+        this IMongoQueryable<TSource> source)
+    {
+        return $"[ Query:{source}; ElementType.Name:{source.ElementType.Name}; ]";
+    }
 }

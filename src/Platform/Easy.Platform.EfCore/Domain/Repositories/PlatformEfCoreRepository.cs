@@ -76,7 +76,9 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
                 Logger,
                 PersistenceConfiguration,
                 forWriteQuery: false,
-                source);
+                resultQuery: source,
+                resultQueryStringBuilder: source.As<IQueryable<TSource>>()
+                    ?.Pipe(queryable => queryable != null ? () => queryable.ToQueryString() : (Func<string>)null));
 
         return await (source.As<IQueryable<TSource>>()?.ToListAsync(cancellationToken) ?? source.ToList().ToTask());
     }

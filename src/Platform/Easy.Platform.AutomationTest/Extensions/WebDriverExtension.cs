@@ -11,11 +11,13 @@ public static class WebDriverExtension
         this IWebDriver webDriver,
         TSettings settings,
         Dictionary<string, string?>? queryParams = null,
-        Dictionary<string, string>? routeParams = null)
+        Dictionary<string, string>? routeParams = null
+    )
         where TPage : class, IPage<TPage, TSettings>
         where TSettings : AutomationTestSettings
     {
-        var page = IPage.CreateInstance<TPage, TSettings>(webDriver, settings)
+        var page = IPage
+            .CreateInstance<TPage, TSettings>(webDriver, settings)
             .With(_ => _.QueryParams = queryParams)
             .With(_ => _.PathRouteParams = routeParams);
 
@@ -24,18 +26,15 @@ public static class WebDriverExtension
         return page;
     }
 
-    public static IPage NavigatePageByFullUrl<TSettings>(
-        this IWebDriver webDriver,
-        Assembly definedPageAssembly,
-        TSettings settings,
-        string url)
+    public static IPage NavigatePageByFullUrl<TSettings>(this IWebDriver webDriver, Assembly definedPageAssembly, TSettings settings, string url)
         where TSettings : AutomationTestSettings
     {
         var page = IPage.CreateInstanceByMatchingUrl(definedPageAssembly, url, webDriver, settings);
 
         if (page != null)
             webDriver.Navigate().GoToUrl(page.FullUrl);
-        else throw new Exception(message: $"Not found any defined page class which match the given url {url}");
+        else
+            throw new Exception(message: $"Not found any defined page class which match the given url {url}");
 
         return page;
     }
@@ -46,7 +45,8 @@ public static class WebDriverExtension
         TSettings settings,
         string appName,
         string path,
-        string? queryParams = null)
+        string? queryParams = null
+    )
         where TSettings : AutomationTestSettings
     {
         return NavigatePageByUrlInfo(webDriver, definedPageAssembly, settings, appName, path, queryParams, fullUrl: out var _);
@@ -59,7 +59,8 @@ public static class WebDriverExtension
         string appName,
         string path,
         string? queryParams,
-        out string fullUrl)
+        out string fullUrl
+    )
         where TSettings : AutomationTestSettings
     {
         fullUrl = IPage.BuildFullUrl(settings, appName, path, queryParams).AbsoluteUri;
@@ -67,13 +68,10 @@ public static class WebDriverExtension
         return NavigatePageByFullUrl(webDriver, definedPageAssembly, settings, fullUrl);
     }
 
-
     /// <summary>
     /// Try <see cref="GetCurrentActiveDefinedPage{TPage,TSettings}" /> or return null if no matched pages
     /// </summary>
-    public static TPage? TryGetCurrentActiveDefinedPage<TPage, TSettings>(
-        this IWebDriver webDriver,
-        TSettings settings)
+    public static TPage? TryGetCurrentActiveDefinedPage<TPage, TSettings>(this IWebDriver webDriver, TSettings settings)
         where TPage : class, IPage<TPage, TSettings>
         where TSettings : AutomationTestSettings
     {
@@ -90,13 +88,12 @@ public static class WebDriverExtension
     /// <summary>
     /// Get current page which must match defined page with the give TPage type. Throw exception if no matched page.
     /// </summary>
-    public static TPage GetCurrentActiveDefinedPage<TPage, TSettings>(
-        this IWebDriver webDriver,
-        TSettings settings)
+    public static TPage GetCurrentActiveDefinedPage<TPage, TSettings>(this IWebDriver webDriver, TSettings settings)
         where TPage : class, IPage<TPage, TSettings>
         where TSettings : AutomationTestSettings
     {
-        var page = IPage.CreateInstance<TPage, TSettings>(webDriver, settings)
+        var page = IPage
+            .CreateInstance<TPage, TSettings>(webDriver, settings)
             .With(page => page.QueryParams = webDriver.Url.ToUri().QueryParams())
             .With(page => page.PathRouteParams = IPage.BuildPathRouteParams(webDriver.Url.ToUri().Path(), page.PathRoute))
             .AssertIsCurrentActivePage();
@@ -104,10 +101,7 @@ public static class WebDriverExtension
         return page;
     }
 
-    public static IPage<TSettings> GetCurrentActiveDefinedPage<TSettings>(
-        this IWebDriver webDriver,
-        TSettings settings,
-        Assembly definedPageAssembly)
+    public static IPage<TSettings> GetCurrentActiveDefinedPage<TSettings>(this IWebDriver webDriver, TSettings settings, Assembly definedPageAssembly)
         where TSettings : AutomationTestSettings
     {
         return GetDefinedPageByUrl(webDriver, settings, definedPageAssembly, webDriver.Url);
@@ -116,7 +110,8 @@ public static class WebDriverExtension
     public static IPage<TSettings>? TryGetCurrentActiveDefinedPage<TSettings>(
         this IWebDriver webDriver,
         TSettings settings,
-        Assembly definedPageAssembly)
+        Assembly definedPageAssembly
+    )
         where TSettings : AutomationTestSettings
     {
         try
@@ -129,7 +124,6 @@ public static class WebDriverExtension
         }
     }
 
-
     /// <summary>
     /// Get current page which must match defined page with the give url. Throw exception if no matched page.
     /// </summary>
@@ -137,15 +131,12 @@ public static class WebDriverExtension
         this IWebDriver webDriver,
         TSettings settings,
         Assembly definedPageAssembly,
-        string url)
+        string url
+    )
         where TSettings : AutomationTestSettings
     {
         var page = IPage
-            .CreateInstanceByMatchingUrl(
-                definedPageAssembly,
-                url,
-                webDriver,
-                settings)
+            .CreateInstanceByMatchingUrl(definedPageAssembly, url, webDriver, settings)
             .EnsureNotNull(exception: () => new Exception(message: $"Not found any defined page class which match the url '{url}'"))!;
 
         return page!;
@@ -154,11 +145,7 @@ public static class WebDriverExtension
     /// <summary>
     /// Try <see cref="GetDefinedPageByUrl{TSettings}" /> or return null if no matched pages
     /// </summary>
-    public static IPage? TryGetDefinedPageByUrl<TSettings>(
-        this IWebDriver webDriver,
-        TSettings settings,
-        Assembly definedPageAssembly,
-        string url)
+    public static IPage? TryGetDefinedPageByUrl<TSettings>(this IWebDriver webDriver, TSettings settings, Assembly definedPageAssembly, string url)
         where TSettings : AutomationTestSettings
     {
         try
@@ -180,7 +167,8 @@ public static class WebDriverExtension
         Assembly definedPageAssembly,
         string appName,
         string path,
-        string? queryParams = null)
+        string? queryParams = null
+    )
         where TSettings : AutomationTestSettings
     {
         var page = IPage
@@ -188,8 +176,12 @@ public static class WebDriverExtension
                 definedPageAssembly,
                 IPage.BuildFullUrl(settings, appName, path, queryParams).AbsoluteUri,
                 webDriver,
-                settings)
-            .EnsureNotNull(exception: () => new Exception(message: $"Not found any defined page class which match the given info: AppName: {appName}; Path: {path};"))!;
+                settings
+            )
+            .EnsureNotNull(
+                exception: () =>
+                    new Exception(message: $"Not found any defined page class which match the given info: AppName: {appName}; Path: {path};")
+            )!;
 
         return page!;
     }
@@ -203,7 +195,8 @@ public static class WebDriverExtension
         Assembly definedPageAssembly,
         string appName,
         string path,
-        string? queryParams = null)
+        string? queryParams = null
+    )
         where TSettings : AutomationTestSettings
     {
         try
@@ -216,9 +209,8 @@ public static class WebDriverExtension
         }
     }
 
-    public static GeneralCurrentActivePage<TSettings> GetGeneralCurrentActivePage<TSettings>(
-        this IWebDriver webDriver,
-        TSettings settings) where TSettings : AutomationTestSettings
+    public static GeneralCurrentActivePage<TSettings> GetGeneralCurrentActivePage<TSettings>(this IWebDriver webDriver, TSettings settings)
+        where TSettings : AutomationTestSettings
     {
         return IPage.CreateInstance<GeneralCurrentActivePage<TSettings>, TSettings>(webDriver, settings);
     }
@@ -227,7 +219,8 @@ public static class WebDriverExtension
         this IWebDriver webDriver,
         AutomationTestSettings settings,
         Dictionary<string, string?>? queryParams = null,
-        Dictionary<string, string>? routeParams = null)
+        Dictionary<string, string>? routeParams = null
+    )
         where TPage : class, IPage<TPage, AutomationTestSettings>
     {
         return NavigatePage<TPage, AutomationTestSettings>(webDriver, settings, queryParams, routeParams);

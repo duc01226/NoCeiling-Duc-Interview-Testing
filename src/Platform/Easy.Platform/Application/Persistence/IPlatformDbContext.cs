@@ -18,50 +18,61 @@ public interface IPlatformDbContext : IDisposable
     public IUnitOfWork? MappedUnitOfWork { get; set; }
 
     public static async Task<TResult> ExecuteWithBadQueryWarningHandling<TResult, TSource>(
-        Func<Task<TResult>> fn,
+        Func<Task<TResult>> getResultFn,
         ILogger logger,
         IPlatformPersistenceConfiguration persistenceConfiguration,
         bool forWriteQuery,
-        [AllowNull] IEnumerable<TSource> queryForResult)
+        [AllowNull] IEnumerable<TSource> resultQuery,
+        [AllowNull] Func<string> resultQueryStringBuilder)
     {
         // Must use stack trace BEFORE await fn() BECAUSE after call get data function, the stack trace get lost because
         // some unknown reason (ToListAsync, FirstOrDefault, XXAsync from ef-core, mongo-db). Could be the thread/task context has been changed
         // after get data from database, it switched to I/O thread pool
         var loggingFullStackTrace = Environment.StackTrace;
 
-        HandleLogTooMuchDataInMemoryBadQueryWarning(queryForResult, persistenceConfiguration, logger, loggingFullStackTrace);
+        HandleLogTooMuchDataInMemoryBadQueryWarning(resultQuery, persistenceConfiguration, logger, loggingFullStackTrace, resultQueryStringBuilder);
 
-        var result = await HandleLogSlowQueryBadQueryWarning(fn, persistenceConfiguration, logger, loggingFullStackTrace, forWriteQuery);
+        var result = await HandleLogSlowQueryBadQueryWarning(
+            getResultFn,
+            persistenceConfiguration,
+            logger,
+            loggingFullStackTrace,
+            forWriteQuery,
+            resultQueryStringBuilder);
 
         return result;
 
         static void HandleLogTooMuchDataInMemoryBadQueryWarning(
-            [AllowNull] IEnumerable<TSource> queryForResult,
-            IPlatformPersistenceConfiguration persistenceConfiguration,
-            ILogger logger,
-            string loggingFullStackTrace)
-        {
-            var queryResultCount = queryForResult?.Count();
-
-            if (queryForResult?.Count() >= persistenceConfiguration.BadQueryWarning.TotalItemsThreshold)
-                LogTooMuchDataInMemoryBadQueryWarning(queryResultCount.Value, logger, persistenceConfiguration, loggingFullStackTrace);
-        }
-
-        static async Task<TResult> HandleLogSlowQueryBadQueryWarning(
-            Func<Task<TResult>> fn,
+            [AllowNull] IEnumerable<TSource> resultQuery,
             IPlatformPersistenceConfiguration persistenceConfiguration,
             ILogger logger,
             string loggingFullStackTrace,
-            bool forWriteQuery)
+            [AllowNull] Func<string> resultQueryStringBuilder)
+        {
+            var queryForResultList = resultQuery?.ToList();
+
+            var queryResultCount = queryForResultList?.Count;
+
+            if (queryForResultList?.Count >= persistenceConfiguration.BadQueryWarning.TotalItemsThreshold)
+                LogTooMuchDataInMemoryBadQueryWarning(queryResultCount.Value, logger, persistenceConfiguration, loggingFullStackTrace, resultQueryStringBuilder);
+        }
+
+        static async Task<TResult> HandleLogSlowQueryBadQueryWarning(
+            Func<Task<TResult>> getResultFn,
+            IPlatformPersistenceConfiguration persistenceConfiguration,
+            ILogger logger,
+            string loggingFullStackTrace,
+            bool forWriteQuery,
+            [AllowNull] Func<string> resultQueryStringBuilder)
         {
             var startQueryTimeStamp = Stopwatch.GetTimestamp();
 
-            var result = await fn();
+            var result = await getResultFn();
 
             var queryElapsedTime = Stopwatch.GetElapsedTime(startQueryTimeStamp);
 
             if (queryElapsedTime.TotalMilliseconds >= persistenceConfiguration.BadQueryWarning.GetSlowQueryMillisecondsThreshold(forWriteQuery))
-                LogSlowQueryBadQueryWarning(queryElapsedTime, logger, persistenceConfiguration, loggingFullStackTrace);
+                LogSlowQueryBadQueryWarning(queryElapsedTime, logger, persistenceConfiguration, loggingFullStackTrace, resultQueryStringBuilder);
             return result;
         }
     }
@@ -70,14 +81,16 @@ public interface IPlatformDbContext : IDisposable
         TimeSpan queryElapsedTime,
         ILogger logger,
         IPlatformPersistenceConfiguration persistenceConfiguration,
-        string loggingStackTrace)
+        string loggingStackTrace,
+        [AllowNull] Func<string> resultQueryStringBuilder)
     {
         logger.Log(
             persistenceConfiguration.BadQueryWarning.IsLogWarningAsError ? LogLevel.Error : LogLevel.Warning,
-            "[BadQueryWarning][IsLogWarningAsError:{IsLogWarningAsError}] Slow query execution. QueryElapsedTime.TotalMilliseconds:{QueryElapsedTime}. SlowQueryMillisecondsThreshold:{SlowQueryMillisecondsThreshold}. TrackTrace:{TrackTrace}",
+            "[BadQueryWarning][IsLogWarningAsError:{IsLogWarningAsError}] Slow query execution. QueryElapsedTime.TotalMilliseconds:{QueryElapsedTime}. SlowQueryMillisecondsThreshold:{SlowQueryMillisecondsThreshold}. QueryString:{QueryString}. FullTrackTrace:{TrackTrace}",
             persistenceConfiguration.BadQueryWarning.IsLogWarningAsError,
             queryElapsedTime.TotalMilliseconds,
             persistenceConfiguration.BadQueryWarning.SlowQueryMillisecondsThreshold,
+            resultQueryStringBuilder?.Invoke(),
             loggingStackTrace);
     }
 
@@ -85,14 +98,16 @@ public interface IPlatformDbContext : IDisposable
         int totalCount,
         ILogger logger,
         IPlatformPersistenceConfiguration persistenceConfiguration,
-        string loggingStackTrace)
+        string loggingStackTrace,
+        [AllowNull] Func<string> resultQueryStringBuilder)
     {
         logger.Log(
             persistenceConfiguration.BadQueryWarning.IsLogWarningAsError ? LogLevel.Error : LogLevel.Warning,
-            "[BadQueryWarning][IsLogWarningAsError:{IsLogWarningAsError}] Get too much of items into memory query execution. TotalItems:{TotalItems}; Threshold:{Threshold}. FullTrackTrace:{TrackTrace}",
+            "[BadQueryWarning][IsLogWarningAsError:{IsLogWarningAsError}] Get too much of items into memory query execution. TotalItems:{TotalItems}; Threshold:{Threshold}. QueryString:{QueryString}. FullTrackTrace:{TrackTrace}",
             persistenceConfiguration.BadQueryWarning.IsLogWarningAsError,
             totalCount,
             persistenceConfiguration.BadQueryWarning.TotalItemsThreshold,
+            resultQueryStringBuilder?.Invoke(),
             loggingStackTrace);
     }
 

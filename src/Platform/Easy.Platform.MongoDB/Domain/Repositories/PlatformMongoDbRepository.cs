@@ -6,6 +6,7 @@ using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Repositories;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.MongoDB.Domain.UnitOfWork;
+using Easy.Platform.MongoDB.Extensions;
 using Easy.Platform.Persistence.Domain;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Misc;
@@ -47,7 +48,9 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
                 Logger,
                 PersistenceConfiguration,
                 forWriteQuery: false,
-                source);
+                resultQuery: source,
+                resultQueryStringBuilder: source.As<IMongoQueryable<TSource>>()
+                    ?.Pipe(queryable => queryable != null ? () => queryable.ToQueryString() : (Func<string>)null));
 
         return await DoToListAsync(source, cancellationToken);
 
