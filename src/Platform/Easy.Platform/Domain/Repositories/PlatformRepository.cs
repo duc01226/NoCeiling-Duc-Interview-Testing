@@ -411,7 +411,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForWrite<TResult>(
         Func<IUnitOfWork, Task<TResult>> action)
     {
-        if (UnitOfWorkManager.TryGetCurrentActiveUow() == null || !UnitOfWorkManager.CurrentActiveUow().IsPseudoTransactionUow())
+        if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
         {
             var uow = UnitOfWorkManager.CreateNewUow();
 
