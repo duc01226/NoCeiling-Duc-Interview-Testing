@@ -23,11 +23,6 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     protected IServiceProvider ServiceProvider { get; }
 
     /// <summary>
-    /// Override this return True to force using the same current active uow for query. May only needed to support old legacy code using platform repository.
-    /// </summary>
-    protected virtual bool ForceUseSameCurrentActiveUowIfExistingForQuery => false;
-
-    /// <summary>
     /// Return current active uow. May throw exception if not existing one.
     /// </summary>
     public IUnitOfWork CurrentActiveUow()
@@ -357,8 +352,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Func<IUnitOfWork, IQueryable<TEntity>, Task<TResult>> readDataFn,
         Expression<Func<TEntity, object>>[]? loadRelatedEntities)
     {
-        if (UnitOfWorkManager.TryGetCurrentActiveUow() == null ||
-            (!UnitOfWorkManager.CurrentActiveUow().IsPseudoTransactionUow() && !ForceUseSameCurrentActiveUowIfExistingForQuery))
+        if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
         {
             var uow = UnitOfWorkManager.CreateNewUow();
 

@@ -47,8 +47,6 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
 
     protected Type[] ToCheckNoNeedKeepUowPrimitiveTypes { get; }
 
-    protected virtual bool IsDefaultNoTrackingQuery => true;
-
     public virtual DbSet<TEntity> Table => DbContext.Set<TEntity>();
 
     public virtual DbSet<TEntity> GetTable(IUnitOfWork uow)
@@ -59,7 +57,6 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
     public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return GetTable(uow)
-            .PipeIf(IsDefaultNoTrackingQuery && !DbContextOptions.IsUsingLazyLoadingProxy(), p => p.AsNoTracking())
             .AsQueryable()
             .PipeIf(
                 loadRelatedEntities.Any(),

@@ -39,14 +39,4 @@ internal class TextSnippetRootRepository<TEntity>
         serviceProvider)
     {
     }
-
-    // EXAMPLE SOME OVERRIDE TO USE FOR LEGACY CODE IF NEEDED
-    //// Override ExecuteAutoOpenUowUsingOnceTimeForRead because this has legacy code. After migrated to platform, the old code might
-    //// have place where in command it has unit of work, tracking entity to update and do not want query get data from separated uow
-    //// if the ActiveUow existing
-    //// TODO: Could refactor remove this override and test ensure that everything works, or fix any place that has error by calling repository create/update
-    //// function to attach the entity
-    protected override bool ForceUseSameCurrentActiveUowIfExistingForQuery => true;
-
-    //protected override bool IsDefaultNoTrackingQuery =>true;
 }
