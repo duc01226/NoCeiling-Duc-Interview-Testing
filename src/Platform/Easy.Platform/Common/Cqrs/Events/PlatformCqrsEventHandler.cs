@@ -27,30 +27,41 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     public virtual async Task Handle(TEvent notification, CancellationToken cancellationToken)
     {
-        if (!HandleWhen(notification)) return;
+        try
+        {
+            if (!HandleWhen(notification)) return;
 
-        if (ExecuteSeparatelyInBackgroundThread() && !IsCurrentInstanceExecutedInSeparateThread)
-            // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
-            // so the it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
-            Util.TaskRunner.QueueActionInBackground(
-                async () =>
-                {
-                    await PlatformApplicationGlobal.RootServiceProvider
-                        .ExecuteInjectScopedAsync(
-                            async (IServiceProvider sp) =>
-                            {
-                                var thisHandlerNewInstance = sp.GetServices<INotificationHandler<TEvent>>()
-                                    .First(p => p.GetType() == GetType())
-                                    .As<PlatformCqrsEventHandler<TEvent>>()
-                                    .With(_ => _.IsCurrentInstanceExecutedInSeparateThread = true);
+            if (ExecuteSeparatelyInBackgroundThread() && !IsCurrentInstanceExecutedInSeparateThread)
+                // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
+                // so the it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
+                Util.TaskRunner.QueueActionInBackground(
+                    async () =>
+                    {
+                        await PlatformApplicationGlobal.RootServiceProvider
+                            .ExecuteInjectScopedAsync(
+                                async (IServiceProvider sp) =>
+                                {
+                                    var thisHandlerNewInstance = sp.GetServices<INotificationHandler<TEvent>>()
+                                        .First(p => p.GetType() == GetType())
+                                        .As<PlatformCqrsEventHandler<TEvent>>()
+                                        .With(_ => _.IsCurrentInstanceExecutedInSeparateThread = true);
 
-                                await thisHandlerNewInstance.Handle(notification, default);
-                            });
-                },
-                PlatformApplicationGlobal.LoggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}"),
-                cancellationToken: default);
-        else
-            await ExecuteHandleAsync(notification, cancellationToken);
+                                    await thisHandlerNewInstance.Handle(notification, default);
+                                });
+                    },
+                    PlatformApplicationGlobal.LoggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}"),
+                    cancellationToken: default);
+            else
+                await ExecuteHandleAsync(notification, cancellationToken);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(
+                e,
+                "[PlatformCqrsEventHandler] Handle event failed. EventType:{EventType}; HandlerType:{HandlerType}.",
+                notification.GetType().Name,
+                GetType().Name);
+        }
     }
 
     /// <summary>
