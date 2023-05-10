@@ -1,6 +1,6 @@
 using Easy.Platform.Application.Context;
 using Easy.Platform.Application.Context.UserContext;
-using Easy.Platform.Application.Cqrs;
+using Easy.Platform.Application.Cqrs.Events;
 using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
