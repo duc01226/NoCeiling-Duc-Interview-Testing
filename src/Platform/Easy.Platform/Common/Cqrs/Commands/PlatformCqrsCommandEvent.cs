@@ -19,16 +19,15 @@ public class PlatformCqrsCommandEvent<TCommand> : PlatformCqrsCommandEvent
         Action = action;
     }
 
-    public TCommand CommandData { get; set; }
-    public PlatformCqrsCommandEventAction? Action { get; set; }
-
     public override string EventType => EventTypeValue;
     public override string EventName => typeof(TCommand).Name;
     public override string EventAction => Action?.ToString();
+
+    public TCommand CommandData { get; set; }
+    public PlatformCqrsCommandEventAction? Action { get; set; }
 }
 
 public enum PlatformCqrsCommandEventAction
 {
-    Executing,
     Executed
 }

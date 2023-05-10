@@ -32,7 +32,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         this.inboxConfig = inboxConfig;
         ConsumerByNameToTypeDic = messageBusScanner
             .ScanAllDefinedConsumerTypes()
-            .ToDictionary(PlatformInboxMessageBusConsumerHelper.GetConsumerByValue);
+            .ToDictionary(PlatformInboxBusMessage.GetConsumerByValue);
     }
 
     protected Dictionary<string, Type> ConsumerByNameToTypeDic { get; }
@@ -134,7 +134,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         {
             var consumer = scope.ServiceProvider.GetService(consumerType)
                 .As<IPlatformMessageBusConsumer>()
-                .With(_ => _.HandleExistingInboxMessageTrackId = toHandleInboxMessage.GetTrackId());
+                .With(_ => _.HandleExistingInboxMessage = toHandleInboxMessage);
 
             var consumerMessageType = PlatformMessageBusConsumer.GetConsumerMessageType(consumer);
 
@@ -217,7 +217,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         }
     }
 
-    /// <inheritdoc cref="PlatformInboxConfig.NumberOfProcessConsumeInboxMessagesBatch"/>
+    /// <inheritdoc cref="PlatformInboxConfig.NumberOfProcessConsumeInboxMessagesBatch" />
     protected virtual int NumberOfProcessMessagesBatch()
     {
         return inboxConfig.NumberOfProcessConsumeInboxMessagesBatch;
@@ -228,25 +228,25 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         return inboxConfig.ProcessConsumeMessageRetryCount;
     }
 
-    /// <inheritdoc cref="PlatformInboxConfig.MessageProcessingMaximumTimeInSeconds"/>
+    /// <inheritdoc cref="PlatformInboxConfig.MessageProcessingMaximumTimeInSeconds" />
     protected virtual double MessageProcessingMaximumTimeInSeconds()
     {
         return inboxConfig.MessageProcessingMaximumTimeInSeconds;
     }
 
-    /// <inheritdoc cref="PlatformInboxConfig.IsLogConsumerProcessTime"/>
+    /// <inheritdoc cref="PlatformInboxConfig.IsLogConsumerProcessTime" />
     protected virtual bool IsLogConsumerProcessTime()
     {
         return inboxConfig.IsLogConsumerProcessTime;
     }
 
-    /// <inheritdoc cref="PlatformInboxConfig.LogErrorSlowProcessWarningTimeMilliseconds"/>
+    /// <inheritdoc cref="PlatformInboxConfig.LogErrorSlowProcessWarningTimeMilliseconds" />
     protected virtual double LogErrorSlowProcessWarningTimeMilliseconds()
     {
         return inboxConfig.LogErrorSlowProcessWarningTimeMilliseconds;
     }
 
-    /// <inheritdoc cref="PlatformInboxConfig.RetryProcessFailedMessageInSecondsUnit"/>
+    /// <inheritdoc cref="PlatformInboxConfig.RetryProcessFailedMessageInSecondsUnit" />
     protected virtual double RetryProcessFailedMessageDelayTimeInSecondsUnit()
     {
         return inboxConfig.RetryProcessFailedMessageInSecondsUnit;

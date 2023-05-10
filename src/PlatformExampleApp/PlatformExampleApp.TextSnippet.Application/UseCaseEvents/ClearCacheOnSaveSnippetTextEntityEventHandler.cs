@@ -25,6 +25,9 @@ public class ClearCacheOnSaveSnippetTextEntityEventHandler : PlatformCqrsEntityE
         return true;
     }
 
+    // Can override to return False to TURN OFF support for store cqrs event handler as inbox
+    // protected override bool EnableHandleEventFromInboxBusMessage => false;
+
     protected override async Task HandleAsync(
         PlatformCqrsEntityEvent<TextSnippetEntity> @event,
         CancellationToken cancellationToken)
@@ -33,9 +36,10 @@ public class ClearCacheOnSaveSnippetTextEntityEventHandler : PlatformCqrsEntityE
         // Delay because when save snippet text, fulltext index take amount of time to update, so that we wait
         // amount of time for fulltext index update
         // We also set executeOnceImmediately=true to clear cache immediately in case of some index is updated fast
-        await Util.TaskRunner.QueueIntervalAsyncAction(
+        Util.TaskRunner.QueueIntervalAsyncActionInBackground(
             token => cacheRepositoryProvider.Get().RemoveCollectionAsync<TextSnippetCollectionCacheKeyProvider>(token),
             intervalTimeInSeconds: 5,
+            logger: Logger,
             maximumIntervalExecutionCount: 3,
             executeOnceImmediately: true,
             cancellationToken);

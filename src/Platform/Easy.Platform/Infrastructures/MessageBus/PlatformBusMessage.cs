@@ -26,7 +26,7 @@ public class PlatformBusMessage<TPayload> : IPlatformTrackableBusMessage, IPlatf
 
     public virtual string MessageType
     {
-        get => messageType ?? GetDefaultMessageType<PlatformBusMessage<TPayload>>();
+        get => messageType ?? GetDefaultMessageType();
         set => messageType = PlatformBusMessageRoutingKey.AutoFixKeyPart(value);
     }
 
@@ -72,13 +72,12 @@ public class PlatformBusMessage<TPayload> : IPlatformTrackableBusMessage, IPlatf
             message.MessageGroup = messageGroup;
         if (messageAction != null)
             message.MessageAction = messageAction;
-        message.MessageType ??= GetDefaultMessageType<TBusMessage>();
+        message.MessageType ??= GetDefaultMessageType();
 
         return message;
     }
 
-    public static string GetDefaultMessageType<TBusMessage>()
-        where TBusMessage : class, IPlatformWithPayloadBusMessage<TPayload>, IPlatformSelfRoutingKeyBusMessage, IPlatformTrackableBusMessage, new()
+    public static string GetDefaultMessageType()
     {
         return typeof(TPayload).Name;
     }

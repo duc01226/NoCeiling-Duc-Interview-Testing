@@ -45,6 +45,8 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
         ApplicationSettingContext = applicationSettingContext;
     }
 
+    protected override bool EnableHandleEventFromInboxBusMessage => false;
+
     protected IPlatformApplicationUserContextAccessor UserContextAccessor { get; }
 
     protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
@@ -55,19 +57,16 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
         TEvent @event,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            await SendMessage(@event, cancellationToken);
-        }
-        catch (PlatformMessageBusException<TMessage> e)
-        {
-            Logger.LogError(
-                e,
-                $"[{GetType().FullName}] Failed to send {{MessageName}}. Message Info: {{EventBusMessage}}",
-                nameof(TMessage),
-                e.EventBusMessage.ToJson());
-            throw;
-        }
+        await SendMessage(@event, cancellationToken);
+    }
+
+    protected override void LogError(TEvent notification, Exception exception)
+    {
+        Logger.LogError(
+            exception,
+            "[PlatformCqrsEventBusMessageProducer] Failed to send {MessageName}. MessageContent: {MessageContent}",
+            nameof(TMessage),
+            exception.As<PlatformMessageBusException<TMessage>>()?.EventBusMessage.ToJson());
     }
 
     protected virtual async Task SendMessage(TEvent @event, CancellationToken cancellationToken)

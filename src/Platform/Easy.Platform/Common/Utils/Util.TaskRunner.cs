@@ -248,7 +248,7 @@ public static partial class Util
         }
 
         /// <summary>
-        /// Help to profiling an asyncTask. <br/>
+        /// Help to profiling an asyncTask. <br />
         /// afterExecution: elapsedMilliseconds => { } is an optional action to execute. It's input is the task ElapsedMilliseconds of asyncTask execution.
         /// </summary>
         public static async Task ProfileExecutionAsync(
@@ -268,7 +268,7 @@ public static partial class Util
         }
 
         /// <summary>
-        /// Help to profiling an asyncTask. <br/>
+        /// Help to profiling an asyncTask. <br />
         /// afterExecution: (result, elapsedMilliseconds) => { } is an optional action to execute. It's input is the task ElapsedMilliseconds of asyncTask execution.
         /// </summary>
         public static async Task<TResult> ProfileExecutionAsync<TResult>(

@@ -54,7 +54,7 @@ public class PlatformMessageBusScanner : IPlatformMessageBusScanner
             .ToList();
     }
 
-    public List<string> ScanAllDefinedConsumerBindingRoutingKeys()
+    public virtual List<string> ScanAllDefinedConsumerBindingRoutingKeys()
     {
         return AllDefinedMessageBusConsumerAttributes()
             .Select(p => p.ConsumerBindingRoutingKey())
@@ -63,15 +63,16 @@ public class PlatformMessageBusScanner : IPlatformMessageBusScanner
             .ToList();
     }
 
-    public List<Assembly> ScanAssemblies()
+    public virtual List<Assembly> ScanAssemblies()
     {
         return serviceProvider.GetServices<PlatformModule>()
             .Where(p => p is not PlatformInfrastructureModule)
             .Select(p => p.Assembly)
+            .Distinct()
             .ToList();
     }
 
-    public List<PlatformConsumerRoutingKeyAttribute> AllDefinedMessageBusConsumerAttributes()
+    public virtual List<PlatformConsumerRoutingKeyAttribute> AllDefinedMessageBusConsumerAttributes()
     {
         return ScanAllDefinedConsumerTypes()
             .SelectMany(
@@ -89,7 +90,7 @@ public class PlatformMessageBusScanner : IPlatformMessageBusScanner
             .ToList();
     }
 
-    public List<PlatformBusMessageRoutingKey> AllDefaultBindingRoutingKeyForDefinedConsumers()
+    public virtual List<PlatformBusMessageRoutingKey> AllDefaultBindingRoutingKeyForDefinedConsumers()
     {
         return ScanAllDefinedConsumerTypes()
             .Where(messageBusConsumerType => !messageBusConsumerType.GetCustomAttributes<PlatformConsumerRoutingKeyAttribute>().Any())
@@ -99,7 +100,7 @@ public class PlatformMessageBusScanner : IPlatformMessageBusScanner
             .ToList();
     }
 
-    public List<PlatformBusMessageRoutingKey> AllDefaultBindingRoutingKeyForDefinedMessages()
+    public virtual List<PlatformBusMessageRoutingKey> AllDefaultBindingRoutingKeyForDefinedMessages()
     {
         return AllDefinedMessageTypes()
             .Select(messageType => PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(messageType))
@@ -107,7 +108,7 @@ public class PlatformMessageBusScanner : IPlatformMessageBusScanner
             .ToList();
     }
 
-    public List<Type> AllDefinedMessageTypes()
+    public virtual List<Type> AllDefinedMessageTypes()
     {
         return ScanAssemblies()
             .SelectMany(p => p.GetTypes())

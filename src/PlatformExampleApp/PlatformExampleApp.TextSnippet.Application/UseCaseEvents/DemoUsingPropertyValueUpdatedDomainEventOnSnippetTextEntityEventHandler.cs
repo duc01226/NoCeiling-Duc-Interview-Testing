@@ -14,6 +14,11 @@ public class DemoUsingPropertyValueUpdatedDomainEventOnSnippetTextEntityEventHan
     {
     }
 
+    // protected override bool ExecuteSeparatelyInBackgroundThread() => true;
+
+    // Can override to return False to TURN OFF support for store cqrs event handler as inbox
+    // protected override bool EnableHandleEventFromInboxBusMessage => false;
+
     protected override async Task HandleAsync(PlatformCqrsEntityEvent<TextSnippetEntity> @event, CancellationToken cancellationToken)
     {
         // DEMO USING PROPERTY CHANGED DOMAIN EVENT

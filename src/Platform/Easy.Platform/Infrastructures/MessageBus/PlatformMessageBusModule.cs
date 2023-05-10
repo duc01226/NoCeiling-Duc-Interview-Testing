@@ -1,3 +1,4 @@
+using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Common.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +23,6 @@ public abstract class PlatformMessageBusModule : PlatformInfrastructureModule
         serviceCollection.RegisterAllFromType<IPlatformMessageBusProducer>(Assembly);
         serviceCollection.RegisterAllFromType<IPlatformMessageBusConsumer>(Assembly);
         serviceCollection.RegisterAllFromType<IPlatformSelfRoutingKeyBusMessage>(Assembly);
-        serviceCollection.RegisterIfServiceNotExist<IPlatformMessageBusScanner, PlatformMessageBusScanner>();
+        serviceCollection.RegisterIfServiceNotExist<IPlatformMessageBusScanner, PlatformMessageBusScanner>(ServiceLifeTime.Singleton);
     }
 }

@@ -87,9 +87,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
         using (usingUow)
         {
             result = await HandleAsync(request, cancellationToken);
-            await Cqrs.SendEvent(
-                new PlatformCqrsCommandEvent<TCommand>(request, PlatformCqrsCommandEventAction.Executing),
-                cancellationToken);
+
             await usingUow.CompleteAsync(cancellationToken);
         }
 

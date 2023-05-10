@@ -22,7 +22,7 @@ public class TransferSnippetTextToMultiDbDemoEntityNameDomainEventConsumer
     {
     }
 
-    protected override Task InternalHandleAsync(
+    public override Task HandleLogicAsync(
         PlatformBusMessage<TransferSnippetTextToMultiDbDemoEntityNameDomainEvent> message,
         string routingKey)
     {

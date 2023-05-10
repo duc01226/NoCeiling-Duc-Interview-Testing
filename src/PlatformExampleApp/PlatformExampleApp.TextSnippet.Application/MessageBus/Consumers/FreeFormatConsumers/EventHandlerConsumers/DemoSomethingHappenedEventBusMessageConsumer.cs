@@ -26,7 +26,7 @@ public class DemoSomethingHappenedEventBusMessageConsumer : PlatformApplicationM
     {
     }
 
-    protected override Task InternalHandleAsync(DemoSomethingHappenedEventBusMessage message, string routingKey)
+    public override Task HandleLogicAsync(DemoSomethingHappenedEventBusMessage message, string routingKey)
     {
         throw new NotImplementedException();
     }

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Common.Exceptions.Extensions;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
@@ -8,7 +9,7 @@ namespace Easy.Platform.Infrastructures.MessageBus;
 
 public interface IPlatformMessageBusConsumer
 {
-    public string HandleExistingInboxMessageTrackId { get; set; }
+    public PlatformInboxBusMessage HandleExistingInboxMessage { get; set; }
 
     /// <summary>
     /// Config the time in milliseconds to log warning if the process consumer time is over ProcessWarningTimeMilliseconds.
@@ -40,14 +41,22 @@ public interface IPlatformMessageBusConsumer
 public interface IPlatformMessageBusConsumer<in TMessage> : IPlatformMessageBusConsumer
     where TMessage : class, new()
 {
+    /// <summary>
+    /// Main Entry Handle Method
+    /// </summary>
     Task HandleAsync(TMessage message, string routingKey);
+
+    /// <summary>
+    /// Main handle logic only method of the consumer
+    /// </summary>
+    Task HandleLogicAsync(TMessage message, string routingKey);
 }
 
 public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
 {
     public const long DefaultProcessWarningTimeMilliseconds = 5000;
 
-    public string HandleExistingInboxMessageTrackId { get; set; }
+    public PlatformInboxBusMessage HandleExistingInboxMessage { get; set; }
 
     public virtual long? SlowProcessWarningTimeMilliseconds()
     {
@@ -175,7 +184,7 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
     {
         try
         {
-            await InternalHandleAsync(message, routingKey);
+            await HandleLogicAsync(message, routingKey);
         }
         catch (Exception e)
         {
@@ -190,5 +199,5 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
         }
     }
 
-    protected abstract Task InternalHandleAsync(TMessage message, string routingKey);
+    public abstract Task HandleLogicAsync(TMessage message, string routingKey);
 }

@@ -12,6 +12,7 @@ public abstract class PlatformCqrsQueryHandler<TQuery, TResult>
         request.Validate().WithValidationException().EnsureValid();
 
         var result = await HandleAsync(request, cancellationToken);
+
         return result;
     }
 

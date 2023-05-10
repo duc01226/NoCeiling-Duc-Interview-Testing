@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Timing;
 using Easy.Platform.Domain.Entities;
+using Easy.Platform.Infrastructures.MessageBus;
 
 namespace Easy.Platform.Application.MessageBus.InboxPattern;
 
@@ -60,9 +61,9 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
                      p.ConsumeStatus == ConsumeStatuses.Failed);
     }
 
-    public static string BuildId(string trackId, string consumerBy)
+    public static string BuildId(string trackId, Type consumerType)
     {
-        return $"{trackId ?? Guid.NewGuid().ToString()}{BuildIdSeparator}{consumerBy}";
+        return $"{trackId ?? Guid.NewGuid().ToString()}{BuildIdSeparator}{consumerType.Name}";
     }
 
     public static DateTime CalculateNextRetryProcessAfter(
@@ -78,7 +79,7 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
         string trackId,
         string produceFrom,
         string routingKey,
-        string consumerBy,
+        Type consumerType,
         ConsumeStatuses consumeStatus,
         string lastConsumeError = null) where TMessage : class
     {
@@ -86,20 +87,31 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
 
         var result = new PlatformInboxBusMessage
         {
-            Id = BuildId(trackId, consumerBy).TakeTop(IdMaxLength),
+            Id = BuildId(trackId, consumerType).TakeTop(IdMaxLength),
             JsonMessage = message.ToFormattedJson(),
             MessageTypeFullName = message.GetType().FullName.TakeTop(MessageTypeFullNameMaxLength),
             ProduceFrom = produceFrom,
             RoutingKey = routingKey.TakeTop(RoutingKeyMaxLength),
             LastConsumeDate = nowDate,
             CreatedDate = nowDate,
-            ConsumerBy = consumerBy,
+            ConsumerBy = GetConsumerByValue(consumerType),
             ConsumeStatus = consumeStatus,
             LastConsumeError = lastConsumeError,
             RetriedProcessCount = lastConsumeError != null ? 1 : 0
         };
 
         return result;
+    }
+
+    public static string GetConsumerByValue<TMessage>(IPlatformMessageBusConsumer<TMessage> consumer)
+        where TMessage : class, new()
+    {
+        return GetConsumerByValue(consumer.GetType());
+    }
+
+    public static string GetConsumerByValue(Type consumerType)
+    {
+        return consumerType.FullName;
     }
 
     public string GetTrackId()

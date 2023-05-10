@@ -31,7 +31,7 @@ public class SaveSnippetTextCommandEventBusMessageConsumer : PlatformCqrsCommand
         return 2000;
     }
 
-    protected override Task InternalHandleAsync(
+    public override Task HandleLogicAsync(
         PlatformBusMessage<PlatformCqrsCommandEvent<SaveSnippetTextCommand>> message,
         string routingKey)
     {

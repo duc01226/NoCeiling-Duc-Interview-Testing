@@ -23,15 +23,13 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         Logger = loggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.PlatformSuffix}.{GetType().Name}");
     }
 
-    public bool IsCurrentInstanceExecutedInSeparateThread { get; set; }
-
     public virtual async Task Handle(TEvent notification, CancellationToken cancellationToken)
     {
         try
         {
             if (!HandleWhen(notification)) return;
 
-            if (ExecuteSeparatelyInBackgroundThread() && !IsCurrentInstanceExecutedInSeparateThread)
+            if (ExecuteSeparatelyInBackgroundThread())
                 // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
                 // so the it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
                 Util.TaskRunner.QueueActionInBackground(
@@ -41,12 +39,10 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                             .ExecuteInjectScopedAsync(
                                 async (IServiceProvider sp) =>
                                 {
-                                    var thisHandlerNewInstance = sp.GetServices<INotificationHandler<TEvent>>()
-                                        .First(p => p.GetType() == GetType())
-                                        .As<PlatformCqrsEventHandler<TEvent>>()
-                                        .With(_ => _.IsCurrentInstanceExecutedInSeparateThread = true);
+                                    var thisHandlerNewInstance = sp.GetRequiredService(GetType())
+                                        .As<PlatformCqrsEventHandler<TEvent>>();
 
-                                    await thisHandlerNewInstance.Handle(notification, default);
+                                    await thisHandlerNewInstance.ExecuteHandleAsync(notification, default);
                                 });
                     },
                     PlatformApplicationGlobal.LoggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}"),
@@ -56,12 +52,24 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         }
         catch (Exception e)
         {
-            Logger.LogError(
-                e,
-                "[PlatformCqrsEventHandler] Handle event failed. EventType:{EventType}; HandlerType:{HandlerType}.",
-                notification.GetType().Name,
-                GetType().Name);
+            LogError(notification, e);
         }
+    }
+
+    public virtual async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
+    {
+        await HandleAsync(@event, cancellationToken);
+    }
+
+    protected virtual void LogError(TEvent notification, Exception exception)
+    {
+        Logger.LogError(
+            exception,
+            "[PlatformCqrsEventHandler] Handle event failed: {ExceptionMessage}. EventType:{EventType}; HandlerType:{HandlerType}. EventContent:{EventContent}",
+            exception.Message,
+            notification.GetType().Name,
+            GetType().Name,
+            notification.ToJson());
     }
 
     /// <summary>
@@ -73,11 +81,6 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
     }
 
     protected abstract Task HandleAsync(TEvent @event, CancellationToken cancellationToken);
-
-    protected virtual async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
-    {
-        await HandleAsync(@event, cancellationToken);
-    }
 
     /// <summary>
     /// Default is False. If true, the event handler will run in separate thread scope with new instance

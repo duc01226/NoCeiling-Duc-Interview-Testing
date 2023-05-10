@@ -15,7 +15,7 @@ public class DemoSendFreeFormatEventBusMessageCommandEventBusConsumer
     {
     }
 
-    protected override Task InternalHandleAsync(DemoSendFreeFormatEventBusMessage message, string routingKey)
+    public override Task HandleLogicAsync(DemoSendFreeFormatEventBusMessage message, string routingKey)
     {
         Logger.LogInformation(
             $"Message {nameof(DemoSendFreeFormatEventBusMessage)} by {GetType().Name} has been handled");
@@ -40,7 +40,7 @@ public class DemoSendFreeFormatInboxEventBusMessageCommandApplicationEventBusCon
     {
     }
 
-    protected override Task InternalHandleAsync(DemoSendFreeFormatEventBusMessage message, string routingKey)
+    public override Task HandleLogicAsync(DemoSendFreeFormatEventBusMessage message, string routingKey)
     {
         Logger.LogInformation($"Message {nameof(DemoSendFreeFormatEventBusMessage)} has been handled");
 

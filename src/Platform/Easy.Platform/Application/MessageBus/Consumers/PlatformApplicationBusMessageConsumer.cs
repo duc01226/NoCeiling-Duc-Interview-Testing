@@ -7,7 +7,27 @@ using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.MessageBus.Consumers;
 
-public interface IPlatformApplicationMessageBusConsumer<in TMessage> : IPlatformMessageBusConsumer<TMessage>
+public interface IPlatformApplicationMessageBusConsumer
+{
+    public static void LogError<TMessage>(
+        ILogger logger,
+        Type consumerType,
+        TMessage message,
+        string routingKey,
+        Exception e)
+        where TMessage : class, new()
+    {
+        logger.LogError(
+            e,
+            $"[{consumerType.FullName}] Error Consume message [RoutingKey:{{RoutingKey}}], [Type:{{BusMessage_Type}}].{Environment.NewLine}" +
+            $"Message Info: {{BusMessage}}.{Environment.NewLine}",
+            routingKey,
+            message.GetType().GetNameOrGenericTypeName(),
+            message.ToJson());
+    }
+}
+
+public interface IPlatformApplicationMessageBusConsumer<in TMessage> : IPlatformMessageBusConsumer<TMessage>, IPlatformApplicationMessageBusConsumer
     where TMessage : class, new()
 {
 }
@@ -40,39 +60,32 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
             if (AutoBeginUow)
                 using (var uow = UowManager.Begin())
                 {
-                    await ExecuteInternalHandleAsync(message, routingKey);
+                    await ExecuteHandleLogicAsync(message, routingKey);
                     await uow.CompleteAsync();
                 }
             else
-                await ExecuteInternalHandleAsync(message, routingKey);
+                await ExecuteHandleLogicAsync(message, routingKey);
         }
         catch (Exception e)
         {
-            Logger.LogError(
-                e,
-                $"[{GetType().FullName}] Error Consume message [RoutingKey:{{RoutingKey}}], [Type:{{BusMessage_Type}}].{Environment.NewLine}" +
-                $"Message Info: {{BusMessage}}.{Environment.NewLine}",
-                routingKey,
-                message.GetType().GetNameOrGenericTypeName(),
-                message.ToJson());
+            IPlatformApplicationMessageBusConsumer.LogError(Logger, GetType(), message, routingKey, e);
             throw;
         }
     }
 
-    protected virtual async Task ExecuteInternalHandleAsync(TMessage message, string routingKey)
+    protected virtual async Task ExecuteHandleLogicAsync(TMessage message, string routingKey)
     {
         if (InboxBusMessageRepo != null)
-            await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerInternalHandleAsync(
+            await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
                 ServiceProvider,
                 consumer: this,
                 InboxBusMessageRepo,
-                InternalHandleAsync,
                 message,
                 routingKey,
                 Logger,
                 InboxConfig.RetryProcessFailedMessageInSecondsUnit,
-                HandleExistingInboxMessageTrackId);
+                HandleExistingInboxMessage);
         else
-            await InternalHandleAsync(message, routingKey);
+            await HandleLogicAsync(message, routingKey);
     }
 }

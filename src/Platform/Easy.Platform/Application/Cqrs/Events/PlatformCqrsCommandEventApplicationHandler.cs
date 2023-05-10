@@ -14,4 +14,9 @@ public abstract class PlatformCqrsCommandEventApplicationHandler<TCommand> : Pla
         unitOfWorkManager)
     {
     }
+
+    protected override bool HandleWhen(PlatformCqrsCommandEvent<TCommand> @event)
+    {
+        return @event.Action == PlatformCqrsCommandEventAction.Executed;
+    }
 }

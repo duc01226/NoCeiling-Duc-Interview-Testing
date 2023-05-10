@@ -2,6 +2,7 @@ using Easy.Platform.Application.BackgroundJob;
 using Easy.Platform.Application.Context;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Context.UserContext.Default;
+using Easy.Platform.Application.Cqrs;
 using Easy.Platform.Application.Cqrs.Commands;
 using Easy.Platform.Application.Cqrs.Queries;
 using Easy.Platform.Application.Domain;
@@ -248,6 +249,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         base.InternalRegister(serviceCollection);
 
         serviceCollection.RegisterAllFromType<IPlatformApplicationDataSeeder>(Assembly, ServiceLifeTime.Scoped);
+        serviceCollection.RegisterAllFromType<IPlatformCqrsEventApplicationHandler>(Assembly);
         RegisterMessageBus(serviceCollection);
         RegisterApplicationSettingContext(serviceCollection);
         RegisterDefaultApplicationUserContext(serviceCollection);
@@ -328,6 +330,8 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
 
     private void RegisterMessageBus(IServiceCollection serviceCollection)
     {
+        serviceCollection.Register<IPlatformMessageBusScanner, PlatformApplicationMessageBusScanner>(ServiceLifeTime.Singleton);
+
         serviceCollection.Register<IPlatformApplicationBusMessageProducer, PlatformApplicationBusMessageProducer>();
         serviceCollection.RegisterAllFromType(
             typeof(IPlatformCqrsEventBusMessageProducer<>),
@@ -341,12 +345,13 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
 
         serviceCollection.RegisterAllFromType(
             typeof(IPlatformMessageBusConsumer),
+            typeof(PlatformApplicationModule).Assembly);
+        serviceCollection.RegisterAllFromType(
+            typeof(IPlatformMessageBusConsumer),
             Assembly);
         serviceCollection.RegisterAllFromType(
             typeof(IPlatformApplicationMessageBusConsumer<>),
             Assembly);
-
-        serviceCollection.Register<IPlatformMessageBusScanner, PlatformApplicationMessageBusScanner>();
 
         if (serviceCollection.NotExist(PlatformInboxBusMessageCleanerHostedService.MatchImplementation))
             serviceCollection.RegisterHostedService<PlatformInboxBusMessageCleanerHostedService>();

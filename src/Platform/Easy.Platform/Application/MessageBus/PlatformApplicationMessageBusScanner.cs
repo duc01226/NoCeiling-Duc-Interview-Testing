@@ -1,3 +1,4 @@
+using System.Reflection;
 using Easy.Platform.Application.MessageBus.Producers.CqrsEventProducers;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Infrastructures.MessageBus;
@@ -14,6 +15,14 @@ public class PlatformApplicationMessageBusScanner : PlatformMessageBusScanner
     {
         return base.ScanAllDefinedMessageBindingRoutingKeys()
             .Concat(AllDefaultBindingRoutingKeyForCqrsEventBusMessageProducers().Select(p => p.ToString()))
+            .ToList();
+    }
+
+    public override List<Assembly> ScanAssemblies()
+    {
+        return base.ScanAssemblies()
+            .ConcatSingle(typeof(PlatformApplicationModule).Assembly)
+            .Distinct()
             .ToList();
     }
 

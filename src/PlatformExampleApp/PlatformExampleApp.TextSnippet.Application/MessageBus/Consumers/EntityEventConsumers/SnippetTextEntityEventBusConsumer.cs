@@ -22,7 +22,7 @@ public class SnippetTextEntityEventBusConsumer : PlatformCqrsEntityEventBusMessa
     {
     }
 
-    protected override Task InternalHandleAsync(
+    public override Task HandleLogicAsync(
         TextSnippetEntityEventBusMessage message,
         string routingKey)
     {

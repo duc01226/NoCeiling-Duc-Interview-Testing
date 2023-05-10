@@ -33,9 +33,6 @@ public abstract class PlatformCqrsCommandHandler<TCommand, TResult>
     protected virtual async Task<TResult> ExecuteHandleAsync(TCommand request, CancellationToken cancellationToken)
     {
         var result = await HandleAsync(request, cancellationToken);
-        await Cqrs.SendEvent(
-            new PlatformCqrsCommandEvent<TCommand>(request, PlatformCqrsCommandEventAction.Executing),
-            cancellationToken);
 
         return result;
     }

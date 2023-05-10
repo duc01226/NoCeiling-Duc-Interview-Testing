@@ -26,7 +26,7 @@ public class DemoAskDoSomethingRequestBusMessageConsumer : PlatformApplicationMe
     {
     }
 
-    protected override Task InternalHandleAsync(DemoAskDoSomethingRequestBusMessage message, string routingKey)
+    public override Task HandleLogicAsync(DemoAskDoSomethingRequestBusMessage message, string routingKey)
     {
         throw new NotImplementedException();
     }

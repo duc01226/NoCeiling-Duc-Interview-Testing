@@ -25,6 +25,9 @@ public class ClearCacheOnSaveSnippetTextCommandEventHandler : PlatformCqrsComman
         return true;
     }
 
+    // Can override to return False to TURN OFF support for store cqrs event handler as inbox
+    // protected override bool EnableHandleEventFromInboxBusMessage => false;
+
     protected override async Task HandleAsync(
         PlatformCqrsCommandEvent<SaveSnippetTextCommand> @event,
         CancellationToken cancellationToken)
@@ -33,14 +36,14 @@ public class ClearCacheOnSaveSnippetTextCommandEventHandler : PlatformCqrsComman
         // Delay because when save snippet text, fulltext index take amount of time to update, so that we wait
         // amount of time for fulltext index update
         // We also set executeOnceImmediately=true to clear cache immediately in case of some index is updated fast
-        if (@event.Action == PlatformCqrsCommandEventAction.Executed)
-            await Util.TaskRunner.QueueIntervalAsyncAction(
-                token => cacheRepositoryProvider.Get()
-                    .RemoveCollectionAsync<TextSnippetCollectionCacheKeyProvider>(token),
-                intervalTimeInSeconds: 5,
-                maximumIntervalExecutionCount: 3,
-                executeOnceImmediately: true,
-                cancellationToken);
+        Util.TaskRunner.QueueIntervalAsyncActionInBackground(
+            token => cacheRepositoryProvider.Get()
+                .RemoveCollectionAsync<TextSnippetCollectionCacheKeyProvider>(token),
+            intervalTimeInSeconds: 5,
+            logger: Logger,
+            maximumIntervalExecutionCount: 3,
+            executeOnceImmediately: true,
+            cancellationToken);
 
         // In other service if you want to run something in the background thread with scope, follow this example
         // Util.TaskRunner.QueueAsyncActionInBackground(
