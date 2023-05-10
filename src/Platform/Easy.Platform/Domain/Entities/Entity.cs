@@ -173,7 +173,9 @@ public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity,
 
     public virtual TEntity Clone()
     {
-        return PlatformJsonSerializer.Deserialize<TEntity>(PlatformJsonSerializer.Serialize(this));
+        // doNotTryUseRuntimeType = true to Serialize normally not using the runtime type to prevent error.
+        // If using runtime type, the ef core entity lazy loading proxies will be the runtime type => lead to error
+        return PlatformJsonSerializer.Deserialize<TEntity>(PlatformJsonSerializer.Serialize(this.As<TEntity>(), doNotTryUseRuntimeType: true));
     }
 
     /// <summary>

@@ -163,13 +163,14 @@ public class PlatformCqrsEventInboxBusMessageConsumer : PlatformApplicationMessa
                         must: p => p.FindMatchedGenericType(typeof(IPlatformCqrsEventApplicationHandler<>)) != null,
                         $"Handler {message.Payload.EventHandlerTypeFullName} must extended from {typeof(IPlatformCqrsEventApplicationHandler<>).FullName}");
 
-                var eventHandlerInstance = serviceProvider.GetRequiredService(eventHandlerType).As<IPlatformCqrsEventApplicationHandler>()
+                var eventHandlerInstance = serviceProvider.GetRequiredService(eventHandlerType)
+                    .As<IPlatformCqrsEventApplicationHandler>()
                     .With(_ => _.IsCurrentInstanceHandlingEventFromInboxBusMessage = true);
                 var eventType = scanAssemblies
                     .Select(p => p.GetType(message.Payload.EventTypeFullName))
                     .FirstOrDefault(p => p != null);
 
-                await eventHandlerInstance.ExecuteHandleAsync(PlatformJsonSerializer.Deserialize(message.Payload.EventJson, eventType), CancellationToken.None);
+                await eventHandlerInstance.Handle(PlatformJsonSerializer.Deserialize(message.Payload.EventJson, eventType), CancellationToken.None);
             });
     }
 }

@@ -109,7 +109,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         if (existingInboxMessage.ConsumeStatus != PlatformInboxBusMessage.ConsumeStatuses.Processed)
             try
             {
-                await consumer.HandleLogicAsync(message, routingKey);
+                await consumer.With(_ => _.HandleExistingInboxMessage = existingInboxMessage).HandleLogicAsync(message, routingKey);
 
                 await UpdateExistingInboxProcessedMessageAsync(
                     serviceProvider,

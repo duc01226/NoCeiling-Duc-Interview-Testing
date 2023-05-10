@@ -61,6 +61,13 @@ public static class PlatformJsonSerializer
 
     public static string Serialize<TValue>(TValue value)
     {
+        return Serialize(value, doNotTryUseRuntimeType: false);
+    }
+
+    public static string Serialize<TValue>(TValue value, bool doNotTryUseRuntimeType)
+    {
+        if (doNotTryUseRuntimeType) return JsonSerializer.Serialize(value, typeof(TValue), CurrentOptions.Value);
+
         try
         {
             // Try to use real runtime type to support TValue is abstract base type. Serialize exactly the type.
@@ -75,6 +82,13 @@ public static class PlatformJsonSerializer
 
     public static string Serialize<TValue>(TValue value, JsonSerializerOptions customSerializerOptions)
     {
+        return Serialize(value, customSerializerOptions, doNotTryUseRuntimeType: false);
+    }
+
+    public static string Serialize<TValue>(TValue value, JsonSerializerOptions customSerializerOptions, bool doNotTryUseRuntimeType)
+    {
+        if (doNotTryUseRuntimeType) return JsonSerializer.Serialize(value, typeof(TValue), CurrentOptions.Value);
+
         try
         {
             // Try to use real runtime type to support TValue is abstract base type. Serialize exactly the type.

@@ -42,7 +42,14 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                                     var thisHandlerNewInstance = sp.GetRequiredService(GetType())
                                         .As<PlatformCqrsEventHandler<TEvent>>();
 
-                                    await thisHandlerNewInstance.ExecuteHandleAsync(notification, default);
+                                    try
+                                    {
+                                        await thisHandlerNewInstance.ExecuteHandleAsync(notification, default);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        LogError(notification, e);
+                                    }
                                 });
                     },
                     PlatformApplicationGlobal.LoggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}"),
