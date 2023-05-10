@@ -1,3 +1,4 @@
+using Easy.Platform.Common;
 using Easy.Platform.EfCore;
 using Easy.Platform.EfCore.Services;
 using Easy.Platform.Persistence;
@@ -38,7 +39,8 @@ public class TextSnippetPostgreSqlEfCorePersistenceModule : PlatformEfCorePersis
             .UseNpgsql(
                 Configuration.GetConnectionString("PostgreSqlConnection"),
                 options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
-            .UseLazyLoadingProxies();
+            .UseLazyLoadingProxies()
+            .EnableDetailedErrors(detailedErrorsEnabled: PlatformEnvironment.IsDevelopment || Configuration.GetSection("SeedDummyData").Get<bool>());
     }
 
     // override to Config PlatformPersistenceConfiguration
