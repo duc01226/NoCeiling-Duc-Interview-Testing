@@ -1,6 +1,8 @@
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Validations;
+using Easy.Platform.Constants;
+using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.Cqrs;
 
@@ -12,9 +14,12 @@ public abstract class PlatformCqrsRequestApplicationHandler<TRequest> : Platform
     public PlatformCqrsRequestApplicationHandler(IPlatformApplicationUserContextAccessor userContext)
     {
         UserContext = userContext;
+        Logger = PlatformApplicationGlobal.LoggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}");
     }
 
     public IPlatformApplicationUserContext CurrentUser => UserContext.Current;
+
+    public ILogger Logger { get; }
 
     public IPlatformCqrsRequestAuditInfo BuildRequestAuditInfo(TRequest request)
     {

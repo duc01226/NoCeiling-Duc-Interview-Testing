@@ -1,5 +1,6 @@
 using Easy.Platform.Common.Extensions.WhenCases;
 using Easy.Platform.Common.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Common.Extensions;
 
@@ -69,7 +70,7 @@ public static class TaskExtension
         return await nextTask(taskResult.Item1, taskResult.Item2, taskResult.Item3, taskResult.Item4, taskResult.Item5);
     }
 
-    public static async Task<T> ThenSideEffectAction<T>(
+    public static async Task<T> ThenAction<T>(
         this Task<T> task,
         Action<T> action)
     {
@@ -80,13 +81,57 @@ public static class TaskExtension
         return targetValue;
     }
 
-    public static async Task<T> ThenSideEffectActionAsync<T>(
+    public static async Task<T> ThenActionAsync<T>(
         this Task<T> task,
         Func<T, Task> nextTask)
     {
         var targetValue = await task;
 
         await nextTask(targetValue);
+
+        return targetValue;
+    }
+
+    /// <summary>
+    /// Side effect call other action, which will not affect the main action flow if error. Just a side effect action
+    /// </summary>
+    public static async Task<T> ThenSideEffectAction<T>(
+        this Task<T> task,
+        Action<T> action,
+        ILogger logger)
+    {
+        var targetValue = await task;
+
+        try
+        {
+            action(targetValue);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "SideEffectAction failed.");
+        }
+
+        return targetValue;
+    }
+
+    /// <summary>
+    /// Side effect call other action, which will not affect the main action flow if error. Just a side effect action
+    /// </summary>
+    public static async Task<T> ThenSideEffectActionAsync<T>(
+        this Task<T> task,
+        Func<T, Task> nextTask,
+        ILogger logger)
+    {
+        var targetValue = await task;
+
+        try
+        {
+            await nextTask(targetValue);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "SideEffectAction failed.");
+        }
 
         return targetValue;
     }

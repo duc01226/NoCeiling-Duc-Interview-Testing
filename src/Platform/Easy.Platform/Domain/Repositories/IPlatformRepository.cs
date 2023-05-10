@@ -362,7 +362,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                     var pagingUpdateItems = await GetAllAsync(
                             GetQuery(uow).Where(predicate).Skip(skipCount).Take(pageSize),
                             cancellationToken: cancellationToken)
-                        .ThenSideEffectAction(items => items.ForEach(updateAction));
+                        .ThenAction(items => items.ForEach(updateAction));
 
                     await UpdateManyAsync(pagingUpdateItems, dismissSendEvent, cancellationToken);
                 }
@@ -389,7 +389,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                     var pagingUpdateItems = await GetAllAsync(
                             GetQuery(uow).Where(predicate).Take(pageSize),
                             cancellationToken: cancellationToken)
-                        .ThenSideEffectAction(items => items.ForEach(updateAction));
+                        .ThenAction(items => items.ForEach(updateAction));
 
                     return await UpdateManyAsync(pagingUpdateItems, dismissSendEvent, cancellationToken);
                 }

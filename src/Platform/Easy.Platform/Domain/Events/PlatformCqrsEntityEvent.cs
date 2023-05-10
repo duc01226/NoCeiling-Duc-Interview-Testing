@@ -77,7 +77,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
                 cancellationToken);
 
         var result = await createEntityAction(entity)
-            .ThenSideEffectActionAsync(
+            .ThenActionAsync(
                 async _ =>
                 {
                     if (!dismissSendEvent)
@@ -113,7 +113,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
                 cancellationToken);
 
         var result = await updateEntityAction(entity)
-            .ThenSideEffectActionAsync(
+            .ThenActionAsync(
                 async _ =>
                 {
                     if (!dismissSendEvent)

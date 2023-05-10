@@ -261,7 +261,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         CancellationToken cancellationToken = default)
     {
         var updateItems = await GetAllAsync(predicate, cancellationToken)
-            .ThenSideEffectAction(items => items.ForEach(updateAction));
+            .ThenAction(items => items.ForEach(updateAction));
 
         return await UpdateManyAsync(updateItems, dismissSendEvent, cancellationToken);
     }

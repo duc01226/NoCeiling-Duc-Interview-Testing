@@ -179,7 +179,7 @@ public interface IPlatformDbContext : IDisposable
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var toUpdateEntities = await GetAllAsync<TEntity, TEntity>(query => query.Where(predicate), cancellationToken)
-            .ThenSideEffectAction(items => items.ForEach(updateAction));
+            .ThenAction(items => items.ForEach(updateAction));
 
         return await UpdateManyAsync<TEntity, TPrimaryKey>(toUpdateEntities, dismissSendEvent, cancellationToken);
     }
