@@ -5,9 +5,9 @@ namespace Easy.Platform.Common.Cqrs.Events;
 
 public abstract class PlatformCqrsEvent : INotification
 {
-    public string AuditTrackId { get; set; }
+    public string AuditTrackId { get; set; } = Guid.NewGuid().ToString();
 
-    public DateTime CreatedDate { get; } = Clock.Now;
+    public DateTime CreatedDate { get; } = Clock.UtcNow;
 
     public string CreatedBy { get; set; }
 
