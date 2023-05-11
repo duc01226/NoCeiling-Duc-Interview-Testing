@@ -5,206 +5,206 @@ namespace Easy.Platform.Common.Validations.Extensions;
 
 public static class PlatformAsyncValidateExtension
 {
-    public static async Task<PlatformValidationResult<TValue>> ValidateAsync<TValue>(
+    public static Task<PlatformValidationResult<TValue>> ValidateAsync<TValue>(
         this TValue value,
         Func<TValue, Task<bool>> must,
         params PlatformValidationError[] errorMsgs)
     {
-        return await must(value).Then(mustValue => PlatformValidationResult<TValue>.Validate(value, mustValue, errorMsgs));
+        return must(value).Then(mustValue => PlatformValidationResult<TValue>.Validate(value, mustValue, errorMsgs));
     }
 
-    public static async Task<PlatformValidationResult<TValue>> ValidateAsync<TValue>(
+    public static Task<PlatformValidationResult<TValue>> ValidateAsync<TValue>(
         this TValue value,
         Func<TValue, Task<bool>> must,
         PlatformValidationError errorMsg)
     {
-        return await must(value).Then(mustValue => PlatformValidationResult<TValue>.Validate(value, mustValue, errorMsg));
+        return must(value).Then(mustValue => PlatformValidationResult<TValue>.Validate(value, mustValue, errorMsg));
     }
 
-    public static async Task<PlatformValidationResult<TValue>> ValidateAsync<TValue>(
+    public static Task<PlatformValidationResult<TValue>> ValidateAsync<TValue>(
         this TValue value,
         Func<TValue, Task<bool>> must,
         Func<TValue, PlatformValidationError> errorMsg)
     {
-        return await must(value).Then(mustValue => PlatformValidationResult<TValue>.Validate(value, mustValue, errorMsg(value)));
+        return must(value).Then(mustValue => PlatformValidationResult<TValue>.Validate(value, mustValue, errorMsg(value)));
     }
 
-    public static async Task<PlatformValidationResult<TValue>> ValidateAsync<TValue>(
+    public static Task<PlatformValidationResult<TValue>> ValidateAsync<TValue>(
         this TValue value,
         Func<Task<bool>> must,
         params PlatformValidationError[] errorMsgs)
     {
-        return await must().Then(mustValue => PlatformValidationResult<TValue>.Validate(value, mustValue, errorMsgs));
+        return must().Then(mustValue => PlatformValidationResult<TValue>.Validate(value, mustValue, errorMsgs));
     }
 
-    public static async Task<PlatformValidationResult<TValue>> ValidateAsync<TValue>(
+    public static Task<PlatformValidationResult<TValue>> ValidateAsync<TValue>(
         this TValue value,
         Task<bool> must,
         params PlatformValidationError[] errorMsgs)
     {
-        return await must.Then(mustValue => PlatformValidationResult<TValue>.Validate(value, mustValue, errorMsgs));
+        return must.Then(mustValue => PlatformValidationResult<TValue>.Validate(value, mustValue, errorMsgs));
     }
 
     /// <summary>
     /// Then validate and map to the next validation[T]. <br />
     /// Validation[T] => ThenValidateAsync Validation[T1] => Validation[T1]
     /// </summary>
-    public static async Task<PlatformValidationResult<TResult>> ThenValidateAsync<T, TResult>(
+    public static Task<PlatformValidationResult<TResult>> ThenValidateAsync<T, TResult>(
         this Task<PlatformValidationResult<T>> sourceValidationTask,
         Func<T, PlatformValidationResult<TResult>> nextValidation)
     {
-        return await sourceValidationTask.Then(p => p.ThenValidate(_ => nextValidation(_)));
+        return sourceValidationTask.Then(p => p.ThenValidate(nextValidation));
     }
 
     /// <summary>
     /// Then validate and map to the next validation[T]. <br />
     /// Validation[T] => ThenValidateAsync Validation[T1] => Validation[T1]
     /// </summary>
-    public static async Task<PlatformValidationResult<TResult>> ThenValidateAsync<T, TResult>(
+    public static Task<PlatformValidationResult<TResult>> ThenValidateAsync<T, TResult>(
         this Task<PlatformValidationResult<T>> sourceValidationTask,
         Func<T, Task<PlatformValidationResult<TResult>>> nextValidation)
     {
-        return await sourceValidationTask.Then(p => p.ThenValidateAsync(_ => nextValidation(_)));
+        return sourceValidationTask.Then(p => p.ThenValidateAsync(nextValidation));
     }
 
-    public static async Task<PlatformValidationResult> AndAsync(
+    public static Task<PlatformValidationResult> AndAsync(
         this Task<PlatformValidationResult> sourceValidationTask,
         Func<PlatformValidationResult> nextValidation)
     {
-        return await sourceValidationTask.Then(p => p.And(nextValidation));
+        return sourceValidationTask.Then(p => p.And(nextValidation));
     }
 
-    public static async Task<PlatformValidationResult> AndAsync(
+    public static Task<PlatformValidationResult> AndAsync(
         this Task<PlatformValidationResult> sourceValidation,
         Func<Task<PlatformValidationResult>> nextValidation)
     {
-        return await sourceValidation.Then(p => p.AndAsync(nextValidation));
+        return sourceValidation.Then(p => p.AndAsync(nextValidation));
     }
 
-    public static async Task<PlatformValidationResult<TValue>> AndAsync<TValue>(
+    public static Task<PlatformValidationResult<TValue>> AndAsync<TValue>(
         this Task<PlatformValidationResult<TValue>> sourceValidationTask,
         Func<TValue, PlatformValidationResult<TValue>> nextValidation)
     {
-        return await sourceValidationTask.Then(p => p.And(nextValidation));
+        return sourceValidationTask.Then(p => p.And(nextValidation));
     }
 
-    public static async Task<PlatformValidationResult<TValue>> AndAsync<TValue>(
+    public static Task<PlatformValidationResult<TValue>> AndAsync<TValue>(
         this Task<PlatformValidationResult<TValue>> sourceValidation,
         Func<TValue, Task<PlatformValidationResult<TValue>>> nextValidation)
     {
-        return await sourceValidation.Then(p => p.AndAsync(nextValidation));
+        return sourceValidation.Then(p => p.AndAsync(nextValidation));
     }
 
-    public static async Task<T> EnsureValidAsync<T>(
+    public static Task<T> EnsureValidAsync<T>(
         this Task<PlatformValidationResult<T>> sourceValidationTask)
     {
-        return await sourceValidationTask.Then(p => p.EnsureValid());
+        return sourceValidationTask.Then(p => p.EnsureValid());
     }
 
 
-    public static async Task<PlatformValidationResult<TValue>> ThenValidateAsync<TValue>(
+    public static Task<PlatformValidationResult<TValue>> ThenValidateAsync<TValue>(
         this Task<TValue> valueTask,
         bool must,
         params PlatformValidationError[] errors)
     {
-        return await valueTask.Then(value => value.Validate(must, errors));
+        return valueTask.Then(value => value.Validate(must, errors));
     }
 
-    public static async Task<PlatformValidationResult<TValue>> ThenValidateAsync<TValue>(
+    public static Task<PlatformValidationResult<TValue>> ThenValidateAsync<TValue>(
         this Task<TValue> valueTask,
         Func<bool> must,
         params PlatformValidationError[] errors)
     {
-        return await valueTask.Then(value => value.Validate(must, errors));
+        return valueTask.Then(value => value.Validate(must, errors));
     }
 
-    public static async Task<PlatformValidationResult<TValue>> ThenValidateAsync<TValue>(
+    public static Task<PlatformValidationResult<TValue>> ThenValidateAsync<TValue>(
         this Task<TValue> valueTask,
         Func<TValue, bool> must,
         params PlatformValidationError[] errors)
     {
-        return await valueTask.Then(value => value.Validate(must, errors));
+        return valueTask.Then(value => value.Validate(must, errors));
     }
 
-    public static async Task<PlatformValidationResult<TValue>> ThenValidateAsync<TValue>(
+    public static Task<PlatformValidationResult<TValue>> ThenValidateAsync<TValue>(
         this Task<TValue> valueTask,
         Func<TValue, bool> must,
         Func<TValue, PlatformValidationError> errorMsg)
     {
-        return await valueTask.Then(value => value.Validate(must, errorMsg));
+        return valueTask.Then(value => value.Validate(must, errorMsg));
     }
 
-    public static async Task<PlatformValidationResult<List<T>>> ThenValidateFoundAllAsync<T>(
+    public static Task<PlatformValidationResult<List<T>>> ThenValidateFoundAllAsync<T>(
         this Task<List<T>> objectsTask,
         List<T> mustFoundAllItems,
         Func<List<T>, string> notFoundObjectsToErrorMsg)
     {
-        return await objectsTask.Then(p => p.ValidateFoundAll(mustFoundAllItems, notFoundObjectsToErrorMsg));
+        return objectsTask.Then(p => p.ValidateFoundAll(mustFoundAllItems, notFoundObjectsToErrorMsg));
     }
 
-    public static async Task<PlatformValidationResult<List<T>>> ThenValidateFoundAllByAsync<T, TFoundBy>(
+    public static Task<PlatformValidationResult<List<T>>> ThenValidateFoundAllByAsync<T, TFoundBy>(
         this Task<List<T>> objectsTask,
         Func<T, TFoundBy> foundBy,
         List<TFoundBy> toFoundByObjects,
         Func<List<TFoundBy>, string> notFoundByObjectsToErrorMsg)
     {
-        return await objectsTask.Then(p => p.ValidateFoundAllBy(foundBy, toFoundByObjects, notFoundByObjectsToErrorMsg));
+        return objectsTask.Then(p => p.ValidateFoundAllBy(foundBy, toFoundByObjects, notFoundByObjectsToErrorMsg));
     }
 
-    public static async Task<PlatformValidationResult<T>> ThenValidateFoundAsync<T>(this Task<T?> objTask, string errorMsg = null)
+    public static Task<PlatformValidationResult<T>> ThenValidateFoundAsync<T>(this Task<T?> objTask, string errorMsg = null)
     {
-        return await objTask.Then(p => p.ValidateFound(errorMsg));
+        return objTask.Then(p => p.ValidateFound(errorMsg));
     }
 
-    public static async Task<PlatformValidationResult<IEnumerable<T>>> ThenValidateFoundAsync<T>(this Task<IEnumerable<T>> objectsTask, string errorMsg = null)
+    public static Task<PlatformValidationResult<IEnumerable<T>>> ThenValidateFoundAsync<T>(this Task<IEnumerable<T>> objectsTask, string errorMsg = null)
     {
-        return await objectsTask.Then(p => p.ValidateFound(errorMsg));
+        return objectsTask.Then(p => p.ValidateFound(errorMsg));
     }
 
-    public static async Task<PlatformValidationResult<TValue>> ThenValidateNotAsync<TValue>(
+    public static Task<PlatformValidationResult<TValue>> ThenValidateNotAsync<TValue>(
         this Task<TValue> valueTask,
         Func<TValue, bool> mustNot,
         params PlatformValidationError[] errorMsgs)
     {
-        return await valueTask.Then(value => PlatformValidationResult<TValue>.ValidateNot(value, () => mustNot(value), errorMsgs));
+        return valueTask.Then(value => PlatformValidationResult<TValue>.ValidateNot(value, () => mustNot(value), errorMsgs));
     }
 
-    public static async Task<PlatformValidationResult<TValue>> ThenValidateNotAsync<TValue>(
+    public static Task<PlatformValidationResult<TValue>> ThenValidateNotAsync<TValue>(
         this Task<TValue> valueTask,
         Func<TValue, bool> mustNot,
         Func<TValue, PlatformValidationError> errorMsgs)
     {
-        return await valueTask.Then(value => PlatformValidationResult<TValue>.ValidateNot(value, () => mustNot(value), errorMsgs(value)));
+        return valueTask.Then(value => PlatformValidationResult<TValue>.ValidateNot(value, () => mustNot(value), errorMsgs(value)));
     }
 
-    public static async Task<PlatformValidationResult<TValue>> ThenValidateNotAsync<TValue>(
+    public static Task<PlatformValidationResult<TValue>> ThenValidateNotAsync<TValue>(
         this Task<TValue> valueTask,
         Func<bool> mustNot,
         params PlatformValidationError[] errorMsgs)
     {
-        return await valueTask.Then(value => PlatformValidationResult<TValue>.ValidateNot(value, mustNot, errorMsgs));
+        return valueTask.Then(value => PlatformValidationResult<TValue>.ValidateNot(value, mustNot, errorMsgs));
     }
 
-    public static async Task<PlatformValidationResult<TValue>> ThenValidateNotAsync<TValue>(
+    public static Task<PlatformValidationResult<TValue>> ThenValidateNotAsync<TValue>(
         this Task<TValue> valueTask,
         bool mustNot,
         params PlatformValidationError[] errorMsgs)
     {
-        return await valueTask.Then(value => PlatformValidationResult<TValue>.ValidateNot(value, mustNot, errorMsgs));
+        return valueTask.Then(value => PlatformValidationResult<TValue>.ValidateNot(value, mustNot, errorMsgs));
     }
 
-    public static async Task<PlatformValidationResult<TR>> WaitValidThen<T, TR>(
+    public static Task<PlatformValidationResult<TR>> WaitValidThen<T, TR>(
         this Task<PlatformValidationResult<T>> task,
         Func<T, TR> next)
     {
-        return await task.Then(val => val.Then(value => next(value)));
+        return task.Then(val => val.Then(next));
     }
 
-    public static async Task<PlatformValidationResult<TR>> WaitValidThen<T, TR>(
+    public static Task<PlatformValidationResult<TR>> WaitValidThen<T, TR>(
         this Task<PlatformValidationResult<T>> task,
         Func<T, Task<TR>> nextTask)
     {
-        return await task.Then(val => val.ThenAsync(value => nextTask(value)));
+        return task.Then(val => val.ThenAsync(nextTask));
     }
 
 

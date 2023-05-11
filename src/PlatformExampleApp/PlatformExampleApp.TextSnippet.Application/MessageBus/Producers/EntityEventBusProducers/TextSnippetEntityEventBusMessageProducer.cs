@@ -13,12 +13,12 @@ public class TextSnippetEntityEventBusMessageProducer
     : PlatformCqrsEntityEventBusMessageProducer<TextSnippetEntityEventBusMessage, TextSnippetEntity>
 {
     public TextSnippetEntityEventBusMessageProducer(
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
         IPlatformApplicationUserContextAccessor userContextAccessor,
         IPlatformApplicationSettingContext applicationSettingContext) : base(
-        loggerFactory,
+        loggerBuilder,
         unitOfWorkManager,
         applicationBusMessageProducer,
         userContextAccessor,

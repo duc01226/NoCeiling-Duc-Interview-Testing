@@ -26,11 +26,13 @@ public interface IPlatformFileStorageDirectory
             .Select(
                 blobItem => blobItem.FullFilePath
                     .TrimStart('/')
-                    .Substring(blobItem.RootDirectory.Length).TrimStart('/')
-                    .Substring(startIndex: DirectoryRelativePathPrefix.Length).TrimStart('/')
+                    .Substring(blobItem.RootDirectory.Length)
+                    .TrimStart('/')
+                    .Substring(startIndex: DirectoryRelativePathPrefix.Length)
+                    .TrimStart('/')
                     .TakeUntilNextChar('/'))
             .Distinct()
-            .SelectList(directChildDirectoryName => GetRelativeChildDirectory(directChildDirectoryName));
+            .SelectList(GetRelativeChildDirectory);
 
         return result;
     }

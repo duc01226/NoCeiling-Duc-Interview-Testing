@@ -20,9 +20,9 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
 
     public PlatformInboxBusMessageCleanerHostedService(
         IServiceProvider serviceProvider,
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IPlatformApplicationSettingContext applicationSettingContext,
-        PlatformInboxConfig inboxConfig) : base(serviceProvider, loggerFactory)
+        PlatformInboxConfig inboxConfig) : base(serviceProvider, loggerBuilder)
     {
         this.applicationSettingContext = applicationSettingContext;
         InboxConfig = inboxConfig;
@@ -49,7 +49,7 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
         {
             // WHY: Retry in case of the db is not started, initiated or restarting
             await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                async () => await CleanInboxEventBusMessage(cancellationToken),
+                () => CleanInboxEventBusMessage(cancellationToken),
                 retryAttempt => 10.Seconds(),
                 retryCount: ProcessClearMessageRetryCount(),
                 onRetry: (ex, timeSpan, currentRetry, ctx) =>

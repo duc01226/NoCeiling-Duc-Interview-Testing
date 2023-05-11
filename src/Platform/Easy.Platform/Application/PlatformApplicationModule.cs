@@ -80,13 +80,13 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                                 $"[SeedData] {seeder.GetType().Name} is scheduled running in background after {seeder.DelaySeedingInBackgroundBySeconds} seconds.");
 
                             Util.TaskRunner.QueueActionInBackground(
-                                action: async () => await ExecuteSeedingWithNewScopeInBackground(seeder.GetType()),
-                                Logger,
+                                action: () => ExecuteSeedingWithNewScopeInBackground(seeder.GetType(), Logger),
+                                () => CreateLogger(PlatformGlobal.LoggerFactory),
                                 delayTimeSeconds: seeder.DelaySeedingInBackgroundBySeconds);
                         }
                         else
                         {
-                            await ExecuteDataSeederWithLog(seeder);
+                            await ExecuteDataSeederWithLog(seeder, Logger);
                         }
                     });
             },
@@ -104,25 +104,25 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
 
         // Need to execute in background with service instance new scope
         // if not, the scope will be disposed, which lead to the seed data will be failed
-        async Task ExecuteSeedingWithNewScopeInBackground(Type seederType)
+        static async Task ExecuteSeedingWithNewScopeInBackground(Type seederType, ILogger logger)
         {
             try
             {
                 await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                     async () =>
                     {
-                        using (var newScope = ServiceProvider.CreateScope())
+                        using (var newScope = PlatformGlobal.RootServiceProvider.CreateScope())
                         {
                             var dataSeeder = newScope.ServiceProvider
                                 .GetServices<IPlatformApplicationDataSeeder>()
                                 .First(_ => _.GetType() == seederType);
 
-                            await ExecuteDataSeederWithLog(dataSeeder);
+                            await ExecuteDataSeederWithLog(dataSeeder, logger);
                         }
                     },
                     retryAttempt => 10.Seconds(),
                     retryCount: PlatformEnvironment.IsDevelopment ? 5 : 10,
-                    onRetry: (ex, timeSpan, currentRetry, context) => Logger.LogWarning(
+                    onRetry: (ex, timeSpan, currentRetry, context) => logger.LogWarning(
                         ex,
                         $"[SeedData] Retry seed data in background {seederType.Name}.{Environment.NewLine}" +
                         "Message: {Message}",
@@ -130,7 +130,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             }
             catch (Exception ex)
             {
-                Logger.LogError(
+                logger.LogError(
                     ex,
                     $"[SeedData] Seed data in background {seederType.Name} failed.{Environment.NewLine}" +
                     "Message: {Message}",
@@ -138,13 +138,13 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             }
         }
 
-        async Task ExecuteDataSeederWithLog(IPlatformApplicationDataSeeder dataSeeder)
+        static async Task ExecuteDataSeederWithLog(IPlatformApplicationDataSeeder dataSeeder, ILogger logger)
         {
-            Logger.LogInformation($"[SeedData] {dataSeeder.GetType().Name} started.");
+            logger.LogInformation($"[SeedData] {dataSeeder.GetType().Name} started.");
 
             await dataSeeder.SeedData();
 
-            Logger.LogInformation($"[SeedData] {dataSeeder.GetType().Name} finished.");
+            logger.LogInformation($"[SeedData] {dataSeeder.GetType().Name} finished.");
         }
     }
 

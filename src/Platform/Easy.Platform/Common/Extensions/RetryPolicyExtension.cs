@@ -21,7 +21,7 @@ public static class RetryPolicyExtension
         {
             onBeforeThrowFinalExceptionFn?.Invoke(e);
 
-            throw new Exception($"{retryPolicy.GetType().Name} ExecuteAndThrowFinalException failed. FullStackTrace: {stackTrace}", e);
+            throw new Exception($"{e.Message}. FullStackTrace: {stackTrace}", e);
         }
     }
 
@@ -42,7 +42,7 @@ public static class RetryPolicyExtension
         {
             onBeforeThrowFinalExceptionFn?.Invoke(e);
 
-            throw new Exception($"{retryPolicy.GetType().Name} ExecuteAndThrowFinalException failed. FullStackTrace: {stackTrace}", e);
+            throw new Exception($"{e.Message}. FullStackTrace: {stackTrace}", e);
         }
     }
 
@@ -63,7 +63,7 @@ public static class RetryPolicyExtension
         {
             if (e.As<TException>() != null) onBeforeThrowFinalExceptionFn?.Invoke(e.As<TException>());
 
-            throw new Exception($"{retryPolicy.GetType().Name} ExecuteAndThrowFinalException failed. FullStackTrace: {stackTrace}", e);
+            throw new Exception($"{e.Message}. FullStackTrace: {stackTrace}", e);
         }
     }
 
@@ -84,7 +84,7 @@ public static class RetryPolicyExtension
         {
             if (e.As<TException>() != null) onBeforeThrowFinalExceptionFn?.Invoke(e.As<TException>());
 
-            throw new Exception($"{retryPolicy.GetType().Name} ExecuteAndThrowFinalException failed. FullStackTrace: {stackTrace}", e);
+            throw new Exception($"{e.Message}. FullStackTrace: {stackTrace}", e);
         }
     }
 
@@ -99,13 +99,13 @@ public static class RetryPolicyExtension
 
         try
         {
-            await retryPolicy.ExecuteAsync(async () => await action());
+            await retryPolicy.ExecuteAsync(action);
         }
         catch (Exception e)
         {
             onBeforeThrowFinalExceptionFn?.Invoke(e);
 
-            throw new Exception($"{retryPolicy.GetType().Name} ExecuteAndThrowFinalExceptionAsync failed. FullStackTrace: {stackTrace}", e);
+            throw new Exception($"{e.Message}. FullStackTrace: {stackTrace}", e);
         }
     }
 
@@ -120,13 +120,13 @@ public static class RetryPolicyExtension
 
         try
         {
-            return await retryPolicy.ExecuteAsync(async () => await action());
+            return await retryPolicy.ExecuteAsync(action);
         }
         catch (Exception e)
         {
             onBeforeThrowFinalExceptionFn?.Invoke(e);
 
-            throw new Exception($"{retryPolicy.GetType().Name} ExecuteAndThrowFinalExceptionAsync failed. FullStackTrace: {stackTrace}", e);
+            throw new Exception($"{e.Message}. FullStackTrace: {stackTrace}", e);
         }
     }
 }

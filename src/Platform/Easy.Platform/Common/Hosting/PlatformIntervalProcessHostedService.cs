@@ -8,23 +8,25 @@ public abstract class PlatformIntervalProcessHostedService : PlatformHostedServi
 {
     public PlatformIntervalProcessHostedService(
         IServiceProvider serviceProvider,
-        ILoggerFactory loggerFactory) : base(serviceProvider, loggerFactory)
+        ILoggerFactory loggerBuilder) : base(serviceProvider, loggerBuilder)
     {
     }
 
     protected override async Task StartProcess(CancellationToken cancellationToken)
     {
         Util.TaskRunner.QueueActionInBackground(
-            async () =>
-            {
-                while (!ProcessStopped && !cancellationToken.IsCancellationRequested)
-                {
-                    await IntervalProcessAsync(cancellationToken);
-                    await Task.Delay(ProcessTriggerIntervalTime(), cancellationToken);
-                }
-            },
-            Logger,
+            DoStartProcess,
+            () => CreateLogger(PlatformGlobal.LoggerFactory),
             cancellationToken: cancellationToken);
+
+        async Task DoStartProcess()
+        {
+            while (!ProcessStopped && !cancellationToken.IsCancellationRequested)
+            {
+                await IntervalProcessAsync(cancellationToken);
+                await Task.Delay(ProcessTriggerIntervalTime(), cancellationToken);
+            }
+        }
     }
 
     protected abstract Task IntervalProcessAsync(CancellationToken cancellationToken);

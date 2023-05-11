@@ -18,7 +18,7 @@ public abstract class PlatformApplicationBackgroundJobExecutor<TParam> : Platfor
 
     public PlatformApplicationBackgroundJobExecutor(
         IUnitOfWorkManager unitOfWorkManager,
-        ILoggerFactory loggerFactory) : base(loggerFactory)
+        ILoggerFactory loggerBuilder) : base(loggerBuilder)
     {
         UnitOfWorkManager = unitOfWorkManager;
     }
@@ -49,7 +49,7 @@ public abstract class PlatformApplicationBackgroundJobExecutor : PlatformApplica
 {
     protected PlatformApplicationBackgroundJobExecutor(
         IUnitOfWorkManager unitOfWorkManager,
-        ILoggerFactory loggerFactory) : base(unitOfWorkManager, loggerFactory)
+        ILoggerFactory loggerBuilder) : base(unitOfWorkManager, loggerBuilder)
     {
     }
 }

@@ -14,8 +14,8 @@ public class PlatformRabbitMqStartProcessHostedService : PlatformHostedService
 
     public PlatformRabbitMqStartProcessHostedService(
         IServiceProvider serviceProvider,
-        ILoggerFactory loggerFactory,
-        PlatformRabbitMqProcessInitializerService rabbitMqProcessInitializerService) : base(serviceProvider, loggerFactory)
+        ILoggerFactory loggerBuilder,
+        PlatformRabbitMqProcessInitializerService rabbitMqProcessInitializerService) : base(serviceProvider, loggerBuilder)
     {
         this.rabbitMqProcessInitializerService = rabbitMqProcessInitializerService;
     }

@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using Easy.Platform.Common;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

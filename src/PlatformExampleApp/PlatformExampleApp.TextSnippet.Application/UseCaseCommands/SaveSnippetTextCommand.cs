@@ -304,7 +304,7 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
             .ValidateSavePermission(userId: CurrentUser.UserId<Guid?>()) // Demo Permission Logic
             .And(entity => toSaveEntity.ValidateSomeSpecificIsXxxLogic()) // Demo domain business logic
             .AndAsync(entity => toSaveEntity.ValidateSomeSpecificIsXxxLogicAsync(textSnippetEntityRepository, multiDbDemoEntityRepository)) // Demo domain business logic
-            .AndAsync(entity => ValidateSomeThisCommandApplicationLogic(entity)) // Demo application business logic
+            .AndAsync(ValidateSomeThisCommandApplicationLogic) // Demo application business logic
             .EnsureValidAsync(); // Throw PermissionException, or DomainException, or ApplicationException on invalid for each stage
 
         // ADDITIONAL DEMO STEP 2 - Bonus Demo Alternative Validation directly on object

@@ -1,5 +1,4 @@
 using System.IO;
-using System.Runtime.InteropServices;
 using Microsoft.AspNetCore.Http;
 
 namespace Easy.Platform.AspNetCore.Extensions;

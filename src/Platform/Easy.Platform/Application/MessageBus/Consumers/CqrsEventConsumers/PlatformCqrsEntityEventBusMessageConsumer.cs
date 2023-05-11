@@ -18,9 +18,9 @@ public abstract class PlatformCqrsEntityEventBusMessageConsumer<TMessage, TEntit
     where TMessage : class, IPlatformWithPayloadBusMessage<PlatformCqrsEntityEvent<TEntity>>, IPlatformSelfRoutingKeyBusMessage, IPlatformTrackableBusMessage, new()
 {
     protected PlatformCqrsEntityEventBusMessageConsumer(
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IUnitOfWorkManager uowManager,
-        IServiceProvider serviceProvider) : base(loggerFactory, uowManager, serviceProvider)
+        IServiceProvider serviceProvider) : base(loggerBuilder, uowManager, serviceProvider)
     {
     }
 }

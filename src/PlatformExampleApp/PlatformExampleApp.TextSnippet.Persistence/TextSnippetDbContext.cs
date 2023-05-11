@@ -14,10 +14,10 @@ public class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDbContext
 {
     public TextSnippetDbContext(
         DbContextOptions<TextSnippetDbContext> options,
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IPlatformCqrs cqrs,
         PlatformPersistenceConfiguration<TextSnippetDbContext> persistenceConfiguration,
-        IPlatformApplicationUserContextAccessor userContextAccessor) : base(options, loggerFactory, cqrs, persistenceConfiguration, userContextAccessor)
+        IPlatformApplicationUserContextAccessor userContextAccessor) : base(options, loggerBuilder, cqrs, persistenceConfiguration, userContextAccessor)
     {
     }
 

@@ -164,7 +164,7 @@ public static class OptionExt
     {
         return opt.Match(
             () => F.Valid(F.Unit()).ToTask(),
-            t => validateFn(t));
+            validateFn);
     }
 
     public static Task<Validation<ValueTuple>> ValidateIfSomeAsync<T>(

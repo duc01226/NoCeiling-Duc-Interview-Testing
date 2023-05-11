@@ -84,7 +84,7 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
 
     protected virtual void AutoRegisterAllClassMap()
     {
-        AllClassMapTypes().ForEach(p => RegisterClassMapType(p));
+        AllClassMapTypes().ForEach(RegisterClassMapType);
     }
 
     protected virtual void AutoRegisterAllSerializers()

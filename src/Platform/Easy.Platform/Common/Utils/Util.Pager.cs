@@ -62,11 +62,11 @@ public static partial class Util
         /// <summary>
         /// Execute until the executeFn return no items
         /// </summary>
-        public static async Task ExecuteScrollingPagingAsync<TItem>(
+        public static Task ExecuteScrollingPagingAsync<TItem>(
             Func<Task<IEnumerable<TItem>>> executeFn,
             int maxExecutionCount = int.MaxValue)
         {
-            await ExecuteScrollingPagingAsync(executeFn: () => executeFn().Then(_ => _.ToList()), maxExecutionCount);
+            return ExecuteScrollingPagingAsync(executeFn: () => executeFn().Then(_ => _.ToList()), maxExecutionCount);
         }
 
         /// <summary>

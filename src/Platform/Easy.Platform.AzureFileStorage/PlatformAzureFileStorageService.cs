@@ -24,7 +24,7 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
         BlobServiceClient blobServiceClient,
         PlatformFileStorageOptions fileStorageOptions)
     {
-        logger = loggerFactory.CreateLogger($"{DefaultPlatformFileStorageLogSuffix.Value}.{GetType().Name}");
+        logger = loggerFactory.CreateLogger(typeof(PlatformAzureFileStorageService));
         this.blobServiceClient = blobServiceClient;
         this.fileStorageOptions = fileStorageOptions;
         fileStorageConfiguration = fileStorageConfigurationOptions;
@@ -120,45 +120,45 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
         return UploadAsync(fileUploader, cancellationToken);
     }
 
-    public async Task<bool> ExistsAsync(string rootDirectory, string filePath)
+    public Task<bool> ExistsAsync(string rootDirectory, string filePath)
     {
         var containerClient = GetAzureBlobContainerClient(rootDirectory, null);
 
         var pureFilePath = filePath.RemoveSpecialCharactersUri();
         var blobClient = containerClient.GetBlobClient(pureFilePath);
 
-        return await blobClient.ExistsAsync();
+        return blobClient.ExistsAsync().Then(p => p.HasValue);
     }
 
-    public async Task<bool> DeleteAsync(string fullFilePath, CancellationToken cancellationToken = default)
+    public Task<bool> DeleteAsync(string fullFilePath, CancellationToken cancellationToken = default)
     {
         var blobClient = GetBlobClient(fullFilePath);
 
-        return await DeleteAsync(blobClient, cancellationToken);
+        return DeleteAsync(blobClient, cancellationToken);
     }
 
-    public async Task<bool> DeleteAsync(string rootDirectory, string filePath, CancellationToken cancellationToken = default)
+    public Task<bool> DeleteAsync(string rootDirectory, string filePath, CancellationToken cancellationToken = default)
     {
         var blobClient = GetBlobClient(rootDirectory, filePath);
 
-        return await DeleteAsync(blobClient, cancellationToken);
+        return DeleteAsync(blobClient, cancellationToken);
     }
 
-    public async Task<Stream> GetStreamAsync(string fullFilePath, CancellationToken cancellationToken = default)
+    public Task<Stream> GetStreamAsync(string fullFilePath, CancellationToken cancellationToken = default)
     {
         var blobClient = GetBlobClient(fullFilePath);
 
-        return await blobClient.OpenReadAsync(cancellationToken: cancellationToken);
+        return blobClient.OpenReadAsync(cancellationToken: cancellationToken);
     }
 
-    public async Task<Stream> GetStreamAsync(string rootDirectory, string filePath, CancellationToken cancellationToken = default)
+    public Task<Stream> GetStreamAsync(string rootDirectory, string filePath, CancellationToken cancellationToken = default)
     {
         var containerClient = GetAzureBlobContainerClient(rootDirectory, null);
 
         var pureFilePath = filePath.RemoveSpecialCharactersUri();
         var blobClient = containerClient.GetBlobClient(pureFilePath);
 
-        return await blobClient.OpenReadAsync(cancellationToken: cancellationToken);
+        return blobClient.OpenReadAsync(cancellationToken: cancellationToken);
     }
 
     public async Task<Uri> CreateSharedAccessUriAsync(string fullFilePath, TimeSpan? expirationTime = null, CancellationToken cancellationToken = default)

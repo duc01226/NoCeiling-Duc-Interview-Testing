@@ -38,39 +38,39 @@ public static class WithExtension
     }
 
     /// <inheritdoc cref="With{T}(T,System.Action{T}[])" />
-    public static async Task<T> With<T>(this Task<T> targetTask, params Action<T>[] actions)
+    public static Task<T> With<T>(this Task<T> targetTask, params Action<T>[] actions)
     {
-        return await targetTask.Then(target => target.With(actions));
+        return targetTask.Then(target => target.With(actions));
     }
 
     /// <inheritdoc cref="With{T}(T,System.Action{T}[])" />
-    public static async Task<T> With<T>(this Task<T> targetTask, params Func<T, Task>[] actions)
+    public static Task<T> With<T>(this Task<T> targetTask, params Func<T, Task>[] actions)
     {
-        return await targetTask.Then(target => target.With(actions));
+        return targetTask.Then(target => target.With(actions));
     }
 
     /// <inheritdoc cref="With{T}(T,System.Action{T}[])" />
-    public static async Task<T> With<T>(this Task<T> targetTask, params Func<T, T>[] actions)
+    public static Task<T> With<T>(this Task<T> targetTask, params Func<T, T>[] actions)
     {
-        return await targetTask.Then(target => target.With(actions));
+        return targetTask.Then(target => target.With(actions));
     }
 
     /// <inheritdoc cref="With{T}(T,System.Action{T}[])" />
-    public static async Task<T> With<T>(this Task<T> targetTask, params Func<T, Task<T>>[] actions)
+    public static Task<T> With<T>(this Task<T> targetTask, params Func<T, Task<T>>[] actions)
     {
-        return await targetTask.Then(target => target.With(actions));
+        return targetTask.Then(target => target.With(actions));
     }
 
     #region WithIf
 
-    public static async Task<T> WithIf<T>(this Task<T> targetTask, bool when, params Action<T>[] actions)
+    public static Task<T> WithIf<T>(this Task<T> targetTask, bool when, params Action<T>[] actions)
     {
-        return await targetTask.Then(target => target.WithIf(when, actions));
+        return targetTask.Then(target => target.WithIf(when, actions));
     }
 
-    public static async Task<T> WithIf<T>(this Task<T> targetTask, Func<T, bool> when, params Action<T>[] actions)
+    public static Task<T> WithIf<T>(this Task<T> targetTask, Func<T, bool> when, params Action<T>[] actions)
     {
-        return await targetTask.Then(target => target.WithIf(when, actions));
+        return targetTask.Then(target => target.WithIf(when, actions));
     }
 
     public static T WithIf<T>(this T target, bool when, params Action<T>[] actions)

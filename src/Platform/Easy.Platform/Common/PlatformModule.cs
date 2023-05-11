@@ -1,12 +1,10 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
-using Easy.Platform.Application;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
-using Easy.Platform.Constants;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -89,7 +87,7 @@ public abstract class PlatformModule : IPlatformModule
     {
         ServiceProvider = serviceProvider;
         Configuration = configuration;
-        Logger = serviceProvider?.GetService<ILoggerFactory>()?.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}");
+        Logger = serviceProvider?.GetService<ILoggerFactory>()?.Pipe(CreateLogger);
     }
 
     protected ILogger Logger { get; init; }
@@ -168,7 +166,7 @@ public abstract class PlatformModule : IPlatformModule
             Logger.LogInformation("[PlatformModule] {Module} start initiating", GetType().Name);
 
             // Because PlatformModule is singleton => ServiceProvider of it is the root ServiceProvider
-            PlatformApplicationGlobal.SetRootServiceProvider(ServiceProvider);
+            PlatformGlobal.SetRootServiceProvider(ServiceProvider);
 
             InitAllModuleDependencies().WaitResult();
 
@@ -247,6 +245,11 @@ public abstract class PlatformModule : IPlatformModule
                                     .ForEach(dependencyModuleAdditionalTracingConfigure => dependencyModuleAdditionalTracingConfigure(_))));
             }
         }
+    }
+
+    public static ILogger CreateLogger(ILoggerFactory loggerFactory)
+    {
+        return loggerFactory.CreateLogger(typeof(PlatformModule));
     }
 
     protected static void ExecuteRegisterByAssemblyOnlyOnce(Action<Assembly> action, Assembly assembly, string actionName)

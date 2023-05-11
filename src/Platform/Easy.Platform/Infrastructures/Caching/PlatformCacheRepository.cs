@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Constants;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -132,8 +131,8 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
     public PlatformCacheRepository(IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
     {
         this.serviceProvider = serviceProvider;
-        Logger = loggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}");
-        GlobalAllRequestCachedKeys = new Lazy<ConcurrentDictionary<PlatformCacheKey, object>>(LoadGlobalAllRequestCachedKeys);
+        Logger = loggerFactory.CreateLogger(typeof(PlatformCacheRepository));
+        GlobalAllRequestCachedKeys = new Lazy<ConcurrentDictionary<PlatformCacheKey, object>>(() => LoadGlobalAllRequestCachedKeys().GetResult());
     }
 
     public abstract T Get<T>(PlatformCacheKey cacheKey);
@@ -212,13 +211,13 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
         }
     }
 
-    public async Task<TData> CacheRequestAsync<TData>(
+    public Task<TData> CacheRequestAsync<TData>(
         Func<Task<TData>> request,
         PlatformCacheKey cacheKey,
         double? absoluteExpirationInSeconds = null,
         CancellationToken token = default)
     {
-        return await CacheRequestAsync(
+        return CacheRequestAsync(
             request,
             cacheKey,
             new PlatformCacheEntryOptions
@@ -239,16 +238,16 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
     /// </summary>
     public abstract PlatformCacheKey GetGlobalAllRequestCachedKeysCacheKey();
 
-    private ConcurrentDictionary<PlatformCacheKey, object> LoadGlobalAllRequestCachedKeys()
+    protected async Task<ConcurrentDictionary<PlatformCacheKey, object>> LoadGlobalAllRequestCachedKeys()
     {
         try
         {
-            return GetAsync<List<PlatformCacheKey>>(GetGlobalAllRequestCachedKeysCacheKey())
-                       .GetResult()
-                       ?
-                       .Select(p => new KeyValuePair<PlatformCacheKey, object>(p, null))
-                       .Pipe(_ => new ConcurrentDictionary<PlatformCacheKey, object>(_)) ??
-                   new ConcurrentDictionary<PlatformCacheKey, object>();
+            return await GetAsync<List<PlatformCacheKey>>(cacheKey: GetGlobalAllRequestCachedKeysCacheKey())
+                .Then(_ => _ ?? new List<PlatformCacheKey>())
+                .Then(
+                    globalRequestCacheKeys => globalRequestCacheKeys
+                        .Select(p => new KeyValuePair<PlatformCacheKey, object>(p, null))
+                        .Pipe(_ => new ConcurrentDictionary<PlatformCacheKey, object>(_)));
         }
         catch (Exception e)
         {

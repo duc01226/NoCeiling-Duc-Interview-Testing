@@ -22,9 +22,9 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
 
     public PlatformSendOutboxBusMessageHostedService(
         IServiceProvider serviceProvider,
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IPlatformApplicationSettingContext applicationSettingContext,
-        PlatformOutboxConfig outboxConfig) : base(serviceProvider, loggerFactory)
+        PlatformOutboxConfig outboxConfig) : base(serviceProvider, loggerBuilder)
     {
         this.applicationSettingContext = applicationSettingContext;
         OutboxConfig = outboxConfig;
@@ -54,7 +54,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
         {
             // WHY: Retry in case of the db is not started, initiated or restarting
             await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                async () => await SendOutboxEventBusMessages(cancellationToken),
+                () => SendOutboxEventBusMessages(cancellationToken),
                 retryAttempt => 10.Seconds(),
                 retryCount: ProcessSendMessageRetryCount(),
                 onRetry: (ex, timeSpan, currentRetry, ctx) =>
@@ -117,15 +117,13 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
         } while (await IsAnyMessagesToHandleAsync());
     }
 
-    protected async Task<bool> IsAnyMessagesToHandleAsync()
+    protected Task<bool> IsAnyMessagesToHandleAsync()
     {
-        return await ServiceProvider.ExecuteInjectScopedAsync<bool>(
-            async (IPlatformOutboxBusMessageRepository outboxEventBusMessageRepo) =>
+        return ServiceProvider.ExecuteInjectScopedAsync<bool>(
+            (IPlatformOutboxBusMessageRepository outboxEventBusMessageRepo) =>
             {
-                var result = await outboxEventBusMessageRepo!.AnyAsync(
+                return outboxEventBusMessageRepo!.AnyAsync(
                     PlatformOutboxBusMessage.ToHandleOutboxEventBusMessagesExpr(MessageProcessingMaximumTimeInSeconds()));
-
-                return result;
             });
     }
 

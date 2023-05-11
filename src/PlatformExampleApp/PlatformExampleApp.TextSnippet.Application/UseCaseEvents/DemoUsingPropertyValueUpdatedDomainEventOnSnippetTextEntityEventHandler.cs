@@ -8,8 +8,8 @@ namespace PlatformExampleApp.TextSnippet.Application.UseCaseEvents;
 
 public class DemoUsingPropertyValueUpdatedDomainEventOnSnippetTextEntityEventHandler : PlatformCqrsEntityEventApplicationHandler<TextSnippetEntity>
 {
-    public DemoUsingPropertyValueUpdatedDomainEventOnSnippetTextEntityEventHandler(ILoggerFactory loggerFactory, IUnitOfWorkManager unitOfWorkManager) : base(
-        loggerFactory,
+    public DemoUsingPropertyValueUpdatedDomainEventOnSnippetTextEntityEventHandler(ILoggerFactory loggerBuilder, IUnitOfWorkManager unitOfWorkManager) : base(
+        loggerBuilder,
         unitOfWorkManager)
     {
     }
@@ -24,12 +24,14 @@ public class DemoUsingPropertyValueUpdatedDomainEventOnSnippetTextEntityEventHan
         // DEMO USING PROPERTY CHANGED DOMAIN EVENT
         var snippetTextPropUpdatedEvent = @event.FindPropertyValueUpdatedDomainEvent(p => p.SnippetText);
         if (snippetTextPropUpdatedEvent != null)
-            Logger.LogInformation(
-                $"TextSnippetEntity Id:'{@event.EntityData.Id}' SnippetText updated. Prev: {snippetTextPropUpdatedEvent.OriginalValue}. New: {snippetTextPropUpdatedEvent.NewValue}");
+            CreateGlobalLogger()
+                .LogInformation(
+                    $"TextSnippetEntity Id:'{@event.EntityData.Id}' SnippetText updated. Prev: {snippetTextPropUpdatedEvent.OriginalValue}. New: {snippetTextPropUpdatedEvent.NewValue}");
 
         var fullTextPropUpdatedEvent = @event.FindPropertyValueUpdatedDomainEvent(p => p.FullText);
         if (fullTextPropUpdatedEvent != null)
-            Logger.LogInformation(
-                $"TextSnippetEntity Id:'{@event.EntityData.Id}' FullText updated. Prev: {fullTextPropUpdatedEvent.OriginalValue}. New: {fullTextPropUpdatedEvent.NewValue}");
+            CreateGlobalLogger()
+                .LogInformation(
+                    $"TextSnippetEntity Id:'{@event.EntityData.Id}' FullText updated. Prev: {fullTextPropUpdatedEvent.OriginalValue}. New: {fullTextPropUpdatedEvent.NewValue}");
     }
 }

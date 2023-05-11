@@ -2,12 +2,12 @@ using System.Diagnostics;
 using System.Reflection.Metadata;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Exceptions.Extensions;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Commands;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Common.Validations.Extensions;
-using Easy.Platform.Constants;
 using Easy.Platform.Domain.UnitOfWork;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -47,10 +47,10 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
             await ValidateRequestAsync(request.Validate().Of<TCommand>(), cancellationToken).EnsureValidAsync();
 
             var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
-                async () => await ExecuteHandleAsync(request, cancellationToken),
+                () => ExecuteHandleAsync(request, cancellationToken),
                 onException: ex =>
                 {
-                    PlatformApplicationGlobal.LoggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}")
+                    PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformCqrsCommandApplicationHandler<>))
                         .Log(
                             ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
                             ex,

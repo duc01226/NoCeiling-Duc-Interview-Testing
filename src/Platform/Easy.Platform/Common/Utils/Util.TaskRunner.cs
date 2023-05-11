@@ -41,7 +41,7 @@ public static partial class Util
 
         public static void QueueActionInBackground(
             Func<CancellationToken, Task> action,
-            ILogger logger,
+            Func<ILogger> loggerBuilder,
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default)
         {
@@ -50,11 +50,11 @@ public static partial class Util
                 {
                     try
                     {
-                        await QueueDelayAsyncAction(async token => await action(token), TimeSpan.FromSeconds(delayTimeSeconds), cancellationToken);
+                        await QueueDelayAsyncAction(action, TimeSpan.FromSeconds(delayTimeSeconds), cancellationToken);
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError(ex, ex.Message);
+                        loggerBuilder().LogError(ex, ex.Message);
                         throw;
                     }
                 },
@@ -63,16 +63,16 @@ public static partial class Util
 
         public static void QueueActionInBackground(
             Func<Task> action,
-            ILogger logger,
+            Func<ILogger> loggerBuilder,
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default)
         {
-            QueueActionInBackground(async _ => await action(), logger, delayTimeSeconds, cancellationToken);
+            QueueActionInBackground(_ => action(), loggerBuilder, delayTimeSeconds, cancellationToken);
         }
 
         public static void QueueActionInBackground(
             Action action,
-            ILogger logger,
+            Func<ILogger> loggerBuilder,
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default)
         {
@@ -85,7 +85,7 @@ public static partial class Util
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError(ex, ex.Message);
+                        loggerBuilder().LogError(ex, ex.Message);
                         throw;
                     }
                 },
@@ -116,7 +116,7 @@ public static partial class Util
         public static void QueueIntervalAsyncActionInBackground(
             Func<CancellationToken, Task> action,
             int intervalTimeInSeconds,
-            ILogger logger,
+            Func<ILogger> loggerBuilder,
             int? maximumIntervalExecutionCount = null,
             bool executeOnceImmediately = false,
             CancellationToken cancellationToken = default)
@@ -130,7 +130,7 @@ public static partial class Util
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError(ex, ex.Message);
+                        loggerBuilder().LogError(ex, ex.Message);
                         throw;
                     }
                 },
@@ -149,9 +149,9 @@ public static partial class Util
             }
         }
 
-        public static async Task CatchException(Func<Task> action, Action<Exception> onException = null)
+        public static Task CatchException(Func<Task> action, Action<Exception> onException = null)
         {
-            await CatchException<Exception>(action, onException);
+            return CatchException<Exception>(action, onException);
         }
 
         public static T CatchException<T>(Func<T> func, Func<Exception, T> onException = null)
@@ -183,9 +183,9 @@ public static partial class Util
             }
         }
 
-        public static async Task<T> CatchExceptionContinueThrowAsync<T>(Func<Task<T>> func, Action<Exception> onException)
+        public static Task<T> CatchExceptionContinueThrowAsync<T>(Func<Task<T>> func, Action<Exception> onException)
         {
-            return await CatchExceptionContinueThrowAsync<T, Exception>(async () => await func(), onException);
+            return CatchExceptionContinueThrowAsync<T, Exception>(func, onException);
         }
 
         public static void CatchExceptionContinueThrow(Action action, Action<Exception> onException)
@@ -418,9 +418,9 @@ public static partial class Util
             return (await task1, await task2, await task3, await task4, await task5, await task6);
         }
 
-        public static async Task<T> Async<T>(T t)
+        public static Task<T> Async<T>(T t)
         {
-            return await Task.FromResult(t);
+            return Task.FromResult(t);
         }
 
         /// <summary>
@@ -433,53 +433,53 @@ public static partial class Util
         /// <param name="onBeforeThrowFinalExceptionFn"></param>
         /// <param name="onRetry">onRetry: (exception,timeSpan,currentRetry,context)</param>
         /// <returns></returns>
-        public static async Task WaitRetryThrowFinalExceptionAsync<TException>(
+        public static Task WaitRetryThrowFinalExceptionAsync<TException>(
             Func<Task> executeFunc,
             Func<int, TimeSpan> sleepDurationProvider = null,
             int retryCount = 1,
             Action<Exception> onBeforeThrowFinalExceptionFn = null,
             Action<Exception, TimeSpan, int, Context> onRetry = null) where TException : Exception
         {
-            await Policy
+            return Policy
                 .Handle<TException>()
                 .WaitAndRetryAsync(
                     retryCount,
                     sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndThrowFinalExceptionAsync(
-                    async () => await executeFunc(),
+                    executeFunc,
                     onBeforeThrowFinalExceptionFn ?? (exception => { }));
         }
 
         /// <inheritdoc cref="WaitRetryThrowFinalExceptionAsync{TException}(Func{Task},Func{int,TimeSpan},int,Action{Exception},Action{Exception,TimeSpan,int,Context})" />
-        public static async Task<T> WaitRetryThrowFinalExceptionAsync<T, TException>(
+        public static Task<T> WaitRetryThrowFinalExceptionAsync<T, TException>(
             Func<Task<T>> executeFunc,
             Func<int, TimeSpan> sleepDurationProvider = null,
             int retryCount = 1,
             Action<Exception> onBeforeThrowFinalExceptionFn = null,
             Action<Exception, TimeSpan, int, Context> onRetry = null) where TException : Exception
         {
-            return await Policy
+            return Policy
                 .Handle<TException>()
                 .WaitAndRetryAsync(
                     retryCount,
                     sleepDurationProvider ?? (retryAttempt => DefaultWaitIntervalSeconds.Seconds()),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndThrowFinalExceptionAsync(
-                    async () => await executeFunc(),
+                    executeFunc,
                     onBeforeThrowFinalExceptionFn ?? (exception => { }));
         }
 
         /// <inheritdoc cref="WaitRetryThrowFinalExceptionAsync{TException}(Func{Task},Func{int,TimeSpan},int,Action{Exception},Action{Exception,TimeSpan,int,Context})" />
-        public static async Task WaitRetryThrowFinalExceptionAsync(
+        public static Task WaitRetryThrowFinalExceptionAsync(
             Func<Task> executeFunc,
             Func<int, TimeSpan> sleepDurationProvider = null,
             int retryCount = 1,
             Action<Exception> onBeforeThrowFinalExceptionFn = null,
             Action<Exception, TimeSpan, int, Context> onRetry = null)
         {
-            await WaitRetryThrowFinalExceptionAsync<Exception>(
-                async () => await executeFunc(),
+            return WaitRetryThrowFinalExceptionAsync<Exception>(
+                executeFunc,
                 sleepDurationProvider,
                 retryCount,
                 onBeforeThrowFinalExceptionFn,
@@ -487,51 +487,49 @@ public static partial class Util
         }
 
         /// <inheritdoc cref="WaitRetryThrowFinalExceptionAsync{TException}(Func{Task},Func{int,TimeSpan},int,Action{Exception},Action{Exception,TimeSpan,int,Context})" />
-        public static async Task<T> WaitRetryThrowFinalExceptionAsync<T>(
+        public static Task<T> WaitRetryThrowFinalExceptionAsync<T>(
             Func<Task<T>> executeFunc,
             Func<int, TimeSpan> sleepDurationProvider = null,
             int retryCount = 1,
             Action<Exception> onBeforeThrowFinalExceptionFn = null,
             Action<Exception, TimeSpan, int, Context> onRetry = null)
         {
-            return await WaitRetryThrowFinalExceptionAsync<T, Exception>(
-                async () => await executeFunc(),
+            return WaitRetryThrowFinalExceptionAsync<T, Exception>(
+                executeFunc,
                 sleepDurationProvider,
                 retryCount,
                 onBeforeThrowFinalExceptionFn,
                 onRetry);
         }
 
-        public static async Task<PolicyResult> WaitRetryAsync(
+        public static Task<PolicyResult> WaitRetryAsync(
             Func<Task> executeFunc,
             Func<int, TimeSpan> sleepDurationProvider = null,
             int retryCount = 1,
             Action<Exception, TimeSpan, int, Context> onRetry = null)
         {
-            return await Policy
+            return Policy
                 .Handle<Exception>()
                 .WaitAndRetryAsync(
                     retryCount,
                     sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
-                .ExecuteAndCaptureAsync(
-                    async () => await executeFunc());
+                .ExecuteAndCaptureAsync(executeFunc);
         }
 
-        public static async Task<PolicyResult<T>> WaitRetryAsync<T>(
+        public static Task<PolicyResult<T>> WaitRetryAsync<T>(
             Func<Task<T>> executeFunc,
             Func<int, TimeSpan> sleepDurationProvider = null,
             int retryCount = 1,
             Action<Exception, TimeSpan, int, Context> onRetry = null)
         {
-            return await Policy
+            return Policy
                 .Handle<Exception>()
                 .WaitAndRetryAsync(
                     retryCount,
                     sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
-                .ExecuteAndCaptureAsync(
-                    async () => await executeFunc());
+                .ExecuteAndCaptureAsync(executeFunc);
         }
 
         /// <summary>
@@ -985,14 +983,14 @@ public static partial class Util
             return result;
         }
 
-        public static async Task WaitRetryDoUntilAsync(
+        public static Task WaitRetryDoUntilAsync(
             Func<Task> action,
             Func<Task<bool>> until,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
-            await WaitRetryDoUntilAsync(action.ToAsyncFunc(), until, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
+            return WaitRetryDoUntilAsync(action.ToAsyncFunc(), until, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
         }
 
         public static async Task<T> WaitRetryDoUntilAsync<T>(

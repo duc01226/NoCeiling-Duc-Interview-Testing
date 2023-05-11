@@ -104,9 +104,9 @@ public static class EnsureThrowCommonExceptionExtension
     }
 
     [return: NotNull]
-    public static async Task<T> EnsureFound<T>(this T? obj, Func<T, Task<bool>> and, string errorMsg = null)
+    public static Task<T> EnsureFound<T>(this T? obj, Func<T, Task<bool>> and, string errorMsg = null)
     {
-        return await obj.ValidateFoundAsync(and, errorMsg).Then(p => p.WithNotFoundException().EnsureValid());
+        return obj.ValidateFoundAsync(and, errorMsg).Then(p => p.WithNotFoundException().EnsureValid());
     }
 
     [return: NotNull]

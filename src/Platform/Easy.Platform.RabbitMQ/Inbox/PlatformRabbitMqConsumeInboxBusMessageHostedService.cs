@@ -14,13 +14,13 @@ public class PlatformRabbitMqConsumeInboxBusMessageHostedService : PlatformConsu
 
     public PlatformRabbitMqConsumeInboxBusMessageHostedService(
         IServiceProvider serviceProvider,
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IPlatformApplicationSettingContext applicationSettingContext,
         PlatformRabbitMqOptions options,
         IPlatformMessageBusScanner messageBusScanner,
         PlatformInboxConfig inboxConfig) : base(
         serviceProvider,
-        loggerFactory,
+        loggerBuilder,
         applicationSettingContext,
         messageBusScanner,
         inboxConfig)

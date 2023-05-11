@@ -175,11 +175,9 @@ public static class ListExtension
     /// <inheritdoc cref="ForEachAsync{T}(IEnumerable{T},Func{T,int,Task})" />
     public static async Task ForEachAsync<T, TActionResult>(this IEnumerable<T> items, Func<T, int, Task<TActionResult>> action)
     {
-        await items.ForEachAsync(
-            async (item, index) =>
-            {
-                await action(item, index);
-            });
+        var itemsList = items.ToList();
+
+        for (var i = 0; i < itemsList.Count; i++) await action(itemsList[i], i);
     }
 
     /// <inheritdoc cref="ForEach{T}(IEnumerable{T},Action{T,int})" />
@@ -189,15 +187,15 @@ public static class ListExtension
     }
 
     /// <inheritdoc cref="ForEachAsync{T}(IEnumerable{T},Func{T,int,Task})" />
-    public static async Task ForEachAsync<T>(this IEnumerable<T> items, Func<T, Task> action)
+    public static Task ForEachAsync<T>(this IEnumerable<T> items, Func<T, Task> action)
     {
-        await items.ForEachAsync((item, index) => action(item));
+        return items.ForEachAsync((item, index) => action(item));
     }
 
     /// <inheritdoc cref="ForEachAsync{T}(IEnumerable{T},Func{T,int,Task})" />
-    public static async Task ForEachAsync<T, TActionResult>(this IEnumerable<T> items, Func<T, Task<TActionResult>> action)
+    public static Task ForEachAsync<T, TActionResult>(this IEnumerable<T> items, Func<T, Task<TActionResult>> action)
     {
-        await items.ForEachAsync((item, index) => action(item));
+        return items.ForEachAsync((item, index) => action(item));
     }
 
     /// <summary>
@@ -217,45 +215,45 @@ public static class ListExtension
     }
 
     /// <inheritdoc cref="SelectAsync{T,TResult}(IEnumerable{T},Func{T,int,Task{TResult}})" />
-    public static async Task<List<TActionResult>> SelectAsync<T, TActionResult>(
+    public static Task<List<TActionResult>> SelectAsync<T, TActionResult>(
         this IEnumerable<T> items,
         Func<T, Task<TActionResult>> actionAsync)
     {
-        return await items.SelectAsync((item, index) => actionAsync(item));
+        return items.SelectAsync((item, index) => actionAsync(item));
     }
 
     /// <summary>
     /// Example: var listB = await Task{list}.ThenSelect((item, itemIndex) => get B)
     /// </summary>
-    public static async Task<List<TActionResult>> ThenSelect<T, TActionResult>(
+    public static Task<List<TActionResult>> ThenSelect<T, TActionResult>(
         this Task<IEnumerable<T>> itemsTask,
         Func<T, int, TActionResult> selector)
     {
-        return await itemsTask.Then(items => items.Select(selector).ToList());
+        return itemsTask.Then(items => items.Select(selector).ToList());
     }
 
     /// <inheritdoc cref="ThenSelect{T,TResult}(Task{IEnumerable{T}},Func{T,int,Task{TResult}})" />
-    public static async Task<List<TActionResult>> ThenSelect<T, TActionResult>(
+    public static Task<List<TActionResult>> ThenSelect<T, TActionResult>(
         this Task<IEnumerable<T>> itemsTask,
         Func<T, TActionResult> selector)
     {
-        return await itemsTask.ThenSelect((item, index) => selector(item));
+        return itemsTask.ThenSelect((item, index) => selector(item));
     }
 
     /// <inheritdoc cref="ThenSelect{T,TResult}(Task{IEnumerable{T}},Func{T,int,Task{TResult}})" />
-    public static async Task<List<TActionResult>> ThenSelect<T, TActionResult>(
+    public static Task<List<TActionResult>> ThenSelect<T, TActionResult>(
         this Task<List<T>> itemsTask,
         Func<T, int, TActionResult> selector)
     {
-        return await itemsTask.Then(items => items.Select(selector).ToList());
+        return itemsTask.Then(items => items.Select(selector).ToList());
     }
 
     /// <inheritdoc cref="ThenSelect{T,TResult}(Task{IEnumerable{T}},Func{T,int,Task{TResult}})" />
-    public static async Task<List<TActionResult>> ThenSelect<T, TActionResult>(
+    public static Task<List<TActionResult>> ThenSelect<T, TActionResult>(
         this Task<List<T>> itemsTask,
         Func<T, TActionResult> selector)
     {
-        return await itemsTask.ThenSelect((item, index) => selector(item));
+        return itemsTask.ThenSelect((item, index) => selector(item));
     }
 
     public static List<T1> Map<T, T1>(this IList<T> items, Func<T, T1> mapFunc)

@@ -82,7 +82,7 @@ public static class WebElementExtension
         {
             var otherElementActions = Util.ListBuilder
                 .New("body", "body > *", "p", "header", "footer", "h1", "h2", "h3")
-                .SelectMany(otherElementSelector => webDriver.FindElements(cssSelector: otherElementSelector))
+                .SelectMany(webDriver.FindElements)
                 .Where(p => p.IsClickable())
                 .Select<IWebElement, Action>(otherElement => () => otherElementAction(otherElement))
                 .Concat(additionalFocusToOtherElements.Select<IWebElement, Action>(element => () => element.Pipe(otherElementAction)))
@@ -121,8 +121,7 @@ public static class WebElementExtension
     {
         return element?.PipeIfNotNull(
             thenPipe: _ =>
-                element.TagName
-                + element.GetCssValue(propertyName: "class").Split(separator: " ").Select(selector: className => $".{className}").JoinToString()
+                element.TagName + element.GetCssValue(propertyName: "class").Split(separator: " ").Select(selector: className => $".{className}").JoinToString()
         );
     }
 

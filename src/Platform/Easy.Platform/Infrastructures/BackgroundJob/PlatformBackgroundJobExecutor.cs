@@ -1,6 +1,5 @@
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
-using Easy.Platform.Constants;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Infrastructures.BackgroundJob;
@@ -39,10 +38,9 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
 {
     protected readonly ILogger Logger;
 
-    public PlatformBackgroundJobExecutor(
-        ILoggerFactory loggerFactory)
+    public PlatformBackgroundJobExecutor(ILoggerFactory loggerFactory)
     {
-        Logger = loggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.BackgroundJob.{GetType().Name}");
+        Logger = loggerFactory.CreateLogger(typeof(PlatformBackgroundJobExecutor));
     }
 
     /// <summary>

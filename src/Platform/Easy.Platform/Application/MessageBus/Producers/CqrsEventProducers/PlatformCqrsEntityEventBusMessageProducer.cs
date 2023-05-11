@@ -15,17 +15,22 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
     where TMessage : class, IPlatformWithPayloadBusMessage<PlatformCqrsEntityEvent<TEntity>>, IPlatformSelfRoutingKeyBusMessage, IPlatformTrackableBusMessage, new()
 {
     protected PlatformCqrsEntityEventBusMessageProducer(
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
         IPlatformApplicationUserContextAccessor userContextAccessor,
         IPlatformApplicationSettingContext applicationSettingContext) : base(
-        loggerFactory,
+        loggerBuilder,
         unitOfWorkManager,
         applicationBusMessageProducer,
         userContextAccessor,
         applicationSettingContext)
     {
+    }
+
+    protected override bool HandleWhen(PlatformCqrsEntityEvent<TEntity> @event)
+    {
+        return CheckCanHandleSendMessage(@event).GetResult();
     }
 
     protected override TMessage BuildMessage(PlatformCqrsEntityEvent<TEntity> @event)
@@ -55,13 +60,23 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
 
     protected override async Task SendMessage(PlatformCqrsEntityEvent<TEntity> @event, CancellationToken cancellationToken)
     {
+        await CheckCanHandleSendMessage(@event, entityEvent => base.SendMessage(entityEvent, cancellationToken));
+    }
+
+    private async Task<bool> CheckCanHandleSendMessage(
+        PlatformCqrsEntityEvent<TEntity> @event,
+        Func<PlatformCqrsEntityEvent<TEntity>, Task> onCanSendMessageFn = null)
+    {
         if (SendMessageWhen(@event))
         {
             // Do not need to send message again if HasOutboxMessageSupport and crud action is IsAfterCompletedUowEntityEvent
             // because of out box support, we will register the outbox message already before complete uow, with crud action value is mapped from before to after CompletedUowCrudAction
             // using MapFromBeforeToAfterCompletedUowCrudAction
             if (!@event.CrudAction.IsCompletedCrudAction() || !ApplicationBusMessageProducer.HasOutboxMessageSupport())
-                await base.SendMessage(@event, cancellationToken);
+            {
+                if (onCanSendMessageFn != null) await onCanSendMessageFn(@event);
+                return true;
+            }
         }
         else
         {
@@ -71,9 +86,14 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
                 var mappedToUowCompletedCrudActionEntityEvent = @event.Clone().With(p => p.CrudAction = p.CrudAction.GetRelevantCompletedCrudAction());
 
                 if (SendMessageWhen(mappedToUowCompletedCrudActionEntityEvent))
-                    await base.SendMessage(mappedToUowCompletedCrudActionEntityEvent, cancellationToken);
+                {
+                    if (onCanSendMessageFn != null) await onCanSendMessageFn(mappedToUowCompletedCrudActionEntityEvent);
+                    return true;
+                }
             }
         }
+
+        return false;
     }
 }
 

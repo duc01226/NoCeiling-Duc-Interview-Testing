@@ -5,7 +5,7 @@ namespace Easy.Platform.MongoDB.Extensions;
 
 public static class MongoCollectionExtensions
 {
-    public static async Task<BulkWriteResult<TItem>> UpsertManyAsync<TItem>(
+    public static Task<BulkWriteResult<TItem>> UpsertManyAsync<TItem>(
         this IMongoCollection<TItem> collection,
         List<TItem> items,
         Func<TItem, Expression<Func<TItem, bool>>> updatePredicateBuilder)
@@ -19,7 +19,7 @@ public static class MongoCollectionExtensions
                     IsUpsert = true
                 });
 
-        return await collection.BulkWriteAsync(
+        return collection.BulkWriteAsync(
             updateRequests,
             new BulkWriteOptions
             {

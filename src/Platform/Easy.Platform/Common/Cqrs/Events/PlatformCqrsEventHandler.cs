@@ -1,7 +1,5 @@
-using Easy.Platform.Application;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
-using Easy.Platform.Constants;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,67 +14,87 @@ public interface IPlatformCqrsEventHandler<in TEvent> : INotificationHandler<TEv
 public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandler<TEvent>
     where TEvent : PlatformCqrsEvent, new()
 {
-    protected readonly ILogger Logger;
+    protected readonly ILoggerFactory LoggerFactory;
 
-    protected PlatformCqrsEventHandler(ILoggerFactory loggerFactory)
+    protected PlatformCqrsEventHandler(ILoggerFactory loggerBuilder)
     {
-        Logger = loggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.PlatformSuffix}.{GetType().Name}");
+        LoggerFactory = loggerBuilder;
     }
+
+    public virtual int RetryOnFailedTimes => 1;
 
     public virtual async Task Handle(TEvent notification, CancellationToken cancellationToken)
     {
+        if (!HandleWhen(notification)) return;
+
         try
         {
-            if (!HandleWhen(notification)) return;
-
+            // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
+            // so the it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
             if (ExecuteSeparatelyInBackgroundThread())
-                // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
-                // so the it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
+            {
                 Util.TaskRunner.QueueActionInBackground(
-                    async () =>
+                    () =>
                     {
-                        await PlatformApplicationGlobal.RootServiceProvider
-                            .ExecuteInjectScopedAsync(
-                                async (IServiceProvider sp) =>
-                                {
-                                    var thisHandlerNewInstance = sp.GetRequiredService(GetType())
-                                        .As<PlatformCqrsEventHandler<TEvent>>();
-
-                                    try
-                                    {
-                                        await thisHandlerNewInstance.ExecuteHandleAsync(notification, default);
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        LogError(notification, e);
-                                    }
-                                });
+                        if (RetryOnFailedTimes > 0)
+                            // Retry at least 1 time to help resilient PlatformCqrsEventHandler. Sometime parallel, create/update concurrency could lead to error
+                            return Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                                () => DoExecuteThisWithNewInstance(GetType(), notification),
+                                retryCount: RetryOnFailedTimes);
+                        return DoExecuteThisWithNewInstance(GetType(), notification);
                     },
-                    PlatformApplicationGlobal.LoggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}"),
+                    () => PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>)),
                     cancellationToken: default);
+            }
             else
-                await ExecuteHandleAsync(notification, cancellationToken);
+            {
+                if (RetryOnFailedTimes > 0)
+                    // Retry at least 1 time to help resilient PlatformCqrsEventHandler. Sometime parallel, create/update concurrency could lead to error
+                    await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(() => ExecuteHandleAsync(notification, cancellationToken), retryCount: RetryOnFailedTimes);
+                else
+                    await ExecuteHandleAsync(notification, cancellationToken);
+            }
         }
         catch (Exception e)
         {
-            LogError(notification, e);
+            LogError(notification, e, LoggerFactory);
+        }
+
+        static async Task DoExecuteThisWithNewInstance(Type eventHandlerType, TEvent notification)
+        {
+            await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
+                async (IServiceProvider sp) =>
+                {
+                    var thisHandlerNewInstance = sp.GetRequiredService(eventHandlerType)
+                        .As<PlatformCqrsEventHandler<TEvent>>();
+
+                    try
+                    {
+                        await thisHandlerNewInstance.ExecuteHandleAsync(notification, default);
+                    }
+                    catch (Exception e)
+                    {
+                        thisHandlerNewInstance.LogError(notification, e, PlatformGlobal.LoggerFactory);
+                    }
+                });
         }
     }
 
-    public virtual async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
+    public virtual Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
     {
-        await HandleAsync(@event, cancellationToken);
+        return HandleAsync(@event, cancellationToken);
     }
 
-    protected virtual void LogError(TEvent notification, Exception exception)
+    public virtual void LogError(TEvent notification, Exception exception, ILoggerFactory loggerBuilder)
     {
-        Logger.LogError(
-            exception,
-            "[PlatformCqrsEventHandler] Handle event failed: {ExceptionMessage}. EventType:{EventType}; HandlerType:{HandlerType}. EventContent:{EventContent}",
-            exception.Message,
-            notification.GetType().Name,
-            GetType().Name,
-            notification.ToJson());
+        CreateLogger(loggerBuilder)
+            .LogError(
+                exception,
+                "[PlatformCqrsEventHandler] Handle event failed: {ExceptionMessage}. EventType:{EventType}; HandlerType:{HandlerType}. EventContent:{EventContent}",
+                exception.Message,
+                notification.GetType().Name,
+                GetType().Name,
+                notification.ToJson());
     }
 
     /// <summary>
@@ -97,5 +115,10 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
     protected virtual bool ExecuteSeparatelyInBackgroundThread()
     {
         return false;
+    }
+
+    public static ILogger CreateLogger(ILoggerFactory loggerFactory)
+    {
+        return loggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>));
     }
 }

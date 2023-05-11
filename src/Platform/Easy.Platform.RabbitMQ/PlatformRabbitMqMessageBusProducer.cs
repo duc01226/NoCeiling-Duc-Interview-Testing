@@ -31,7 +31,7 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
         MqChannelPool = mqChannelPool;
         ExchangeProvider = exchangeProvider;
         Options = options;
-        Logger = loggerFactory.CreateLogger($"{DefaultPlatformMessageBusLogSuffix.Value}.{GetType().Name}");
+        Logger = loggerFactory.CreateLogger(typeof(PlatformRabbitMqMessageBusProducer));
     }
 
     public async Task<TMessage> SendAsync<TMessage>(

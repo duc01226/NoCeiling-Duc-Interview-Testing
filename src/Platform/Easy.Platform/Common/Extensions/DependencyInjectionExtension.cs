@@ -727,8 +727,10 @@ public static class DependencyInjectionExtension
     {
         method.Method
             .Validate(
-                must: methodInfo => methodInfo.GetParameters().Length >= manuallyParams.Length && manuallyParams.All(
-                    (manuallyParam, index) => manuallyParam?.GetType() == null || manuallyParam.GetType() == methodInfo.GetParameters()[index].ParameterType),
+                must: methodInfo => methodInfo.GetParameters().Length >= manuallyParams.Length &&
+                                    manuallyParams.All(
+                                        (manuallyParam, index) =>
+                                            manuallyParam?.GetType() == null || manuallyParam.GetType() == methodInfo.GetParameters()[index].ParameterType),
                 errorMsg: "Delegate method parameters signature must start with all parameters correspond to manuallyParams")
             .EnsureValid();
 
@@ -801,15 +803,15 @@ public static class DependencyInjectionExtension
     }
 
     /// <inheritdoc cref="ExecuteInjectScoped" />
-    public static async Task ExecuteInjectScopedAsync(this IServiceProvider serviceProvider, Delegate method, params object[] manuallyParams)
+    public static Task ExecuteInjectScopedAsync(this IServiceProvider serviceProvider, Delegate method, params object[] manuallyParams)
     {
-        await serviceProvider.ExecuteScopedAsync(async scope => await scope.ExecuteInjectAsync(method, manuallyParams));
+        return serviceProvider.ExecuteScopedAsync(scope => scope.ExecuteInjectAsync(method, manuallyParams));
     }
 
     /// <inheritdoc cref="ExecuteInjectScoped" />
-    public static async Task<TResult> ExecuteInjectScopedAsync<TResult>(this IServiceProvider serviceProvider, Delegate method, params object[] manuallyParams)
+    public static Task<TResult> ExecuteInjectScopedAsync<TResult>(this IServiceProvider serviceProvider, Delegate method, params object[] manuallyParams)
     {
-        return await serviceProvider.ExecuteScopedAsync(async scope => await scope.ExecuteInjectAsync<TResult>(method, manuallyParams));
+        return serviceProvider.ExecuteScopedAsync(scope => scope.ExecuteInjectAsync<TResult>(method, manuallyParams));
     }
 
     /// <summary>
@@ -851,27 +853,27 @@ public static class DependencyInjectionExtension
     /// Support ExecuteInjectScopedAsync scrolling paging. <br />
     /// Then the "manuallyParams" for the method. And the last will be the object you want to be dependency injected
     /// </summary>
-    public static async Task ExecuteInjectScopedScrollingPagingAsync<TItem>(
+    public static Task ExecuteInjectScopedScrollingPagingAsync<TItem>(
         this IServiceProvider serviceProvider,
         Delegate method,
         params object[] manuallyParams)
     {
-        await Util.Pager.ExecuteScrollingPagingAsync(
-            async () => await serviceProvider.ExecuteInjectScopedAsync<List<TItem>>(method, manuallyParams: manuallyParams));
+        return Util.Pager.ExecuteScrollingPagingAsync(
+            () => serviceProvider.ExecuteInjectScopedAsync<List<TItem>>(method, manuallyParams: manuallyParams));
     }
 
     /// <summary>
     /// Support ExecuteInjectScopedAsync scrolling paging. <br />
     /// Then the "manuallyParams" for the method. And the last will be the object you want to be dependency injected
     /// </summary>
-    public static async Task ExecuteInjectScopedScrollingPagingAsync<TItem>(
+    public static Task ExecuteInjectScopedScrollingPagingAsync<TItem>(
         this IServiceProvider serviceProvider,
         int maxExecutionCount,
         Delegate method,
         params object[] manuallyParams)
     {
-        await Util.Pager.ExecuteScrollingPagingAsync(
-            async () => await serviceProvider.ExecuteInjectScopedAsync<List<TItem>>(method, manuallyParams: manuallyParams),
+        return Util.Pager.ExecuteScrollingPagingAsync(
+            () => serviceProvider.ExecuteInjectScopedAsync<List<TItem>>(method, manuallyParams: manuallyParams),
             maxExecutionCount: maxExecutionCount);
     }
 

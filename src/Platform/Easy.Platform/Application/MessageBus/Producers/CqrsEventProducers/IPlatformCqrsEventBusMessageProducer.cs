@@ -34,11 +34,11 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
     protected readonly IPlatformApplicationBusMessageProducer ApplicationBusMessageProducer;
 
     public PlatformCqrsEventBusMessageProducer(
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
         IPlatformApplicationUserContextAccessor userContextAccessor,
-        IPlatformApplicationSettingContext applicationSettingContext) : base(loggerFactory, unitOfWorkManager)
+        IPlatformApplicationSettingContext applicationSettingContext) : base(loggerBuilder, unitOfWorkManager)
     {
         ApplicationBusMessageProducer = applicationBusMessageProducer;
         UserContextAccessor = userContextAccessor;
@@ -60,13 +60,14 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
         await SendMessage(@event, cancellationToken);
     }
 
-    protected override void LogError(TEvent notification, Exception exception)
+    public override void LogError(TEvent notification, Exception exception, ILoggerFactory loggerBuilder)
     {
-        Logger.LogError(
-            exception,
-            "[PlatformCqrsEventBusMessageProducer] Failed to send {MessageName}. MessageContent: {MessageContent}",
-            nameof(TMessage),
-            exception.As<PlatformMessageBusException<TMessage>>()?.EventBusMessage.ToJson());
+        CreateLogger(loggerBuilder)
+            .LogError(
+                exception,
+                "[PlatformCqrsEventBusMessageProducer] Failed to send {MessageName}. MessageContent: {MessageContent}",
+                nameof(TMessage),
+                exception.As<PlatformMessageBusException<TMessage>>()?.EventBusMessage.ToJson());
     }
 
     protected virtual async Task SendMessage(TEvent @event, CancellationToken cancellationToken)

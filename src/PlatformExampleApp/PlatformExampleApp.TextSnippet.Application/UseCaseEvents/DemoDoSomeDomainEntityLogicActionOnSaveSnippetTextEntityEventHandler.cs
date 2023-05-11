@@ -8,8 +8,8 @@ namespace PlatformExampleApp.TextSnippet.Application.UseCaseEvents;
 
 public class DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEventHandler : PlatformCqrsEntityEventApplicationHandler<TextSnippetEntity>
 {
-    public DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEventHandler(ILoggerFactory loggerFactory, IUnitOfWorkManager unitOfWorkManager) : base(
-        loggerFactory,
+    public DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEventHandler(ILoggerFactory loggerBuilder, IUnitOfWorkManager unitOfWorkManager) : base(
+        loggerBuilder,
         unitOfWorkManager)
     {
     }

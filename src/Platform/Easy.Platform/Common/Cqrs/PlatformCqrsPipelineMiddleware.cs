@@ -10,12 +10,12 @@ namespace Easy.Platform.Common.Cqrs;
 public abstract class PlatformCqrsPipelineMiddleware<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull, IRequest<TResponse>
 {
-    public async Task<TResponse> Handle(
+    public Task<TResponse> Handle(
         TRequest request,
         RequestHandlerDelegate<TResponse> next,
         CancellationToken cancellationToken)
     {
-        return await HandleAsync(request, next, cancellationToken);
+        return HandleAsync(request, next, cancellationToken);
     }
 
     protected abstract Task<TResponse> HandleAsync(

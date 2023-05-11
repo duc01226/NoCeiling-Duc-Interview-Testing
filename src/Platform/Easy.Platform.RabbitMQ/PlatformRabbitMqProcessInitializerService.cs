@@ -2,8 +2,8 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
-using Easy.Platform.Application;
 using Easy.Platform.Application.Context;
+using Easy.Platform.Common;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Timing;
 using Easy.Platform.Infrastructures.MessageBus;
@@ -21,7 +21,7 @@ namespace Easy.Platform.RabbitMQ;
 /// Name/Consumer Message Name via RoutingKey.
 /// Then start to connect listening messages, execute consumer which handle the suitable message
 /// </summary>
-public sealed class PlatformRabbitMqProcessInitializerService
+public class PlatformRabbitMqProcessInitializerService
 {
     public const int CheckToRestartProcessMaxFailedCounter = 100;
     public const int CheckToRestartProcessDelaySeconds = 6;
@@ -60,7 +60,6 @@ public sealed class PlatformRabbitMqProcessInitializerService
         IPlatformMessageBusScanner messageBusScanner,
         PlatformRabbitMqChannelPool mqChannelPool,
         PlatformRabbitMqOptions options,
-        ILoggerFactory loggerFactory,
         IServiceProvider serviceProvider)
     {
         this.applicationSettingContext = applicationSettingContext;
@@ -69,10 +68,13 @@ public sealed class PlatformRabbitMqProcessInitializerService
         this.mqChannelPool = mqChannelPool;
         this.options = options;
         this.serviceProvider = serviceProvider;
-        Logger = loggerFactory.CreateLogger($"{DefaultPlatformMessageBusLogSuffix.Value}.{GetType().Name}");
+        Logger = PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformRabbitMqProcessInitializerService));
+        InvokeConsumerLogger = PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformMessageBusConsumer));
     }
 
-    private ILogger Logger { get; }
+    protected ILogger Logger { get; }
+
+    protected ILogger InvokeConsumerLogger { get; }
 
     public IModel CurrentChannel => mqChannelPool.GlobalChannel;
 
@@ -92,8 +94,8 @@ public sealed class PlatformRabbitMqProcessInitializerService
             StartConsumers();
 
             Util.TaskRunner.QueueActionInBackground(
-                async () => await StartCheckToRestartProcessInterval(cancellationToken),
-                Logger,
+                () => StartCheckToRestartProcessInterval(cancellationToken),
+                () => Logger,
                 cancellationToken: cancellationToken);
 
             processStarted = true;
@@ -340,7 +342,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
                             rabbitMqMessage.RoutingKey,
                             rabbitMqMessage.DeliveryTag));
                 },
-                Logger,
+                () => Logger,
                 cancellationToken: cancellationToken);
         }
         catch (PlatformInvokeConsumerException ex)
@@ -375,7 +377,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
                                 "[MessageBus] Failed to ack the message. RoutingKey:{RoutingKey}. DeliveryTag:{DeliveryTag}",
                                 rabbitMqMessage.RoutingKey,
                                 rabbitMqMessage.DeliveryTag)),
-                    Logger,
+                    () => Logger,
                     cancellationToken: cancellationToken);
             }
         }
@@ -464,10 +466,8 @@ public sealed class PlatformRabbitMqProcessInitializerService
                         message: $"RabbitMQ retry queue failed message for the routing key: {rabbitMqMessage.RoutingKey}.{Environment.NewLine}" +
                                  "Message: {BusMessage}",
                         busMessage.ToJson()));
-
-                return Task.CompletedTask;
             },
-            PlatformApplicationGlobal.LoggerFactory.CreateLogger($"{DefaultPlatformMessageBusLogSuffix.Value}.{GetType().Name}"),
+            () => Logger,
             cancellationToken: currentCancellationToken);
 
         return true;
@@ -502,8 +502,7 @@ public sealed class PlatformRabbitMqProcessInitializerService
                 args.RoutingKey,
                 options.IsLogConsumerProcessTime,
                 options.LogErrorSlowProcessWarningTimeMilliseconds,
-                Logger,
-                currentCancellationToken);
+                InvokeConsumerLogger);
         }
     }
 

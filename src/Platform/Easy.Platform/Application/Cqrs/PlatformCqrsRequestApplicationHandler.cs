@@ -1,7 +1,7 @@
 using Easy.Platform.Application.Context.UserContext;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Validations;
-using Easy.Platform.Constants;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.Cqrs;
@@ -14,7 +14,7 @@ public abstract class PlatformCqrsRequestApplicationHandler<TRequest> : Platform
     public PlatformCqrsRequestApplicationHandler(IPlatformApplicationUserContextAccessor userContext)
     {
         UserContext = userContext;
-        Logger = PlatformApplicationGlobal.LoggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}");
+        Logger = PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformCqrsRequestApplicationHandler<>));
     }
 
     public IPlatformApplicationUserContext CurrentUser => UserContext.Current;
@@ -38,10 +38,10 @@ public abstract class PlatformCqrsRequestApplicationHandler<TRequest> : Platform
         return requestSelfValidation;
     }
 
-    protected virtual async Task<PlatformValidationResult<TRequest>> ValidateRequestAsync(
+    protected virtual Task<PlatformValidationResult<TRequest>> ValidateRequestAsync(
         TRequest request,
         CancellationToken cancellationToken)
     {
-        return await ValidateRequestAsync(request.Validate().Of<TRequest>(), cancellationToken);
+        return ValidateRequestAsync(request.Validate().Of<TRequest>(), cancellationToken);
     }
 }

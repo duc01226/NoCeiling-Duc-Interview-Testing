@@ -286,13 +286,13 @@ public abstract class PlatformCollectionCacheRepository<TCollectionCacheKeyProvi
                 token);
     }
 
-    public async Task<TData> CacheRequestAsync<TData>(
+    public Task<TData> CacheRequestAsync<TData>(
         Func<Task<TData>> request,
         string requestKey = PlatformContextCacheKeyProvider.DefaultRequestKey,
         PlatformCacheEntryOptions cacheOptions = null,
         CancellationToken token = default)
     {
-        return await CacheRepository()
+        return CacheRepository()
             .CacheRequestAsync(
                 request,
                 CollectionCacheKeyProvider.GetKey(requestKey),
@@ -300,13 +300,13 @@ public abstract class PlatformCollectionCacheRepository<TCollectionCacheKeyProvi
                 token);
     }
 
-    public async Task<TData> CacheRequestAsync<TData>(
+    public Task<TData> CacheRequestAsync<TData>(
         Func<Task<TData>> request,
         object[] requestKeyParts = null,
         PlatformCacheEntryOptions cacheOptions = null,
         CancellationToken token = default)
     {
-        return await CacheRepository()
+        return CacheRepository()
             .CacheRequestAsync(
                 request,
                 CollectionCacheKeyProvider.GetKey(requestKeyParts),
@@ -340,7 +340,7 @@ public abstract class PlatformCollectionCacheRepository<TCollectionCacheKeyProvi
             token);
     }
 
-    public async Task<TData> CacheRequestAsync<TData>(
+    public Task<TData> CacheRequestAsync<TData>(
         Func<Task<TData>> request,
         string requestKey,
         double? absoluteExpirationInSeconds,
@@ -350,14 +350,14 @@ public abstract class PlatformCollectionCacheRepository<TCollectionCacheKeyProvi
             .GetDefaultCacheEntryOptions()
             .WithOptionalCustomAbsoluteExpirationInSeconds(absoluteExpirationInSeconds);
 
-        return await CacheRequestAsync(
+        return CacheRequestAsync(
             request,
             requestKey,
             defaultCacheOptions,
             token);
     }
 
-    public async Task<TData> CacheRequestAsync<TData>(
+    public Task<TData> CacheRequestAsync<TData>(
         Func<Task<TData>> request,
         object[] requestKeyParts,
         double? absoluteExpirationInSeconds,
@@ -367,7 +367,7 @@ public abstract class PlatformCollectionCacheRepository<TCollectionCacheKeyProvi
             .GetDefaultCacheEntryOptions()
             .WithOptionalCustomAbsoluteExpirationInSeconds(absoluteExpirationInSeconds);
 
-        return await CacheRequestAsync(
+        return CacheRequestAsync(
             request,
             requestKeyParts,
             defaultCacheOptions,

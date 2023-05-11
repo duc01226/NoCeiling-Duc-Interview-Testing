@@ -13,6 +13,6 @@ internal static class BsonClassMapHelper
     public static void TryRegisterClassMapWithDefaultInitializer<TClassMap>()
     {
         if (!BsonClassMap.IsClassMapRegistered(typeof(TClassMap)))
-            BsonClassMap.RegisterClassMap<TClassMap>(cm => DefaultClassMapInitializer(cm));
+            BsonClassMap.RegisterClassMap<TClassMap>(DefaultClassMapInitializer);
     }
 }

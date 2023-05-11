@@ -249,18 +249,18 @@ public class PlatformValidationResult<TValue> : ValidationResult
     }
 
 
-    public async Task<PlatformValidationResult<T>> ThenAsync<T>(
+    public Task<PlatformValidationResult<T>> ThenAsync<T>(
         Func<Task<PlatformValidationResult<T>>> nextVal)
     {
-        return await MatchAsync(
+        return MatchAsync(
             valid: value => nextVal(),
             invalid: err => Of<T>(default).ToTask());
     }
 
-    public async Task<PlatformValidationResult<T>> ThenAsync<T>(
+    public Task<PlatformValidationResult<T>> ThenAsync<T>(
         Func<TValue, Task<PlatformValidationResult<T>>> nextVal)
     {
-        return await MatchAsync(
+        return MatchAsync(
             valid: value => nextVal(Value),
             invalid: err => Of<T>(default).ToTask());
     }
@@ -310,7 +310,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
         Func<bool> must,
         params PlatformValidationError[] errors)
     {
-        return And(() => Validate(value: Value, () => must(), errors));
+        return And(() => Validate(value: Value, must, errors));
     }
 
     public PlatformValidationResult<TValue> And(Func<PlatformValidationResult<TValue>> nextValidation)

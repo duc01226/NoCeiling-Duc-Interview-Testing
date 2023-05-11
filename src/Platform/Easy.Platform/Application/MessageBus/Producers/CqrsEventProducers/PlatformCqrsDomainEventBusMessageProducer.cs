@@ -12,12 +12,12 @@ public abstract class PlatformCqrsDomainEventBusMessageProducer<TDomainEvent>
     where TDomainEvent : PlatformCqrsDomainEvent, new()
 {
     protected PlatformCqrsDomainEventBusMessageProducer(
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
         IPlatformApplicationUserContextAccessor userContextAccessor,
         IPlatformApplicationSettingContext applicationSettingContext) : base(
-        loggerFactory,
+        loggerBuilder,
         unitOfWorkManager,
         applicationBusMessageProducer,
         userContextAccessor,

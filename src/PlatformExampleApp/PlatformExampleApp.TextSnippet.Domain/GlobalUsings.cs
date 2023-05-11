@@ -2,6 +2,7 @@
 global using System;
 global using System.Collections.Generic;
 global using System.Threading.Tasks;
+global using Easy.Platform.Common;
 global using Easy.Platform.Common.Utils;
 global using Easy.Platform.Common.Extensions;
 global using Easy.Platform.Common.Validations;

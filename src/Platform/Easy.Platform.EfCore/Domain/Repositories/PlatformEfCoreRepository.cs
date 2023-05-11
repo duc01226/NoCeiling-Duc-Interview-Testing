@@ -69,13 +69,13 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
     {
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
-                async () => await (source.As<IQueryable<TSource>>()?.ToListAsync(cancellationToken) ?? source.ToList().ToTask()),
+                () => source.As<IQueryable<TSource>>()?.ToListAsync(cancellationToken) ?? source.ToList().ToTask(),
                 Logger,
                 PersistenceConfiguration,
                 forWriteQuery: false,
                 resultQuery: source,
                 resultQueryStringBuilder: source.As<IQueryable<TSource>>()
-                    ?.Pipe(queryable => queryable != null ? () => queryable.ToQueryString() : (Func<string>)null));
+                    ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
 
         return await (source.As<IQueryable<TSource>>()?.ToListAsync(cancellationToken) ?? source.ToList().ToTask());
     }
@@ -85,11 +85,11 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         return source.As<IQueryable<TSource>>()?.AsAsyncEnumerable() ?? source.ToAsyncEnumerable();
     }
 
-    public override async Task<TSource> FirstOrDefaultAsync<TSource>(
+    public override Task<TSource> FirstOrDefaultAsync<TSource>(
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default)
     {
-        return await source.FirstOrDefaultAsync(cancellationToken);
+        return source.FirstOrDefaultAsync(cancellationToken);
     }
 
     public override async Task<TSource> FirstOrDefaultAsync<TSource>(
@@ -102,21 +102,21 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         return query.FirstOrDefault();
     }
 
-    public override async Task<TSource> FirstAsync<TSource>(
+    public override Task<TSource> FirstAsync<TSource>(
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default)
     {
-        return await source.FirstAsync(cancellationToken);
+        return source.FirstAsync(cancellationToken);
     }
 
-    public override async Task<int> CountAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public override Task<int> CountAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
-        return await source.CountAsync(cancellationToken);
+        return source.CountAsync(cancellationToken);
     }
 
-    public override async Task<bool> AnyAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public override Task<bool> AnyAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
-        return await source.AnyAsync(cancellationToken);
+        return source.AnyAsync(cancellationToken);
     }
 
     protected override void HandleDisposeUsingOnceTimeContextLogic<TResult>(

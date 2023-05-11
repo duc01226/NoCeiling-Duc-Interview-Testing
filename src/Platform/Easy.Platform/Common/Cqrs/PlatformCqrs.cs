@@ -73,52 +73,52 @@ public class PlatformCqrs : IPlatformCqrs
         this.mediator = mediator;
     }
 
-    public async Task<TResult> SendCommand<TCommand, TResult>(
+    public Task<TResult> SendCommand<TCommand, TResult>(
         TCommand command,
         CancellationToken cancellationToken = default)
         where TCommand : PlatformCqrsCommand<TResult>
         where TResult : PlatformCqrsCommandResult, new()
     {
-        return await mediator.Send(command, cancellationToken);
+        return mediator.Send(command, cancellationToken);
     }
 
-    public async Task<TResult> SendCommand<TResult>(
+    public Task<TResult> SendCommand<TResult>(
         PlatformCqrsCommand<TResult> command,
         CancellationToken cancellationToken = default) where TResult : PlatformCqrsCommandResult, new()
     {
-        return await mediator.Send(command, cancellationToken);
+        return mediator.Send(command, cancellationToken);
     }
 
-    public async Task SendCommand<TCommand>(TCommand command, CancellationToken cancellationToken = default)
+    public Task SendCommand<TCommand>(TCommand command, CancellationToken cancellationToken = default)
         where TCommand : PlatformCqrsCommand<PlatformCqrsCommandResult>
     {
-        await mediator.Send(command, cancellationToken);
+        return mediator.Send(command, cancellationToken);
     }
 
-    public async Task<TResult> SendQuery<TQuery, TResult>(
+    public Task<TResult> SendQuery<TQuery, TResult>(
         TQuery query,
         CancellationToken cancellationToken = default)
         where TQuery : PlatformCqrsQuery<TResult>
     {
-        return await mediator.Send(query, cancellationToken);
+        return mediator.Send(query, cancellationToken);
     }
 
-    public async Task<TResult> SendQuery<TResult>(
+    public Task<TResult> SendQuery<TResult>(
         PlatformCqrsQuery<TResult> query,
         CancellationToken cancellationToken = default)
     {
-        return await mediator.Send(query, cancellationToken);
+        return mediator.Send(query, cancellationToken);
     }
 
-    public async Task SendEvent(PlatformCqrsEvent cqrsEvent, CancellationToken cancellationToken = default)
+    public Task SendEvent(PlatformCqrsEvent cqrsEvent, CancellationToken cancellationToken = default)
     {
-        await mediator.Publish(cqrsEvent, cancellationToken);
+        return mediator.Publish(cqrsEvent, cancellationToken);
     }
 
-    public async Task SendEvents(
+    public Task SendEvents(
         IEnumerable<PlatformCqrsEvent> cqrsEvents,
         CancellationToken cancellationToken = default)
     {
-        await cqrsEvents.ForEachAsync(cqrsEvent => mediator.Publish(cqrsEvent, cancellationToken));
+        return cqrsEvents.ForEachAsync(cqrsEvent => mediator.Publish(cqrsEvent, cancellationToken));
     }
 }

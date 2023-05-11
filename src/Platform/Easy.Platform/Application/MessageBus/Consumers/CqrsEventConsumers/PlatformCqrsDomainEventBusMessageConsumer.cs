@@ -15,9 +15,9 @@ public abstract class PlatformCqrsDomainEventBusMessageConsumer<TDomainEvent>
     where TDomainEvent : PlatformCqrsDomainEvent, new()
 {
     protected PlatformCqrsDomainEventBusMessageConsumer(
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IUnitOfWorkManager uowManager,
-        IServiceProvider serviceProvider) : base(loggerFactory, uowManager, serviceProvider)
+        IServiceProvider serviceProvider) : base(loggerBuilder, uowManager, serviceProvider)
     {
     }
 }

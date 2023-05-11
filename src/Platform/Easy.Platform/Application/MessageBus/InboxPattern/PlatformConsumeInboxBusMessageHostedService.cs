@@ -1,4 +1,6 @@
 using Easy.Platform.Application.Context;
+using Easy.Platform.Application.MessageBus.Consumers;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Hosting;
 using Easy.Platform.Common.JsonSerialization;
@@ -23,19 +25,22 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
 
     public PlatformConsumeInboxBusMessageHostedService(
         IServiceProvider serviceProvider,
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IPlatformApplicationSettingContext applicationSettingContext,
         IPlatformMessageBusScanner messageBusScanner,
-        PlatformInboxConfig inboxConfig) : base(serviceProvider, loggerFactory)
+        PlatformInboxConfig inboxConfig) : base(serviceProvider, loggerBuilder)
     {
         this.applicationSettingContext = applicationSettingContext;
         this.inboxConfig = inboxConfig;
         ConsumerByNameToTypeDic = messageBusScanner
             .ScanAllDefinedConsumerTypes()
             .ToDictionary(PlatformInboxBusMessage.GetConsumerByValue);
+        InvokeConsumerLogger = PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformMessageBusConsumer));
     }
 
     protected Dictionary<string, Type> ConsumerByNameToTypeDic { get; }
+
+    protected ILogger InvokeConsumerLogger { get; }
 
     public static bool MatchImplementation(ServiceDescriptor serviceDescriptor)
     {
@@ -59,7 +64,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         {
             // WHY: Retry in case of the database is not started, initiated or restarting
             await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                async () => await ConsumeInboxEventBusMessages(cancellationToken),
+                () => ConsumeInboxEventBusMessages(cancellationToken),
                 retryAttempt => 10.Seconds(),
                 retryCount: ProcessConsumeMessageRetryCount(),
                 onRetry: (ex, timeSpan, currentRetry, ctx) =>
@@ -111,15 +116,13 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         }
     }
 
-    protected async Task<bool> IsAnyMessagesToHandleAsync()
+    protected Task<bool> IsAnyMessagesToHandleAsync()
     {
-        return await ServiceProvider.ExecuteInjectScopedAsync<bool>(
-            async (IPlatformInboxBusMessageRepository inboxEventBusMessageRepo) =>
+        return ServiceProvider.ExecuteInjectScopedAsync<bool>(
+            (IPlatformInboxBusMessageRepository inboxEventBusMessageRepo) =>
             {
-                var result = await inboxEventBusMessageRepo!.AnyAsync(
+                return inboxEventBusMessageRepo!.AnyAsync(
                     PlatformInboxBusMessage.ToHandleInboxEventBusMessagesExpr(MessageProcessingMaximumTimeInSeconds()));
-
-                return result;
             });
     }
 
@@ -133,7 +136,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         if (consumerType != null)
         {
             var consumer = scope.ServiceProvider.GetService(consumerType)
-                .As<IPlatformMessageBusConsumer>()
+                .As<IPlatformApplicationMessageBusConsumer>()
                 .With(_ => _.HandleExistingInboxMessage = toHandleInboxMessage);
 
             var consumerMessageType = PlatformMessageBusConsumer.GetConsumerMessageType(consumer);
@@ -155,8 +158,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                     toHandleInboxMessage.RoutingKey,
                     IsLogConsumerProcessTime(),
                     LogErrorSlowProcessWarningTimeMilliseconds(),
-                    Logger,
-                    cancellationToken);
+                    InvokeConsumerLogger);
         }
         else
         {

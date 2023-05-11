@@ -13,9 +13,9 @@ public class ClearCacheOnSaveSnippetTextEntityEventHandler : PlatformCqrsEntityE
     private readonly IPlatformCacheRepositoryProvider cacheRepositoryProvider;
 
     public ClearCacheOnSaveSnippetTextEntityEventHandler(
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IUnitOfWorkManager unitOfWorkManager,
-        IPlatformCacheRepositoryProvider cacheRepositoryProvider) : base(loggerFactory, unitOfWorkManager)
+        IPlatformCacheRepositoryProvider cacheRepositoryProvider) : base(loggerBuilder, unitOfWorkManager)
     {
         this.cacheRepositoryProvider = cacheRepositoryProvider;
     }
@@ -39,7 +39,7 @@ public class ClearCacheOnSaveSnippetTextEntityEventHandler : PlatformCqrsEntityE
         Util.TaskRunner.QueueIntervalAsyncActionInBackground(
             token => cacheRepositoryProvider.Get().RemoveCollectionAsync<TextSnippetCollectionCacheKeyProvider>(token),
             intervalTimeInSeconds: 5,
-            logger: Logger,
+            CreateGlobalLogger,
             maximumIntervalExecutionCount: 3,
             executeOnceImmediately: true,
             cancellationToken);

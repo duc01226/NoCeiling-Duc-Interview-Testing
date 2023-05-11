@@ -1,5 +1,4 @@
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Constants;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -16,15 +15,13 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
     protected bool ProcessStarted;
     protected bool ProcessStopped;
     protected readonly IServiceProvider ServiceProvider;
-    protected readonly ILogger SystemLogger;
     private readonly object startProcessLock = new();
     private readonly object stopProcessLock = new();
 
     public PlatformHostedService(IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
     {
         ServiceProvider = serviceProvider;
-        Logger = loggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.PlatformSuffix}.{GetType().Name}");
-        SystemLogger = loggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}");
+        Logger = CreateLogger(loggerFactory);
     }
 
     public void Dispose()
@@ -43,7 +40,7 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
 
             ProcessStarted = true;
 
-            SystemLogger.LogInformation($"Process of {GetType().Name} Started");
+            Logger.LogInformation($"Process of {GetType().Name} Started");
         }
     }
 
@@ -57,7 +54,7 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
 
             ProcessStopped = true;
 
-            SystemLogger.LogInformation($"Process of {GetType().Name} Stopped");
+            Logger.LogInformation($"Process of {GetType().Name} Stopped");
         }
     }
 
@@ -71,4 +68,9 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
     }
 
     protected virtual void DisposeManagedResource() { }
+
+    public static ILogger CreateLogger(ILoggerFactory loggerFactory)
+    {
+        return loggerFactory.CreateLogger(typeof(PlatformHostedService));
+    }
 }

@@ -20,9 +20,9 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
 
     public PlatformOutboxBusMessageCleanerHostedService(
         IServiceProvider serviceProvider,
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IPlatformApplicationSettingContext applicationSettingContext,
-        PlatformOutboxConfig outboxConfig) : base(serviceProvider, loggerFactory)
+        PlatformOutboxConfig outboxConfig) : base(serviceProvider, loggerBuilder)
     {
         this.applicationSettingContext = applicationSettingContext;
         OutboxConfig = outboxConfig;
@@ -49,7 +49,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
         {
             // WHY: Retry in case of the db is not started, initiated or restarting
             await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                async () => await CleanOutboxEventBusMessage(cancellationToken),
+                () => CleanOutboxEventBusMessage(cancellationToken),
                 retryAttempt => 10.Seconds(),
                 retryCount: ProcessClearMessageRetryCount(),
                 onRetry: (ex, timeSpan, currentRetry, ctx) =>

@@ -15,9 +15,9 @@ public abstract class PlatformCqrsCommandEventBusMessageConsumer<TCommand>
     where TCommand : class, IPlatformCqrsCommand, new()
 {
     protected PlatformCqrsCommandEventBusMessageConsumer(
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IUnitOfWorkManager uowManager,
-        IServiceProvider serviceProvider) : base(loggerFactory, uowManager, serviceProvider)
+        IServiceProvider serviceProvider) : base(loggerBuilder, uowManager, serviceProvider)
     {
     }
 }

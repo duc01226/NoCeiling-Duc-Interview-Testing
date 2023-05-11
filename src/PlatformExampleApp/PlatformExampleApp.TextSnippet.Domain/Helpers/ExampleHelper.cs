@@ -1,5 +1,4 @@
 using System.Linq.Expressions;
-using Easy.Platform.Common;
 using Easy.Platform.Persistence.Services;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;

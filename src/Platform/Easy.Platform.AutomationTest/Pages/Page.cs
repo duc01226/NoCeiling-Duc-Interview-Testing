@@ -515,7 +515,7 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
 
     public PlatformValidationResult<TPage> ValidateIsCurrentActivePage()
     {
-        return ValidateCurrentPageUrlMatched().And(nextValidation: () => ValidateCurrentPageTitleMatched());
+        return ValidateCurrentPageUrlMatched().And(nextValidation: ValidateCurrentPageTitleMatched);
     }
 
     public TPage Reload()

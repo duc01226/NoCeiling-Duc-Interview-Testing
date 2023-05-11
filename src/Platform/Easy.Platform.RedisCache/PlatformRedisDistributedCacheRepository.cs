@@ -19,7 +19,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         IServiceProvider serviceProvider,
         IOptions<RedisCacheOptions> optionsAccessor,
         IPlatformApplicationSettingContext applicationSettingContext,
-        ILoggerFactory loggerFactory) : base(serviceProvider, loggerFactory)
+        ILoggerFactory loggerBuilder) : base(serviceProvider, loggerBuilder)
     {
         this.applicationSettingContext = applicationSettingContext;
         redisCache = new Lazy<Microsoft.Extensions.Caching.StackExchangeRedis.RedisCache>(
@@ -50,7 +50,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         }
         catch (Exception e)
         {
-            throw new Exception($"{GetType().Name} GetAsync failed. FullStackTrace: {stackTrace}", e);
+            throw new Exception($"{GetType().Name} GetAsync failed. {e.Message}. FullStackTrace: {stackTrace}", e);
         }
 
         try
@@ -92,7 +92,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         }
         catch (Exception e)
         {
-            throw new Exception($"{GetType().Name} RemoveAsync failed. FullStackTrace: {stackTrace}", e);
+            throw new Exception($"{GetType().Name} RemoveAsync failed. {e.Message}. FullStackTrace: {stackTrace}", e);
         }
 
         await UpdateGlobalCachedKeys(p => p.TryRemove(cacheKey, out var _));
@@ -172,7 +172,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
                 cacheKey,
                 value.ToJson());
 
-            throw new Exception($"{GetType().Name} SetToRedisCacheAsync failed. FullStackTrace: {stackTrace}", ex);
+            throw new Exception($"{GetType().Name} SetToRedisCacheAsync failed. {ex.Message}. FullStackTrace: {stackTrace}", ex);
         }
     }
 

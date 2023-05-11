@@ -9,9 +9,9 @@ public abstract class PlatformCqrsEntityEventApplicationHandler<TEntity> : Platf
     where TEntity : class, IEntity, new()
 {
     protected PlatformCqrsEntityEventApplicationHandler(
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IUnitOfWorkManager unitOfWorkManager) : base(
-        loggerFactory,
+        loggerBuilder,
         unitOfWorkManager)
     {
     }
@@ -25,5 +25,10 @@ public abstract class PlatformCqrsEntityEventApplicationHandler<TEntity> : Platf
             PlatformCqrsEntityEventCrudAction.Deleted => true,
             _ => false
         };
+    }
+
+    protected override bool CanExecuteHandlingEventUsingInboxConsumer(bool hasInboxMessageRepository, PlatformCqrsEntityEvent<TEntity> @event)
+    {
+        return base.CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository, @event) && !@event.CrudAction.IsTrackingCrudAction();
     }
 }

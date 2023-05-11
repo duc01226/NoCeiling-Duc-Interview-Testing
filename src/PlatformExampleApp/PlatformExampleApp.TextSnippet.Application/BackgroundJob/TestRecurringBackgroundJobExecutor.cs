@@ -19,11 +19,11 @@ public class TestRecurringBackgroundJobExecutor : PlatformApplicationBackgroundJ
     private readonly ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository;
 
     public TestRecurringBackgroundJobExecutor(
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IUnitOfWorkManager unitOfWorkManager,
         ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository,
         IPlatformCqrs cqrs,
-        IPlatformApplicationBusMessageProducer busMessageProducer) : base(unitOfWorkManager, loggerFactory)
+        IPlatformApplicationBusMessageProducer busMessageProducer) : base(unitOfWorkManager, loggerBuilder)
     {
         this.textSnippetEntityRepository = textSnippetEntityRepository;
         this.cqrs = cqrs;

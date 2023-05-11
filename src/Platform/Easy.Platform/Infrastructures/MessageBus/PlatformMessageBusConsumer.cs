@@ -1,6 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using Easy.Platform.Application.MessageBus.InboxPattern;
-using Easy.Platform.Common.Exceptions.Extensions;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Microsoft.Extensions.Logging;
@@ -9,7 +9,15 @@ namespace Easy.Platform.Infrastructures.MessageBus;
 
 public interface IPlatformMessageBusConsumer
 {
-    public PlatformInboxBusMessage HandleExistingInboxMessage { get; set; }
+    /// <summary>
+    /// Main Entry Handle Method
+    /// </summary>
+    Task HandleAsync(object message, string routingKey);
+
+    /// <summary>
+    /// Main handle logic only method of the consumer
+    /// </summary>
+    Task HandleLogicAsync(object message, string routingKey);
 
     /// <summary>
     /// Config the time in milliseconds to log warning if the process consumer time is over ProcessWarningTimeMilliseconds.
@@ -56,7 +64,9 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
 {
     public const long DefaultProcessWarningTimeMilliseconds = 5000;
 
-    public PlatformInboxBusMessage HandleExistingInboxMessage { get; set; }
+    public abstract Task HandleAsync(object message, string routingKey);
+
+    public abstract Task HandleLogicAsync(object message, string routingKey);
 
     public virtual long? SlowProcessWarningTimeMilliseconds()
     {
@@ -105,8 +115,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
         string routingKey,
         bool isLogConsumerProcessTime,
         double slowProcessWarningTimeMilliseconds = DefaultProcessWarningTimeMilliseconds,
-        ILogger logger = null,
-        CancellationToken cancellationToken = default)
+        ILogger logger = null)
     {
         logger?.LogInformation(
             "[MessageBus] Start invoking consumer. Name: {ConsumerName}. RoutingKey: {RoutingKey}. TrackingId: {TrackingId}",
@@ -116,7 +125,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
 
         if (isLogConsumerProcessTime && !consumer.DisableSlowProcessWarning())
             await Util.TaskRunner.ProfileExecutionAsync(
-                asyncTask: async () => await DoInvokeConsumer(consumer, busMessage, routingKey, cancellationToken),
+                asyncTask: () => DoInvokeConsumer(consumer, busMessage, routingKey),
                 afterExecution: elapsedMilliseconds =>
                 {
                     var logMessage =
@@ -133,8 +142,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
             await DoInvokeConsumer(
                 consumer,
                 busMessage,
-                routingKey,
-                cancellationToken);
+                routingKey);
 
         logger?.LogInformation(
             "[MessageBus] Finished invoking consumer. Name: {ConsumerName}. RoutingKey: {RoutingKey}. TrackingId: {TrackingId}",
@@ -146,22 +154,11 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
     private static async Task DoInvokeConsumer(
         IPlatformMessageBusConsumer consumer,
         object eventBusMessage,
-        string routingKey,
-        CancellationToken cancellationToken)
+        string routingKey)
     {
-        var handleMethodName = nameof(IPlatformMessageBusConsumer<object>.HandleAsync);
-
-        var methodInfo = consumer.GetType()
-            .GetMethod(handleMethodName)
-            .EnsureFound($"Can not find execution handle method {handleMethodName} from {consumer.GetType().FullName}");
-
         try
         {
-            var invokeResult = methodInfo.Invoke(
-                consumer,
-                Util.ListBuilder.NewArray(eventBusMessage, routingKey));
-
-            if (invokeResult is Task invokeTask) await invokeTask;
+            await consumer.HandleAsync(eventBusMessage, routingKey);
         }
         catch (Exception e)
         {
@@ -175,16 +172,34 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
 {
     protected readonly ILogger Logger;
 
-    public PlatformMessageBusConsumer(ILoggerFactory loggerFactory)
+    public PlatformMessageBusConsumer(ILoggerFactory loggerBuilder)
     {
-        Logger = loggerFactory.CreateLogger($"{DefaultPlatformMessageBusLogSuffix.Value}.{GetType().Name}");
+        Logger = CreateLogger(loggerBuilder);
+    }
+
+    public virtual int RetryOnFailedTimes => 1;
+
+    public override Task HandleAsync(object message, string routingKey)
+    {
+        return HandleAsync(message.Cast<TMessage>(), routingKey);
+    }
+
+    public override Task HandleLogicAsync(object message, string routingKey)
+    {
+        return HandleLogicAsync(message.Cast<TMessage>(), routingKey);
     }
 
     public virtual async Task HandleAsync(TMessage message, string routingKey)
     {
+        if (!HandleWhen(message, routingKey)) return;
+
         try
         {
-            await HandleLogicAsync(message, routingKey);
+            if (RetryOnFailedTimes > 0)
+                // Retry at least 1 time to help resilient consumer. Sometime parallel, create/update concurrency could lead to error
+                await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(() => HandleLogicAsync(message, routingKey), retryCount: RetryOnFailedTimes);
+            else
+                await HandleLogicAsync(message, routingKey);
         }
         catch (Exception e)
         {
@@ -200,4 +215,19 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
     }
 
     public abstract Task HandleLogicAsync(TMessage message, string routingKey);
+
+    public virtual bool HandleWhen(TMessage message, string routingKey)
+    {
+        return true;
+    }
+
+    public static ILogger CreateLogger([AllowNull] ILoggerFactory? loggerBuilder)
+    {
+        return (loggerBuilder ?? PlatformGlobal.LoggerFactory).CreateLogger(typeof(PlatformMessageBusConsumer));
+    }
+
+    public static ILogger CreateLogger()
+    {
+        return CreateLogger(null);
+    }
 }

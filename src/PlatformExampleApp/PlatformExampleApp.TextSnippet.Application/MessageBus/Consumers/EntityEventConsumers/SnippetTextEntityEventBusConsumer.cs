@@ -16,9 +16,9 @@ namespace PlatformExampleApp.TextSnippet.Application.MessageBus.Consumers.Entity
 public class SnippetTextEntityEventBusConsumer : PlatformCqrsEntityEventBusMessageConsumer<TextSnippetEntityEventBusMessage, TextSnippetEntity>
 {
     public SnippetTextEntityEventBusConsumer(
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IUnitOfWorkManager uowManager,
-        IServiceProvider serviceProvider) : base(loggerFactory, uowManager, serviceProvider)
+        IServiceProvider serviceProvider) : base(loggerBuilder, uowManager, serviceProvider)
     {
     }
 

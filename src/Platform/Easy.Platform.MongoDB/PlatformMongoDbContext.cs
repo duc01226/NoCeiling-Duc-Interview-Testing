@@ -6,7 +6,6 @@ using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
-using Easy.Platform.Constants;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.Exceptions;
@@ -52,7 +51,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         PersistenceConfiguration = persistenceConfiguration;
         Database = client.MongoClient.GetDatabase(options.Value.Database);
         EntityTypeToCollectionNameDictionary = new Lazy<Dictionary<Type, string>>(BuildEntityTypeToCollectionNameDictionary);
-        Logger = loggerFactory.CreateLogger($"{DefaultPlatformLogSuffix.SystemPlatformSuffix}.{GetType().Name}");
+        Logger = loggerFactory.CreateLogger(typeof(PlatformMongoDbContext<>));
     }
 
     public IMongoCollection<PlatformInboxBusMessage> InboxBusMessageCollection =>
@@ -89,7 +88,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         }
         catch (Exception e)
         {
-            throw new Exception($"{GetType().Name} Initialize failed. FullStackTrace: {stackTrace}", e);
+            throw new Exception($"{GetType().Name} Initialize failed. {e.Message}. FullStackTrace: {stackTrace}", e);
         }
 
         async Task InsertDbInitializedApplicationDataMigrationHistory()
@@ -100,72 +99,72 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         }
     }
 
-    public async Task<TSource> FirstAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public Task<TSource> FirstAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
-        return await source.FirstAsync(cancellationToken);
+        return source.FirstAsync(cancellationToken);
     }
 
-    public async Task<int> CountAsync<TEntity>(Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default)
+    public Task<int> CountAsync<TEntity>(Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default)
         where TEntity : class, IEntity
     {
-        return await GetQuery<TEntity>().WhereIf(predicate != null, predicate).CountAsync(cancellationToken);
+        return GetQuery<TEntity>().WhereIf(predicate != null, predicate).CountAsync(cancellationToken);
     }
 
-    public async Task<TResult> FirstOrDefaultAsync<TEntity, TResult>(
+    public Task<TResult> FirstOrDefaultAsync<TEntity, TResult>(
         Func<IQueryable<TEntity>, IQueryable<TResult>> queryBuilder,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity
     {
-        return await queryBuilder(GetQuery<TEntity>()).FirstOrDefaultAsync(cancellationToken);
+        return queryBuilder(GetQuery<TEntity>()).FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<int> CountAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
+    public Task<int> CountAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
     {
-        return await source.CountAsync(cancellationToken);
+        return source.CountAsync(cancellationToken);
     }
 
-    public async Task<bool> AnyAsync<TEntity>(Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default)
+    public Task<bool> AnyAsync<TEntity>(Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default)
         where TEntity : class, IEntity
     {
-        return await GetQuery<TEntity>().WhereIf(predicate != null, predicate).AnyAsync(cancellationToken);
+        return GetQuery<TEntity>().WhereIf(predicate != null, predicate).AnyAsync(cancellationToken);
     }
 
-    public async Task<bool> AnyAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
+    public Task<bool> AnyAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
     {
-        return await source.AnyAsync(cancellationToken);
+        return source.AnyAsync(cancellationToken);
     }
 
-    public async Task<List<T>> GetAllAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
+    public Task<List<T>> GetAllAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
     {
-        return await source.ToListAsync(cancellationToken);
+        return source.ToListAsync(cancellationToken);
     }
 
-    public async Task<T> FirstOrDefaultAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
+    public Task<T> FirstOrDefaultAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
     {
-        return await source.FirstOrDefaultAsync(cancellationToken);
+        return source.FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<List<TResult>> GetAllAsync<TEntity, TResult>(
+    public Task<List<TResult>> GetAllAsync<TEntity, TResult>(
         Func<IQueryable<TEntity>, IQueryable<TResult>> queryBuilder,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity
     {
-        return await queryBuilder(GetQuery<TEntity>()).ToListAsync(cancellationToken);
+        return queryBuilder(GetQuery<TEntity>()).ToListAsync(cancellationToken);
     }
 
-    public async Task<List<TEntity>> CreateManyAsync<TEntity, TPrimaryKey>(
+    public Task<List<TEntity>> CreateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return await entities.Select(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken)).WhenAll();
+        return entities.Select(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken)).WhenAll();
     }
 
-    public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
+    public Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return await UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, cancellationToken);
+        return UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, cancellationToken);
     }
 
     public async Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
@@ -187,10 +186,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         if (entity != null) await DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken);
     }
 
-    public async Task DeleteAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
+    public Task DeleteAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        await PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey>(
+        return PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey>(
             Cqrs,
             MappedUnitOfWork,
             entity,
@@ -217,13 +216,13 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     {
         await entities.ForEachAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
 
-        return await entities.ToTask();
+        return entities;
     }
 
-    public async Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
+    public Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return await CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, upsert: false, cancellationToken);
+        return CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, upsert: false, cancellationToken);
     }
 
     public async Task<TEntity> CreateOrUpdateAsync<TEntity, TPrimaryKey>(
@@ -311,7 +310,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                             ex.StackTrace);
 
                         if (!PlatformEnvironment.IsDevelopment)
-                            throw new Exception($"MigrateApplicationDataAsync for migration {migrationExecution.Name} has errors", ex);
+                            throw new Exception($"MigrateApplicationDataAsync for migration {migrationExecution.Name} has errors. {ex.Message}.", ex);
                     }
                 });
     }
@@ -333,7 +332,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
 
         if (existingEntity == null &&
-            ((!dismissSendEvent && entity.HasAutoTrackValueUpdatedDomainEventAttribute()) ||
+            ((!dismissSendEvent && entity.HasTrackValueUpdatedDomainEventAttribute()) ||
              entity is IRowVersionEntity { ConcurrencyUpdateToken: null }))
             existingEntity = await GetQuery<TEntity>().Where(p => p.Id.Equals(entity.Id)).FirstOrDefaultAsync(cancellationToken);
 

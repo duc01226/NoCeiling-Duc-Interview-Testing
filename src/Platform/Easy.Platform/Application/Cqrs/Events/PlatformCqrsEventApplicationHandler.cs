@@ -2,6 +2,7 @@ using Easy.Platform.Application.Context;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Cqrs.Events.InboxSupport;
 using Easy.Platform.Application.MessageBus.InboxPattern;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
@@ -30,8 +31,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     protected readonly IUnitOfWorkManager UnitOfWorkManager;
 
     public PlatformCqrsEventApplicationHandler(
-        ILoggerFactory loggerFactory,
-        IUnitOfWorkManager unitOfWorkManager) : base(loggerFactory)
+        ILoggerFactory loggerBuilder,
+        IUnitOfWorkManager unitOfWorkManager) : base(loggerBuilder)
     {
         UnitOfWorkManager = unitOfWorkManager;
     }
@@ -72,14 +73,12 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     private async Task DoExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
     {
-        var hasInboxMessageRepository = PlatformApplicationGlobal.RootServiceProvider
+        var hasInboxMessageRepository = PlatformGlobal.RootServiceProvider
             .ExecuteScoped(scope => scope.ServiceProvider.GetService<IPlatformInboxBusMessageRepository>() != null);
 
-        if (EnableHandleEventFromInboxBusMessage &&
-            hasInboxMessageRepository &&
-            !IsCurrentInstanceHandlingEventFromInboxBusMessage)
+        if (CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository, @event))
         {
-            await PlatformApplicationGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
+            await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
                 async (
                     IServiceProvider serviceProvider,
                     IPlatformInboxBusMessageRepository inboxMessageRepository,
@@ -94,7 +93,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                         inboxBusMessageRepository: inboxMessageRepository,
                         message: CqrsEventInboxBusMessage(@event, eventHandlerType: GetType(), applicationSettingContext, userContextAccessor),
                         routingKey: PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(typeof(TEvent), applicationSettingContext.ApplicationName),
-                        Logger,
+                        loggerBuilder: CreateGlobalLogger,
                         retryProcessFailedMessageInSecondsUnit: PlatformInboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit,
                         cancellationToken: cancellationToken);
                 });
@@ -110,6 +109,13 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             else
                 await HandleAsync(@event, cancellationToken);
         }
+    }
+
+    protected virtual bool CanExecuteHandlingEventUsingInboxConsumer(bool hasInboxMessageRepository, TEvent @event)
+    {
+        return EnableHandleEventFromInboxBusMessage &&
+               hasInboxMessageRepository &&
+               !IsCurrentInstanceHandlingEventFromInboxBusMessage;
     }
 
     protected virtual PlatformBusMessage<PlatformCqrsEventBusMessagePayload> CqrsEventInboxBusMessage(
@@ -130,5 +136,10 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             producerContext: applicationSettingContext.ApplicationName,
             messageGroup: nameof(PlatformCqrsEvent),
             messageAction: @event.EventAction);
+    }
+
+    public static ILogger CreateGlobalLogger()
+    {
+        return CreateLogger(PlatformGlobal.LoggerFactory);
     }
 }

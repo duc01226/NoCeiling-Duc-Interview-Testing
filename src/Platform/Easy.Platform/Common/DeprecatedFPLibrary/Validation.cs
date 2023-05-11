@@ -122,8 +122,8 @@ public static class Validation
         Func<T, Validation<TR>> f)
     {
         return val.Match(
-            err => F.Invalid(err),
-            r => f(r));
+            p => F.Invalid(p),
+            f);
     }
 
     public static Validation<T> And<T>(
@@ -132,7 +132,7 @@ public static class Validation
         params Error[] errors)
     {
         return val.Match(
-            err => F.Invalid(err),
+            p => F.Invalid(p),
             r => val.Value.Validate(condition(r), errors));
     }
 
@@ -141,7 +141,7 @@ public static class Validation
         Validation<TR> valNext)
     {
         return val.Match(
-            err => F.Invalid(err),
+            p => F.Invalid(p),
             r => valNext);
     }
 
@@ -151,7 +151,7 @@ public static class Validation
     {
         return await val.Match(
             reasons => F.Invalid<TR>(reasons).ToTask(),
-            t => f(t));
+            f);
     }
 
     public static async Task<Validation<TR>> Then<T, TR>(
@@ -160,7 +160,7 @@ public static class Validation
     {
         return await @this.Match(
             reasons => F.Invalid<TR>(reasons).ToTask(),
-            t => func(t).Then(_ => F.Valid(_)));
+            t => func(t).Then(F.Valid));
     }
 
     public static async Task<Validation<TR>> ThenAsync<T, TR>(
@@ -210,7 +210,7 @@ public readonly struct Validation<T>
     public bool IsValid { get; }
 
     // the Return function for Validation
-    public static readonly Func<T, Validation<T>> Return = t => F.Valid(t);
+    public static readonly Func<T, Validation<T>> Return = F.Valid;
 
     public static Validation<T> Fail(List<Error> errors)
     {

@@ -13,9 +13,9 @@ public class ClearCacheOnSaveSnippetTextCommandEventHandler : PlatformCqrsComman
     private readonly IPlatformCacheRepositoryProvider cacheRepositoryProvider;
 
     public ClearCacheOnSaveSnippetTextCommandEventHandler(
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IUnitOfWorkManager unitOfWorkManager,
-        IPlatformCacheRepositoryProvider cacheRepositoryProvider) : base(loggerFactory, unitOfWorkManager)
+        IPlatformCacheRepositoryProvider cacheRepositoryProvider) : base(loggerBuilder, unitOfWorkManager)
     {
         this.cacheRepositoryProvider = cacheRepositoryProvider;
     }
@@ -40,7 +40,7 @@ public class ClearCacheOnSaveSnippetTextCommandEventHandler : PlatformCqrsComman
             token => cacheRepositoryProvider.Get()
                 .RemoveCollectionAsync<TextSnippetCollectionCacheKeyProvider>(token),
             intervalTimeInSeconds: 5,
-            logger: Logger,
+            CreateGlobalLogger,
             maximumIntervalExecutionCount: 3,
             executeOnceImmediately: true,
             cancellationToken);

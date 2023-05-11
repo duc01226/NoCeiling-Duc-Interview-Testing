@@ -498,7 +498,7 @@ public class WhenCase<TSource> : WhenCase<TSource, object>
     public WhenCase<TSource> WhenIs<TSourceIs>(Func<TSourceIs, Task> then)
         where TSourceIs : class
     {
-        Cases.Add(new CaseItem(source => source is TSourceIs, _ => then(_ as TSourceIs).Then(() => ValueTuple.Create())));
+        Cases.Add(new CaseItem(source => source is TSourceIs, _ => then(_ as TSourceIs).Then(ValueTuple.Create)));
         return this;
     }
 

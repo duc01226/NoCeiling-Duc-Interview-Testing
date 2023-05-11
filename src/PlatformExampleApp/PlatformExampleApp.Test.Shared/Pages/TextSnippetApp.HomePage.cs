@@ -151,7 +151,7 @@ public static partial class TextSnippetApp
 
             return GetTextSnippetDataTableItems()
                 .Select(p => p.SnippetText)
-                .All(rowSnippetTextValue => searchWords.Any(searchWord => rowSnippetTextValue.ContainsIgnoreCase(searchWord)));
+                .All(rowSnippetTextValue => searchWords.Any(rowSnippetTextValue.ContainsIgnoreCase));
         }
 
         public HomePage DoFillInAndSubmitSaveSnippetTextForm(TextSnippetEntityData textSnippetEntityData)

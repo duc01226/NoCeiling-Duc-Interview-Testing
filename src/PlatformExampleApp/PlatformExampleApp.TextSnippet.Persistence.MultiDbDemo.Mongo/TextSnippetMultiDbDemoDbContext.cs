@@ -15,13 +15,13 @@ public class TextSnippetMultiDbDemoDbContext : PlatformMongoDbContext<TextSnippe
     public TextSnippetMultiDbDemoDbContext(
         IOptions<PlatformMongoOptions<TextSnippetMultiDbDemoDbContext>> options,
         IPlatformMongoClient<TextSnippetMultiDbDemoDbContext> client,
-        ILoggerFactory loggerFactory,
+        ILoggerFactory loggerBuilder,
         IPlatformCqrs cqrs,
         IPlatformApplicationUserContextAccessor userContextAccessor,
         PlatformPersistenceConfiguration<TextSnippetMultiDbDemoDbContext> persistenceConfiguration) : base(
         options,
         client,
-        loggerFactory,
+        loggerBuilder,
         cqrs,
         userContextAccessor,
         persistenceConfiguration)

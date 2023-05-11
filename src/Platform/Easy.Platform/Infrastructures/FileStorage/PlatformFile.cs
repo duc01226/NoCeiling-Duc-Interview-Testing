@@ -26,9 +26,9 @@ public class PlatformHttpFormFile : IPlatformFile
         return FormFile.OpenReadStream().With(_ => _.Position = 0);
     }
 
-    public async Task<byte[]> GetFileBinaries()
+    public Task<byte[]> GetFileBinaries()
     {
-        return await FormFile.GetFileBinaries();
+        return FormFile.GetFileBinaries();
     }
 
     public static PlatformHttpFormFile Create(IFormFile formFile)
@@ -55,9 +55,9 @@ public class PlatformStreamFile : IPlatformFile
         return Stream.With(_ => _.Position = 0);
     }
 
-    public async Task<byte[]> GetFileBinaries()
+    public Task<byte[]> GetFileBinaries()
     {
-        return await Stream.GetBinaries();
+        return Stream.GetBinaries();
     }
 
     public static PlatformStreamFile Create(Stream stream, string fileName)
