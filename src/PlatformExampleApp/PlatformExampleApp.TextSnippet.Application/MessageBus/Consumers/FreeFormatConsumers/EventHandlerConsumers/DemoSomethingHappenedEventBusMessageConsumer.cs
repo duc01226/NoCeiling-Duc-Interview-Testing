@@ -20,9 +20,9 @@ namespace PlatformExampleApp.TextSnippet.Application.MessageBus.Consumers.FreeFo
 public class DemoSomethingHappenedEventBusMessageConsumer : PlatformApplicationMessageBusConsumer<DemoSomethingHappenedEventBusMessage>
 {
     public DemoSomethingHappenedEventBusMessageConsumer(
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IUnitOfWorkManager uowManager,
-        IServiceProvider serviceProvider) : base(loggerBuilder, uowManager, serviceProvider)
+        IServiceProvider serviceProvider) : base(loggerFactory, uowManager, serviceProvider)
     {
     }
 

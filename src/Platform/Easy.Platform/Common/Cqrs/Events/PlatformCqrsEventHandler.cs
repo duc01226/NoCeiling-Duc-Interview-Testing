@@ -16,9 +16,9 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 {
     protected readonly ILoggerFactory LoggerFactory;
 
-    protected PlatformCqrsEventHandler(ILoggerFactory loggerBuilder)
+    protected PlatformCqrsEventHandler(ILoggerFactory loggerFactory)
     {
-        LoggerFactory = loggerBuilder;
+        LoggerFactory = loggerFactory;
     }
 
     public virtual int RetryOnFailedTimes => 2;
@@ -91,9 +91,9 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         return HandleAsync(@event, cancellationToken);
     }
 
-    public virtual void LogError(TEvent notification, Exception exception, ILoggerFactory loggerBuilder)
+    public virtual void LogError(TEvent notification, Exception exception, ILoggerFactory loggerFactory)
     {
-        CreateLogger(loggerBuilder)
+        CreateLogger(loggerFactory)
             .LogError(
                 exception,
                 "[PlatformCqrsEventHandler] Handle event failed: {ExceptionMessage}. EventType:{EventType}; HandlerType:{HandlerType}. EventContent:{EventContent}",

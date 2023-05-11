@@ -15,12 +15,12 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
     where TMessage : class, IPlatformWithPayloadBusMessage<PlatformCqrsEntityEvent<TEntity>>, IPlatformSelfRoutingKeyBusMessage, IPlatformTrackableBusMessage, new()
 {
     protected PlatformCqrsEntityEventBusMessageProducer(
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
         IPlatformApplicationUserContextAccessor userContextAccessor,
         IPlatformApplicationSettingContext applicationSettingContext) : base(
-        loggerBuilder,
+        loggerFactory,
         unitOfWorkManager,
         applicationBusMessageProducer,
         userContextAccessor,

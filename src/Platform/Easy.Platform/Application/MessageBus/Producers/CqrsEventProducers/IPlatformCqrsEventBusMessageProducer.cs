@@ -34,11 +34,11 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
     protected readonly IPlatformApplicationBusMessageProducer ApplicationBusMessageProducer;
 
     public PlatformCqrsEventBusMessageProducer(
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
         IPlatformApplicationUserContextAccessor userContextAccessor,
-        IPlatformApplicationSettingContext applicationSettingContext) : base(loggerBuilder, unitOfWorkManager)
+        IPlatformApplicationSettingContext applicationSettingContext) : base(loggerFactory, unitOfWorkManager)
     {
         ApplicationBusMessageProducer = applicationBusMessageProducer;
         UserContextAccessor = userContextAccessor;
@@ -60,9 +60,9 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
         await SendMessage(@event, cancellationToken);
     }
 
-    public override void LogError(TEvent notification, Exception exception, ILoggerFactory loggerBuilder)
+    public override void LogError(TEvent notification, Exception exception, ILoggerFactory loggerFactory)
     {
-        CreateLogger(loggerBuilder)
+        CreateLogger(loggerFactory)
             .LogError(
                 exception,
                 "[PlatformCqrsEventBusMessageProducer] Failed to send {MessageName}. MessageContent: {MessageContent}",

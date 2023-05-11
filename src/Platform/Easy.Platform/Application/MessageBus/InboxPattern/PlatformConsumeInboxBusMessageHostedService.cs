@@ -25,10 +25,10 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
 
     public PlatformConsumeInboxBusMessageHostedService(
         IServiceProvider serviceProvider,
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IPlatformApplicationSettingContext applicationSettingContext,
         IPlatformMessageBusScanner messageBusScanner,
-        PlatformInboxConfig inboxConfig) : base(serviceProvider, loggerBuilder)
+        PlatformInboxConfig inboxConfig) : base(serviceProvider, loggerFactory)
     {
         this.applicationSettingContext = applicationSettingContext;
         this.inboxConfig = inboxConfig;

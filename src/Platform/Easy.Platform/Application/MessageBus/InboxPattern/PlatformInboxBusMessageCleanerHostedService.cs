@@ -20,9 +20,9 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
 
     public PlatformInboxBusMessageCleanerHostedService(
         IServiceProvider serviceProvider,
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IPlatformApplicationSettingContext applicationSettingContext,
-        PlatformInboxConfig inboxConfig) : base(serviceProvider, loggerBuilder)
+        PlatformInboxConfig inboxConfig) : base(serviceProvider, loggerFactory)
     {
         this.applicationSettingContext = applicationSettingContext;
         InboxConfig = inboxConfig;

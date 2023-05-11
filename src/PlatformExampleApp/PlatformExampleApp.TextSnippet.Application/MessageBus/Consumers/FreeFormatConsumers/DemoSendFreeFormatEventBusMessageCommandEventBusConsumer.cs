@@ -8,8 +8,8 @@ namespace PlatformExampleApp.TextSnippet.Application.MessageBus.Consumers.FreeFo
 public class DemoSendFreeFormatEventBusMessageCommandEventBusConsumer
     : PlatformApplicationMessageBusConsumer<DemoSendFreeFormatEventBusMessage>
 {
-    public DemoSendFreeFormatEventBusMessageCommandEventBusConsumer(ILoggerFactory loggerBuilder, IUnitOfWorkManager uowManager, IServiceProvider serviceProvider) : base(
-        loggerBuilder,
+    public DemoSendFreeFormatEventBusMessageCommandEventBusConsumer(ILoggerFactory loggerFactory, IUnitOfWorkManager uowManager, IServiceProvider serviceProvider) : base(
+        loggerFactory,
         uowManager,
         serviceProvider)
     {
@@ -34,9 +34,9 @@ public class DemoSendFreeFormatInboxEventBusMessageCommandApplicationEventBusCon
     : PlatformApplicationMessageBusConsumer<DemoSendFreeFormatEventBusMessage>
 {
     public DemoSendFreeFormatInboxEventBusMessageCommandApplicationEventBusConsumer(
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IUnitOfWorkManager uowManager,
-        IServiceProvider serviceProvider) : base(loggerBuilder, uowManager, serviceProvider)
+        IServiceProvider serviceProvider) : base(loggerFactory, uowManager, serviceProvider)
     {
     }
 

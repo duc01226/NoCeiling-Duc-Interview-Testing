@@ -22,9 +22,9 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
 
     public PlatformSendOutboxBusMessageHostedService(
         IServiceProvider serviceProvider,
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IPlatformApplicationSettingContext applicationSettingContext,
-        PlatformOutboxConfig outboxConfig) : base(serviceProvider, loggerBuilder)
+        PlatformOutboxConfig outboxConfig) : base(serviceProvider, loggerFactory)
     {
         this.applicationSettingContext = applicationSettingContext;
         OutboxConfig = outboxConfig;

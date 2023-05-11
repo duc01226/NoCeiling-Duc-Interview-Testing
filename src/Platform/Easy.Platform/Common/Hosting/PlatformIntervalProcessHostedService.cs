@@ -8,7 +8,7 @@ public abstract class PlatformIntervalProcessHostedService : PlatformHostedServi
 {
     public PlatformIntervalProcessHostedService(
         IServiceProvider serviceProvider,
-        ILoggerFactory loggerBuilder) : base(serviceProvider, loggerBuilder)
+        ILoggerFactory loggerFactory) : base(serviceProvider, loggerFactory)
     {
     }
 

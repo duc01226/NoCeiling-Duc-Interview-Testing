@@ -12,12 +12,12 @@ public abstract class PlatformCqrsCommandEventBusMessageProducer<TCommand>
     where TCommand : class, IPlatformCqrsCommand, new()
 {
     protected PlatformCqrsCommandEventBusMessageProducer(
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
         IPlatformApplicationUserContextAccessor userContextAccessor,
         IPlatformApplicationSettingContext applicationSettingContext) : base(
-        loggerBuilder,
+        loggerFactory,
         unitOfWorkManager,
         applicationBusMessageProducer,
         userContextAccessor,

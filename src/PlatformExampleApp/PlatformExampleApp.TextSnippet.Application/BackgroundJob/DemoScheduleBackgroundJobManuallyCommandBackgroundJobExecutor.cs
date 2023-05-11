@@ -14,10 +14,10 @@ public class DemoScheduleBackgroundJobManuallyCommandBackgroundJobExecutor
 
     public DemoScheduleBackgroundJobManuallyCommandBackgroundJobExecutor(
         IUnitOfWorkManager unitOfWorkManager,
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository) : base(
         unitOfWorkManager,
-        loggerBuilder)
+        loggerFactory)
     {
         this.textSnippetEntityRepository = textSnippetEntityRepository;
     }

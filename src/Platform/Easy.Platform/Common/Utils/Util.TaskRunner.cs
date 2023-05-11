@@ -41,7 +41,7 @@ public static partial class Util
 
         public static void QueueActionInBackground(
             Func<CancellationToken, Task> action,
-            Func<ILogger> loggerBuilder,
+            Func<ILogger> loggerFactory,
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default)
         {
@@ -54,7 +54,7 @@ public static partial class Util
                     }
                     catch (Exception ex)
                     {
-                        loggerBuilder().LogError(ex, ex.Message);
+                        loggerFactory().LogError(ex, ex.Message);
                         throw;
                     }
                 },
@@ -63,16 +63,16 @@ public static partial class Util
 
         public static void QueueActionInBackground(
             Func<Task> action,
-            Func<ILogger> loggerBuilder,
+            Func<ILogger> loggerFactory,
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default)
         {
-            QueueActionInBackground(_ => action(), loggerBuilder, delayTimeSeconds, cancellationToken);
+            QueueActionInBackground(_ => action(), loggerFactory, delayTimeSeconds, cancellationToken);
         }
 
         public static void QueueActionInBackground(
             Action action,
-            Func<ILogger> loggerBuilder,
+            Func<ILogger> loggerFactory,
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default)
         {
@@ -85,7 +85,7 @@ public static partial class Util
                     }
                     catch (Exception ex)
                     {
-                        loggerBuilder().LogError(ex, ex.Message);
+                        loggerFactory().LogError(ex, ex.Message);
                         throw;
                     }
                 },
@@ -116,7 +116,7 @@ public static partial class Util
         public static void QueueIntervalAsyncActionInBackground(
             Func<CancellationToken, Task> action,
             int intervalTimeInSeconds,
-            Func<ILogger> loggerBuilder,
+            Func<ILogger> loggerFactory,
             int? maximumIntervalExecutionCount = null,
             bool executeOnceImmediately = false,
             CancellationToken cancellationToken = default)
@@ -130,7 +130,7 @@ public static partial class Util
                     }
                     catch (Exception ex)
                     {
-                        loggerBuilder().LogError(ex, ex.Message);
+                        loggerFactory().LogError(ex, ex.Message);
                         throw;
                     }
                 },

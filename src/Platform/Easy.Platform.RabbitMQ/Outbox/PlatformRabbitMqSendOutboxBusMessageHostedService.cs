@@ -11,11 +11,11 @@ public class PlatformRabbitMqSendOutboxBusMessageHostedService : PlatformSendOut
 {
     public PlatformRabbitMqSendOutboxBusMessageHostedService(
         IServiceProvider serviceProvider,
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IPlatformApplicationSettingContext applicationSettingContext,
         PlatformOutboxConfig outboxConfig) : base(
         serviceProvider,
-        loggerBuilder,
+        loggerFactory,
         applicationSettingContext,
         outboxConfig)
     {

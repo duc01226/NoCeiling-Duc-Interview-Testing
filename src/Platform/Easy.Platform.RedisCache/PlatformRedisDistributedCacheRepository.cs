@@ -19,7 +19,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         IServiceProvider serviceProvider,
         IOptions<RedisCacheOptions> optionsAccessor,
         IPlatformApplicationSettingContext applicationSettingContext,
-        ILoggerFactory loggerBuilder) : base(serviceProvider, loggerBuilder)
+        ILoggerFactory loggerFactory) : base(serviceProvider, loggerFactory)
     {
         this.applicationSettingContext = applicationSettingContext;
         redisCache = new Lazy<Microsoft.Extensions.Caching.StackExchangeRedis.RedisCache>(

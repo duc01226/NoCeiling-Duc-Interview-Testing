@@ -12,12 +12,12 @@ public class TransferSnippetTextToMultiDbDemoEntityNameDomainEventSendWithDefaul
     : PlatformCqrsDomainEventBusMessageProducer<TransferSnippetTextToMultiDbDemoEntityNameDomainEvent>
 {
     public TransferSnippetTextToMultiDbDemoEntityNameDomainEventSendWithDefaultRoutingKeyEventBusMessageProducer(
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
         IPlatformApplicationUserContextAccessor userContextAccessor,
         IPlatformApplicationSettingContext applicationSettingContext) :
-        base(loggerBuilder, unitOfWorkManager, applicationBusMessageProducer, userContextAccessor, applicationSettingContext)
+        base(loggerFactory, unitOfWorkManager, applicationBusMessageProducer, userContextAccessor, applicationSettingContext)
     {
     }
 

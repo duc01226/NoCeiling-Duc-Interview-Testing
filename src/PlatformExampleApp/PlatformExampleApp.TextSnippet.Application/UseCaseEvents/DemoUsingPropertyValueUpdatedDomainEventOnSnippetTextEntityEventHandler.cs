@@ -8,8 +8,8 @@ namespace PlatformExampleApp.TextSnippet.Application.UseCaseEvents;
 
 public class DemoUsingPropertyValueUpdatedDomainEventOnSnippetTextEntityEventHandler : PlatformCqrsEntityEventApplicationHandler<TextSnippetEntity>
 {
-    public DemoUsingPropertyValueUpdatedDomainEventOnSnippetTextEntityEventHandler(ILoggerFactory loggerBuilder, IUnitOfWorkManager unitOfWorkManager) : base(
-        loggerBuilder,
+    public DemoUsingPropertyValueUpdatedDomainEventOnSnippetTextEntityEventHandler(ILoggerFactory loggerFactory, IUnitOfWorkManager unitOfWorkManager) : base(
+        loggerFactory,
         unitOfWorkManager)
     {
     }

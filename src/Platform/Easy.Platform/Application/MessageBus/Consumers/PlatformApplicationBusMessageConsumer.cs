@@ -29,9 +29,9 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
     protected readonly IUnitOfWorkManager UowManager;
 
     protected PlatformApplicationMessageBusConsumer(
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IUnitOfWorkManager uowManager,
-        IServiceProvider serviceProvider) : base(loggerBuilder)
+        IServiceProvider serviceProvider) : base(loggerFactory)
     {
         UowManager = uowManager;
         InboxBusMessageRepo = serviceProvider.GetService<IPlatformInboxBusMessageRepository>();

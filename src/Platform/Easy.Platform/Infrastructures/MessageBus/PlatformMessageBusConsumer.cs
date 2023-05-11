@@ -191,9 +191,9 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
 {
     protected readonly ILogger Logger;
 
-    public PlatformMessageBusConsumer(ILoggerFactory loggerBuilder)
+    public PlatformMessageBusConsumer(ILoggerFactory loggerFactory)
     {
-        Logger = CreateLogger(loggerBuilder);
+        Logger = CreateLogger(loggerFactory);
     }
 
     public virtual int RetryOnFailedTimes => 2;
@@ -239,9 +239,9 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
         return true;
     }
 
-    public static ILogger CreateLogger([AllowNull] ILoggerFactory? loggerBuilder)
+    public static ILogger CreateLogger([AllowNull] ILoggerFactory? loggerFactory)
     {
-        return (loggerBuilder ?? PlatformGlobal.LoggerFactory).CreateLogger(typeof(PlatformMessageBusConsumer));
+        return (loggerFactory ?? PlatformGlobal.LoggerFactory).CreateLogger(typeof(PlatformMessageBusConsumer));
     }
 
     public static ILogger CreateLogger()

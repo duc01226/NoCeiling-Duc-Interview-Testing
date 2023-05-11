@@ -22,7 +22,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         IPlatformInboxBusMessageRepository inboxBusMessageRepository,
         TMessage message,
         string routingKey,
-        Func<ILogger> loggerBuilder,
+        Func<ILogger> loggerFactory,
         double retryProcessFailedMessageInSecondsUnit,
         PlatformInboxBusMessage handleImmediatelyExistingInboxMessage = null,
         CancellationToken cancellationToken = default) where TMessage : class, new()
@@ -35,7 +35,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 serviceProvider,
                 message,
                 routingKey,
-                loggerBuilder,
+                loggerFactory,
                 retryProcessFailedMessageInSecondsUnit,
                 cancellationToken);
         }
@@ -56,7 +56,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                     message,
                     routingKey,
                     PlatformInboxBusMessage.ConsumeStatuses.Processing,
-                    loggerBuilder,
+                    loggerFactory,
                     cancellationToken)
                 : null;
 
@@ -65,7 +65,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 message,
                 existingInboxMessage ?? newInboxMessage,
                 routingKey,
-                loggerBuilder);
+                loggerFactory);
         }
     }
 
@@ -74,7 +74,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         TMessage message,
         PlatformInboxBusMessage existingInboxMessage,
         string routingKey,
-        Func<ILogger> loggerBuilder) where TMessage : class, new()
+        Func<ILogger> loggerFactory) where TMessage : class, new()
     {
         Util.TaskRunner.QueueActionInBackground(
             () => PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
@@ -83,15 +83,15 @@ public static class PlatformInboxMessageBusConsumerHelper
                 message,
                 existingInboxMessage,
                 routingKey,
-                loggerBuilder),
-            loggerBuilder);
+                loggerFactory),
+            loggerFactory);
 
         static async Task DoTriggerHandleExistingInboxMessageInBackground(
             Type consumerType,
             TMessage message,
             PlatformInboxBusMessage existingInboxMessage,
             string routingKey,
-            Func<ILogger> loggerBuilder,
+            Func<ILogger> loggerFactory,
             IServiceProvider serviceProvider)
         {
             try
@@ -104,7 +104,7 @@ public static class PlatformInboxMessageBusConsumerHelper
             catch (Exception e)
             {
                 // Catch and just log error to prevent retry queue message. Inbox message will be automatically retry handling via inbox hosted service
-                loggerBuilder()
+                loggerFactory()
                     .LogError(
                         e,
                         $"{nameof(ExecuteConsumerForExistingInboxMessageInBackground)} [Consumer:{{ConsumerType}}] failed. Inbox message will be automatically retry later.",
@@ -119,7 +119,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         IServiceProvider serviceProvider,
         TMessage message,
         string routingKey,
-        Func<ILogger> loggerBuilder,
+        Func<ILogger> loggerFactory,
         double retryProcessFailedMessageInSecondsUnit,
         CancellationToken cancellationToken) where TMessage : class, new()
     {
@@ -137,7 +137,7 @@ public static class PlatformInboxMessageBusConsumerHelper
             }
             catch (Exception ex)
             {
-                loggerBuilder()
+                loggerFactory()
                     .LogError(
                         ex,
                         "Error Consume inbox message. [MessageType: {MessageType}]; [ConsumerType: {ConsumerType}]; [ErrorMessage: {ErrorMessage}]; [RoutingKey: {RoutingKey}]; [MessageContent: {MessageContent}];",
@@ -152,7 +152,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                     existingInboxMessage.Id,
                     ex,
                     retryProcessFailedMessageInSecondsUnit,
-                    loggerBuilder,
+                    loggerFactory,
                     cancellationToken);
             }
     }
@@ -163,7 +163,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         TMessage message,
         string routingKey,
         PlatformInboxBusMessage.ConsumeStatuses consumeStatus,
-        Func<ILogger> loggerBuilder,
+        Func<ILogger> loggerFactory,
         CancellationToken cancellationToken = default) where TMessage : class, new()
     {
         var newInboxMessage = PlatformInboxBusMessage.Create(
@@ -188,7 +188,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         }
         catch (Exception ex)
         {
-            loggerBuilder()
+            loggerFactory()
                 .LogError(
                     ex,
                     "Error Create inbox message [RoutingKey:{RoutingKey}], [Type:{MessageType}]. NewInboxMessage: {NewInboxMessage}.",
@@ -224,7 +224,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         string existingInboxMessageId,
         Exception exception,
         double retryProcessFailedMessageInSecondsUnit,
-        Func<ILogger> loggerBuilder,
+        Func<ILogger> loggerFactory,
         CancellationToken cancellationToken = default)
     {
         try
@@ -252,7 +252,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         }
         catch (Exception ex)
         {
-            loggerBuilder()
+            loggerFactory()
                 .LogError(
                     ex,
                     "Error UpdateExistingInboxFailedMessageAsync message [MessageId:{ExistingInboxMessageId}].",

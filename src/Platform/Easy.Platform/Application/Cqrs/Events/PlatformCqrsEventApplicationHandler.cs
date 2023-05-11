@@ -31,8 +31,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     protected readonly IUnitOfWorkManager UnitOfWorkManager;
 
     public PlatformCqrsEventApplicationHandler(
-        ILoggerFactory loggerBuilder,
-        IUnitOfWorkManager unitOfWorkManager) : base(loggerBuilder)
+        ILoggerFactory loggerFactory,
+        IUnitOfWorkManager unitOfWorkManager) : base(loggerFactory)
     {
         UnitOfWorkManager = unitOfWorkManager;
     }
@@ -93,7 +93,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                         inboxBusMessageRepository: inboxMessageRepository,
                         message: CqrsEventInboxBusMessage(@event, eventHandlerType: GetType(), applicationSettingContext, userContextAccessor),
                         routingKey: PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(typeof(TEvent), applicationSettingContext.ApplicationName),
-                        loggerBuilder: CreateGlobalLogger,
+                        loggerFactory: CreateGlobalLogger,
                         retryProcessFailedMessageInSecondsUnit: PlatformInboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit,
                         cancellationToken: cancellationToken);
                 });

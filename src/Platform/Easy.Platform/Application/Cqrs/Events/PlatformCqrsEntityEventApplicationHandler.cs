@@ -9,9 +9,9 @@ public abstract class PlatformCqrsEntityEventApplicationHandler<TEntity> : Platf
     where TEntity : class, IEntity, new()
 {
     protected PlatformCqrsEntityEventApplicationHandler(
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager) : base(
-        loggerBuilder,
+        loggerFactory,
         unitOfWorkManager)
     {
     }

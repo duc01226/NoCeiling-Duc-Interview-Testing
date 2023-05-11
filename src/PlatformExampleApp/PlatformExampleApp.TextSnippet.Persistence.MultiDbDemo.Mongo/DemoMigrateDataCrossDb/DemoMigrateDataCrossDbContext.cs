@@ -14,13 +14,13 @@ public class DemoMigrateDataCrossDbContext : PlatformMongoDbContext<DemoMigrateD
     public DemoMigrateDataCrossDbContext(
         IOptions<PlatformMongoOptions<DemoMigrateDataCrossDbContext>> options,
         IPlatformMongoClient<DemoMigrateDataCrossDbContext> client,
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IPlatformCqrs cqrs,
         IPlatformApplicationUserContextAccessor userContextAccessor,
         PlatformPersistenceConfiguration<DemoMigrateDataCrossDbContext> persistenceConfiguration) : base(
         options,
         client,
-        loggerBuilder,
+        loggerFactory,
         cqrs,
         userContextAccessor,
         persistenceConfiguration)

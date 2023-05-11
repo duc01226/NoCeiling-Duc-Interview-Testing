@@ -15,13 +15,13 @@ public class TextSnippetDbContext : PlatformMongoDbContext<TextSnippetDbContext>
     public TextSnippetDbContext(
         IOptions<PlatformMongoOptions<TextSnippetDbContext>> options,
         IPlatformMongoClient<TextSnippetDbContext> client,
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IPlatformCqrs cqrs,
         IPlatformApplicationUserContextAccessor userContextAccessor,
         PlatformPersistenceConfiguration<TextSnippetDbContext> persistenceConfiguration) : base(
         options,
         client,
-        loggerBuilder,
+        loggerFactory,
         cqrs,
         userContextAccessor,
         persistenceConfiguration)

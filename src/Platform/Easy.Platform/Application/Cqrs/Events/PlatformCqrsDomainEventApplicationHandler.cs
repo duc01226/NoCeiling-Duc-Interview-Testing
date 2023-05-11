@@ -8,9 +8,9 @@ public abstract class PlatformCqrsDomainEventApplicationHandler<TEvent> : Platfo
     where TEvent : PlatformCqrsDomainEvent, new()
 {
     protected PlatformCqrsDomainEventApplicationHandler(
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager) : base(
-        loggerBuilder,
+        loggerFactory,
         unitOfWorkManager)
     {
     }

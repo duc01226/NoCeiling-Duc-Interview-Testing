@@ -16,9 +16,9 @@ public class TransferSnippetTextToMultiDbDemoEntityNameDomainEventConsumer
     : PlatformCqrsDomainEventBusMessageConsumer<TransferSnippetTextToMultiDbDemoEntityNameDomainEvent>
 {
     public TransferSnippetTextToMultiDbDemoEntityNameDomainEventConsumer(
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IUnitOfWorkManager uowManager,
-        IServiceProvider serviceProvider) : base(loggerBuilder, uowManager, serviceProvider)
+        IServiceProvider serviceProvider) : base(loggerFactory, uowManager, serviceProvider)
     {
     }
 

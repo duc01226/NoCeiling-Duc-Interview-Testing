@@ -17,9 +17,9 @@ namespace PlatformExampleApp.TextSnippet.Application.MessageBus.Consumers.Comman
 public class SaveSnippetTextCommandEventBusMessageConsumer : PlatformCqrsCommandEventBusMessageConsumer<SaveSnippetTextCommand>
 {
     public SaveSnippetTextCommandEventBusMessageConsumer(
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IUnitOfWorkManager uowManager,
-        IServiceProvider serviceProvider) : base(loggerBuilder, uowManager, serviceProvider)
+        IServiceProvider serviceProvider) : base(loggerFactory, uowManager, serviceProvider)
     {
     }
 

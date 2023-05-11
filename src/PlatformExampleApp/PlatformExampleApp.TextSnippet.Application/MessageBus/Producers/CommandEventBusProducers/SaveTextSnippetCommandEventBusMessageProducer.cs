@@ -11,12 +11,12 @@ namespace PlatformExampleApp.TextSnippet.Application.MessageBus.Producers.Comman
 public class SaveTextSnippetCommandEventBusMessageProducer : PlatformCqrsCommandEventBusMessageProducer<SaveSnippetTextCommand>
 {
     public SaveTextSnippetCommandEventBusMessageProducer(
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
         IPlatformApplicationUserContextAccessor userContextAccessor,
         IPlatformApplicationSettingContext applicationSettingContext) : base(
-        loggerBuilder,
+        loggerFactory,
         unitOfWorkManager,
         applicationBusMessageProducer,
         userContextAccessor,

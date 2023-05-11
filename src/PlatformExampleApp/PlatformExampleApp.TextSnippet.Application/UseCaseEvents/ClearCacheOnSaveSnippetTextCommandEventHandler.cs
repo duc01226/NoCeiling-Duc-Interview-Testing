@@ -13,9 +13,9 @@ public class ClearCacheOnSaveSnippetTextCommandEventHandler : PlatformCqrsComman
     private readonly IPlatformCacheRepositoryProvider cacheRepositoryProvider;
 
     public ClearCacheOnSaveSnippetTextCommandEventHandler(
-        ILoggerFactory loggerBuilder,
+        ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
-        IPlatformCacheRepositoryProvider cacheRepositoryProvider) : base(loggerBuilder, unitOfWorkManager)
+        IPlatformCacheRepositoryProvider cacheRepositoryProvider) : base(loggerFactory, unitOfWorkManager)
     {
         this.cacheRepositoryProvider = cacheRepositoryProvider;
     }
