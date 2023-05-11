@@ -69,7 +69,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
         try
         {
             if (RetryOnFailedTimes > 0)
-                // Retry at least 1 time to help resilient consumer. Sometime parallel, create/update concurrency could lead to error
+                // Retry RetryOnFailedTimes to help resilient consumer. Sometime parallel, create/update concurrency could lead to error
                 await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(() => DoHandleAsync(message, routingKey), retryCount: RetryOnFailedTimes);
             else
                 await DoHandleAsync(message, routingKey);

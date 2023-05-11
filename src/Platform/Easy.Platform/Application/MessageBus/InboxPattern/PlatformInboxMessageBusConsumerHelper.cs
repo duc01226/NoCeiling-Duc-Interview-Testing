@@ -140,10 +140,10 @@ public static class PlatformInboxMessageBusConsumerHelper
                 loggerBuilder()
                     .LogError(
                         ex,
-                        "Error Consume inbox message. {ErrorMessage}. [MessageType: {MessageType}]; [ConsumerType: {ConsumerType}]; [RoutingKey: {RoutingKey}]; [MessageContent: {MessageContent}];",
-                        ex.Message,
+                        "Error Consume inbox message. [MessageType: {MessageType}]; [ConsumerType: {ConsumerType}]; [ErrorMessage: {ErrorMessage}]; [RoutingKey: {RoutingKey}]; [MessageContent: {MessageContent}];",
                         message.GetType().GetNameOrGenericTypeName(),
                         consumer.GetType().GetNameOrGenericTypeName(),
+                        ex.Message,
                         routingKey,
                         message.ToJson());
 

@@ -177,7 +177,9 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
         Logger = CreateLogger(loggerBuilder);
     }
 
-    public virtual int RetryOnFailedTimes => 1;
+    public virtual int RetryOnFailedTimes => 2;
+
+    public virtual double RetryOnFailedDelaySeconds => 1;
 
     public override Task HandleAsync(object message, string routingKey)
     {
@@ -196,8 +198,11 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
         try
         {
             if (RetryOnFailedTimes > 0)
-                // Retry at least 1 time to help resilient consumer. Sometime parallel, create/update concurrency could lead to error
-                await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(() => HandleLogicAsync(message, routingKey), retryCount: RetryOnFailedTimes);
+                // Retry RetryOnFailedTimes to help resilient consumer. Sometime parallel, create/update concurrency could lead to error
+                await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                    () => HandleLogicAsync(message, routingKey),
+                    retryCount: RetryOnFailedTimes,
+                    sleepDurationProvider: retryAttempt => (retryAttempt * RetryOnFailedDelaySeconds).Seconds());
             else
                 await HandleLogicAsync(message, routingKey);
         }

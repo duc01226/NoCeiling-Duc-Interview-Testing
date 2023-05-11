@@ -21,7 +21,9 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         LoggerFactory = loggerBuilder;
     }
 
-    public virtual int RetryOnFailedTimes => 1;
+    public virtual int RetryOnFailedTimes => 2;
+
+    public virtual double RetryOnFailedDelaySeconds => 1;
 
     public virtual async Task Handle(TEvent notification, CancellationToken cancellationToken)
     {
@@ -37,10 +39,11 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                     () =>
                     {
                         if (RetryOnFailedTimes > 0)
-                            // Retry at least 1 time to help resilient PlatformCqrsEventHandler. Sometime parallel, create/update concurrency could lead to error
+                            // Retry RetryOnFailedTimes to help resilient PlatformCqrsEventHandler. Sometime parallel, create/update concurrency could lead to error
                             return Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                                 () => DoExecuteThisWithNewInstance(GetType(), notification),
-                                retryCount: RetryOnFailedTimes);
+                                retryCount: RetryOnFailedTimes,
+                                sleepDurationProvider: retryAttempt => (retryAttempt * RetryOnFailedDelaySeconds).Seconds());
                         return DoExecuteThisWithNewInstance(GetType(), notification);
                     },
                     () => PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>)),
@@ -49,8 +52,11 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
             else
             {
                 if (RetryOnFailedTimes > 0)
-                    // Retry at least 1 time to help resilient PlatformCqrsEventHandler. Sometime parallel, create/update concurrency could lead to error
-                    await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(() => ExecuteHandleAsync(notification, cancellationToken), retryCount: RetryOnFailedTimes);
+                    // Retry RetryOnFailedTimes to help resilient PlatformCqrsEventHandler. Sometime parallel, create/update concurrency could lead to error
+                    await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                        () => ExecuteHandleAsync(notification, cancellationToken),
+                        retryCount: RetryOnFailedTimes,
+                        sleepDurationProvider: retryAttempt => (retryAttempt * RetryOnFailedDelaySeconds).Seconds());
                 else
                     await ExecuteHandleAsync(notification, cancellationToken);
             }
