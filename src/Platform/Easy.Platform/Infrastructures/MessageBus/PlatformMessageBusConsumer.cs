@@ -44,6 +44,25 @@ public interface IPlatformMessageBusConsumer
     {
         return consumerGenericType.GetGenericArguments()[0];
     }
+
+    public static void LogError<TMessage>(
+        ILogger logger,
+        Type consumerType,
+        TMessage message,
+        string routingKey,
+        Exception e)
+        where TMessage : class, new()
+    {
+        logger.LogError(
+            e,
+            "Error Consume message bus. [Error:{Error}]; [ConsumerType:{ConsumerType}]; [MessageType:{MessageType}]; [RoutingKey:{RoutingKey}]; [MessageContent:{MessageContent}]" +
+            $"Message Info: {{BusMessage}}.{Environment.NewLine}",
+            e.Message,
+            consumerType.FullName,
+            message.GetType().GetNameOrGenericTypeName(),
+            routingKey,
+            message.ToJson());
+    }
 }
 
 public interface IPlatformMessageBusConsumer<in TMessage> : IPlatformMessageBusConsumer
@@ -208,13 +227,7 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
         }
         catch (Exception e)
         {
-            Logger.LogError(
-                e,
-                $"Error Consume message [RoutingKey:{{RoutingKey}}], [Type:{{MessageName}}].{Environment.NewLine}" +
-                $"Message Info: {{BusMessage}}.{Environment.NewLine}",
-                routingKey,
-                message.GetType().GetNameOrGenericTypeName(),
-                message.ToJson());
+            IPlatformMessageBusConsumer.LogError(Logger, GetType(), message, routingKey, e);
             throw;
         }
     }

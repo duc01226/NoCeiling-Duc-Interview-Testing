@@ -93,14 +93,10 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                     {
                         Logger.LogError(
                             ex,
-                            "MigrateApplicationDataAsync for migration {DataMigrationName} has errors. If in dev environment it may happens if migrate cross db, when other service db is not initiated. Usually for dev environment migrate cross service db when run system in the first-time could be ignored." +
-                            Environment.NewLine +
-                            "Exception: {Exception}" +
-                            Environment.NewLine +
-                            "TrackTrace: {Exception}",
+                            "MigrateApplicationDataAsync for migration {DataMigrationName} has errors. If in dev environment it may happens if migrate cross db, when other service db is not initiated. Usually for dev environment migrate cross service db when run system in the first-time could be ignored. " +
+                            "Error: {Error}",
                             migrationExecution.Name,
-                            ex.Message,
-                            ex.StackTrace);
+                            ex.Message);
 
                         if (!(ex is DbException && PlatformEnvironment.IsDevelopment))
                             throw new Exception($"MigrateApplicationDataAsync for migration {migrationExecution.Name} has errors. {ex.Message}.", ex);

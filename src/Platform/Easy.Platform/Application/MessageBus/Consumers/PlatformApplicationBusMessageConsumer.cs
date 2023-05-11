@@ -1,6 +1,5 @@
 using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Common;
-using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
@@ -14,23 +13,6 @@ public interface IPlatformApplicationMessageBusConsumer : IPlatformMessageBusCon
     public PlatformInboxBusMessage HandleExistingInboxMessage { get; set; }
 
     public bool IsInstanceExecutingFromInboxHelper { get; set; }
-
-    public static void LogError<TMessage>(
-        ILogger logger,
-        Type consumerType,
-        TMessage message,
-        string routingKey,
-        Exception e)
-        where TMessage : class, new()
-    {
-        logger.LogError(
-            e,
-            $"[{consumerType.FullName}] Error Consume message [RoutingKey:{{RoutingKey}}], [Type:{{BusMessage_Type}}].{Environment.NewLine}" +
-            $"Message Info: {{BusMessage}}.{Environment.NewLine}",
-            routingKey,
-            message.GetType().GetNameOrGenericTypeName(),
-            message.ToJson());
-    }
 }
 
 public interface IPlatformApplicationMessageBusConsumer<in TMessage> : IPlatformMessageBusConsumer<TMessage>, IPlatformApplicationMessageBusConsumer
@@ -76,7 +58,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
         }
         catch (Exception e)
         {
-            IPlatformApplicationMessageBusConsumer.LogError(Logger, GetType(), message, routingKey, e);
+            IPlatformMessageBusConsumer.LogError(Logger, GetType(), message, routingKey, e);
             throw;
         }
 
