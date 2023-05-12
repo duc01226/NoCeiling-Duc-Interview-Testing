@@ -40,16 +40,17 @@ public class PlatformCqrsEventInboxBusMessageConsumer : PlatformApplicationMessa
 
                 var eventHandlerInstance = serviceProvider.GetRequiredService(eventHandlerType)
                     .As<IPlatformCqrsEventApplicationHandler>()
-                    .With(_ => _.IsCurrentInstanceHandlingEventFromInboxBusMessage = true);
+                    .With(_ => _.IsCurrentInstanceCalledFromInboxBusMessageConsumer = true);
 
-                if (eventHandlerInstance.EnableHandleEventFromInboxBusMessage)
-                {
-                    var eventType = scanAssemblies
-                        .Select(p => p.GetType(message.Payload.EventTypeFullName))
-                        .FirstOrDefault(p => p != null);
+                var @event = scanAssemblies
+                    .Select(p => p.GetType(message.Payload.EventTypeFullName))
+                    .FirstOrDefault(p => p != null)
+                    .EnsureFound(
+                        $"[{nameof(PlatformCqrsEventInboxBusMessageConsumer)}] Not found [EventType:{message.Payload.EventTypeFullName}] in application to serialize the message.")
+                    .Pipe(eventType => PlatformJsonSerializer.Deserialize(message.Payload.EventJson, eventType));
 
-                    await eventHandlerInstance.Handle(PlatformJsonSerializer.Deserialize(message.Payload.EventJson, eventType), CancellationToken.None);
-                }
+                if (eventHandlerInstance.CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository: true, @event))
+                    await eventHandlerInstance.Handle(@event, CancellationToken.None);
             });
     }
 }

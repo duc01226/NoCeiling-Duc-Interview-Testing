@@ -43,6 +43,8 @@ public interface IUiComponent
 
     public string Text { get; }
 
+    public string GetAttribute(string attributeName);
+
     public bool IsClickable();
     public bool IsDisplayed();
     public IUiComponent WaitUntilClickable(double maxWaitSeconds, string? waitForMsg = null);
@@ -145,6 +147,8 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
             executeFunc: () => DirectReferenceRootElement?.Invoke() ?? IUiComponent.FindRootElementBySelector(component: this));
 
     public virtual string Text => RootElement?.Text ?? "";
+
+    public virtual string GetAttribute(string attributeName) => RootElement?.GetAttribute(attributeName) ?? "";
 
     public bool IsClickable()
     {

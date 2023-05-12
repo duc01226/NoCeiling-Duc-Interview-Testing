@@ -27,7 +27,7 @@ public abstract class PlatformCqrsEntityEventApplicationHandler<TEntity> : Platf
         };
     }
 
-    protected override bool CanExecuteHandlingEventUsingInboxConsumer(bool hasInboxMessageRepository, PlatformCqrsEntityEvent<TEntity> @event)
+    public override bool CanExecuteHandlingEventUsingInboxConsumer(bool hasInboxMessageRepository, PlatformCqrsEntityEvent<TEntity> @event)
     {
         return base.CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository, @event) && !@event.CrudAction.IsTrackingCrudAction();
     }

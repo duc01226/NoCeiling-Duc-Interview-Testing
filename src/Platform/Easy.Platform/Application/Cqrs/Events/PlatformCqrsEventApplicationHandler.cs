@@ -14,19 +14,23 @@ namespace Easy.Platform.Application.Cqrs.Events;
 
 public interface IPlatformCqrsEventApplicationHandler
 {
-    bool IsCurrentInstanceHandlingEventFromInboxBusMessage { get; set; }
+    bool IsCurrentInstanceCalledFromInboxBusMessageConsumer { get; set; }
 
     public bool EnableHandleEventFromInboxBusMessage { get; }
 
     Task ExecuteHandleAsync(object @event, CancellationToken cancellationToken);
 
     Task Handle(object notification, CancellationToken cancellationToken);
+
+    bool CanExecuteHandlingEventUsingInboxConsumer(bool hasInboxMessageRepository, object @event);
 }
 
 public interface IPlatformCqrsEventApplicationHandler<in TEvent> : IPlatformCqrsEventApplicationHandler, IPlatformCqrsEventHandler<TEvent>
     where TEvent : PlatformCqrsEvent, new()
 {
     Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken);
+
+    bool CanExecuteHandlingEventUsingInboxConsumer(bool hasInboxMessageRepository, TEvent @event);
 }
 
 public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrsEventHandler<TEvent>, IPlatformCqrsEventApplicationHandler<TEvent>
@@ -48,7 +52,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     /// </summary>
     public virtual bool EnableHandleEventFromInboxBusMessage => true;
 
-    public bool IsCurrentInstanceHandlingEventFromInboxBusMessage { get; set; }
+    public bool IsCurrentInstanceCalledFromInboxBusMessageConsumer { get; set; }
 
     public Task ExecuteHandleAsync(object @event, CancellationToken cancellationToken)
     {
@@ -58,6 +62,11 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     public Task Handle(object notification, CancellationToken cancellationToken)
     {
         return DoHandle(notification.As<TEvent>(), cancellationToken);
+    }
+
+    public bool CanExecuteHandlingEventUsingInboxConsumer(bool hasInboxMessageRepository, object @event)
+    {
+        return CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository, @event.As<TEvent>());
     }
 
     public override Task Handle(TEvent notification, CancellationToken cancellationToken)
@@ -70,6 +79,24 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         await DoExecuteHandleAsync(@event, cancellationToken);
     }
 
+    public virtual bool CanExecuteHandlingEventUsingInboxConsumer(bool hasInboxMessageRepository, TEvent @event)
+    {
+        // EventHandler using IPlatformApplicationUserContextAccessor cannot use inbox because user request context is not available when process inbox message
+        var usingApplicationUserContextAccessor = GetType()
+            .GetConstructors()
+            .Any(p => p.IsPublic && p.GetParameters().Any(p => p.ParameterType.IsAssignableTo(typeof(IPlatformApplicationUserContextAccessor))));
+        var hasEnabledInboxFeature = EnableHandleEventFromInboxBusMessage && hasInboxMessageRepository;
+
+        if (usingApplicationUserContextAccessor && hasEnabledInboxFeature)
+            CreateLogger(LoggerFactory)
+                .LogError(
+                    "[WARNING] Auto handing event directly, not support using InboxEvent. " +
+                    "EventHandler using IPlatformApplicationUserContextAccessor cannot use inbox because user request context is not available when process inbox message. " +
+                    "Should refactor removing using IPlatformApplicationUserContextAccessor to support inbox.");
+
+        return hasEnabledInboxFeature && !usingApplicationUserContextAccessor;
+    }
+
     private Task DoHandle(TEvent notification, CancellationToken cancellationToken)
     {
         return base.Handle(notification, cancellationToken);
@@ -80,7 +107,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         var hasInboxMessageRepository = PlatformGlobal.RootServiceProvider
             .ExecuteScoped(scope => scope.ServiceProvider.GetService<IPlatformInboxBusMessageRepository>() != null);
 
-        if (CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository, @event))
+        if (CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository, @event) && !IsCurrentInstanceCalledFromInboxBusMessageConsumer)
         {
             // Need to get outside of ExecuteInjectScopedAsync to has data because it read current context by thread. If inside => other threads => lose identity data
             var currentBusMessageIdentity =
@@ -118,18 +145,6 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             else
                 await HandleAsync(@event, cancellationToken);
         }
-    }
-
-    protected virtual bool CanExecuteHandlingEventUsingInboxConsumer(bool hasInboxMessageRepository, TEvent @event)
-    {
-        // 1*: EventHandler using IPlatformApplicationUserContextAccessor cannot use inbox because user request context is not available when
-        // process inbox message
-        return EnableHandleEventFromInboxBusMessage &&
-               hasInboxMessageRepository &&
-               !IsCurrentInstanceHandlingEventFromInboxBusMessage &&
-               !GetType() //1*
-                   .GetConstructors()
-                   .Any(p => p.IsPublic && p.GetParameters().Any(p => p.ParameterType.IsAssignableTo(typeof(IPlatformApplicationUserContextAccessor))));
     }
 
     protected virtual PlatformBusMessage<PlatformCqrsEventBusMessagePayload> CqrsEventInboxBusMessage(
