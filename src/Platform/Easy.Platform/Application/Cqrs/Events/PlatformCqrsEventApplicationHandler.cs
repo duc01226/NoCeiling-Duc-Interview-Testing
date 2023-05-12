@@ -125,7 +125,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         IPlatformApplicationUserContextAccessor userContextAccessor)
     {
         return PlatformBusMessage<PlatformCqrsEventBusMessagePayload>.New<PlatformBusMessage<PlatformCqrsEventBusMessagePayload>>(
-            trackId: $"{@event.AuditTrackId ?? Guid.NewGuid().ToString()}-{eventHandlerType.Name}",
+            trackId: $"{@event.Id}-{eventHandlerType.Name}",
             payload: PlatformCqrsEventBusMessagePayload.New(@event, eventHandlerType.FullName),
             identity: new PlatformBusMessageIdentity
             {

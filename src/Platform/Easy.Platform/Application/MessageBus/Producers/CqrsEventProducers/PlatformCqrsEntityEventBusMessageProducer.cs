@@ -36,7 +36,7 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
     protected override TMessage BuildMessage(PlatformCqrsEntityEvent<TEntity> @event)
     {
         return PlatformCqrsEntityEventBusMessage<TEntity>.New<TMessage>(
-            trackId: Guid.NewGuid().ToString(),
+            trackId: @event.Id,
             payload: @event,
             identity: BuildPlatformEventBusMessageIdentity(),
             producerContext: ApplicationSettingContext.ApplicationName,

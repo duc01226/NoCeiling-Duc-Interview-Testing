@@ -27,7 +27,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         PlatformInboxBusMessage handleImmediatelyExistingInboxMessage = null,
         CancellationToken cancellationToken = default) where TMessage : class, new()
     {
-        if (handleImmediatelyExistingInboxMessage != null)
+        if (handleImmediatelyExistingInboxMessage != null && handleImmediatelyExistingInboxMessage.ConsumeStatus != PlatformInboxBusMessage.ConsumeStatuses.Processed)
         {
             await ExecuteConsumerForExistingInboxMessage(
                 handleImmediatelyExistingInboxMessage,
@@ -39,7 +39,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 retryProcessFailedMessageInSecondsUnit,
                 cancellationToken);
         }
-        else
+        else if (handleImmediatelyExistingInboxMessage == null)
         {
             var trackId = message.As<IPlatformTrackableBusMessage>()?.TrackingId;
 
@@ -60,12 +60,15 @@ public static class PlatformInboxMessageBusConsumerHelper
                     cancellationToken)
                 : null;
 
-            ExecuteConsumerForExistingInboxMessageInBackground(
-                consumer.GetType(),
-                message,
-                existingInboxMessage ?? newInboxMessage,
-                routingKey,
-                loggerFactory);
+            var toProcessInboxMessage = existingInboxMessage ?? newInboxMessage;
+
+            if (toProcessInboxMessage.ConsumeStatus != PlatformInboxBusMessage.ConsumeStatuses.Processed)
+                ExecuteConsumerForExistingInboxMessageInBackground(
+                    consumer.GetType(),
+                    message,
+                    existingInboxMessage ?? newInboxMessage,
+                    routingKey,
+                    loggerFactory);
         }
     }
 
@@ -207,15 +210,11 @@ public static class PlatformInboxMessageBusConsumerHelper
         await serviceProvider.ExecuteInjectScopedAsync(
             async (IUnitOfWorkManager uowManager, IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
             {
-                using (var uow = uowManager.Begin())
-                {
-                    existingInboxMessage.LastConsumeDate = DateTime.UtcNow;
-                    existingInboxMessage.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Processed;
+                var toUpdateInboxMessage = existingInboxMessage
+                    .With(_ => _.LastConsumeDate = DateTime.UtcNow)
+                    .With(_ => _.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Processed);
 
-                    await inboxBusMessageRepo.UpdateAsync(existingInboxMessage, dismissSendEvent: true, cancellationToken);
-
-                    await uow.CompleteAsync(cancellationToken);
-                }
+                await inboxBusMessageRepo.UpdateAsync(toUpdateInboxMessage, dismissSendEvent: true, cancellationToken);
             });
     }
 
@@ -230,24 +229,19 @@ public static class PlatformInboxMessageBusConsumerHelper
         try
         {
             await serviceProvider.ExecuteInjectScopedAsync(
-                async (IUnitOfWorkManager uowManager, IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
+                async (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
                 {
-                    using (var uow = uowManager.Begin())
-                    {
-                        var existingInboxMessage = await inboxBusMessageRepo.GetByIdAsync(existingInboxMessageId, cancellationToken);
+                    var existingInboxMessage = await inboxBusMessageRepo.GetByIdAsync(existingInboxMessageId, cancellationToken);
 
-                        existingInboxMessage.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Failed;
-                        existingInboxMessage.LastConsumeDate = DateTime.UtcNow;
-                        existingInboxMessage.LastConsumeError = PlatformJsonSerializer.Serialize(new { exception.Message, exception.StackTrace });
-                        existingInboxMessage.RetriedProcessCount = (existingInboxMessage.RetriedProcessCount ?? 0) + 1;
-                        existingInboxMessage.NextRetryProcessAfter = PlatformInboxBusMessage.CalculateNextRetryProcessAfter(
-                            existingInboxMessage.RetriedProcessCount,
-                            retryProcessFailedMessageInSecondsUnit);
+                    existingInboxMessage.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Failed;
+                    existingInboxMessage.LastConsumeDate = DateTime.UtcNow;
+                    existingInboxMessage.LastConsumeError = PlatformJsonSerializer.Serialize(new { exception.Message, exception.StackTrace });
+                    existingInboxMessage.RetriedProcessCount = (existingInboxMessage.RetriedProcessCount ?? 0) + 1;
+                    existingInboxMessage.NextRetryProcessAfter = PlatformInboxBusMessage.CalculateNextRetryProcessAfter(
+                        existingInboxMessage.RetriedProcessCount,
+                        retryProcessFailedMessageInSecondsUnit);
 
-                        await inboxBusMessageRepo.UpdateAsync(existingInboxMessage, dismissSendEvent: true, cancellationToken);
-
-                        await uow.CompleteAsync(cancellationToken);
-                    }
+                    await inboxBusMessageRepo.UpdateAsync(existingInboxMessage, dismissSendEvent: true, cancellationToken);
                 });
         }
         catch (Exception ex)

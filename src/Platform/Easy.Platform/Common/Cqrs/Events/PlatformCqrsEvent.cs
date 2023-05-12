@@ -16,4 +16,6 @@ public abstract class PlatformCqrsEvent : INotification
     public abstract string EventName { get; }
 
     public abstract string EventAction { get; }
+
+    public string Id => $"{AuditTrackId}-{EventAction}";
 }
