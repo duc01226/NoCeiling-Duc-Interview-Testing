@@ -15,7 +15,11 @@ namespace Easy.Platform.Application.Cqrs.Events;
 public interface IPlatformCqrsEventApplicationHandler
 {
     bool IsCurrentInstanceHandlingEventFromInboxBusMessage { get; set; }
+
+    public bool EnableHandleEventFromInboxBusMessage { get; }
+
     Task ExecuteHandleAsync(object @event, CancellationToken cancellationToken);
+
     Task Handle(object notification, CancellationToken cancellationToken);
 }
 
@@ -42,7 +46,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     /// <summary>
     /// Default return True. When True, Support for store cqrs event handler as inbox if inbox bus message is enabled in persistence module
     /// </summary>
-    protected virtual bool EnableHandleEventFromInboxBusMessage => true;
+    public virtual bool EnableHandleEventFromInboxBusMessage => true;
 
     public bool IsCurrentInstanceHandlingEventFromInboxBusMessage { get; set; }
 

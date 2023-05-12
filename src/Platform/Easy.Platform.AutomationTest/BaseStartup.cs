@@ -41,6 +41,11 @@ public abstract class BaseStartup
         hostBuilder.UseServiceProviderFactory(factory);
         hostBuilder.Build();
 
+        PlatformGlobal.SetRootServiceProvider(factory.ServiceCollection.BuildServiceProvider());
+
+        startUp.Services = factory.ServiceCollection;
+        GlobalDiServices = factory.ServiceCollection;
+
         return factory.ServiceCollection;
     }
 
@@ -51,9 +56,6 @@ public abstract class BaseStartup
 
     public virtual void ConfigureServices(IServiceCollection services)
     {
-        Services = services;
-        GlobalDiServices = services;
-
         services.AddTransient(
             serviceType: typeof(IWebDriverManager),
             implementationFactory: sp => new WebDriverManager(settings: sp.GetRequiredService<AutomationTestSettings>())
@@ -64,6 +66,9 @@ public abstract class BaseStartup
         services.AddScoped<IScopedLazyWebDriver, LazyWebDriver>();
         services.AddSingleton<ISingletonLazyWebDriver, LazyWebDriver>();
         services.RegisterAllFromType(conventionalType: typeof(IBddStepsContext), GetType().Assembly, ServiceLifeTime.Scoped);
+
+        Services = services;
+        GlobalDiServices = services;
     }
 
     /// <summary>

@@ -45,7 +45,7 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
         ApplicationSettingContext = applicationSettingContext;
     }
 
-    protected override bool EnableHandleEventFromInboxBusMessage => false;
+    public override bool EnableHandleEventFromInboxBusMessage => false;
 
     protected IPlatformApplicationUserContextAccessor UserContextAccessor { get; }
 

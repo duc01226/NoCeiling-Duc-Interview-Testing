@@ -1,5 +1,6 @@
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
+using Easy.Platform.Common.Validations.Exceptions;
 using FluentValidation.Results;
 
 namespace Easy.Platform.Common.Validations;
@@ -124,7 +125,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
         TValue value,
         params PlatformValidationError[] errors)
     {
-        return errors.Any()
+        return errors?.Any() == true
             ? new PlatformValidationResult<TValue>(value, errors.ToList())
             : new PlatformValidationResult<TValue>(
                 value,
@@ -389,7 +390,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
                 ? invalidException(this)
                 : InvalidException != null
                     ? InvalidException(this)
-                    : new Exception(message: ErrorsMsg());
+                    : new PlatformValidationException(this);
 
         if (LogicalAndValidationsChain.Any())
             return LogicalAndValidationsChain

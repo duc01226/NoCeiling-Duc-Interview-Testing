@@ -41,11 +41,15 @@ public class PlatformCqrsEventInboxBusMessageConsumer : PlatformApplicationMessa
                 var eventHandlerInstance = serviceProvider.GetRequiredService(eventHandlerType)
                     .As<IPlatformCqrsEventApplicationHandler>()
                     .With(_ => _.IsCurrentInstanceHandlingEventFromInboxBusMessage = true);
-                var eventType = scanAssemblies
-                    .Select(p => p.GetType(message.Payload.EventTypeFullName))
-                    .FirstOrDefault(p => p != null);
 
-                await eventHandlerInstance.Handle(PlatformJsonSerializer.Deserialize(message.Payload.EventJson, eventType), CancellationToken.None);
+                if (eventHandlerInstance.EnableHandleEventFromInboxBusMessage)
+                {
+                    var eventType = scanAssemblies
+                        .Select(p => p.GetType(message.Payload.EventTypeFullName))
+                        .FirstOrDefault(p => p != null);
+
+                    await eventHandlerInstance.Handle(PlatformJsonSerializer.Deserialize(message.Payload.EventJson, eventType), CancellationToken.None);
+                }
             });
     }
 }
