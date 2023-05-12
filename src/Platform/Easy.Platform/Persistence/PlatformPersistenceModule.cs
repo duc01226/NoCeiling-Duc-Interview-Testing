@@ -128,7 +128,7 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
     /// </summary>
     protected virtual bool EnableInboxBusMessage()
     {
-        return false;
+        return true;
     }
 
     /// <summary>
@@ -136,7 +136,7 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
     /// </summary>
     protected virtual bool EnableOutboxBusMessage()
     {
-        return false;
+        return true;
     }
 
     protected virtual void RegisterUnitOfWorkManager(IServiceCollection serviceCollection)

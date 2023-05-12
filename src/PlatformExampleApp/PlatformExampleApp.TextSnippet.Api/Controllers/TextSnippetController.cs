@@ -162,7 +162,7 @@ public class TextSnippetController : PlatformBaseController
 
     private static void RandomThrowToTestHandleInternalException(int percentChance = 5)
     {
-        if (PlatformApplicationGlobal.Configuration.GetSection("RandomThrowExceptionForTesting").Get<bool?>() == true)
+        if (PlatformGlobal.Configuration.GetSection("RandomThrowExceptionForTesting").Get<bool?>() == true)
             Util.RandomGenerator.DoByChance(
                 percentChance,
                 () => throw new Exception("Random Test Throw Exception"));

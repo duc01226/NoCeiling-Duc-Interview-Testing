@@ -132,11 +132,21 @@ public static class PlatformInboxMessageBusConsumerHelper
                 await consumer
                     .With(_ => _.IsInstanceExecutingFromInboxHelper = true)
                     .HandleAsync(message, routingKey);
-
-                await UpdateExistingInboxProcessedMessageAsync(
-                    serviceProvider,
-                    existingInboxMessage,
-                    cancellationToken);
+                try
+                {
+                    await UpdateExistingInboxProcessedMessageAsync(
+                        serviceProvider,
+                        existingInboxMessage,
+                        cancellationToken);
+                }
+                catch (Exception e)
+                {
+                    // If failed for some reason like concurrency token conflict or entity is not existing, try to update again by Id
+                    await UpdateExistingInboxProcessedMessageAsync(
+                        serviceProvider,
+                        existingInboxMessage.Id,
+                        cancellationToken);
+                }
             }
             catch (Exception ex)
             {
@@ -200,6 +210,24 @@ public static class PlatformInboxMessageBusConsumerHelper
                     newInboxMessage.ToJson());
             throw;
         }
+    }
+
+    public static async Task UpdateExistingInboxProcessedMessageAsync(
+        IServiceProvider serviceProvider,
+        string existingInboxMessageId,
+        CancellationToken cancellationToken = default)
+    {
+        await serviceProvider.ExecuteInjectScopedAsync(
+            async (IUnitOfWorkManager uowManager, IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
+            {
+                var existingInboxMessage = await inboxBusMessageRepo.FirstOrDefaultAsync(predicate: p => p.Id == existingInboxMessageId);
+
+                if (existingInboxMessage != null)
+                    await UpdateExistingInboxProcessedMessageAsync(
+                        serviceProvider,
+                        existingInboxMessage,
+                        cancellationToken);
+            });
     }
 
     public static async Task UpdateExistingInboxProcessedMessageAsync(
