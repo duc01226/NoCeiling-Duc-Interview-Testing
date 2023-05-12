@@ -1,5 +1,5 @@
-using Easy.Platform.Application;
 using Easy.Platform.AspNetCore.Controllers;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
