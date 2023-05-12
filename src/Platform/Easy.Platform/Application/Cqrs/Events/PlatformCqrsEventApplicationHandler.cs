@@ -117,9 +117,14 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     protected virtual bool CanExecuteHandlingEventUsingInboxConsumer(bool hasInboxMessageRepository, TEvent @event)
     {
+        // 1*: EventHandler using IPlatformApplicationUserContextAccessor cannot use inbox because user request context is not available when
+        // process inbox message
         return EnableHandleEventFromInboxBusMessage &&
                hasInboxMessageRepository &&
-               !IsCurrentInstanceHandlingEventFromInboxBusMessage;
+               !IsCurrentInstanceHandlingEventFromInboxBusMessage &&
+               !GetType() //1*
+                   .GetConstructors()
+                   .Any(p => p.IsPublic && p.GetParameters().Any(p => p.ParameterType.IsAssignableTo(typeof(IPlatformApplicationUserContextAccessor))));
     }
 
     protected virtual PlatformBusMessage<PlatformCqrsEventBusMessagePayload> CqrsEventInboxBusMessage(

@@ -114,6 +114,23 @@ public static class TaskExtension
         return targetValue;
     }
 
+    public static async Task ThenSideEffectActionAsync(
+        this Task task,
+        Func<Task> nextTask,
+        ILogger logger)
+    {
+        await task;
+
+        try
+        {
+            await nextTask();
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "SideEffectAction failed.");
+        }
+    }
+
     /// <summary>
     /// Side effect call other action, which will not affect the main action flow if error. Just a side effect action
     /// </summary>

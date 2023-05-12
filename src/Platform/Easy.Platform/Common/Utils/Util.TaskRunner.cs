@@ -45,6 +45,9 @@ public static partial class Util
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default)
         {
+            // Must use stack trace BEFORE Task.RunBECAUSE after call get data function, the stack trace get lost, only back to task.run.
+            var loggingFullStackTrace = Environment.StackTrace;
+
             Task.Run(
                 async () =>
                 {
@@ -54,7 +57,8 @@ public static partial class Util
                     }
                     catch (Exception ex)
                     {
-                        loggerFactory().LogError(ex, ex.Message);
+                        loggerFactory()
+                            .LogError(ex, "Run in background thread failed. [Error: {Error}]. [FullStackTrace: {FullStackTrace}]", ex.Message, loggingFullStackTrace);
                         throw;
                     }
                 },
@@ -76,6 +80,9 @@ public static partial class Util
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default)
         {
+            // Must use stack trace BEFORE Task.RunBECAUSE after call get data function, the stack trace get lost, only back to task.run.
+            var loggingFullStackTrace = Environment.StackTrace;
+
             Task.Run(
                 async () =>
                 {
@@ -85,7 +92,8 @@ public static partial class Util
                     }
                     catch (Exception ex)
                     {
-                        loggerFactory().LogError(ex, ex.Message);
+                        loggerFactory()
+                            .LogError(ex, "Run in background thread failed. [Error: {Error}]. [FullStackTrace: {FullStackTrace}]", ex.Message, loggingFullStackTrace);
                         throw;
                     }
                 },
@@ -121,6 +129,9 @@ public static partial class Util
             bool executeOnceImmediately = false,
             CancellationToken cancellationToken = default)
         {
+            // Must use stack trace BEFORE Task.RunBECAUSE after call get data function, the stack trace get lost, only back to task.run.
+            var loggingFullStackTrace = Environment.StackTrace;
+
             Task.Run(
                 async () =>
                 {
@@ -130,7 +141,8 @@ public static partial class Util
                     }
                     catch (Exception ex)
                     {
-                        loggerFactory().LogError(ex, ex.Message);
+                        loggerFactory()
+                            .LogError(ex, "Run in background thread failed. [Error: {Error}]. [FullStackTrace: {FullStackTrace}]", ex.Message, loggingFullStackTrace);
                         throw;
                     }
                 },
