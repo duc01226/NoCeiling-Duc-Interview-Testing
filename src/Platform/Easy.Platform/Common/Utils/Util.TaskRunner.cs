@@ -13,8 +13,6 @@ public static partial class Util
         public const int DefaultWaitUntilMaxSeconds = 60;
         public const double DefaultWaitIntervalSeconds = 0.3;
 
-        public const int DefaultWhenAllWaitEachItemsToKeepStackTraceMaxTasksCount = 5;
-
         /// <summary>
         /// Execute an action after a given of time.
         /// </summary>
@@ -343,48 +341,24 @@ public static partial class Util
             return result;
         }
 
-        public static async Task WhenAll(params Task[] tasks)
+        public static Task WhenAll(params Task[] tasks)
         {
-            // If not too much task using WaitResult for keeping the track trace
-            // Too much task using this locking could lead to Deadlocks or Threadpool Starvation
-            // https://www.nikouusitalo.com/blog/why-is-getawaiter-getresult-bad-in-c/
-            if (tasks.Length <= DefaultWhenAllWaitEachItemsToKeepStackTraceMaxTasksCount)
-                await tasks.ForEachAsync(async p => await p);
-            else await Task.WhenAll(tasks);
+            return Task.WhenAll(tasks);
         }
 
         public static async Task WhenAll(IEnumerable<Task> tasks)
         {
-            var taskList = tasks.ToList();
-
-            // If not too much task using WaitResult for keeping the track trace
-            // Too much task using this locking could lead to Deadlocks or Threadpool Starvation
-            // https://www.nikouusitalo.com/blog/why-is-getawaiter-getresult-bad-in-c/
-            if (taskList.Count <= DefaultWhenAllWaitEachItemsToKeepStackTraceMaxTasksCount)
-                await taskList.ForEachAsync(async p => await p);
-            else await Task.WhenAll(taskList);
+            await Task.WhenAll(tasks);
         }
 
-        public static async Task<List<T>> WhenAll<T>(IEnumerable<Task<T>> tasks)
+        public static Task<List<T>> WhenAll<T>(IEnumerable<Task<T>> tasks)
         {
-            var taskList = tasks.ToList();
-
-            // If not too much task using WaitResult for keeping the track trace
-            // Too much task using this locking could lead to Deadlocks or Threadpool Starvation
-            // https://www.nikouusitalo.com/blog/why-is-getawaiter-getresult-bad-in-c/
-            if (taskList.Count <= DefaultWhenAllWaitEachItemsToKeepStackTraceMaxTasksCount)
-                return await taskList.SelectAsync(async p => await p);
-            return await Task.WhenAll(taskList).Then(_ => _.ToList());
+            return Task.WhenAll(tasks).Then(_ => _.ToList());
         }
 
-        public static async Task<List<T>> WhenAll<T>(params Task<T>[] tasks)
+        public static Task<List<T>> WhenAll<T>(params Task<T>[] tasks)
         {
-            // If not too much task using WaitResult for keeping the track trace
-            // Too much task using this locking could lead to Deadlocks or Threadpool Starvation
-            // https://www.nikouusitalo.com/blog/why-is-getawaiter-getresult-bad-in-c/
-            if (tasks.Length <= DefaultWhenAllWaitEachItemsToKeepStackTraceMaxTasksCount)
-                return await tasks.SelectAsync(async p => await p);
-            return await Task.WhenAll(tasks).Then(_ => _.ToList());
+            return Task.WhenAll(tasks).Then(_ => _.ToList());
         }
 
         public static async Task<ValueTuple<T1, T2>> WhenAll<T1, T2>(Task<T1> task1, Task<T2> task2)

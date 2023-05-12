@@ -49,6 +49,17 @@ public interface IUnitOfWork : IDisposable
     public bool DoesSupportParallelQuery();
 
     /// <summary>
+    /// Asynchronously wait to enter the UowLock. If no-one has been granted access to the UowLock, code execution will proceed, otherwise this thread waits here until the semaphore is released 
+    /// </summary>
+    public Task LockAsync();
+
+    /// <summary>
+    /// When the task is ready, release the UowLock. It is vital to ALWAYS release the UowLock when we are ready, or else we will end up with a UowLock that is forever locked.
+    /// This is why it is important to do the Release within a try...finally clause; program execution may crash or take a different path, this way you are guaranteed execution 
+    /// </summary>
+    public void ReleaseLock();
+
+    /// <summary>
     /// Get itself or inner uow which is TUnitOfWork.
     /// </summary>
     public TUnitOfWork UowOfType<TUnitOfWork>() where TUnitOfWork : class, IUnitOfWork
@@ -73,6 +84,8 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
 {
     public bool Completed { get; protected set; }
     public bool Disposed { get; protected set; }
+
+    public SemaphoreSlim SemaphoreSlim { get; } = new(1, 1);
     public event EventHandler OnCompleted;
     public event EventHandler<UnitOfWorkFailedArgs> OnFailed;
     public List<IUnitOfWork> InnerUnitOfWorks { get; protected set; } = new();
@@ -111,6 +124,16 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
 
     public abstract bool DoesSupportParallelQuery();
 
+    public Task LockAsync()
+    {
+        return SemaphoreSlim.WaitAsync();
+    }
+
+    public void ReleaseLock()
+    {
+        SemaphoreSlim.Release();
+    }
+
     public void Dispose()
     {
         // Dispose of unmanaged resources.
@@ -124,9 +147,8 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
     protected virtual void Dispose(bool disposing)
     {
         if (disposing)
-        {
             // Dispose managed state (managed objects).
-        }
+            SemaphoreSlim.Dispose();
 
         Disposed = true;
     }

@@ -158,7 +158,14 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return entities.Select(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken)).WhenAll();
+        return Util.Pager.ExecutePagingAsync(
+                (skipCount, pageSize) => entities.Skip(skipCount)
+                    .Take(pageSize)
+                    .Select(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken))
+                    .WhenAll(),
+                maxItemCount: entities.Count,
+                IPlatformDbContext.DefaultPageSize)
+            .Then(result => result.SelectMany(p => p).ToList());
     }
 
     public Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
@@ -167,15 +174,20 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         return UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, cancellationToken);
     }
 
-    public async Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
+    public Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        await entities.ForEachAsync(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
-
-        return entities;
+        return Util.Pager.ExecutePagingAsync(
+                (skipCount, pageSize) => entities.Skip(skipCount)
+                    .Take(pageSize)
+                    .Select(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken))
+                    .WhenAll(),
+                maxItemCount: entities.Count,
+                IPlatformDbContext.DefaultPageSize)
+            .Then(result => result.SelectMany(p => p).ToList());
     }
 
     public async Task DeleteAsync<TEntity, TPrimaryKey>(TPrimaryKey entityId, bool dismissSendEvent, CancellationToken cancellationToken)
@@ -214,7 +226,12 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        await entities.ForEachAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
+        await Util.Pager.ExecutePagingAsync(
+            (skipCount, pageSize) => entities.Skip(skipCount)
+                .Take(pageSize)
+                .ForEachAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken)),
+            maxItemCount: entities.Count,
+            IPlatformDbContext.DefaultPageSize);
 
         return entities;
     }
@@ -243,17 +260,25 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         return await CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, upsert: true, cancellationToken);
     }
 
-    public async Task<List<TEntity>> CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
+    public Task<List<TEntity>> CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        if (entities.Any())
-            await entities.ForEachAsync(
-                entity => CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, customCheckExistingPredicateBuilder?.Invoke(entity), dismissSendEvent, cancellationToken));
-
-        return entities;
+        return Util.Pager.ExecutePagingAsync(
+                (skipCount, pageSize) => entities.Skip(skipCount)
+                    .Take(pageSize)
+                    .Select(
+                        entity => CreateOrUpdateAsync<TEntity, TPrimaryKey>(
+                            entity,
+                            customCheckExistingPredicateBuilder?.Invoke(entity),
+                            dismissSendEvent,
+                            cancellationToken))
+                    .WhenAll(),
+                maxItemCount: entities.Count,
+                IPlatformDbContext.DefaultPageSize)
+            .Then(result => result.SelectMany(p => p).ToList());
     }
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -330,7 +355,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         if (existingEntity == null &&
             ((!dismissSendEvent && entity.HasTrackValueUpdatedDomainEventAttribute()) ||
              entity is IRowVersionEntity { ConcurrencyUpdateToken: null }))
-            existingEntity = await GetQuery<TEntity>().Where(p => p.Id.Equals(entity.Id)).FirstOrDefaultAsync(cancellationToken);
+            existingEntity = await GetQuery<TEntity>()
+                .Where(p => p.Id.Equals(entity.Id))
+                .FirstOrDefaultAsync(cancellationToken)
+                .EnsureFound($"Entity {typeof(TEntity).Name} with [Id:{entity.Id}] not found to update");
 
         if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })
             entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = existingEntity.As<IRowVersionEntity>().ConcurrencyUpdateToken;

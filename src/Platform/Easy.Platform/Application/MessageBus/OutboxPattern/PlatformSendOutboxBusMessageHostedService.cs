@@ -134,39 +134,34 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
         CancellationToken cancellationToken)
     {
         await scope.ExecuteInjectAsync(
-            async (PlatformOutboxMessageBusProducerHelper outboxEventBusProducerHelper, IUnitOfWorkManager uowManager) =>
+            async (PlatformOutboxMessageBusProducerHelper outboxEventBusProducerHelper) =>
             {
                 var messageType = ResolveMessageType(toHandleOutboxMessage);
 
-                using (var uow = uowManager.Begin())
+                if (messageType != null)
                 {
-                    if (messageType != null)
-                    {
-                        var message = PlatformJsonSerializer.Deserialize(
-                            toHandleOutboxMessage.JsonMessage,
-                            messageType);
+                    var message = PlatformJsonSerializer.Deserialize(
+                        toHandleOutboxMessage.JsonMessage,
+                        messageType);
 
-                        await outboxEventBusProducerHelper!.HandleSendingOutboxMessageAsync(
-                            message,
-                            toHandleOutboxMessage.RoutingKey,
-                            retryProcessFailedMessageInSecondsUnit,
-                            handleExistingOutboxMessageId: toHandleOutboxMessage.Id,
-                            cancellationToken);
-                    }
-                    else
-                    {
-                        await PlatformOutboxMessageBusProducerHelper.UpdateExistingOutboxMessageFailedAsync(
-                            toHandleOutboxMessage.Id,
-                            new Exception(
-                                $"[{GetType().Name}] Error resolve outbox message type " +
-                                $"[TypeName:{toHandleOutboxMessage.MessageTypeFullName}]. OutboxId:{toHandleOutboxMessage.Id}"),
-                            retryProcessFailedMessageInSecondsUnit,
-                            cancellationToken,
-                            ServiceProvider.GetService<IPlatformOutboxBusMessageRepository>(),
-                            Logger);
-                    }
-
-                    await uow.CompleteAsync(cancellationToken);
+                    await outboxEventBusProducerHelper!.HandleSendingOutboxMessageAsync(
+                        message,
+                        toHandleOutboxMessage.RoutingKey,
+                        retryProcessFailedMessageInSecondsUnit,
+                        handleExistingOutboxMessage: toHandleOutboxMessage,
+                        cancellationToken);
+                }
+                else
+                {
+                    await PlatformOutboxMessageBusProducerHelper.UpdateExistingOutboxMessageFailedAsync(
+                        toHandleOutboxMessage,
+                        new Exception(
+                            $"[{GetType().Name}] Error resolve outbox message type " +
+                            $"[TypeName:{toHandleOutboxMessage.MessageTypeFullName}]. OutboxId:{toHandleOutboxMessage.Id}"),
+                        retryProcessFailedMessageInSecondsUnit,
+                        cancellationToken,
+                        Logger,
+                        ServiceProvider.GetService<IPlatformOutboxBusMessageRepository>());
                 }
             });
     }

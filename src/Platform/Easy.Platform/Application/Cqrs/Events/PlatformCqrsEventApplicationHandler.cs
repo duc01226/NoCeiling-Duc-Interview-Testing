@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.Cqrs.Events;
 
-public interface IPlatformCqrsEventApplicationHandler
+public interface IPlatformCqrsEventApplicationHandler : IPlatformCqrsEventHandler
 {
     bool IsCurrentInstanceCalledFromInboxBusMessageConsumer { get; set; }
 
@@ -43,9 +43,12 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         IUnitOfWorkManager unitOfWorkManager) : base(loggerFactory)
     {
         UnitOfWorkManager = unitOfWorkManager;
+        IsInjectingUserContextAccessor = CheckIsInjectingUserContextAccessor();
     }
 
     protected virtual bool AutoOpenUow => true;
+
+    public bool IsInjectingUserContextAccessor { get; }
 
     /// <summary>
     /// Default return True. When True, Support for store cqrs event handler as inbox if inbox bus message is enabled in persistence module
@@ -82,9 +85,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     public virtual bool CanExecuteHandlingEventUsingInboxConsumer(bool hasInboxMessageRepository, TEvent @event)
     {
         // EventHandler using IPlatformApplicationUserContextAccessor cannot use inbox because user request context is not available when process inbox message
-        var usingApplicationUserContextAccessor = GetType()
-            .GetConstructors()
-            .Any(p => p.IsPublic && p.GetParameters().Any(p => p.ParameterType.IsAssignableTo(typeof(IPlatformApplicationUserContextAccessor))));
+        var usingApplicationUserContextAccessor = IsInjectingUserContextAccessor;
         var hasEnabledInboxFeature = EnableHandleEventFromInboxBusMessage && hasInboxMessageRepository;
 
         if (usingApplicationUserContextAccessor && hasEnabledInboxFeature)
@@ -95,6 +96,49 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                     "Should refactor removing using IPlatformApplicationUserContextAccessor to support inbox.");
 
         return hasEnabledInboxFeature && !usingApplicationUserContextAccessor;
+    }
+
+    protected bool CheckIsInjectingUserContextAccessor()
+    {
+        return GetType()
+            .GetConstructors()
+            .Any(p => p.IsPublic && p.GetParameters().Any(p => p.ParameterType.IsAssignableTo(typeof(IPlatformApplicationUserContextAccessor))));
+    }
+
+    protected override Dictionary<string, object> BuildDataContextBeforeBackgroundExecution()
+    {
+        if (IsInjectingUserContextAccessor)
+        {
+            // Need to get current user context outside of QueueActionInBackground to has data because it read current context by thread. If inside => other threads => lose identity data
+            var currentUserContextAllValues =
+                PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.GetAllKeyValues();
+
+            return currentUserContextAllValues;
+        }
+
+        return null;
+    }
+
+    protected override void ReApplyDataContextInBackgroundExecution(
+        IServiceProvider inBackgroundServiceProvider,
+        Dictionary<string, object> dataContextBeforeBackgroundExecution)
+    {
+        // Need to get set back current user context outside of QueueActionInBackground into the current thread context
+        if (IsInjectingUserContextAccessor)
+            inBackgroundServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.SetValues(dataContextBeforeBackgroundExecution);
+    }
+
+    protected override void CopyValuesToNewInstanceInBackgroundBeforeExecution(
+        PlatformCqrsEventHandler<TEvent> previousInstance,
+        PlatformCqrsEventHandler<TEvent> newInstance)
+    {
+        base.CopyValuesToNewInstanceInBackgroundBeforeExecution(previousInstance, newInstance);
+
+        var applicationHandlerPreviousInstance = previousInstance.As<PlatformCqrsEventApplicationHandler<TEvent>>();
+        var applicationHandlerNewInstance = newInstance.As<PlatformCqrsEventApplicationHandler<TEvent>>();
+
+        applicationHandlerNewInstance.IsCurrentInstanceCalledFromInboxBusMessageConsumer =
+            applicationHandlerPreviousInstance.IsCurrentInstanceCalledFromInboxBusMessageConsumer;
     }
 
     private Task DoHandle(TEvent notification, CancellationToken cancellationToken)

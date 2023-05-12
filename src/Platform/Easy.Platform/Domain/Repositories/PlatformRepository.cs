@@ -1,7 +1,6 @@
 using System.Linq.Expressions;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.UnitOfWork;
 
@@ -363,12 +362,23 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
             return result;
         }
 
+        var currentUow = UnitOfWorkManager.CurrentActiveUow();
+
         // Do retry if the uow do not support parallel query so that if there's other uow running query in parallel, it could retry get data again to have chance to make it work
-        if (UnitOfWorkManager.CurrentActiveUow().DoesSupportParallelQuery() == false)
-            return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                () => ExecuteReadDataUsingCurrentActiveUow(readDataFn, loadRelatedEntities),
-                retryAttempt => SupportParallelQueryRetrySleepTime(),
-                retryCount: SupportParallelQueryRetryCount());
+        if (currentUow.DoesSupportParallelQuery() == false)
+            try
+            {
+                //Asynchronously wait to enter the Semaphore. If no-one has been granted access to the Semaphore, code execution will proceed, otherwise this thread waits here until the semaphore is released 
+                await currentUow.LockAsync();
+
+                return await ExecuteReadDataUsingCurrentActiveUow(readDataFn, loadRelatedEntities);
+            }
+            finally
+            {
+                //When the task is ready, release the semaphore. It is vital to ALWAYS release the semaphore when we are ready, or else we will end up with a Semaphore that is forever locked.
+                //This is why it is important to do the Release within a try...finally clause; program execution may crash or take a different path, this way you are guaranteed execution
+                currentUow.ReleaseLock();
+            }
 
         return await ExecuteReadDataUsingCurrentActiveUow(readDataFn, loadRelatedEntities);
     }
@@ -380,7 +390,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
     protected virtual TimeSpan SupportParallelQueryRetrySleepTime()
     {
-        return 100.Milliseconds();
+        return 300.Milliseconds();
     }
 
     protected virtual Task<TResult> ExecuteReadDataUsingCurrentActiveUow<TResult>(

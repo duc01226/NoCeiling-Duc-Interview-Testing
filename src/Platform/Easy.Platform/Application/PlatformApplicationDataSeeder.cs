@@ -54,7 +54,7 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
         PlatformGlobal.Configuration.GetValue<int?>(SeedingMinimumDummyItemsCountConfigurationKey) ??
         DefaultSeedingMinimumDummyItemsCount;
 
-    public static int DefaultActiveDelaySeedingInBackgroundBySeconds => PlatformEnvironment.IsDevelopment ? 60 : 180;
+    public static int DefaultActiveDelaySeedingInBackgroundBySeconds => PlatformEnvironment.IsDevelopment ? 30 : 180;
     public static int DefaultDelayRetryCheckSeedDataBySeconds => PlatformEnvironment.IsDevelopment ? 2 : 4;
     public static int DefaultMaxWaitSeedDataBySyncMessagesBySeconds => PlatformEnvironment.IsDevelopment ? 300 : 600;
 

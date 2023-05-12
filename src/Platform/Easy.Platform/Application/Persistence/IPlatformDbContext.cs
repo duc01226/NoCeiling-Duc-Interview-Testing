@@ -13,6 +13,8 @@ namespace Easy.Platform.Application.Persistence;
 
 public interface IPlatformDbContext : IDisposable
 {
+    public const int DefaultPageSize = 10;
+
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery { get; }
 
     public IUnitOfWork? MappedUnitOfWork { get; set; }

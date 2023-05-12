@@ -69,27 +69,18 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
     {
         if (SendMessageWhen(@event))
         {
-            // Do not need to send message again if HasOutboxMessageSupport and crud action is IsAfterCompletedUowEntityEvent
-            // because of out box support, we will register the outbox message already before complete uow, with crud action value is mapped from before to after CompletedUowCrudAction
-            // using MapFromBeforeToAfterCompletedUowCrudAction
-            if (!@event.CrudAction.IsCompletedCrudAction() || !ApplicationBusMessageProducer.HasOutboxMessageSupport())
-            {
-                if (onCanSendMessageFn != null) await onCanSendMessageFn(@event);
-                return true;
-            }
+            if (onCanSendMessageFn != null) await onCanSendMessageFn(@event);
+            return true;
         }
-        else
-        {
-            if (@event.CrudAction.IsTrackingCrudAction() &&
-                ApplicationBusMessageProducer.HasOutboxMessageSupport())
-            {
-                var mappedToUowCompletedCrudActionEntityEvent = @event.Clone().With(p => p.CrudAction = p.CrudAction.GetRelevantCompletedCrudAction());
 
-                if (SendMessageWhen(mappedToUowCompletedCrudActionEntityEvent))
-                {
-                    if (onCanSendMessageFn != null) await onCanSendMessageFn(mappedToUowCompletedCrudActionEntityEvent);
-                    return true;
-                }
+        if (@event.CrudAction.IsTrackingCrudAction() && UnitOfWorkManager.HasCurrentActiveUow() && ApplicationBusMessageProducer.HasOutboxMessageSupport())
+        {
+            var mappedToUowCompletedCrudActionEntityEvent = @event.Clone().With(p => p.CrudAction = p.CrudAction.GetRelevantCompletedCrudAction());
+
+            if (SendMessageWhen(mappedToUowCompletedCrudActionEntityEvent))
+            {
+                if (onCanSendMessageFn != null) await onCanSendMessageFn(mappedToUowCompletedCrudActionEntityEvent);
+                return true;
             }
         }
 

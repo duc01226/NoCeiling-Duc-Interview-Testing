@@ -146,7 +146,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
                 message,
                 routingKey,
                 OutboxConfig.RetryProcessFailedMessageInSecondsUnit,
-                handleExistingOutboxMessageId: null,
+                handleExistingOutboxMessage: null,
                 cancellationToken);
 
             return message;

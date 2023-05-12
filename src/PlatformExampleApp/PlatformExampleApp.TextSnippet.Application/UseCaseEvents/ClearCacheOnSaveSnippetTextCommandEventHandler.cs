@@ -20,10 +20,7 @@ public class ClearCacheOnSaveSnippetTextCommandEventHandler : PlatformCqrsComman
         this.cacheRepositoryProvider = cacheRepositoryProvider;
     }
 
-    protected override bool ExecuteSeparatelyInBackgroundThread()
-    {
-        return true;
-    }
+    protected override bool EnableHandleInBackgroundThread => true;
 
     // Can override to return False to TURN OFF support for store cqrs event handler as inbox
     // protected override bool EnableHandleEventFromInboxBusMessage => false;

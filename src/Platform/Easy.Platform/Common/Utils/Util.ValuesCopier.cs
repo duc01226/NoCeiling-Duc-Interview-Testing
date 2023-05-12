@@ -117,9 +117,7 @@ public static partial class Util
                             " is not present and accessible in " +
                             typeof(TTarget).FullName);
 
-                    if (targetProperty.GetSetMethod() == null)
-                        throw new ArgumentException(
-                            "Property " + sourceProperty.Name + " is not writable in " + typeof(TTarget).FullName);
+                    if (targetProperty.GetSetMethod() == null) continue;
 
                     if ((targetProperty.GetSetMethod()?.Attributes & MethodAttributes.Static) != 0)
                         throw new ArgumentException(

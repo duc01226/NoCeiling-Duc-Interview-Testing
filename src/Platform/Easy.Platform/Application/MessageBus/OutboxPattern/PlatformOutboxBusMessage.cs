@@ -63,7 +63,7 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
 
         var result = new PlatformOutboxBusMessage
         {
-            Id = BuildId(trackId).TakeTop(IdMaxLength),
+            Id = BuildId(trackId),
             JsonMessage = message.ToFormattedJson(),
             MessageTypeFullName = GetMessageTypeFullName(message.GetType()),
             RoutingKey = routingKey.TakeTop(RoutingKeyMaxLength),
@@ -84,7 +84,7 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
 
     public static string BuildId(string trackId)
     {
-        return trackId ?? Guid.NewGuid().ToString();
+        return (trackId ?? Guid.NewGuid().ToString()).TakeTop(IdMaxLength);
     }
 
     public static DateTime CalculateNextRetryProcessAfter(

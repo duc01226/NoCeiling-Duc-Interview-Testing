@@ -40,7 +40,8 @@ public class PlatformCqrsEventInboxBusMessageConsumer : PlatformApplicationMessa
 
                 var eventHandlerInstance = serviceProvider.GetRequiredService(eventHandlerType)
                     .As<IPlatformCqrsEventApplicationHandler>()
-                    .With(_ => _.IsCurrentInstanceCalledFromInboxBusMessageConsumer = true);
+                    .With(_ => _.IsCurrentInstanceCalledFromInboxBusMessageConsumer = true)
+                    .With(_ => _.ForceCurrentInstanceHandleInCurrentThread = true);
 
                 var @event = scanAssemblies
                     .Select(p => p.GetType(message.Payload.EventTypeFullName))
