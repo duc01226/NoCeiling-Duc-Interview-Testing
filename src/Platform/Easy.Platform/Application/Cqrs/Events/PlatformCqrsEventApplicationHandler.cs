@@ -82,12 +82,16 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
         if (CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository, @event))
         {
+            // Need to get outside of ExecuteInjectScopedAsync to has data because it read current context by thread. If inside => other threads => lose identity data
+            var currentBusMessageIdentity =
+                BuildCurrentBusMessageIdentity(PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>());
+
             await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
                 async (
+                    PlatformBusMessageIdentity currentBusMessageIdentity,
                     IServiceProvider serviceProvider,
                     IPlatformInboxBusMessageRepository inboxMessageRepository,
-                    IPlatformApplicationSettingContext applicationSettingContext,
-                    IPlatformApplicationUserContextAccessor userContextAccessor) =>
+                    IPlatformApplicationSettingContext applicationSettingContext) =>
                 {
                     var consumerInstance = serviceProvider.GetRequiredService<PlatformCqrsEventInboxBusMessageConsumer>();
 
@@ -95,12 +99,13 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                         serviceProvider: serviceProvider,
                         consumer: consumerInstance,
                         inboxBusMessageRepository: inboxMessageRepository,
-                        message: CqrsEventInboxBusMessage(@event, eventHandlerType: GetType(), applicationSettingContext, userContextAccessor),
+                        message: CqrsEventInboxBusMessage(@event, eventHandlerType: GetType(), applicationSettingContext, currentBusMessageIdentity),
                         routingKey: PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(typeof(TEvent), applicationSettingContext.ApplicationName),
                         loggerFactory: CreateGlobalLogger,
                         retryProcessFailedMessageInSecondsUnit: PlatformInboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit,
                         cancellationToken: cancellationToken);
-                });
+                },
+                currentBusMessageIdentity);
         }
         else
         {
@@ -131,20 +136,25 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         TEvent @event,
         Type eventHandlerType,
         IPlatformApplicationSettingContext applicationSettingContext,
-        IPlatformApplicationUserContextAccessor userContextAccessor)
+        PlatformBusMessageIdentity currentBusMessageIdentity)
     {
         return PlatformBusMessage<PlatformCqrsEventBusMessagePayload>.New<PlatformBusMessage<PlatformCqrsEventBusMessagePayload>>(
             trackId: $"{@event.Id}-{eventHandlerType.Name}",
             payload: PlatformCqrsEventBusMessagePayload.New(@event, eventHandlerType.FullName),
-            identity: new PlatformBusMessageIdentity
-            {
-                UserId = userContextAccessor.Current.UserId(),
-                RequestId = userContextAccessor.Current.RequestId(),
-                UserName = userContextAccessor.Current.UserName()
-            },
+            identity: currentBusMessageIdentity,
             producerContext: applicationSettingContext.ApplicationName,
             messageGroup: nameof(PlatformCqrsEvent),
             messageAction: @event.EventAction);
+    }
+
+    public virtual PlatformBusMessageIdentity BuildCurrentBusMessageIdentity(IPlatformApplicationUserContextAccessor userContextAccessor)
+    {
+        return new PlatformBusMessageIdentity
+        {
+            UserId = userContextAccessor.Current.UserId(),
+            RequestId = userContextAccessor.Current.RequestId(),
+            UserName = userContextAccessor.Current.UserName()
+        };
     }
 
     public static ILogger CreateGlobalLogger()
