@@ -189,14 +189,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return Util.Pager.ExecutePagingAsync(
-                (skipCount, pageSize) => entities.Skip(skipCount)
-                    .Take(pageSize)
-                    .Select(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken))
-                    .WhenAll(),
-                maxItemCount: entities.Count,
-                IPlatformDbContext.DefaultPageSize)
-            .Then(result => result.SelectMany(p => p).ToList());
+        return entities.SelectAsync(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
     }
 
     public Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
@@ -211,14 +204,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return Util.Pager.ExecutePagingAsync(
-                (skipCount, pageSize) => entities.Skip(skipCount)
-                    .Take(pageSize)
-                    .Select(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken))
-                    .WhenAll(),
-                maxItemCount: entities.Count,
-                IPlatformDbContext.DefaultPageSize)
-            .Then(result => result.SelectMany(p => p).ToList());
+        return entities.SelectAsync(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
     }
 
     public async Task DeleteAsync<TEntity, TPrimaryKey>(
@@ -264,12 +250,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        await Util.Pager.ExecutePagingAsync(
-            (skipCount, pageSize) => entities.Skip(skipCount)
-                .Take(pageSize)
-                .ForEachAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken)),
-            maxItemCount: entities.Count,
-            IPlatformDbContext.DefaultPageSize);
+        await entities.ForEachAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
 
         return entities;
     }
@@ -326,19 +307,12 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return Util.Pager.ExecutePagingAsync(
-                (skipCount, pageSize) => entities.Skip(skipCount)
-                    .Take(pageSize)
-                    .Select(
-                        entity => CreateOrUpdateAsync<TEntity, TPrimaryKey>(
-                            entity,
-                            customCheckExistingPredicateBuilder?.Invoke(entity),
-                            dismissSendEvent,
-                            cancellationToken))
-                    .WhenAll(),
-                maxItemCount: entities.Count,
-                IPlatformDbContext.DefaultPageSize)
-            .Then(result => result.SelectMany(p => p).ToList());
+        return entities.SelectAsync(
+            entity => CreateOrUpdateAsync<TEntity, TPrimaryKey>(
+                entity,
+                customCheckExistingPredicateBuilder?.Invoke(entity),
+                dismissSendEvent,
+                cancellationToken));
     }
 
     public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(TEntity entity, TEntity existingEntity, bool dismissSendEvent, CancellationToken cancellationToken)
