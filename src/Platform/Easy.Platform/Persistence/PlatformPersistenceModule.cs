@@ -186,17 +186,6 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
             },
             sleepDurationProvider: retryAttempt => 10.Seconds(),
             retryCount: DefaultDbInitAndMigrationRetryCount,
-            onRetry: (exception, timeSpan, currentRetry, ctx) =>
-            {
-                Logger.LogWarning(
-                    exception,
-                    "[{DbContext}] Exception {ExceptionType} with message {Message} detected on attempt MigrateApplicationDataAsync {Retry} of {Retries}",
-                    typeof(TDbContext).Name,
-                    exception.GetType().Name,
-                    exception.Message,
-                    currentRetry,
-                    DefaultDbInitAndMigrationRetryCount);
-            },
             onBeforeThrowFinalExceptionFn: exception => Logger.LogError(
                 exception,
                 "[{DbContext}] Exception {ExceptionType} with message {Message} detected on attempt MigrateApplicationDataAsync",
@@ -218,17 +207,12 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
             },
             sleepDurationProvider: retryAttempt => 10.Seconds(),
             retryCount: DefaultDbInitAndMigrationRetryCount,
-            onRetry: (exception, timeSpan, currentRetry, ctx) =>
-            {
-                Logger.LogWarning(
-                    exception,
-                    "[{DbContext}] Exception {ExceptionType} with message {Message} detected on attempt Initialize {Retry} of {Retries}",
-                    typeof(TDbContext).Name,
-                    exception.GetType().Name,
-                    exception.Message,
-                    currentRetry,
-                    DefaultDbInitAndMigrationRetryCount);
-            });
+            onBeforeThrowFinalExceptionFn: exception => Logger.LogError(
+                exception,
+                "[{DbContext}] Exception {ExceptionType} with message {Message} detected on attempt InitializeDb",
+                typeof(TDbContext).Name,
+                exception.GetType().Name,
+                exception.Message));
     }
 
     protected override void InternalRegister(IServiceCollection serviceCollection)
