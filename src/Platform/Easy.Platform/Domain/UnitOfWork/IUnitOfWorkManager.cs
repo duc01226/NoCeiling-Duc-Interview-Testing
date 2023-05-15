@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
 
 namespace Easy.Platform.Domain.UnitOfWork;
@@ -17,6 +18,8 @@ public interface IUnitOfWorkManager : IDisposable
     /// This won't affect the normal current uow queue list when Begin a new uow.
     /// </summary>
     public IUnitOfWork GlobalUow { get; }
+
+    public IPlatformCqrs CurrentSameScopeCqrs { get; }
 
     /// <summary>
     /// Just create and return a new instance of uow without manage it. It will not affect to <see cref="HasCurrentActiveUow" /> result
@@ -69,6 +72,13 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
     protected readonly List<IUnitOfWork> CurrentUnitOfWorks = new();
 
     private IUnitOfWork globalUow;
+
+    protected PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCqrs)
+    {
+        CurrentSameScopeCqrs = currentSameScopeCqrs;
+    }
+
+    public IPlatformCqrs CurrentSameScopeCqrs { get; }
 
     public abstract IUnitOfWork CreateNewUow();
 

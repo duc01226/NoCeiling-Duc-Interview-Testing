@@ -102,6 +102,15 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
     {
         if (ManuallySetValueItemsDic.TryGetValue(contextKey, out var value) && value != null)
         {
+            var originalValue = ManuallySetValueItemsDic[contextKey];
+
+            if (originalValue is string originalValueStr && typeof(T) != typeof(string))
+            {
+                var isParsedSuccess = TryGetParsedValuesFromStringValues(out item, Util.ListBuilder.New(originalValueStr));
+
+                return isParsedSuccess;
+            }
+
             item = (T)ManuallySetValueItemsDic[contextKey];
             return true;
         }

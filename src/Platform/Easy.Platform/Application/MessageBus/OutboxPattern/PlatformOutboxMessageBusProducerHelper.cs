@@ -266,7 +266,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         var messageTrackId = message.As<IPlatformTrackableBusMessage>()?.TrackingId;
 
         var isMessageExisting = await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-            () => outboxBusMessageRepository.AnyAsync(p => p.Id == PlatformOutboxBusMessage.BuildId(messageTrackId)),
+            () => outboxBusMessageRepository.AnyAsync(p => p.Id == PlatformOutboxBusMessage.BuildId(messageTrackId), cancellationToken),
             sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
             retryCount: DefaultResilientRetiredCount);
         if (isMessageExisting) return;
@@ -301,7 +301,8 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                     retryProcessFailedMessageInSecondsUnit,
                     cancellationToken,
                     logger),
-                loggerFactory: CreateLogger);
+                loggerFactory: CreateLogger,
+                cancellationToken: cancellationToken);
         else
             // Do not use async, just call.WaitResult()
             // WHY: Never use async lambda on event handler, because it's equivalent to async void, which fire async task and forget
@@ -320,7 +321,8 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         retryProcessFailedMessageInSecondsUnit,
                         cancellationToken,
                         logger),
-                    loggerFactory: CreateLogger);
+                    loggerFactory: CreateLogger,
+                    cancellationToken: cancellationToken);
             };
     }
 

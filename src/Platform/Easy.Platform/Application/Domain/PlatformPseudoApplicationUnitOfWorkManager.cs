@@ -1,3 +1,4 @@
+using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 
@@ -5,6 +6,10 @@ namespace Easy.Platform.Application.Domain;
 
 internal sealed class PlatformPseudoApplicationUnitOfWorkManager : PlatformUnitOfWorkManager
 {
+    public PlatformPseudoApplicationUnitOfWorkManager(IPlatformCqrs currentSameScopeCqrs) : base(currentSameScopeCqrs)
+    {
+    }
+
     public override IUnitOfWork CreateNewUow()
     {
         return new PlatformPseudoApplicationUnitOfWork().With(_ => _.CreatedByUnitOfWorkManager = this);

@@ -343,22 +343,22 @@ public static partial class Util
 
         public static Task WhenAll(params Task[] tasks)
         {
-            return Task.WhenAll(tasks);
+            return tasks.ForEachAsync(p => p);
         }
 
-        public static async Task WhenAll(IEnumerable<Task> tasks)
+        public static Task WhenAll(IEnumerable<Task> tasks)
         {
-            await Task.WhenAll(tasks);
+            return tasks.ForEachAsync(p => p);
         }
 
         public static Task<List<T>> WhenAll<T>(IEnumerable<Task<T>> tasks)
         {
-            return Task.WhenAll(tasks).Then(_ => _.ToList());
+            return tasks.SelectAsync(p => p);
         }
 
         public static Task<List<T>> WhenAll<T>(params Task<T>[] tasks)
         {
-            return Task.WhenAll(tasks).Then(_ => _.ToList());
+            return tasks.SelectAsync(p => p);
         }
 
         public static async Task<ValueTuple<T1, T2>> WhenAll<T1, T2>(Task<T1> task1, Task<T2> task2)
@@ -888,6 +888,29 @@ public static partial class Util
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
 
             return action();
+        }
+
+        public static async Task WaitUntilToDo(
+            Func<Task<bool>> condition,
+            Func<Task> action,
+            double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
+            double waitIntervalSeconds = DefaultWaitIntervalSeconds,
+            string waitForMsg = null)
+        {
+            var startWaitTime = DateTime.UtcNow;
+            var maxWaitMilliseconds = maxWaitSeconds * 1000;
+
+            Thread.Sleep((int)(waitIntervalSeconds * 1000));
+
+            while (!await condition())
+                if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
+                    Thread.Sleep((int)(waitIntervalSeconds * 1000));
+                else
+                    throw new TimeoutException(
+                        $"WaitUntil is timed out (Max: {maxWaitSeconds} seconds)." +
+                        $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+
+            await action();
         }
 
         public static void WaitUntilToDo(

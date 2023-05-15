@@ -30,12 +30,6 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     public virtual double RetryOnFailedDelaySeconds => 1;
 
-    /// <summary>
-    /// Default is True. If true, the event handler will run in separate thread scope with new instance
-    /// and if exception, it won't affect the main flow
-    /// </summary>
-    protected virtual bool EnableHandleInBackgroundThread => true;
-
     public bool ForceCurrentInstanceHandleInCurrentThread { get; set; }
 
     public virtual async Task Handle(TEvent notification, CancellationToken cancellationToken)
@@ -46,10 +40,10 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         {
             // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
             // so the it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
-            if (EnableHandleInBackgroundThread && !ForceCurrentInstanceHandleInCurrentThread)
+            if (AllowHandleInBackgroundThread(notification) && !ForceCurrentInstanceHandleInCurrentThread)
             {
                 // Need to get current data context outside of QueueActionInBackground to has data because it read current context by thread. If inside => other threads => lose identity data
-                var currentDataContextAllValues = BuildDataContextBeforeBackgroundExecution();
+                var currentDataContextAllValues = BuildDataContextBeforeNewScopeExecution();
 
                 Util.TaskRunner.QueueActionInBackground(
                     () =>
@@ -84,6 +78,15 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         }
     }
 
+    /// <summary>
+    /// Default is True. If true, the event handler will run in separate thread scope with new instance
+    /// and if exception, it won't affect the main flow
+    /// </summary>
+    protected virtual bool AllowHandleInBackgroundThread(TEvent notification)
+    {
+        return true;
+    }
+
     protected async Task DoExecuteNewInstanceInBackgroundThread(
         PlatformCqrsEventHandler<TEvent> previousInstance,
         Type eventHandlerType,
@@ -95,8 +98,8 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
             {
                 var thisHandlerNewInstance = sp.GetRequiredService(eventHandlerType)
                     .As<PlatformCqrsEventHandler<TEvent>>()
-                    .With(newInstance => CopyValuesToNewInstanceInBackgroundBeforeExecution(previousInstance, newInstance))
-                    .With(newInstance => newInstance.ReApplyDataContextInBackgroundExecution(sp, currentDataContextAllValues));
+                    .With(newInstance => CopyPropertiesToNewInstanceBeforeExecution(previousInstance, newInstance))
+                    .With(newInstance => newInstance.ReApplyDataContextInNewScopeExecution(sp, currentDataContextAllValues));
 
                 try
                 {
@@ -109,7 +112,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
             });
     }
 
-    protected virtual void CopyValuesToNewInstanceInBackgroundBeforeExecution(
+    protected virtual void CopyPropertiesToNewInstanceBeforeExecution(
         PlatformCqrsEventHandler<TEvent> previousInstance,
         PlatformCqrsEventHandler<TEvent> newInstance)
     {
@@ -117,21 +120,21 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
     }
 
     /// <summary>
-    /// Help for any inherit handler could override BuildDataContextBeforeBackgroundExecution/ReApplyDataContextInBackgroundExecution to handle custom additional
+    /// Help for any inherit handler could override BuildDataContextBeforeNewScopeExecution/ReApplyDataContextInNewScopeExecution to handle custom additional
     /// set context values which is different per thread
     /// </summary>
-    protected virtual Dictionary<string, object> BuildDataContextBeforeBackgroundExecution()
+    protected virtual Dictionary<string, object> BuildDataContextBeforeNewScopeExecution()
     {
         return null;
     }
 
     /// <summary>
-    /// Help for any inherit handler could override BuildDataContextBeforeBackgroundExecution/ReApplyDataContextInBackgroundExecution to handle custom additional
+    /// Help for any inherit handler could override BuildDataContextBeforeNewScopeExecution/ReApplyDataContextInNewScopeExecution to handle custom additional
     /// set context values which is different per thread
     /// </summary>
-    protected virtual void ReApplyDataContextInBackgroundExecution(
-        IServiceProvider inBackgroundServiceProvider,
-        Dictionary<string, object> dataContextBeforeBackgroundExecution)
+    protected virtual void ReApplyDataContextInNewScopeExecution(
+        IServiceProvider newScopeServiceProvider,
+        Dictionary<string, object> dataContextBeforeNewScopeExecution)
     {
         // Default do not thing here.
     }

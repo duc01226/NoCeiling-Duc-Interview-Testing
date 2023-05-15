@@ -17,7 +17,7 @@ public interface IPlatformDbContext : IDisposable
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery { get; }
 
-    public IUnitOfWork? MappedUnitOfWork { get; set; }
+    public IUnitOfWork MappedUnitOfWork { get; set; }
 
     public static async Task<TResult> ExecuteWithBadQueryWarningHandling<TResult, TSource>(
         Func<Task<TResult>> getResultFn,

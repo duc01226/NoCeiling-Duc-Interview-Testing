@@ -5,7 +5,6 @@ using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common;
-using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.Exceptions;
@@ -32,7 +31,6 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
 
     public readonly IMongoDatabase Database;
 
-    protected readonly IPlatformCqrs Cqrs;
     protected readonly Lazy<Dictionary<Type, string>> EntityTypeToCollectionNameDictionary;
     protected readonly ILogger Logger;
     protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
@@ -42,11 +40,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         IOptions<PlatformMongoOptions<TDbContext>> options,
         IPlatformMongoClient<TDbContext> client,
         ILoggerFactory loggerFactory,
-        IPlatformCqrs cqrs,
         IPlatformApplicationUserContextAccessor userContextAccessor,
         PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration)
     {
-        Cqrs = cqrs;
         UserContextAccessor = userContextAccessor;
         PersistenceConfiguration = persistenceConfiguration;
         Database = client.MongoClient.GetDatabase(options.Value.Database);
@@ -202,11 +198,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         return PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey>(
-            Cqrs,
             MappedUnitOfWork,
             entity,
             entity => GetTable<TEntity>().DeleteOneAsync(p => p.Id.Equals(entity.Id), null, cancellationToken),
             dismissSendEvent,
+            hasSupportOutboxEvent: HasSupportOutboxEvent(),
             cancellationToken);
     }
 
@@ -379,7 +375,6 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
             toBeUpdatedRowVersionEntity.ConcurrencyUpdateToken = newUpdateConcurrencyUpdateToken;
 
             var result = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, ReplaceOneResult>(
-                Cqrs,
                 MappedUnitOfWork,
                 toBeUpdatedEntity,
                 existingEntity,
@@ -393,6 +388,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                         new ReplaceOptions { IsUpsert = false },
                         cancellationToken),
                 dismissSendEvent,
+                hasSupportOutboxEvent: HasSupportOutboxEvent(),
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -406,7 +402,6 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         else
         {
             var result = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, ReplaceOneResult>(
-                Cqrs,
                 MappedUnitOfWork,
                 toBeUpdatedEntity,
                 existingEntity,
@@ -417,6 +412,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                         new ReplaceOptions { IsUpsert = false },
                         cancellationToken),
                 dismissSendEvent,
+                hasSupportOutboxEvent: HasSupportOutboxEvent(),
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -608,6 +604,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         return EntityTypeToCollectionNameDictionary.Value.TryGetValue(typeof(TEntity), out collectionName);
     }
 
+    protected bool HasSupportOutboxEvent()
+    {
+        return PlatformGlobal.RootServiceProvider.CheckHasRegisteredScopedService<IPlatformOutboxBusMessageRepository>();
+    }
+
     protected bool IsEnsureIndexesMigrationExecuted()
     {
         return MigrationHistoryCollection.AsQueryable().Any(p => p.Name == EnsureIndexesMigrationName);
@@ -634,15 +635,14 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
 
         if (upsert == false)
             await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
-                Cqrs,
                 MappedUnitOfWork,
                 toBeCreatedEntity,
                 entity => GetTable<TEntity>().InsertOneAsync(entity, null, cancellationToken).Then(() => entity),
                 dismissSendEvent,
+                hasSupportOutboxEvent: HasSupportOutboxEvent(),
                 cancellationToken);
         else
             await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
-                Cqrs,
                 MappedUnitOfWork,
                 toBeCreatedEntity,
                 entity => GetTable<TEntity>()
@@ -653,6 +653,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                         cancellationToken)
                     .Then(() => entity),
                 dismissSendEvent,
+                hasSupportOutboxEvent: HasSupportOutboxEvent(),
                 cancellationToken);
 
         return toBeCreatedEntity;

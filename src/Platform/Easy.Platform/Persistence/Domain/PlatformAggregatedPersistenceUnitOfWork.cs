@@ -1,3 +1,4 @@
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,7 +24,9 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
 
     public PlatformAggregatedPersistenceUnitOfWork(List<IUnitOfWork> innerUnitOfWorks, IServiceScope associatedServiceScope)
     {
-        InnerUnitOfWorks = innerUnitOfWorks ?? new List<IUnitOfWork>();
+        InnerUnitOfWorks = innerUnitOfWorks?
+            .Select(innerUow => innerUow.With(_ => _.ParentUnitOfWork = this))
+            .ToList() ?? new List<IUnitOfWork>();
         this.associatedServiceScope = associatedServiceScope;
     }
 

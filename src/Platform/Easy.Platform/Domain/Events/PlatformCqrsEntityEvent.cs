@@ -1,6 +1,4 @@
-using System.ComponentModel;
 using System.Linq.Expressions;
-using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
@@ -15,77 +13,66 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
     public const string EventTypeValue = nameof(PlatformCqrsEntityEvent);
 
     public static async Task SendEvent<TEntity, TPrimaryKey>(
-        IPlatformCqrs cqrs,
-        IUnitOfWork? unitOfWork,
+        IUnitOfWork mappedToDbContextUow,
         TEntity entity,
         PlatformCqrsEntityEventCrudAction crudAction,
+        bool hasSupportOutboxEvent,
         CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        if (crudAction.IsCompletedCrudAction() && unitOfWork != null && !unitOfWork.IsPseudoTransactionUow())
-            unitOfWork.OnCompleted += (object sender, EventArgs e) =>
+        if (!mappedToDbContextUow.IsPseudoTransactionUow() && !hasSupportOutboxEvent)
+        {
+            mappedToDbContextUow.OnCompleted += (object sender, EventArgs e) =>
             {
                 // Do not use async, just call.WaitResult()
                 // WHY: Never use async lambda on event handler, because it's equivalent to async void, which fire async task and forget
                 // this will lead to a lot of potential bug and issues.
-                cqrs.SendEntityEvent(entity, crudAction, cancellationToken).WaitResult();
+                mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs
+                    .SendEntityEvent(entity, crudAction, cancellationToken).WaitResult();
             };
-        else await cqrs.SendEntityEvent(entity, crudAction, cancellationToken);
+        }
+        else
+            await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs
+                .SendEntityEvent(entity, crudAction, cancellationToken);
     }
 
     public static async Task ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey>(
-        IPlatformCqrs cqrs,
-        IUnitOfWork? unitOfWork,
+        IUnitOfWork mappedToDbContextUow,
         TEntity entity,
         Func<TEntity, Task> deleteEntityAction,
         bool dismissSendEvent,
+        bool hasSupportOutboxEvent,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        if (!dismissSendEvent)
-            await SendEvent<TEntity, TPrimaryKey>(
-                cqrs,
-                unitOfWork,
-                entity,
-                PlatformCqrsEntityEventCrudAction.TrackDeleting,
-                cancellationToken);
-
         await deleteEntityAction(entity);
 
         if (!dismissSendEvent)
             await SendEvent<TEntity, TPrimaryKey>(
-                cqrs,
-                unitOfWork,
+                mappedToDbContextUow,
                 entity,
                 PlatformCqrsEntityEventCrudAction.Deleted,
+                hasSupportOutboxEvent,
                 cancellationToken);
     }
 
     public static async Task<TResult> ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TResult>(
-        IPlatformCqrs cqrs,
-        IUnitOfWork? unitOfWork,
+        IUnitOfWork mappedToDbContextUow,
         TEntity entity,
         Func<TEntity, Task<TResult>> createEntityAction,
         bool dismissSendEvent,
+        bool hasSupportOutboxEvent,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        if (!dismissSendEvent)
-            await SendEvent<TEntity, TPrimaryKey>(
-                cqrs,
-                unitOfWork,
-                entity,
-                PlatformCqrsEntityEventCrudAction.TrackCreating,
-                cancellationToken);
-
         var result = await createEntityAction(entity)
             .ThenActionAsync(
                 async _ =>
                 {
                     if (!dismissSendEvent)
                         await SendEvent<TEntity, TPrimaryKey>(
-                            cqrs,
-                            unitOfWork,
+                            mappedToDbContextUow,
                             entity,
                             PlatformCqrsEntityEventCrudAction.Created,
+                            hasSupportOutboxEvent,
                             cancellationToken);
                 });
 
@@ -93,24 +80,16 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
     }
 
     public static async Task<TResult> ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, TResult>(
-        IPlatformCqrs cqrs,
-        IUnitOfWork? unitOfWork,
+        IUnitOfWork unitOfWork,
         TEntity entity,
         TEntity existingEntity,
         Func<TEntity, Task<TResult>> updateEntityAction,
         bool dismissSendEvent,
+        bool hasSupportOutboxEvent,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         if (!dismissSendEvent)
             entity.AutoAddPropertyValueUpdatedDomainEvent(existingEntity);
-
-        if (!dismissSendEvent)
-            await SendEvent<TEntity, TPrimaryKey>(
-                cqrs,
-                unitOfWork,
-                entity,
-                PlatformCqrsEntityEventCrudAction.TrackUpdating,
-                cancellationToken);
 
         var result = await updateEntityAction(entity)
             .ThenActionAsync(
@@ -118,10 +97,10 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
                 {
                     if (!dismissSendEvent)
                         await SendEvent<TEntity, TPrimaryKey>(
-                            cqrs,
                             unitOfWork,
                             entity,
                             PlatformCqrsEntityEventCrudAction.Updated,
+                            hasSupportOutboxEvent,
                             cancellationToken);
                 });
 
@@ -191,62 +170,7 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent
 
 public enum PlatformCqrsEntityEventCrudAction
 {
-    /// <summary>
-    /// Track Creating Before complete current UOW
-    /// </summary>
-    TrackCreating,
-
-    /// <summary>
-    /// Track Updating Before complete current UOW
-    /// </summary>
-    TrackUpdating,
-
-    /// <summary>
-    /// Track Deleting Before complete current UOW
-    /// </summary>
-    TrackDeleting,
-
-    // After completed UOW
     Created,
     Updated,
     Deleted
-}
-
-public static class PlatformCqrsEntityEventCrudActionExtensions
-{
-    public static bool IsTrackingCrudAction(this PlatformCqrsEntityEventCrudAction crudAction)
-    {
-        return crudAction == PlatformCqrsEntityEventCrudAction.TrackCreating ||
-               crudAction == PlatformCqrsEntityEventCrudAction.TrackUpdating ||
-               crudAction == PlatformCqrsEntityEventCrudAction.TrackDeleting;
-    }
-
-    public static bool IsCompletedCrudAction(this PlatformCqrsEntityEventCrudAction crudAction)
-    {
-        return crudAction == PlatformCqrsEntityEventCrudAction.Created ||
-               crudAction == PlatformCqrsEntityEventCrudAction.Updated ||
-               crudAction == PlatformCqrsEntityEventCrudAction.Deleted;
-    }
-
-    public static PlatformCqrsEntityEventCrudAction GetRelevantCompletedCrudAction(this PlatformCqrsEntityEventCrudAction crudAction)
-    {
-        return crudAction switch
-        {
-            PlatformCqrsEntityEventCrudAction.TrackCreating => PlatformCqrsEntityEventCrudAction.Created,
-            PlatformCqrsEntityEventCrudAction.TrackUpdating => PlatformCqrsEntityEventCrudAction.Updated,
-            PlatformCqrsEntityEventCrudAction.TrackDeleting => PlatformCqrsEntityEventCrudAction.Deleted,
-            _ => throw new InvalidEnumArgumentException($"Invalid CrudAction value:{crudAction}")
-        };
-    }
-
-    public static PlatformCqrsEntityEventCrudAction GetRelevantTrackingCrudAction(this PlatformCqrsEntityEventCrudAction crudAction)
-    {
-        return crudAction switch
-        {
-            PlatformCqrsEntityEventCrudAction.Created => PlatformCqrsEntityEventCrudAction.TrackCreating,
-            PlatformCqrsEntityEventCrudAction.Updated => PlatformCqrsEntityEventCrudAction.TrackUpdating,
-            PlatformCqrsEntityEventCrudAction.Deleted => PlatformCqrsEntityEventCrudAction.TrackDeleting,
-            _ => throw new InvalidEnumArgumentException($"Invalid CrudAction value:{crudAction}")
-        };
-    }
 }

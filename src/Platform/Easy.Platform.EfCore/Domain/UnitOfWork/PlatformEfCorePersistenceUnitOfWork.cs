@@ -32,21 +32,30 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
         if (Completed)
             return;
 
+        // Store stack trace before save changes so that if something went wrong in save into db, stack trace could
+        // be tracked. Because call to db if failed lose stack trace
+        var fullStackTrace = Environment.StackTrace;
+
         try
         {
             await InnerUnitOfWorks.Where(p => p.IsActive()).Select(p => p.CompleteAsync(cancellationToken)).WhenAll();
+
             await SaveChangesAsync(cancellationToken);
+
             Completed = true;
+
             InvokeOnCompleted(this, EventArgs.Empty);
         }
-        catch (DbUpdateConcurrencyException concurrencyException)
+        catch (DbUpdateConcurrencyException e)
         {
-            throw new PlatformDomainRowVersionConflictException(concurrencyException.Message, concurrencyException);
+            throw new PlatformDomainRowVersionConflictException(
+                $"{GetType().Name} complete uow failed. [Message: {e.Message}]. [FullStackTrace:{fullStackTrace}]",
+                e);
         }
         catch (Exception e)
         {
             InvokeOnFailed(this, new UnitOfWorkFailedArgs(e));
-            throw;
+            throw new Exception($"{GetType().Name} complete uow failed. [Message: {e.Message}]. [FullStackTrace:{fullStackTrace}]", e);
         }
     }
 

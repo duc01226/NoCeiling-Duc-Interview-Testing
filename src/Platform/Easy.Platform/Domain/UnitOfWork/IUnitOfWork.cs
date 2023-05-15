@@ -16,6 +16,8 @@ public interface IUnitOfWork : IDisposable
     /// </summary>
     public IUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
 
+    public IUnitOfWork ParentUnitOfWork { get; set; }
+
     public event EventHandler OnCompleted;
     public event EventHandler<UnitOfWorkFailedArgs> OnFailed;
 
@@ -49,13 +51,13 @@ public interface IUnitOfWork : IDisposable
     public bool DoesSupportParallelQuery();
 
     /// <summary>
-    /// Asynchronously wait to enter the UowLock. If no-one has been granted access to the UowLock, code execution will proceed, otherwise this thread waits here until the semaphore is released 
+    /// Asynchronously wait to enter the UowLock. If no-one has been granted access to the UowLock, code execution will proceed, otherwise this thread waits here until the semaphore is released
     /// </summary>
     public Task LockAsync();
 
     /// <summary>
     /// When the task is ready, release the UowLock. It is vital to ALWAYS release the UowLock when we are ready, or else we will end up with a UowLock that is forever locked.
-    /// This is why it is important to do the Release within a try...finally clause; program execution may crash or take a different path, this way you are guaranteed execution 
+    /// This is why it is important to do the Release within a try...finally clause; program execution may crash or take a different path, this way you are guaranteed execution
     /// </summary>
     public void ReleaseLock();
 
@@ -86,6 +88,9 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
     public bool Disposed { get; protected set; }
 
     public SemaphoreSlim SemaphoreSlim { get; } = new(1, 1);
+
+    public IUnitOfWork ParentUnitOfWork { get; set; }
+
     public event EventHandler OnCompleted;
     public event EventHandler<UnitOfWorkFailedArgs> OnFailed;
     public List<IUnitOfWork> InnerUnitOfWorks { get; protected set; } = new();
@@ -102,9 +107,9 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
 
             await SaveChangesAsync(cancellationToken);
 
-            InvokeOnCompleted(this, EventArgs.Empty);
-
             Completed = true;
+
+            InvokeOnCompleted(this, EventArgs.Empty);
         }
         catch (Exception e)
         {

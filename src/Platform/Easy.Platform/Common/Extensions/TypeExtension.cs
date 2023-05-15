@@ -107,4 +107,11 @@ public static class TypeExtension
     {
         return type.IsValueType ? Activator.CreateInstance(type) : null;
     }
+
+    public static bool IsUsingGivenTypeViaConstructor<T>(this Type type)
+    {
+        return type
+            .GetConstructors()
+            .Any(p => p.IsPublic && p.GetParameters().Any(p => p.ParameterType.IsAssignableTo(typeof(T))));
+    }
 }

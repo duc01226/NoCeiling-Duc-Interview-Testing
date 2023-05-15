@@ -1,3 +1,5 @@
+using Easy.Platform.Application.MessageBus.Producers;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.UnitOfWork;
@@ -14,6 +16,16 @@ public abstract class PlatformCqrsEntityEventApplicationHandler<TEntity> : Platf
         loggerFactory,
         unitOfWorkManager)
     {
+        IsInjectingApplicationBusMessageProducer = GetType().IsUsingGivenTypeViaConstructor<IPlatformApplicationBusMessageProducer>();
+    }
+
+    protected bool IsInjectingApplicationBusMessageProducer { get; }
+
+    protected override bool AllowHandleInBackgroundThread(PlatformCqrsEntityEvent<TEntity> notification)
+    {
+        return !IsInjectingApplicationBusMessageProducer ||
+               UnitOfWorkManager.TryGetCurrentActiveUow() == null ||
+               UnitOfWorkManager.CurrentActiveUow().IsPseudoTransactionUow();
     }
 
     protected override bool HandleWhen(PlatformCqrsEntityEvent<TEntity> @event)
@@ -25,10 +37,5 @@ public abstract class PlatformCqrsEntityEventApplicationHandler<TEntity> : Platf
             PlatformCqrsEntityEventCrudAction.Deleted => true,
             _ => false
         };
-    }
-
-    public override bool CanExecuteHandlingEventUsingInboxConsumer(bool hasInboxMessageRepository, PlatformCqrsEntityEvent<TEntity> @event)
-    {
-        return base.CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository, @event) && !@event.CrudAction.IsTrackingCrudAction();
     }
 }

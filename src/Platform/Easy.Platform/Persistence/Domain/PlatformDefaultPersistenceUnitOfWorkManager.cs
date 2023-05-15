@@ -1,3 +1,4 @@
+using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,7 +10,8 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
     protected readonly IServiceProvider ServiceProvider;
 
     public PlatformDefaultPersistenceUnitOfWorkManager(
-        IServiceProvider serviceProvider)
+        IPlatformCqrs cqrs,
+        IServiceProvider serviceProvider) : base(cqrs)
     {
         ServiceProvider = serviceProvider;
     }
@@ -24,7 +26,9 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
         var newScope = ServiceProvider.CreateScope();
 
         return new PlatformAggregatedPersistenceUnitOfWork(
-            newScope.ServiceProvider.GetServices<IUnitOfWork>().Select(p => p.With(_ => _.CreatedByUnitOfWorkManager = this)).ToList(),
-            associatedServiceScope: newScope);
+                newScope.ServiceProvider.GetServices<IUnitOfWork>()
+                    .Select(p => p.With(_ => _.CreatedByUnitOfWorkManager = this)).ToList(),
+                associatedServiceScope: newScope)
+            .With(_ => _.CreatedByUnitOfWorkManager = this);
     }
 }

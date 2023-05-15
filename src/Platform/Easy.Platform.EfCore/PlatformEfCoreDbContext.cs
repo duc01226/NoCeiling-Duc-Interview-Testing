@@ -1,6 +1,7 @@
 using System.Data.Common;
 using System.Linq.Expressions;
 using Easy.Platform.Application.Context.UserContext;
+using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
@@ -19,7 +20,6 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 {
     public const string DbInitializedApplicationDataMigrationHistoryName = "DbInitialized";
 
-    protected readonly IPlatformCqrs Cqrs;
     protected readonly ILogger Logger;
     protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
     protected readonly IPlatformApplicationUserContextAccessor UserContextAccessor;
@@ -31,7 +31,6 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
         IPlatformApplicationUserContextAccessor userContextAccessor) : base(options)
     {
-        Cqrs = cqrs;
         PersistenceConfiguration = persistenceConfiguration;
         UserContextAccessor = userContextAccessor;
         Logger = loggerFactory.CreateLogger(typeof(PlatformEfCoreDbContext<>));
@@ -41,7 +40,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryDbSet.AsQueryable();
 
-    public IUnitOfWork? MappedUnitOfWork { get; set; }
+    public IUnitOfWork MappedUnitOfWork { get; set; }
 
     public new Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -225,11 +224,11 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(entity);
 
         return PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey>(
-            Cqrs,
             MappedUnitOfWork,
             entity,
             entity => GetTable<TEntity>().Remove(entity).ToTask(),
             dismissSendEvent,
+            hasSupportOutboxEvent: HasSupportOutboxEvent(),
             cancellationToken);
     }
 
@@ -272,11 +271,11 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 entity => entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = Guid.NewGuid());
 
         var result = await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
-            Cqrs,
             MappedUnitOfWork,
             toBeCreatedEntity,
             entity => GetTable<TEntity>().AddAsync(toBeCreatedEntity, cancellationToken).AsTask().Then(p => toBeCreatedEntity),
             dismissSendEvent,
+            hasSupportOutboxEvent: HasSupportOutboxEvent(),
             cancellationToken);
 
         return result;
@@ -315,6 +314,11 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 cancellationToken));
     }
 
+    protected bool HasSupportOutboxEvent()
+    {
+        return PlatformGlobal.RootServiceProvider.CheckHasRegisteredScopedService<IPlatformOutboxBusMessageRepository>();
+    }
+
     public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(TEntity entity, TEntity existingEntity, bool dismissSendEvent, CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
@@ -339,7 +343,6 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                     .As<TEntity>());
 
         var result = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, TEntity>(
-            Cqrs,
             MappedUnitOfWork,
             toBeUpdatedEntity,
             existingEntity,
@@ -351,6 +354,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                     .PipeIf(entity is IRowVersionEntity, p => p.As<IRowVersionEntity>().With(_ => _.ConcurrencyUpdateToken = Guid.NewGuid()).As<TEntity>());
             },
             dismissSendEvent,
+            hasSupportOutboxEvent: HasSupportOutboxEvent(),
             cancellationToken);
 
         return result;

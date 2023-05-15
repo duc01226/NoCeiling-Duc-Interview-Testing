@@ -814,6 +814,19 @@ public static class DependencyInjectionExtension
         return serviceProvider.ExecuteScopedAsync(scope => scope.ExecuteInjectAsync<TResult>(method, manuallyParams));
     }
 
+    public static bool CheckHasRegisteredScopedService<TService>(this IServiceProvider serviceProvider)
+    {
+        return CheckHasRegisteredScopedService(serviceProvider, typeof(TService));
+    }
+
+    public static bool CheckHasRegisteredScopedService(this IServiceProvider serviceProvider, Type serviceType)
+    {
+        using (var scope = serviceProvider.CreateScope())
+        {
+            return scope.ServiceProvider.GetService(serviceType) != null;
+        }
+    }
+
     /// <summary>
     /// Support ExecuteInjectScopedAsync paged. <br />
     /// Method to be executed, the First two parameter MUST BE (int skipCount, int pageSize). <br />
