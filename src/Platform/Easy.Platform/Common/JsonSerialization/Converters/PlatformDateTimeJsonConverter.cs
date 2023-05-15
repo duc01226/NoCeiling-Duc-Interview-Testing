@@ -1,17 +1,22 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.JsonSerialization.Converters.Helpers;
 
 namespace Easy.Platform.Common.JsonSerialization.Converters;
 
-//TODO: Remove it and force client to fix not to push string date to server
-public class PlatformFormattedStringToDateTimeJsonConverter : JsonConverter<DateTime>
+public class PlatformDateTimeJsonConverter : JsonConverter<DateTime>
 {
     public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        var strValue = reader.GetString();
+        var type = reader.TokenType;
 
-        return strValue.IsNullOrEmpty() ? default : DateTime.Parse(strValue!);
+        if (type == JsonTokenType.Null) return default;
+
+        var strValue = reader.GetString();
+        if (strValue.IsNullOrEmpty()) return default;
+
+        return PlatformStringToDateTimeConverterHelper.TryRead(strValue) ?? default;
     }
 
     public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)

@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.JsonSerialization.Converters.Helpers;
 
 namespace Easy.Platform.Common.JsonSerialization.Converters;
 
@@ -13,11 +13,8 @@ public class PlatformNullableDateTimeJsonConverter : JsonConverter<DateTime?>
         if (type == JsonTokenType.Null) return null;
 
         var strValue = reader.GetString();
-        if (strValue.IsNullOrEmpty()) return null;
 
-        DateTime.TryParse(strValue, out var parsedDate);
-
-        return parsedDate;
+        return PlatformStringToDateTimeConverterHelper.TryRead(strValue);
     }
 
     public override void Write(Utf8JsonWriter writer, DateTime? value, JsonSerializerOptions options)

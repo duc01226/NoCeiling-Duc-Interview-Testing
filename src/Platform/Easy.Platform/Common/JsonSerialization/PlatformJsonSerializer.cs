@@ -44,7 +44,7 @@ public static class PlatformJsonSerializer
         options.Converters.Add(new PlatformClassTypeJsonConverter());
         options.Converters.Add(new PlatformIgnoreMethodBaseJsonConverter());
         options.Converters.Add(new PlatformNullableDateTimeJsonConverter());
-        options.Converters.Add(new PlatformFormattedStringToDateTimeJsonConverter());
+        options.Converters.Add(new PlatformDateTimeJsonConverter());
         options.Converters.Add(new PlatformPrimitiveTypeToStringJsonConverter());
         customConverters?.ForEach(options.Converters.Add);
 
