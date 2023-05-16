@@ -169,7 +169,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                         routingKey: PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(typeof(TEvent), applicationSettingContext.ApplicationName),
                         loggerFactory: CreateGlobalLogger,
                         retryProcessFailedMessageInSecondsUnit: PlatformInboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit,
-                        allowHandlingInBackgroundThread: AllowHandleInBackgroundThread(@event),
+                        allowProcessInBackgroundThread: AllowHandleInBackgroundThread(@event),
                         cancellationToken: cancellationToken);
                 });
         }

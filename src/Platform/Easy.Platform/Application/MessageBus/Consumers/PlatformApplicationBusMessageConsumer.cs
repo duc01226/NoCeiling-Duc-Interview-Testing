@@ -10,9 +10,11 @@ namespace Easy.Platform.Application.MessageBus.Consumers;
 
 public interface IPlatformApplicationMessageBusConsumer : IPlatformMessageBusConsumer
 {
-    public PlatformInboxBusMessage HandleExistingInboxMessage { get; set; }
+    public PlatformInboxBusMessage HandleDirectlyExistingInboxMessage { get; set; }
 
     public bool IsInstanceExecutingFromInboxHelper { get; set; }
+
+    public bool AllowProcessInboxMessageInBackgroundThread { get; set; }
 }
 
 public interface IPlatformApplicationMessageBusConsumer<in TMessage> : IPlatformMessageBusConsumer<TMessage>, IPlatformApplicationMessageBusConsumer
@@ -41,8 +43,9 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
 
     public virtual bool AutoBeginUow => true;
 
-    public PlatformInboxBusMessage HandleExistingInboxMessage { get; set; }
+    public PlatformInboxBusMessage HandleDirectlyExistingInboxMessage { get; set; }
     public bool IsInstanceExecutingFromInboxHelper { get; set; }
+    public bool AllowProcessInboxMessageInBackgroundThread { get; set; }
 
     public override async Task HandleAsync(TMessage message, string routingKey)
     {
@@ -74,8 +77,8 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                     routingKey,
                     CreateGlobalLogger,
                     InboxConfig.RetryProcessFailedMessageInSecondsUnit,
-                    allowHandlingInBackgroundThread: true,
-                    HandleExistingInboxMessage);
+                    allowProcessInBackgroundThread: AllowProcessInboxMessageInBackgroundThread,
+                    HandleDirectlyExistingInboxMessage);
             }
             else
             {

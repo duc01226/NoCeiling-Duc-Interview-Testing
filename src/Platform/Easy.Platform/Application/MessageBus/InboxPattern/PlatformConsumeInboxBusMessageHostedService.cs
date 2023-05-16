@@ -90,7 +90,10 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         {
             var toHandleMessages = await PopToHandleInboxEventBusMessages(cancellationToken);
 
-            await toHandleMessages.ForEachAsync(HandleInboxMessageAsync);
+            // Group by TrackId to handling multiple consumer with same message parallel
+            await toHandleMessages
+                .GroupBy(p => p.GetTrackId())
+                .ForEachAsync(consumerMessages => consumerMessages.Select(HandleInboxMessageAsync).WhenAll());
         } while (await IsAnyMessagesToHandleAsync());
 
         async Task HandleInboxMessageAsync(PlatformInboxBusMessage toHandleInboxMessage)
@@ -137,7 +140,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         {
             var consumer = scope.ServiceProvider.GetService(consumerType)
                 .As<IPlatformApplicationMessageBusConsumer>()
-                .With(_ => _.HandleExistingInboxMessage = toHandleInboxMessage);
+                .With(_ => _.HandleDirectlyExistingInboxMessage = toHandleInboxMessage);
 
             var consumerMessageType = PlatformMessageBusConsumer.GetConsumerMessageType(consumer);
 

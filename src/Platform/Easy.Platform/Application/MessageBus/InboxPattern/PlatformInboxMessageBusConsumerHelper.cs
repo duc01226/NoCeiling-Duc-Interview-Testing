@@ -27,7 +27,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         string routingKey,
         Func<ILogger> loggerFactory,
         double retryProcessFailedMessageInSecondsUnit,
-        bool allowHandlingInBackgroundThread,
+        bool allowProcessInBackgroundThread,
         PlatformInboxBusMessage handleDirectlyExistingInboxMessage = null,
         CancellationToken cancellationToken = default) where TMessage : class, new()
     {
@@ -47,13 +47,13 @@ public static class PlatformInboxMessageBusConsumerHelper
         {
             var trackId = message.As<IPlatformTrackableBusMessage>()?.TrackingId;
 
-            var existingInboxMessage = trackId != null
+            var existedInboxMessage = trackId != null
                 ? await inboxBusMessageRepository.FirstOrDefaultAsync(
                     p => p.Id == PlatformInboxBusMessage.BuildId(trackId, consumer.GetType()),
                     cancellationToken)
                 : null;
 
-            var newInboxMessage = existingInboxMessage == null
+            var newInboxMessage = existedInboxMessage == null
                 ? await CreateNewInboxMessageAsync(
                     serviceProvider,
                     consumer.GetType(),
@@ -64,16 +64,16 @@ public static class PlatformInboxMessageBusConsumerHelper
                     cancellationToken)
                 : null;
 
-            var toProcessInboxMessage = existingInboxMessage ?? newInboxMessage;
+            var toProcessInboxMessage = existedInboxMessage ?? newInboxMessage;
 
             if (toProcessInboxMessage.ConsumeStatus != PlatformInboxBusMessage.ConsumeStatuses.Processed)
             {
-                if (allowHandlingInBackgroundThread && existingInboxMessage == null)
+                if (allowProcessInBackgroundThread || toProcessInboxMessage == existedInboxMessage)
                     Util.TaskRunner.QueueActionInBackground(
                         () => ExecuteConsumerForNewInboxMessage(
                             consumer.GetType(),
                             message,
-                            newInboxMessage,
+                            toProcessInboxMessage,
                             routingKey,
                             loggerFactory),
                         loggerFactory,
@@ -82,7 +82,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                     await ExecuteConsumerForNewInboxMessage(
                         consumer.GetType(),
                         message,
-                        existingInboxMessage ?? newInboxMessage,
+                        toProcessInboxMessage,
                         routingKey,
                         loggerFactory);
             }
@@ -116,7 +116,7 @@ public static class PlatformInboxMessageBusConsumerHelper
             {
                 await serviceProvider.GetService(consumerType)
                     .Cast<IPlatformApplicationMessageBusConsumer<TMessage>>()
-                    .With(_ => _.HandleExistingInboxMessage = existingInboxMessage)
+                    .With(_ => _.HandleDirectlyExistingInboxMessage = existingInboxMessage)
                     .HandleAsync(message, routingKey);
             }
             catch (Exception e)

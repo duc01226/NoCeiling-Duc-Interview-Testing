@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using Easy.Platform.Application.Context;
+using Easy.Platform.Application.MessageBus.Consumers;
 using Easy.Platform.Common;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Timing;
@@ -290,7 +291,7 @@ public class PlatformRabbitMqProcessInitializerService
                 });
 
             await canProcessConsumerTypes
-                .ForEachAsync(
+                .Select(
                     async consumerType =>
                     {
                         if (cancellationToken.IsCancellationRequested) return;
@@ -307,13 +308,18 @@ public class PlatformRabbitMqProcessInitializerService
                         {
                             using (var scope = serviceProvider.CreateScope())
                             {
-                                var consumer = scope.ServiceProvider.GetService(consumerType).Cast<IPlatformMessageBusConsumer>();
+                                var consumer = scope.ServiceProvider.GetService(consumerType)
+                                    .Cast<IPlatformMessageBusConsumer>()
+                                    .WithIf(
+                                        consumer => consumer.As<IPlatformApplicationMessageBusConsumer>() != null,
+                                        consumer => consumer.As<IPlatformApplicationMessageBusConsumer>().AllowProcessInboxMessageInBackgroundThread = false);
 
                                 if (consumer != null)
                                     await ExecuteConsumer(rabbitMqMessage, consumer, activity);
                             }
                         }
-                    });
+                    })
+                .WhenAll();
 
             // WHY: After consumed message successfully, ack the message is handled to rabbitmq so that message could be removed.
             Util.TaskRunner.QueueActionInBackground(

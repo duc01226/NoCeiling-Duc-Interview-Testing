@@ -12,7 +12,7 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
     public const int MessageTypeFullNameMaxLength = 1000;
     public const int RoutingKeyMaxLength = 500;
     public const double DefaultRetryProcessFailedMessageInSecondsUnit = 60;
-    public const string BuildIdSeparator = "_";
+    public const string BuildIdSeparator = "---";
 
     public string JsonMessage { get; set; }
 

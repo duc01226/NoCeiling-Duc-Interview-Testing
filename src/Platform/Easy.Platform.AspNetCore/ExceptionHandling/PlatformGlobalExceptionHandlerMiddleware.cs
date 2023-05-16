@@ -42,7 +42,17 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
         }
         catch (Exception e)
         {
-            await OnException(context, e);
+            try
+            {
+                await OnException(context, e);
+            }
+            catch (Exception exception)
+            {
+                if (exception is OperationCanceledException or TaskCanceledException)
+                    Logger.LogWarning(exception, exception.GetType().Name);
+                else
+                    throw;
+            }
         }
     }
 
