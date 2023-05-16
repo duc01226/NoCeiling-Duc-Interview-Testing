@@ -68,12 +68,12 @@ public static class PlatformInboxMessageBusConsumerHelper
 
             if (toProcessInboxMessage.ConsumeStatus != PlatformInboxBusMessage.ConsumeStatuses.Processed)
             {
-                if (allowHandlingInBackgroundThread)
+                if (allowHandlingInBackgroundThread && existingInboxMessage == null)
                     Util.TaskRunner.QueueActionInBackground(
                         () => ExecuteConsumerForNewInboxMessage(
                             consumer.GetType(),
                             message,
-                            existingInboxMessage ?? newInboxMessage,
+                            newInboxMessage,
                             routingKey,
                             loggerFactory),
                         loggerFactory,
