@@ -305,12 +305,12 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default);
 
-    public abstract Task DeleteAsync(
+    public abstract Task<TEntity> DeleteAsync(
         TPrimaryKey entityId,
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default);
 
-    public abstract Task DeleteAsync(
+    public abstract Task<TEntity> DeleteAsync(
         TEntity entity,
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default);

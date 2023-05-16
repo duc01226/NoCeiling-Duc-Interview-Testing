@@ -90,10 +90,11 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
         if (usingApplicationUserContextAccessor && hasEnabledInboxFeature)
             CreateLogger(LoggerFactory)
-                .LogError(
-                    "[WARNING] Auto handing event directly, not support using InboxEvent. " +
+                .LogWarning(
+                    "[WARNING] Auto handing event directly, not support using InboxEvent in [EventHandlerType:{EventHandlerType}]. " +
                     "EventHandler using IPlatformApplicationUserContextAccessor cannot use inbox because user request context is not available when process inbox message. " +
-                    "Should refactor removing using IPlatformApplicationUserContextAccessor to support inbox.");
+                    "Should refactor removing using IPlatformApplicationUserContextAccessor to support inbox.",
+                    GetType().FullName);
 
         return hasEnabledInboxFeature && !usingApplicationUserContextAccessor;
     }

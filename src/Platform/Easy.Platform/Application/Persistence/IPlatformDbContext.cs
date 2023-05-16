@@ -190,12 +190,12 @@ public interface IPlatformDbContext : IDisposable
         return await UpdateManyAsync<TEntity, TPrimaryKey>(toUpdateEntities, dismissSendEvent, cancellationToken);
     }
 
-    public Task DeleteAsync<TEntity, TPrimaryKey>(
+    public Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
         TPrimaryKey entityId,
         bool dismissSendEvent,
         CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>, new();
 
-    public Task DeleteAsync<TEntity, TPrimaryKey>(
+    public Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,
         CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>, new();

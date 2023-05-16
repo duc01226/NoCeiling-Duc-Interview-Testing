@@ -28,7 +28,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
                 // WHY: Never use async lambda on event handler, because it's equivalent to async void, which fire async task and forget
                 // this will lead to a lot of potential bug and issues.
                 mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs
-                    .SendEntityEvent(entity, crudAction, cancellationToken).WaitResult();
+                    .SendEntityEvent(entity, crudAction, cancellationToken)
+                    .WaitResult();
             };
         }
         else
@@ -36,23 +37,28 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
                 .SendEntityEvent(entity, crudAction, cancellationToken);
     }
 
-    public static async Task ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey>(
+    public static async Task<TResult> ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TResult>(
         IUnitOfWork mappedToDbContextUow,
         TEntity entity,
-        Func<TEntity, Task> deleteEntityAction,
+        Func<TEntity, Task<TResult>> deleteEntityAction,
         bool dismissSendEvent,
         bool hasSupportOutboxEvent,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        await deleteEntityAction(entity);
+        var result = await deleteEntityAction(entity)
+            .ThenActionAsync(
+                async _ =>
+                {
+                    if (!dismissSendEvent)
+                        await SendEvent<TEntity, TPrimaryKey>(
+                            mappedToDbContextUow,
+                            entity,
+                            PlatformCqrsEntityEventCrudAction.Deleted,
+                            hasSupportOutboxEvent,
+                            cancellationToken);
+                });
 
-        if (!dismissSendEvent)
-            await SendEvent<TEntity, TPrimaryKey>(
-                mappedToDbContextUow,
-                entity,
-                PlatformCqrsEntityEventCrudAction.Deleted,
-                hasSupportOutboxEvent,
-                cancellationToken);
+        return result;
     }
 
     public static async Task<TResult> ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TResult>(

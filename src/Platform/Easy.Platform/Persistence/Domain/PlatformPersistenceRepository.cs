@@ -318,21 +318,21 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             uow => GetUowDbContext(uow).UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
     }
 
-    public override Task DeleteAsync(
+    public override async Task<TEntity> DeleteAsync(
         TPrimaryKey entityId,
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForWrite(
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).DeleteAsync<TEntity, TPrimaryKey>(entityId, dismissSendEvent, cancellationToken));
     }
 
-    public override Task DeleteAsync(
+    public override async Task<TEntity> DeleteAsync(
         TEntity entity,
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForWrite(
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
     }
 

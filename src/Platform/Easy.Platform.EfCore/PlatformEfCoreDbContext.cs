@@ -206,7 +206,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         return entities.SelectAsync(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
     }
 
-    public async Task DeleteAsync<TEntity, TPrimaryKey>(
+    public async Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
         TPrimaryKey entityId,
         bool dismissSendEvent,
         CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>, new()
@@ -214,19 +214,26 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         var entity = GetQuery<TEntity>().FirstOrDefault(p => p.Id.Equals(entityId));
 
         if (entity != null) await DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken);
+
+        return entity;
     }
 
-    public Task DeleteAsync<TEntity, TPrimaryKey>(
+    public async Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,
         CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(entity);
 
-        return PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey>(
+        return await PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TEntity>(
             MappedUnitOfWork,
             entity,
-            entity => GetTable<TEntity>().Remove(entity).ToTask(),
+            async entity =>
+            {
+                GetTable<TEntity>().Remove(entity);
+
+                return entity;
+            },
             dismissSendEvent,
             hasSupportOutboxEvent: HasSupportOutboxEvent(),
             cancellationToken);
@@ -249,9 +256,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        await entities.ForEachAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
-
-        return entities;
+        return await entities.SelectAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
     }
 
     public async Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)

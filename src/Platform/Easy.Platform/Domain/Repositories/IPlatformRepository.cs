@@ -77,12 +77,12 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default);
 
-    public Task DeleteAsync(
+    public Task<TEntity> DeleteAsync(
         TPrimaryKey entityId,
         bool dismissSendEvent = false,
         CancellationToken cancellationToken = default);
 
-    public Task DeleteAsync(TEntity entity, bool dismissSendEvent = false, CancellationToken cancellationToken = default);
+    public Task<TEntity> DeleteAsync(TEntity entity, bool dismissSendEvent = false, CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> CreateManyAsync(
         List<TEntity> entities,

@@ -186,21 +186,28 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
             .Then(result => result.SelectMany(p => p).ToList());
     }
 
-    public async Task DeleteAsync<TEntity, TPrimaryKey>(TPrimaryKey entityId, bool dismissSendEvent, CancellationToken cancellationToken)
+    public async Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(TPrimaryKey entityId, bool dismissSendEvent, CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var entity = GetQuery<TEntity>().FirstOrDefault(p => p.Id.Equals(entityId));
 
         if (entity != null) await DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken);
+
+        return entity;
     }
 
-    public Task DeleteAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
+    public async Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey>(
+        return await PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TEntity>(
             MappedUnitOfWork,
             entity,
-            entity => GetTable<TEntity>().DeleteOneAsync(p => p.Id.Equals(entity.Id), null, cancellationToken),
+            async entity =>
+            {
+                await GetTable<TEntity>().DeleteOneAsync(p => p.Id.Equals(entity.Id), null, cancellationToken);
+
+                return entity;
+            },
             dismissSendEvent,
             hasSupportOutboxEvent: HasSupportOutboxEvent(),
             cancellationToken);
@@ -222,14 +229,13 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        await Util.Pager.ExecutePagingAsync(
-            (skipCount, pageSize) => entities.Skip(skipCount)
-                .Take(pageSize)
-                .ForEachAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken)),
-            maxItemCount: entities.Count,
-            IPlatformDbContext.DefaultPageSize);
-
-        return entities;
+        return await Util.Pager.ExecutePagingAsync(
+                (skipCount, pageSize) => entities.Skip(skipCount)
+                    .Take(pageSize)
+                    .SelectAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken)),
+                maxItemCount: entities.Count,
+                IPlatformDbContext.DefaultPageSize)
+            .Then(_ => _.Flatten().ToList());
     }
 
     public Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
