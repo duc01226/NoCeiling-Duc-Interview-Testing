@@ -86,12 +86,8 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>
         {
             return connectionInitializer.Value.CreateModel();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            logger.LogError(
-                ex,
-                "Create rabbit-mq channel failed. RabbitMqOptions:{RabbitMqOptions}",
-                options.ToJson());
             ReInitNewConnectionInitializer();
             throw;
         }
@@ -147,17 +143,23 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>
         // after CreateConnection will lose full stack trace (may because it connect async to other external service)
         var stackTrace = Environment.StackTrace;
 
-        try
-        {
-            var hostNames = options.HostNames.Split(',')
-                .Where(hostName => hostName.IsNotNullOrEmpty())
-                .ToArray();
+        return Util.TaskRunner.WaitRetryThrowFinalException(
+            () =>
+            {
+                try
+                {
+                    var hostNames = options.HostNames.Split(',')
+                        .Where(hostName => hostName.IsNotNullOrEmpty())
+                        .ToArray();
 
-            return connectionFactory.CreateConnection(hostNames);
-        }
-        catch (Exception e)
-        {
-            throw new Exception($"{GetType().Name} CreateConnection failed. {e.Message}. [FullStackTrace: {stackTrace}]", e);
-        }
+                    return connectionFactory.CreateConnection(hostNames);
+                }
+                catch (Exception e)
+                {
+                    throw new Exception($"{GetType().Name} CreateConnection failed. {e.Message}. [FullStackTrace: {stackTrace}]", e);
+                }
+            },
+            retryAttempt => 1.Seconds(),
+            retryCount: 10);
     }
 }

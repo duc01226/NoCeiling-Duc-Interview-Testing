@@ -7,7 +7,6 @@ using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Repositories;
 using Easy.Platform.Domain.UnitOfWork;
-using Easy.Platform.Infrastructures;
 using Easy.Platform.Persistence.DataMigration;
 using Easy.Platform.Persistence.Domain;
 using Easy.Platform.Persistence.Services;
@@ -58,7 +57,7 @@ public interface IPlatformPersistenceModule : IPlatformModule
 /// </summary>
 public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersistenceModule
 {
-    public new const int DefaultExecuteInitPriority = PlatformInfrastructureModule.DefaultExecuteInitPriority * ExecuteInitPriorityNextLevelDistance;
+    public new const int DefaultExecuteInitPriority = PlatformModule.DefaultExecuteInitPriority + (ExecuteInitPriorityNextLevelDistance * 2);
 
     protected PlatformPersistenceModule(IServiceProvider serviceProvider, IConfiguration configuration) : base(serviceProvider, configuration)
     {

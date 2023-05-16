@@ -10,11 +10,16 @@ namespace Easy.Platform.Infrastructures.BackgroundJob;
 
 public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
 {
+    // PlatformBackgroundJobModule init after PersistenceModule but before other modules
+    public new const int DefaultExecuteInitPriority = DefaultDependentOnPersistenceInitExecuteInitPriority;
+
     public PlatformBackgroundJobModule(IServiceProvider serviceProvider, IConfiguration configuration) : base(
         serviceProvider,
         configuration)
     {
     }
+
+    public override int ExecuteInitPriority => DefaultExecuteInitPriority;
 
     public static int DefaultStartBackgroundJobProcessingRetryCount => PlatformEnvironment.IsDevelopment ? 5 : 10;
 

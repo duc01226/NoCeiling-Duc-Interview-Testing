@@ -20,7 +20,7 @@ public interface IPlatformModule
     /// <summary>
     /// Higher Priority value mean the module init will be executed before lower Priority value in the same level module dependencies
     /// <br />
-    /// Default is 10. For the default priority should be: PersistenceModule (Priority 1000) => InfrastructureModule (100) => Others Module (10)
+    /// Default is 10. For the default priority should be:  InfrastructureModule (Not Dependent on DatabaseInitialization) => PersistenceModule => InfrastructureModule (Dependent on DatabaseInitialization) => Others Module (10)
     /// </summary>
     public int ExecuteInitPriority { get; }
 
@@ -97,7 +97,7 @@ public abstract class PlatformModule : IPlatformModule
     /// <summary>
     /// Higher Priority value mean the module init will be executed before lower Priority value in the same level module dependencies
     /// <br />
-    /// Default is 1. For the default priority should be: PermissionModule => InfrastructureModule => Others Module
+    /// Default is 10. For the default priority should be: PersistenceModule => InfrastructureModule => Others Module
     /// </summary>
     public virtual int ExecuteInitPriority => DefaultExecuteInitPriority;
 
