@@ -41,7 +41,7 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
         Configuration = configuration;
     }
 
-    public static int DefaultSeedingMinimumDummyItemsCount => PlatformEnvironment.IsDevelopment ? 1000 : 100000;
+    public static int DefaultSeedingMinimumDummyItemsCount => PlatformEnvironment.IsDevelopment ? 100 : 100000;
 
     /// <summary>
     /// Default value is SeedingMinimumDummyItemsCount; <br />
@@ -54,9 +54,9 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
         PlatformGlobal.Configuration.GetValue<int?>(SeedingMinimumDummyItemsCountConfigurationKey) ??
         DefaultSeedingMinimumDummyItemsCount;
 
-    public static int DefaultActiveDelaySeedingInBackgroundBySeconds => PlatformEnvironment.IsDevelopment ? 90 : 180;
-    public static int DefaultDelayRetryCheckSeedDataBySeconds => PlatformEnvironment.IsDevelopment ? 2 : 4;
-    public static int DefaultMaxWaitSeedDataBySyncMessagesBySeconds => PlatformEnvironment.IsDevelopment ? 300 : 600;
+    public static int DefaultActiveDelaySeedingInBackgroundBySeconds => 30;
+    public static int DefaultDelayRetryCheckSeedDataBySeconds => 5;
+    public static int DefaultMaxWaitSeedDataBySyncMessagesBySeconds => 300;
 
     /// <summary>
     /// Default is true. Override this if you want to start uow yourself or not want to

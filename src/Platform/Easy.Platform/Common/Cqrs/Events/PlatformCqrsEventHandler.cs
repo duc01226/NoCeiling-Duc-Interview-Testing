@@ -26,9 +26,9 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         LoggerFactory = loggerFactory;
     }
 
-    public virtual int RetryOnFailedTimes => 2;
+    public virtual int RetryOnFailedTimes => 10;
 
-    public virtual double RetryOnFailedDelaySeconds => 1;
+    public virtual double RetryOnFailedDelaySeconds => 0.5;
 
     public bool ForceCurrentInstanceHandleInCurrentThread { get; set; }
 
@@ -53,7 +53,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                             return Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                                 () => DoExecuteNewInstanceInBackgroundThread(this, GetType(), notification, currentDataContextAllValues),
                                 retryCount: RetryOnFailedTimes,
-                                sleepDurationProvider: retryAttempt => (retryAttempt * RetryOnFailedDelaySeconds).Seconds());
+                                sleepDurationProvider: retryAttempt => RetryOnFailedDelaySeconds.Seconds());
 
                         return DoExecuteNewInstanceInBackgroundThread(this, GetType(), notification, currentDataContextAllValues);
                     },
@@ -67,7 +67,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                     await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                         () => ExecuteHandleAsync(notification, cancellationToken),
                         retryCount: RetryOnFailedTimes,
-                        sleepDurationProvider: retryAttempt => (retryAttempt * RetryOnFailedDelaySeconds).Seconds());
+                        sleepDurationProvider: retryAttempt => RetryOnFailedDelaySeconds.Seconds());
                 else
                     await ExecuteHandleAsync(notification, cancellationToken);
             }

@@ -2,7 +2,6 @@ using Easy.Platform.Application.Context;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.MessageBus.Producers;
 using Easy.Platform.Application.MessageBus.Producers.CqrsEventProducers;
-using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Logging;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
@@ -43,16 +42,6 @@ public class TextSnippetEntityEventBusMessageProducer
     //{
     //    return true;
     //}
-
-    /// <summary>
-    /// This is optional. Demo if you want to custom only send free format message only for some condition
-    /// </summary>
-    protected override bool SendMessageWhen(PlatformCqrsEntityEvent<TextSnippetEntity> @event)
-    {
-        return @event.CrudAction == PlatformCqrsEntityEventCrudAction.Created ||
-               @event.CrudAction == PlatformCqrsEntityEventCrudAction.Updated ||
-               @event.CrudAction == PlatformCqrsEntityEventCrudAction.Deleted;
-    }
 }
 
 public class TextSnippetEntityEventBusMessage : PlatformCqrsEntityEventBusMessage<TextSnippetEntity>

@@ -1,5 +1,4 @@
 using Easy.Platform.Application.Context.UserContext;
-using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.MongoDB;
 using Easy.Platform.Persistence;
@@ -16,13 +15,11 @@ public class TextSnippetMultiDbDemoDbContext : PlatformMongoDbContext<TextSnippe
         IOptions<PlatformMongoOptions<TextSnippetMultiDbDemoDbContext>> options,
         IPlatformMongoClient<TextSnippetMultiDbDemoDbContext> client,
         ILoggerFactory loggerFactory,
-        IPlatformCqrs cqrs,
         IPlatformApplicationUserContextAccessor userContextAccessor,
         PlatformPersistenceConfiguration<TextSnippetMultiDbDemoDbContext> persistenceConfiguration) : base(
         options,
         client,
         loggerFactory,
-        cqrs,
         userContextAccessor,
         persistenceConfiguration)
     {

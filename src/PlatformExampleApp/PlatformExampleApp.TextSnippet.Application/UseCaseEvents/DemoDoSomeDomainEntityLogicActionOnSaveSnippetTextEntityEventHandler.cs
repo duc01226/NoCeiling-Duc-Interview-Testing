@@ -14,7 +14,9 @@ public class DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEventHandle
     {
     }
 
-    // protected override bool ExecuteSeparatelyInBackgroundThread() => true;
+    // Default is true to improve performance when command save, the event is executed separately and could be in parallel.
+    // Set it to false if you want the event executed sync with the command and in order
+    // protected override bool AllowHandleInBackgroundThread() => false;
 
     // Can override to return False to TURN OFF support for store cqrs event handler as inbox
     // protected override bool EnableHandleEventFromInboxBusMessage => false;

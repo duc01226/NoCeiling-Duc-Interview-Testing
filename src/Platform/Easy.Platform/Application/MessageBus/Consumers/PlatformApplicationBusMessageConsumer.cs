@@ -74,6 +74,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                     routingKey,
                     CreateGlobalLogger,
                     InboxConfig.RetryProcessFailedMessageInSecondsUnit,
+                    allowHandlingInBackgroundThread: true,
                     HandleExistingInboxMessage);
             }
             else

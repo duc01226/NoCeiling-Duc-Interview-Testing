@@ -145,7 +145,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             .CheckHasRegisteredScopedService<IPlatformInboxBusMessageRepository>();
 
         if (CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository, @event) &&
-            !IsCurrentInstanceCalledFromInboxBusMessageConsumer)
+            !IsCurrentInstanceCalledFromInboxBusMessageConsumer &&
+            !IsInjectingUserContextAccessor)
         {
             // Need to get outside of ExecuteInjectScopedAsync to has data because it read current context by thread. If inside => other threads => lose identity data
             var currentBusMessageIdentity =
@@ -153,7 +154,6 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
             await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
                 async (
-                    PlatformBusMessageIdentity currentBusMessageIdentity,
                     IServiceProvider serviceProvider,
                     IPlatformInboxBusMessageRepository inboxMessageRepository,
                     IPlatformApplicationSettingContext applicationSettingContext) =>
@@ -168,9 +168,9 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                         routingKey: PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(typeof(TEvent), applicationSettingContext.ApplicationName),
                         loggerFactory: CreateGlobalLogger,
                         retryProcessFailedMessageInSecondsUnit: PlatformInboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit,
+                        allowHandlingInBackgroundThread: AllowHandleInBackgroundThread(@event),
                         cancellationToken: cancellationToken);
-                },
-                currentBusMessageIdentity);
+                });
         }
         else
         {

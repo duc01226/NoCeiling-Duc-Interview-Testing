@@ -1,5 +1,4 @@
 using Easy.Platform.Application.Context.UserContext;
-using Easy.Platform.Common.Cqrs;
 using Easy.Platform.MongoDB;
 using Easy.Platform.Persistence;
 using Microsoft.Extensions.Logging;
@@ -15,13 +14,11 @@ public class DemoMigrateDataCrossDbContext : PlatformMongoDbContext<DemoMigrateD
         IOptions<PlatformMongoOptions<DemoMigrateDataCrossDbContext>> options,
         IPlatformMongoClient<DemoMigrateDataCrossDbContext> client,
         ILoggerFactory loggerFactory,
-        IPlatformCqrs cqrs,
         IPlatformApplicationUserContextAccessor userContextAccessor,
         PlatformPersistenceConfiguration<DemoMigrateDataCrossDbContext> persistenceConfiguration) : base(
         options,
         client,
         loggerFactory,
-        cqrs,
         userContextAccessor,
         persistenceConfiguration)
     {

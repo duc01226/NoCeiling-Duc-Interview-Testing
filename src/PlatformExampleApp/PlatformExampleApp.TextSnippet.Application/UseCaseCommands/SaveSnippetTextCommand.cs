@@ -279,6 +279,7 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
                 await textSnippetEntityRepository.UpdateAsync(
                     await textSnippetEntityRepository.FirstOrDefaultAsync(cancellationToken: cancellationToken),
                     cancellationToken: cancellationToken);
+
                 await uow.CompleteAsync(cancellationToken);
             }
         }
