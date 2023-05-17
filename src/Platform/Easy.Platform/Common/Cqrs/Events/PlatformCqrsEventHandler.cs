@@ -40,7 +40,9 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         {
             // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
             // so the it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
-            if (AllowHandleInBackgroundThread(notification) && !ForceCurrentInstanceHandleInCurrentThread)
+            if (AllowHandleParallelInBackgroundThread(notification) &&
+                !ForceCurrentInstanceHandleInCurrentThread &&
+                !notification.HasForceWaitEventHandler(GetType()))
             {
                 // Need to get current data context outside of QueueActionInBackground to has data because it read current context by thread. If inside => other threads => lose identity data
                 var currentDataContextAllValues = BuildDataContextBeforeNewScopeExecution();
@@ -82,7 +84,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
     /// Default is True. If true, the event handler will run in separate thread scope with new instance
     /// and if exception, it won't affect the main flow
     /// </summary>
-    protected virtual bool AllowHandleInBackgroundThread(TEvent notification)
+    protected virtual bool AllowHandleParallelInBackgroundThread(TEvent notification)
     {
         return true;
     }
@@ -149,8 +151,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         CreateLogger(loggerFactory)
             .LogError(
                 exception,
-                "[PlatformCqrsEventHandler] Handle event failed: {ExceptionMessage}. EventType:{EventType}; HandlerType:{HandlerType}. EventContent:{EventContent}",
-                exception.Message,
+                "[PlatformCqrsEventHandler] Handle event failed. EventType:{EventType}; HandlerType:{HandlerType}. EventContent:{EventContent}",
                 notification.GetType().Name,
                 GetType().Name,
                 notification.ToJson());

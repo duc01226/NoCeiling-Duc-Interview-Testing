@@ -13,6 +13,7 @@ using Easy.Platform.MongoDB.Extensions;
 using Easy.Platform.MongoDB.Migration;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -28,6 +29,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     public const string PlatformOutboxBusMessageCollectionName = "OutboxEventBusMessage";
     public const string PlatformDataMigrationHistoryCollectionName = "MigrationHistory";
     public const string DbInitializedApplicationDataMigrationHistoryName = "DbInitialized";
+    public const int DefaultRunDataMigrationInBackgroundRetryCount = 10;
 
     public readonly IMongoDatabase Database;
 
@@ -47,7 +49,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         PersistenceConfiguration = persistenceConfiguration;
         Database = client.MongoClient.GetDatabase(options.Value.Database);
         EntityTypeToCollectionNameDictionary = new Lazy<Dictionary<Type, string>>(BuildEntityTypeToCollectionNameDictionary);
-        Logger = loggerFactory.CreateLogger(typeof(PlatformMongoDbContext<>));
+        Logger = CreateLogger(loggerFactory);
     }
 
     public IMongoCollection<PlatformInboxBusMessage> InboxBusMessageCollection =>
@@ -84,7 +86,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         }
         catch (Exception e)
         {
-            throw new Exception($"{GetType().Name} Initialize failed. {e.Message}. FullStackTrace: {stackTrace}", e);
+            throw new Exception($"{GetType().Name} Initialize failed. [[FullStackTrace: {stackTrace}]]", e);
         }
 
         async Task InsertDbInitializedApplicationDataMigrationHistory()
@@ -151,52 +153,66 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     public Task<List<TEntity>> CreateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         return Util.Pager.ExecutePagingAsync(
                 (skipCount, pageSize) => entities.Skip(skipCount)
                     .Take(pageSize)
-                    .Select(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken))
+                    .Select(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken))
                     .WhenAll(),
                 maxItemCount: entities.Count,
                 IPlatformDbContext.DefaultPageSize)
             .Then(result => result.SelectMany(p => p).ToList());
     }
 
-    public Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
+    public Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
+        TEntity entity,
+        bool dismissSendEvent,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, cancellationToken);
+        return UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
     }
 
     public Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         return Util.Pager.ExecutePagingAsync(
                 (skipCount, pageSize) => entities.Skip(skipCount)
                     .Take(pageSize)
-                    .Select(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken))
+                    .Select(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken))
                     .WhenAll(),
                 maxItemCount: entities.Count,
                 IPlatformDbContext.DefaultPageSize)
             .Then(result => result.SelectMany(p => p).ToList());
     }
 
-    public async Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(TPrimaryKey entityId, bool dismissSendEvent, CancellationToken cancellationToken)
+    public async Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
+        TPrimaryKey entityId,
+        bool dismissSendEvent,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var entity = GetQuery<TEntity>().FirstOrDefault(p => p.Id.Equals(entityId));
 
-        if (entity != null) await DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken);
+        if (entity != null) await DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
 
         return entity;
     }
 
-    public async Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
+    public async Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
+        TEntity entity,
+        bool dismissSendEvent,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         return await PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TEntity>(
@@ -210,44 +226,52 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
             },
             dismissSendEvent,
             hasSupportOutboxEvent: HasSupportOutboxEvent(),
+            sendEntityEventConfigure: sendEntityEventConfigure,
             cancellationToken);
     }
 
     public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
         List<TPrimaryKey> entityIds,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var entities = await GetQuery<TEntity>().Where(p => entityIds.Contains(p.Id)).ToListAsync(cancellationToken);
 
-        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, cancellationToken);
+        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
     }
 
     public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         return await Util.Pager.ExecutePagingAsync(
                 (skipCount, pageSize) => entities.Skip(skipCount)
                     .Take(pageSize)
-                    .SelectAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken)),
+                    .SelectAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken)),
                 maxItemCount: entities.Count,
                 IPlatformDbContext.DefaultPageSize)
             .Then(_ => _.Flatten().ToList());
     }
 
-    public Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(TEntity entity, bool dismissSendEvent, CancellationToken cancellationToken)
+    public Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(
+        TEntity entity,
+        bool dismissSendEvent,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, upsert: false, cancellationToken);
+        return CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, upsert: false, sendEntityEventConfigure, cancellationToken);
     }
 
     public async Task<TEntity> CreateOrUpdateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         Expression<Func<TEntity, bool>> customCheckExistingPredicate = null,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var existingEntity = await GetQuery<TEntity>()
@@ -257,15 +281,21 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
             .FirstOrDefaultAsync(cancellationToken);
 
         if (existingEntity != null)
-            return await UpdateAsync<TEntity, TPrimaryKey>(entity.With(_ => _.Id = existingEntity.Id), existingEntity, dismissSendEvent, cancellationToken);
+            return await UpdateAsync<TEntity, TPrimaryKey>(
+                entity.With(_ => _.Id = existingEntity.Id),
+                existingEntity,
+                dismissSendEvent,
+                sendEntityEventConfigure,
+                cancellationToken);
 
-        return await CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, upsert: true, cancellationToken);
+        return await CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, upsert: true, sendEntityEventConfigure, cancellationToken);
     }
 
     public Task<List<TEntity>> CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         return Util.Pager.ExecutePagingAsync(
@@ -276,6 +306,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                             entity,
                             customCheckExistingPredicateBuilder?.Invoke(entity),
                             dismissSendEvent,
+                            sendEntityEventConfigure,
                             cancellationToken))
                     .WhenAll(),
                 maxItemCount: entities.Count,
@@ -310,15 +341,53 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
 
                         if (dbInitializedMigrationHistory.CreatedDate < migrationExecution.CreationDate)
                         {
-                            Logger.LogInformation($"Migration {migrationExecution.Name} started.");
+                            if (migrationExecution.AllowRunInBackgroundThread)
+                            {
+                                var migrationExecutionType = migrationExecution.GetType();
+                                var migrationExecutionName = migrationExecution.GetType();
 
-                            await migrationExecution.Execute((TDbContext)this);
+                                Util.TaskRunner.QueueActionInBackground(
+                                    async () =>
+                                    {
+                                        Logger.LogInformation($"Wait To Execute DataMigration {migrationExecutionName} in background thread");
 
-                            await ApplicationDataMigrationHistoryCollection.InsertOneAsync(new PlatformDataMigrationHistory(migrationExecution.Name));
+                                        var currentDbContextPersistenceModule = PlatformGlobal.RootServiceProvider
+                                            .GetRequiredService(
+                                                GetType().Assembly.GetTypes().First(p => p.IsAssignableTo(typeof(PlatformPersistenceModule<TDbContext>))))
+                                            .As<PlatformPersistenceModule<TDbContext>>();
 
-                            await SaveChangesAsync();
+                                        await currentDbContextPersistenceModule.BackgroundThreadDataMigrationLock.WaitAsync();
 
-                            Logger.LogInformation($"Migration {migrationExecution.Name} finished.");
+                                        await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                                            () => PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
+                                                async (IServiceProvider sp) =>
+                                                {
+                                                    try
+                                                    {
+                                                        await ExecuteDataMigrationExecutor(
+                                                            sp.GetRequiredService(migrationExecutionType).As<PlatformDataMigrationExecutor<TDbContext>>(),
+                                                            sp.GetRequiredService<TDbContext>());
+                                                    }
+                                                    finally
+                                                    {
+                                                        currentDbContextPersistenceModule.BackgroundThreadDataMigrationLock.Release();
+                                                    }
+                                                }),
+                                            retryCount: DefaultRunDataMigrationInBackgroundRetryCount,
+                                            sleepDurationProvider: retryAttempt => 10.Seconds(),
+                                            onRetry: (ex, timeSpan, currentRetry, ctx) =>
+                                            {
+                                                Logger.LogWarning(
+                                                    ex,
+                                                    $"Retry Execute DataMigration {migrationExecutionType.Name} {currentRetry} time(s).");
+                                            });
+                                    },
+                                    () => CreateLogger(PlatformGlobal.LoggerFactory));
+                            }
+                            else
+                            {
+                                await ExecuteDataMigrationExecutor(migrationExecution, this.As<TDbContext>());
+                            }
                         }
 
                         migrationExecution.Dispose();
@@ -327,10 +396,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                     {
                         Logger.LogError(
                             ex,
-                            "MigrateApplicationDataAsync for migration {DataMigrationName} has errors. If in dev environment it may happens if migrate cross db, when other service db is not initiated. Usually for dev environment migrate cross service db when run system in the first-time could be ignored. " +
-                            "Error: {Error}",
-                            migrationExecution.Name,
-                            ex.Message);
+                            "MigrateApplicationDataAsync for migration {DataMigrationName} has errors. If in dev environment it may happens if migrate cross db, when other service db is not initiated. Usually for dev environment migrate cross service db when run system in the first-time could be ignored. ",
+                            migrationExecution.Name);
 
                         if (!PlatformEnvironment.IsDevelopment)
                             throw new Exception($"MigrateApplicationDataAsync for migration {migrationExecution.Name} has errors. {ex.Message}.", ex);
@@ -349,7 +416,30 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         GC.SuppressFinalize(this);
     }
 
-    public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(TEntity entity, TEntity existingEntity, bool dismissSendEvent, CancellationToken cancellationToken)
+    public static ILogger CreateLogger(ILoggerFactory loggerFactory)
+    {
+        return loggerFactory.CreateLogger(typeof(PlatformMongoDbContext<>));
+    }
+
+    public static async Task ExecuteDataMigrationExecutor(PlatformDataMigrationExecutor<TDbContext> migrationExecution, TDbContext dbContext)
+    {
+        dbContext.Logger.LogInformation($"Migration {migrationExecution.Name} started.");
+
+        await migrationExecution.Execute(dbContext);
+
+        await dbContext.ApplicationDataMigrationHistoryCollection.InsertOneAsync(new PlatformDataMigrationHistory(migrationExecution.Name));
+
+        await dbContext.SaveChangesAsync();
+
+        dbContext.Logger.LogInformation($"Migration {migrationExecution.Name} finished.");
+    }
+
+    public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
+        TEntity entity,
+        TEntity existingEntity,
+        bool dismissSendEvent,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
@@ -395,6 +485,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                         cancellationToken),
                 dismissSendEvent,
                 hasSupportOutboxEvent: HasSupportOutboxEvent(),
+                sendEntityEventConfigure: sendEntityEventConfigure,
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -419,6 +510,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                         cancellationToken),
                 dismissSendEvent,
                 hasSupportOutboxEvent: HasSupportOutboxEvent(),
+                sendEntityEventConfigure: sendEntityEventConfigure,
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -624,6 +716,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         TEntity entity,
         bool dismissSendEvent,
         bool upsert = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
@@ -646,6 +739,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                 entity => GetTable<TEntity>().InsertOneAsync(entity, null, cancellationToken).Then(() => entity),
                 dismissSendEvent,
                 hasSupportOutboxEvent: HasSupportOutboxEvent(),
+                sendEntityEventConfigure: sendEntityEventConfigure,
                 cancellationToken);
         else
             await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
@@ -660,6 +754,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
                     .Then(() => entity),
                 dismissSendEvent,
                 hasSupportOutboxEvent: HasSupportOutboxEvent(),
+                sendEntityEventConfigure: sendEntityEventConfigure,
                 cancellationToken);
 
         return toBeCreatedEntity;

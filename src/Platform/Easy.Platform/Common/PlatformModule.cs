@@ -77,6 +77,7 @@ public abstract class PlatformModule : IPlatformModule
 {
     public const int DefaultExecuteInitPriority = 10;
     public const int ExecuteInitPriorityNextLevelDistance = 10;
+    public const int MinimumRetryTimesToWarning = 3;
 
     protected static readonly ConcurrentDictionary<string, Assembly> ExecutedRegisterByAssemblies = new();
 

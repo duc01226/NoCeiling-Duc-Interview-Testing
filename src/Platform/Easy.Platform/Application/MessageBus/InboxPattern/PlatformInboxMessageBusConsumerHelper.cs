@@ -167,8 +167,7 @@ public static class PlatformInboxMessageBusConsumerHelper
             loggerFactory()
                 .LogError(
                     ex,
-                    "ExecuteConsumerForExistingInboxMessage failed. [Error: {Error}]; [MessageType: {MessageType}]; [ConsumerType: {ConsumerType}]; [RoutingKey: {RoutingKey}]; [MessageContent: {MessageContent}];",
-                    ex.Message,
+                    "ExecuteConsumerForExistingInboxMessage failed. [MessageType: {MessageType}]; [ConsumerType: {ConsumerType}]; [RoutingKey: {RoutingKey}]; [MessageContent: {MessageContent}];",
                     message.GetType().GetNameOrGenericTypeName(),
                     consumer.GetType().GetNameOrGenericTypeName(),
                     routingKey,
@@ -211,6 +210,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                             var result = await inboxBusMessageRepo.CreateAsync(
                                 newInboxMessage,
                                 dismissSendEvent: true,
+                                sendEntityEventConfigure: null,
                                 cancellationToken);
 
                             return result;
@@ -224,8 +224,7 @@ public static class PlatformInboxMessageBusConsumerHelper
             loggerFactory()
                 .LogError(
                     ex,
-                    "CreateNewInboxMessageAsync failed. [Error:{Error}]; [RoutingKey:{RoutingKey}], [Type:{MessageType}]. NewInboxMessage: {NewInboxMessage}.",
-                    ex.Message,
+                    "CreateNewInboxMessageAsync failed. [RoutingKey:{RoutingKey}], [Type:{MessageType}]. NewInboxMessage: {NewInboxMessage}.",
                     routingKey,
                     message.GetType().GetNameOrGenericTypeName(),
                     newInboxMessage.ToJson());
@@ -263,7 +262,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                     .With(_ => _.LastConsumeDate = DateTime.UtcNow)
                     .With(_ => _.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Processed);
 
-                await inboxBusMessageRepo.UpdateAsync(toUpdateInboxMessage, dismissSendEvent: true, cancellationToken);
+                await inboxBusMessageRepo.UpdateAsync(toUpdateInboxMessage, dismissSendEvent: true, sendEntityEventConfigure: null, cancellationToken);
             });
     }
 
@@ -291,7 +290,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                                 existingInboxMessage.RetriedProcessCount,
                                 retryProcessFailedMessageInSecondsUnit);
 
-                            await inboxBusMessageRepo.UpdateAsync(existingInboxMessage, dismissSendEvent: true, cancellationToken);
+                            await inboxBusMessageRepo.UpdateAsync(existingInboxMessage, dismissSendEvent: true, sendEntityEventConfigure: null, cancellationToken);
                         },
                         sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
                         retryCount: DefaultResilientRetiredCount);
@@ -302,8 +301,7 @@ public static class PlatformInboxMessageBusConsumerHelper
             loggerFactory()
                 .LogError(
                     ex,
-                    "UpdateExistingInboxFailedMessageAsync failed. [Error:{Error}]; [InboxMessage:{Message}].",
-                    ex.Message,
+                    "UpdateExistingInboxFailedMessageAsync failed. [InboxMessage:{Message}].",
                     existingInboxMessage.ToJson());
         }
     }
@@ -337,7 +335,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                             retriedProcessCount: existingInboxMessage.RetriedProcessCount,
                             retryProcessFailedMessageInSecondsUnit);
 
-                        await inboxBusMessageRepo.UpdateAsync(existingInboxMessage, dismissSendEvent: true, cancellationToken);
+                        await inboxBusMessageRepo.UpdateAsync(existingInboxMessage, dismissSendEvent: true, sendEntityEventConfigure: null, cancellationToken);
                     },
                     sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
                     retryCount: DefaultResilientRetiredCount);

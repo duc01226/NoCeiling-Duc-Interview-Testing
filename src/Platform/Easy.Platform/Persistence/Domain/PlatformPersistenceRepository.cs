@@ -4,6 +4,7 @@ using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Exceptions.Extensions;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
+using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.Repositories;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.DependencyInjection;
@@ -273,109 +274,121 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<TEntity> CreateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
+            uow => GetUowDbContext(uow).CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
     }
 
     public override Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, cancellationToken));
+            uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
     }
 
     public override Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         Expression<Func<TEntity, bool>> customCheckExistingPredicate,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, customCheckExistingPredicate, dismissSendEvent, cancellationToken));
+            uow => GetUowDbContext(uow)
+                .CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, customCheckExistingPredicate, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
     }
 
     public override Task<List<TEntity>> CreateOrUpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         if (entities.IsEmpty()) return entities.ToTask();
 
         return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(entities, null, dismissSendEvent, cancellationToken));
+            uow => GetUowDbContext(uow).CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(entities, null, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
     }
 
     public override Task<TEntity> UpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
+            uow => GetUowDbContext(uow).UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
     }
 
     public override async Task<TEntity> DeleteAsync(
         TPrimaryKey entityId,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).DeleteAsync<TEntity, TPrimaryKey>(entityId, dismissSendEvent, cancellationToken));
+            uow => GetUowDbContext(uow).DeleteAsync(entityId, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
     }
 
     public override async Task<TEntity> DeleteAsync(
         TEntity entity,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, cancellationToken));
+            uow => GetUowDbContext(uow).DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
     }
 
     public override Task<List<TEntity>> CreateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         if (entities.IsEmpty()) return entities.ToTask();
 
         return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).CreateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, cancellationToken));
+            uow => GetUowDbContext(uow).CreateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
     }
 
     public override Task<List<TEntity>> UpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         if (entities.IsEmpty()) return entities.ToTask();
 
         return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, cancellationToken));
+            uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
     }
 
     public override Task<List<TEntity>> DeleteManyAsync(
         List<TPrimaryKey> entityIds,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entityIds, dismissSendEvent, cancellationToken));
+            uow => GetUowDbContext(uow).DeleteManyAsync(entityIds, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
     }
 
     public override Task<List<TEntity>> DeleteManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         if (entities.IsEmpty()) return entities.ToTask();
 
         return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, cancellationToken));
+            uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
     }
 }
 

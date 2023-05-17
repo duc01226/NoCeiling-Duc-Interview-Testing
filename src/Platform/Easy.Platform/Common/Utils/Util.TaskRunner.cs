@@ -56,7 +56,7 @@ public static partial class Util
                     catch (Exception ex)
                     {
                         loggerFactory()
-                            .LogError(ex, "Run in background thread failed. [Error: {Error}]. [FullStackTrace: {FullStackTrace}]", ex.Message, loggingFullStackTrace);
+                            .LogError(ex, "Run in background thread failed. [[FullStackTrace: {FullStackTrace}]]", loggingFullStackTrace);
                         throw;
                     }
                 },
@@ -91,7 +91,7 @@ public static partial class Util
                     catch (Exception ex)
                     {
                         loggerFactory()
-                            .LogError(ex, "Run in background thread failed. [Error: {Error}]. [FullStackTrace: {FullStackTrace}]", ex.Message, loggingFullStackTrace);
+                            .LogError(ex, "Run in background thread failed. [[FullStackTrace: {FullStackTrace}]]", loggingFullStackTrace);
                         throw;
                     }
                 },
@@ -140,7 +140,7 @@ public static partial class Util
                     catch (Exception ex)
                     {
                         loggerFactory()
-                            .LogError(ex, "Run in background thread failed. [Error: {Error}]. [FullStackTrace: {FullStackTrace}]", ex.Message, loggingFullStackTrace);
+                            .LogError(ex, "Run in background thread failed. [[FullStackTrace: {FullStackTrace}]]", loggingFullStackTrace);
                         throw;
                     }
                 },

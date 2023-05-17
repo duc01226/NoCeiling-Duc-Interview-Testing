@@ -17,6 +17,8 @@ namespace Easy.Platform.Application.MessageBus.OutboxPattern;
 /// </summary>
 public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcessHostedService
 {
+    public const int MinimumRetrySendOutboxMessageTimesToWarning = 3;
+
     private readonly IPlatformApplicationSettingContext applicationSettingContext;
     private bool isProcessing;
 
@@ -59,21 +61,20 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
                 retryCount: ProcessSendMessageRetryCount(),
                 onRetry: (ex, timeSpan, currentRetry, ctx) =>
                 {
-                    Logger.LogWarning(
-                        ex,
-                        "Retry SendOutboxEventBusMessages {CurrentRetry} time(s) failed with error: {ExMessage}. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly_FullName}]",
-                        currentRetry,
-                        ex.Message,
-                        applicationSettingContext.ApplicationName,
-                        applicationSettingContext.ApplicationAssembly.FullName);
+                    if (currentRetry >= MinimumRetrySendOutboxMessageTimesToWarning)
+                        Logger.LogWarning(
+                            ex,
+                            "Retry SendOutboxEventBusMessages {CurrentRetry} time(s) failed. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly_FullName}]",
+                            currentRetry,
+                            applicationSettingContext.ApplicationName,
+                            applicationSettingContext.ApplicationAssembly.FullName);
                 });
         }
         catch (Exception ex)
         {
             Logger.LogError(
                 ex,
-                "SendOutboxEventBusMessages failed with error: {Ex_Message}. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly_FullName}]",
-                ex.Message,
+                "SendOutboxEventBusMessages failed. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly_FullName}]",
                 applicationSettingContext.ApplicationName,
                 applicationSettingContext.ApplicationAssembly.FullName);
         }

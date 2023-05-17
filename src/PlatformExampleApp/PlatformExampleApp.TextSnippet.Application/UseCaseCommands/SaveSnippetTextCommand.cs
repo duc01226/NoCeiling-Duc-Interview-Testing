@@ -11,6 +11,7 @@ using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Logging;
 using PlatformExampleApp.TextSnippet.Application.EntityDtos;
 using PlatformExampleApp.TextSnippet.Application.Infrastructures;
+using PlatformExampleApp.TextSnippet.Application.UseCaseEvents;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
@@ -357,6 +358,19 @@ public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandl
         // STEP 3: Saving data in to repository
         var savedData = await textSnippetEntityRepository.CreateOrUpdateAsync(
             validToSaveEntity,
+            cancellationToken: cancellationToken);
+        // DEMO If you want to force wait handler to be handling successfully to continue. By default, handlers for entity event executing
+        // in background thread and you dont need to wait for it. The command will return immediately.
+        // Sometime you could want to wait for handler done
+        var savedDataWaitClearCacheDone = await textSnippetEntityRepository.CreateOrUpdateAsync(
+            validToSaveEntity,
+            sendEntityEventConfigure: p => p.SetForceWaitEventHandlerFinished(
+                typeof(ClearCacheOnSaveSnippetTextEntityEventHandler),
+                typeof(DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEventHandler)),
+            cancellationToken: cancellationToken);
+        var savedDataWaitClearCacheDone1 = await textSnippetEntityRepository.CreateOrUpdateAsync(
+            validToSaveEntity,
+            sendEntityEventConfigure: p => p.SetForceWaitEventHandlerFinished<ClearCacheOnSaveSnippetTextEntityEventHandler>(),
             cancellationToken: cancellationToken);
 
         if (request.Data.IsSubmitToUpdate())

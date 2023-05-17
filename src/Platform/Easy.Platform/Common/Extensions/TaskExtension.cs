@@ -108,7 +108,7 @@ public static class TaskExtension
         }
         catch (Exception e)
         {
-            logger.LogError(e, "SideEffectAction failed. [Error:{Error}]", e.Message);
+            logger.LogError(e, "SideEffectAction failed");
         }
 
         return targetValue;
@@ -127,7 +127,7 @@ public static class TaskExtension
         }
         catch (Exception e)
         {
-            logger.LogError(e, "SideEffectAction failed. [Error:{Error}]", e.Message);
+            logger.LogError(e, "SideEffectAction failed");
         }
     }
 
@@ -147,7 +147,7 @@ public static class TaskExtension
         }
         catch (Exception e)
         {
-            logger.LogError(e, "SideEffectAction failed. [Error:{Error}]", e.Message);
+            logger.LogError(e, "SideEffectAction failed");
         }
 
         return targetValue;

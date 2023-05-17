@@ -71,15 +71,14 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
                 retryCount: DefaultStartBackgroundJobProcessingRetryCount,
                 onRetry: (exception, timeSpan, currentRetry, ctx) =>
                 {
-                    var logger = serviceScope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(PlatformBackgroundJobModule));
-
-                    logger.LogWarning(
-                        exception,
-                        "[StartBackgroundJobProcessing] Exception {ExceptionType} with message {Message} detected on attempt StartBackgroundJobProcessing {Retry} of {Retries}",
-                        exception.GetType().Name,
-                        exception.Message,
-                        currentRetry,
-                        DefaultStartBackgroundJobProcessingRetryCount);
+                    if (currentRetry >= MinimumRetryTimesToWarning)
+                        PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformBackgroundJobModule))
+                            .LogWarning(
+                                exception,
+                                "[StartBackgroundJobProcessing] Exception {ExceptionType} detected on attempt StartBackgroundJobProcessing {Retry} of {Retries}",
+                                exception.GetType().Name,
+                                currentRetry,
+                                DefaultStartBackgroundJobProcessingRetryCount);
                 });
     }
 
@@ -101,15 +100,14 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
             retryCount: DefaultStartBackgroundJobProcessingRetryCount,
             onRetry: (exception, timeSpan, currentRetry, ctx) =>
             {
-                var logger = serviceScope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(PlatformBackgroundJobModule));
-
-                logger.LogWarning(
-                    exception,
-                    "[Init][ReplaceAllLatestRecurringBackgroundJobs] Exception {ExceptionType} with message {Message} detected on attempt ReplaceAllLatestRecurringBackgroundJobs {Retry} of {Retries}",
-                    exception.GetType().Name,
-                    exception.Message,
-                    currentRetry,
-                    DefaultStartBackgroundJobProcessingRetryCount);
+                if (currentRetry >= MinimumRetryTimesToWarning)
+                    PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformBackgroundJobModule))
+                        .LogWarning(
+                            exception,
+                            "[Init][ReplaceAllLatestRecurringBackgroundJobs] Exception {ExceptionType} detected on attempt ReplaceAllLatestRecurringBackgroundJobs {Retry} of {Retries}",
+                            exception.GetType().Name,
+                            currentRetry,
+                            DefaultStartBackgroundJobProcessingRetryCount);
             });
     }
 }

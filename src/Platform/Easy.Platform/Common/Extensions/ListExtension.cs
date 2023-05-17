@@ -157,9 +157,17 @@ public static class ListExtension
     /// </summary>
     public static void ForEach<T>(this IEnumerable<T> items, Action<T, int> action)
     {
-        var itemsList = items.ToList();
+        var itemsList = items.As<IList<T>>() ?? items.ToList();
 
         for (var i = 0; i < itemsList.Count; i++) action(itemsList[i], i);
+    }
+
+    /// <summary>
+    /// Example: list.ForEach((item, itemIndex) => do some thing)
+    /// </summary>
+    public static void ForEach<T>(this IList<T> items, Action<T, int> action)
+    {
+        for (var i = 0; i < items.Count; i++) action(items[i], i);
     }
 
     /// <summary>
@@ -167,7 +175,7 @@ public static class ListExtension
     /// </summary>
     public static async Task ForEachAsync<T>(this IEnumerable<T> items, Func<T, int, Task> action)
     {
-        var itemsList = items.ToList();
+        var itemsList = items.As<IList<T>>() ?? items.ToList();
 
         for (var i = 0; i < itemsList.Count; i++) await action(itemsList[i], i);
     }
@@ -175,13 +183,33 @@ public static class ListExtension
     /// <inheritdoc cref="ForEachAsync{T}(IEnumerable{T},Func{T,int,Task})" />
     public static async Task ForEachAsync<T, TActionResult>(this IEnumerable<T> items, Func<T, int, Task<TActionResult>> action)
     {
-        var itemsList = items.ToList();
+        var itemsList = items.As<IList<T>>() ?? items.ToList();
 
         for (var i = 0; i < itemsList.Count; i++) await action(itemsList[i], i);
     }
 
+    /// <summary>
+    /// Example: await list.ForEach((item, itemIndex) => do some thing async)
+    /// </summary>
+    public static async Task ForEachAsync<T>(this IList<T> items, Func<T, int, Task> action)
+    {
+        for (var i = 0; i < items.Count; i++) await action(items[i], i);
+    }
+
+    /// <inheritdoc cref="ForEachAsync{T}(IEnumerable{T},Func{T,int,Task})" />
+    public static async Task ForEachAsync<T, TActionResult>(this IList<T> items, Func<T, int, Task<TActionResult>> action)
+    {
+        for (var i = 0; i < items.Count; i++) await action(items[i], i);
+    }
+
     /// <inheritdoc cref="ForEach{T}(IEnumerable{T},Action{T,int})" />
     public static void ForEach<T>(this IEnumerable<T> items, Action<T> action)
+    {
+        items.ForEach((item, index) => action(item));
+    }
+
+    /// <inheritdoc cref="ForEach{T}(IEnumerable{T},Action{T,int})" />
+    public static void ForEach<T>(this IList<T> items, Action<T> action)
     {
         items.ForEach((item, index) => action(item));
     }
@@ -198,6 +226,18 @@ public static class ListExtension
         return items.ForEachAsync((item, index) => action(item));
     }
 
+    /// <inheritdoc cref="ForEachAsync{T}(IEnumerable{T},Func{T,int,Task})" />
+    public static Task ForEachAsync<T>(this IList<T> items, Func<T, Task> action)
+    {
+        return items.ForEachAsync((item, index) => action(item));
+    }
+
+    /// <inheritdoc cref="ForEachAsync{T}(IEnumerable{T},Func{T,int,Task})" />
+    public static Task ForEachAsync<T, TActionResult>(this IList<T> items, Func<T, Task<TActionResult>> action)
+    {
+        return items.ForEachAsync((item, index) => action(item));
+    }
+
     /// <summary>
     /// Example: var listB = await list.SelectAsync((item, itemIndex) => get B async)
     /// </summary>
@@ -207,7 +247,7 @@ public static class ListExtension
     {
         var result = new List<TActionResult>();
 
-        var itemsList = items.ToList();
+        var itemsList = items.As<IList<T>>() ?? items.ToList();
 
         for (var i = 0; i < itemsList.Count; i++) result.Add(await actionAsync(itemsList[i], i));
 
@@ -217,6 +257,28 @@ public static class ListExtension
     /// <inheritdoc cref="SelectAsync{T,TResult}(IEnumerable{T},Func{T,int,Task{TResult}})" />
     public static Task<List<TActionResult>> SelectAsync<T, TActionResult>(
         this IEnumerable<T> items,
+        Func<T, Task<TActionResult>> actionAsync)
+    {
+        return items.SelectAsync((item, index) => actionAsync(item));
+    }
+
+    /// <summary>
+    /// Example: var listB = await list.SelectAsync((item, itemIndex) => get B async)
+    /// </summary>
+    public static async Task<List<TActionResult>> SelectAsync<T, TActionResult>(
+        this IList<T> items,
+        Func<T, int, Task<TActionResult>> actionAsync)
+    {
+        var result = new List<TActionResult>();
+
+        for (var i = 0; i < items.Count; i++) result.Add(await actionAsync(items[i], i));
+
+        return result;
+    }
+
+    /// <inheritdoc cref="SelectAsync{T,TResult}(IEnumerable{T},Func{T,int,Task{TResult}})" />
+    public static Task<List<TActionResult>> SelectAsync<T, TActionResult>(
+        this IList<T> items,
         Func<T, Task<TActionResult>> actionAsync)
     {
         return items.SelectAsync((item, index) => actionAsync(item));
@@ -299,7 +361,8 @@ public static class ListExtension
         Func<IEnumerable<TSource>, bool> @if,
         Func<IEnumerable<TSource>, IEnumerable<TSource>> second)
     {
-        var sourceList = source.ToList();
+        var sourceList = source.As<IList<TSource>>() ?? source.ToList();
+
         return @if(sourceList) ? sourceList.Concat(second(sourceList)) : sourceList;
     }
 
@@ -369,7 +432,7 @@ public static class ListExtension
 
     public static bool All<TSource>(this IEnumerable<TSource> source, Func<TSource, int, bool> predicate)
     {
-        var sourceList = source.ToList();
+        var sourceList = source.As<IList<TSource>>() ?? source.ToList();
 
         for (var i = 0; i < sourceList.Count; i++)
         {
@@ -382,7 +445,7 @@ public static class ListExtension
 
     public static TSource? FirstOrDefault<TSource>(this IEnumerable<TSource> source, Func<TSource, int, bool> predicate)
     {
-        var sourceList = source.ToList();
+        var sourceList = source.As<IList<TSource>>() ?? source.ToList();
 
         for (var i = 0; i < sourceList.Count; i++)
         {
@@ -395,7 +458,7 @@ public static class ListExtension
 
     public static TSource First<TSource>(this IEnumerable<TSource> source, Func<TSource, int, bool> predicate)
     {
-        var sourceList = source.ToList();
+        var sourceList = source.As<IList<TSource>>() ?? source.ToList();
 
         for (var i = 0; i < sourceList.Count; i++)
         {
@@ -408,7 +471,7 @@ public static class ListExtension
 
     public static bool Any<TSource>(this IEnumerable<TSource> source, Func<TSource, int, bool> predicate)
     {
-        var sourceList = source.ToList();
+        var sourceList = source.As<IList<TSource>>() ?? source.ToList();
 
         for (var i = 0; i < sourceList.Count; i++)
         {

@@ -143,7 +143,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "SendExistingOutboxMessageAsync failed. [Error:{Error}]", exception.Message);
+            logger.LogError(exception, "SendExistingOutboxMessageAsync failed.");
 
             await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
                 UpdateExistingOutboxMessageFailedInNewUowAsync,
@@ -192,7 +192,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 existingOutboxMessage.LastSendDate = DateTime.UtcNow;
                 existingOutboxMessage.SendStatus = PlatformOutboxBusMessage.SendStatuses.Processed;
 
-                await outboxBusMessageRepository.UpdateAsync(existingOutboxMessage, dismissSendEvent: true, cancellationToken);
+                await outboxBusMessageRepository.UpdateAsync(existingOutboxMessage, dismissSendEvent: true, sendEntityEventConfigure: null, cancellationToken);
             },
             sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
             retryCount: DefaultResilientRetiredCount);
@@ -245,7 +245,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                     existingOutboxMessage.RetriedProcessCount,
                     retryProcessFailedMessageInSecondsUnit);
 
-                await outboxBusMessageRepository.CreateOrUpdateAsync(existingOutboxMessage, dismissSendEvent: true, cancellationToken);
+                await outboxBusMessageRepository.CreateOrUpdateAsync(existingOutboxMessage, dismissSendEvent: true, sendEntityEventConfigure: null, cancellationToken);
 
                 LogSendOutboxMessageFailed(exception, existingOutboxMessage, logger);
             },
@@ -281,6 +281,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             () => outboxBusMessageRepository.CreateAsync(
                 newProcessingOutboxMessage,
                 dismissSendEvent: true,
+                sendEntityEventConfigure: null,
                 cancellationToken),
             sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
             retryCount: DefaultResilientRetiredCount);

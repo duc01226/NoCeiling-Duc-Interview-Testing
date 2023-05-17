@@ -16,7 +16,7 @@ public interface IPlatformCqrsEventApplicationHandler : IPlatformCqrsEventHandle
 {
     bool IsCurrentInstanceCalledFromInboxBusMessageConsumer { get; set; }
 
-    public bool EnableHandleEventFromInboxBusMessage { get; }
+    public bool EnableInboxEventBusMessage { get; }
 
     Task ExecuteHandleAsync(object @event, CancellationToken cancellationToken);
 
@@ -53,7 +53,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     /// <summary>
     /// Default return True. When True, Support for store cqrs event handler as inbox if inbox bus message is enabled in persistence module
     /// </summary>
-    public virtual bool EnableHandleEventFromInboxBusMessage => true;
+    public virtual bool EnableInboxEventBusMessage => true;
 
     public bool IsCurrentInstanceCalledFromInboxBusMessageConsumer { get; set; }
 
@@ -86,7 +86,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     {
         // EventHandler using IPlatformApplicationUserContextAccessor cannot use inbox because user request context is not available when process inbox message
         var usingApplicationUserContextAccessor = IsInjectingUserContextAccessor;
-        var hasEnabledInboxFeature = EnableHandleEventFromInboxBusMessage && hasInboxMessageRepository;
+        var hasEnabledInboxFeature = EnableInboxEventBusMessage && hasInboxMessageRepository;
 
         if (usingApplicationUserContextAccessor && hasEnabledInboxFeature)
             CreateLogger(LoggerFactory)
@@ -169,7 +169,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                         routingKey: PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(typeof(TEvent), applicationSettingContext.ApplicationName),
                         loggerFactory: CreateGlobalLogger,
                         retryProcessFailedMessageInSecondsUnit: PlatformInboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit,
-                        allowProcessInBackgroundThread: AllowHandleInBackgroundThread(@event),
+                        allowProcessInBackgroundThread: AllowHandleParallelInBackgroundThread(@event),
                         cancellationToken: cancellationToken);
                 });
         }
@@ -180,7 +180,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                 // If handler already executed in background or from inbox consumer, not need to open new scope for open uow
                 // If not then create new scope to open new uow so that multiple events handlers from an event do not get conflicted
                 // uow in the same scope if not open new scope
-                if (AllowHandleInBackgroundThread(@event) || CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository, @event))
+                if (AllowHandleParallelInBackgroundThread(@event) || CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository, @event))
                 {
                     using (var uow = UnitOfWorkManager.Begin())
                     {

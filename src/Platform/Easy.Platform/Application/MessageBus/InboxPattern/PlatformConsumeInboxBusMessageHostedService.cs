@@ -18,6 +18,8 @@ namespace Easy.Platform.Application.MessageBus.InboxPattern;
 /// </summary>
 public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProcessHostedService
 {
+    public const int MinimumRetryConsumeInboxMessageTimesToWarning = 3;
+
     private readonly IPlatformApplicationSettingContext applicationSettingContext;
     private readonly PlatformInboxConfig inboxConfig;
 
@@ -69,16 +71,17 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                 retryCount: ProcessConsumeMessageRetryCount(),
                 onRetry: (ex, timeSpan, currentRetry, ctx) =>
                 {
-                    Logger.LogWarning(
-                        ex,
-                        $"Retry ConsumeInboxEventBusMessages {currentRetry} time(s) failed with error: {ex.Message}. [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]");
+                    if (currentRetry >= MinimumRetryConsumeInboxMessageTimesToWarning)
+                        Logger.LogWarning(
+                            ex,
+                            $"Retry ConsumeInboxEventBusMessages {currentRetry} time(s) failed. [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]");
                 });
         }
         catch (Exception ex)
         {
             Logger.LogError(
                 ex,
-                $"Retry ConsumeInboxEventBusMessages failed with error: {ex.Message}. [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]");
+                $"Retry ConsumeInboxEventBusMessages failed. [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]");
         }
 
         isProcessing = false;
@@ -202,6 +205,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                         await inboxEventBusMessageRepo.UpdateManyAsync(
                             toHandleMessages,
                             dismissSendEvent: true,
+                            sendEntityEventConfigure: null,
                             cancellationToken);
 
                         await uow.CompleteAsync(cancellationToken);

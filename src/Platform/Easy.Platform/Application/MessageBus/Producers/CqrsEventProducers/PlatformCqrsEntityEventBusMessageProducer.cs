@@ -27,7 +27,7 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
     {
     }
 
-    protected override bool AllowHandleInBackgroundThread(PlatformCqrsEntityEvent<TEntity> notification)
+    protected override bool AllowHandleParallelInBackgroundThread(PlatformCqrsEntityEvent<TEntity> notification)
     {
         return UnitOfWorkManager.TryGetCurrentActiveUow() == null || UnitOfWorkManager.CurrentActiveUow().IsPseudoTransactionUow();
     }

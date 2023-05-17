@@ -49,13 +49,13 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
         catch (DbUpdateConcurrencyException e)
         {
             throw new PlatformDomainRowVersionConflictException(
-                $"{GetType().Name} complete uow failed. [Message: {e.Message}]. [FullStackTrace:{fullStackTrace}]",
+                $"{GetType().Name} complete uow failed because of {nameof(DbUpdateConcurrencyException)}. [[FullStackTrace:{fullStackTrace}]]",
                 e);
         }
         catch (Exception e)
         {
             InvokeOnFailed(this, new UnitOfWorkFailedArgs(e));
-            throw new Exception($"{GetType().Name} complete uow failed. [Message: {e.Message}]. [FullStackTrace:{fullStackTrace}]", e);
+            throw new Exception($"{GetType().Name} complete uow failed. [[FullStackTrace:{fullStackTrace}]]", e);
         }
     }
 

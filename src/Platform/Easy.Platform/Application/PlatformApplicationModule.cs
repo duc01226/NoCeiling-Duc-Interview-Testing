@@ -94,12 +94,12 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             retryCount: 10,
             onRetry: (exception, timeSpan, retry, ctx) =>
             {
-                Logger.LogWarning(
-                    exception,
-                    "Exception {ExceptionType} with message [{Message}] detected on attempt SeedData {Retry}",
-                    exception.GetType().Name,
-                    exception.Message,
-                    retry);
+                if (retry >= MinimumRetryTimesToWarning)
+                    Logger.LogWarning(
+                        exception,
+                        "Exception {ExceptionType} detected on attempt SeedData {Retry}",
+                        exception.GetType().Name,
+                        retry);
             });
 
         // Need to execute in background with service instance new scope
@@ -122,19 +122,19 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                     },
                     retryAttempt => 10.Seconds(),
                     retryCount: PlatformEnvironment.IsDevelopment ? 5 : 10,
-                    onRetry: (ex, timeSpan, currentRetry, context) => logger.LogWarning(
-                        ex,
-                        $"[SeedData] Retry seed data in background {seederType.Name}.{Environment.NewLine}" +
-                        "Message: {Message}",
-                        ex.Message));
+                    onRetry: (ex, timeSpan, currentRetry, context) =>
+                    {
+                        if (currentRetry >= MinimumRetryTimesToWarning)
+                            logger.LogWarning(
+                                ex,
+                                $"[SeedData] Retry seed data in background {seederType.Name}.");
+                    });
             }
             catch (Exception ex)
             {
                 logger.LogError(
                     ex,
-                    $"[SeedData] Seed data in background {seederType.Name} failed.{Environment.NewLine}" +
-                    "Message: {Message}",
-                    ex.Message);
+                    $"[SeedData] Seed data in background {seederType.Name} failed.");
             }
         }
 
@@ -169,12 +169,12 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             retryCount: 10,
             onRetry: (exception, timeSpan, retry, ctx) =>
             {
-                Logger.LogWarning(
-                    exception,
-                    "Exception {ExceptionType} with message [{Message}] detected on attempt ClearDistributedCache {Retry}",
-                    exception.GetType().Name,
-                    exception.Message,
-                    retry);
+                if (retry >= MinimumRetryTimesToWarning)
+                    Logger.LogWarning(
+                        exception,
+                        "Exception {ExceptionType} detected on attempt ClearDistributedCache {Retry}",
+                        exception.GetType().Name,
+                        retry);
             });
     }
 

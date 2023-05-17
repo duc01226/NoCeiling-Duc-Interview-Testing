@@ -18,4 +18,36 @@ public abstract class PlatformCqrsEvent : INotification
     public abstract string EventAction { get; }
 
     public string Id => $"{AuditTrackId}-{EventAction}";
+
+    /// <summary>
+    /// Add handler type fullname If you want to force wait handler to be handling successfully to continue. By default, handlers for entity event executing
+    /// in background thread and you dont need to wait for it. The command will return immediately. <br/>
+    /// Sometime you could want to wait for handler done
+    /// </summary>
+    public HashSet<string> ForceWaitEventHandlerFinishedFullNames { get; set; }
+
+    /// <summary>
+    /// Set handler type fullname If you want to force wait handler to be handling successfully to continue. By default, handlers for entity event executing
+    /// in background thread and you dont need to wait for it. The command will return immediately. <br/>
+    /// Sometime you could want to wait for handler done
+    /// </summary>
+    public virtual PlatformCqrsEvent SetForceWaitEventHandlerFinished(params Type[] eventHandlerTypes)
+    {
+        ForceWaitEventHandlerFinishedFullNames = eventHandlerTypes.Select(p => p.FullName).ToHashSet();
+
+        return this;
+    }
+
+    /// <inheritdoc cref="SetForceWaitEventHandlerFinished"/>
+    public virtual PlatformCqrsEvent SetForceWaitEventHandlerFinished<THandler, TEvent>()
+        where THandler : IPlatformCqrsEventHandler<TEvent>
+        where TEvent : PlatformCqrsEvent, new()
+    {
+        return SetForceWaitEventHandlerFinished(typeof(THandler));
+    }
+
+    public bool HasForceWaitEventHandler(Type eventHandlerType)
+    {
+        return ForceWaitEventHandlerFinishedFullNames?.Contains(eventHandlerType.FullName) == true;
+    }
 }

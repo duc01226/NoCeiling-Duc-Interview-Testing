@@ -17,6 +17,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
         TEntity entity,
         PlatformCqrsEntityEventCrudAction crudAction,
         bool hasSupportOutboxEvent,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure,
         CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
@@ -28,13 +29,13 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
                 // WHY: Never use async lambda on event handler, because it's equivalent to async void, which fire async task and forget
                 // this will lead to a lot of potential bug and issues.
                 mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs
-                    .SendEntityEvent(entity, crudAction, cancellationToken)
+                    .SendEntityEvent(entity, crudAction, sendEntityEventConfigure, cancellationToken)
                     .WaitResult();
             };
         }
         else
             await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs
-                .SendEntityEvent(entity, crudAction, cancellationToken);
+                .SendEntityEvent(entity, crudAction, sendEntityEventConfigure, cancellationToken);
     }
 
     public static async Task<TResult> ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TResult>(
@@ -43,6 +44,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
         Func<TEntity, Task<TResult>> deleteEntityAction,
         bool dismissSendEvent,
         bool hasSupportOutboxEvent,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var result = await deleteEntityAction(entity)
@@ -55,6 +57,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
                             entity,
                             PlatformCqrsEntityEventCrudAction.Deleted,
                             hasSupportOutboxEvent,
+                            sendEntityEventConfigure: sendEntityEventConfigure,
                             cancellationToken);
                 });
 
@@ -67,6 +70,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
         Func<TEntity, Task<TResult>> createEntityAction,
         bool dismissSendEvent,
         bool hasSupportOutboxEvent,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var result = await createEntityAction(entity)
@@ -79,6 +83,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
                             entity,
                             PlatformCqrsEntityEventCrudAction.Created,
                             hasSupportOutboxEvent,
+                            sendEntityEventConfigure: sendEntityEventConfigure,
                             cancellationToken);
                 });
 
@@ -92,6 +97,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
         Func<TEntity, Task<TResult>> updateEntityAction,
         bool dismissSendEvent,
         bool hasSupportOutboxEvent,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         if (!dismissSendEvent)
@@ -107,10 +113,19 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
                             entity,
                             PlatformCqrsEntityEventCrudAction.Updated,
                             hasSupportOutboxEvent,
+                            sendEntityEventConfigure: sendEntityEventConfigure,
                             cancellationToken);
                 });
 
         return result;
+    }
+
+    /// <inheritdoc cref="PlatformCqrsEvent.SetForceWaitEventHandlerFinished"/>
+    public new virtual PlatformCqrsEntityEvent SetForceWaitEventHandlerFinished<THandler, TEvent>()
+        where THandler : IPlatformCqrsEventHandler<TEvent>
+        where TEvent : PlatformCqrsEntityEvent, new()
+    {
+        return SetForceWaitEventHandlerFinished(typeof(THandler)).Cast<PlatformCqrsEntityEvent>();
     }
 }
 
@@ -171,6 +186,13 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent
     public PlatformCqrsEntityEvent<TEntity> Clone()
     {
         return MemberwiseClone().As<PlatformCqrsEntityEvent<TEntity>>();
+    }
+
+    /// <inheritdoc cref="PlatformCqrsEvent.SetForceWaitEventHandlerFinished{THandler,TEvent}"/>
+    public new virtual PlatformCqrsEntityEvent<TEntity> SetForceWaitEventHandlerFinished<THandler>()
+        where THandler : IPlatformCqrsEventHandler<PlatformCqrsEntityEvent<TEntity>>
+    {
+        return SetForceWaitEventHandlerFinished(typeof(THandler)).Cast<PlatformCqrsEntityEvent<TEntity>>();
     }
 }
 

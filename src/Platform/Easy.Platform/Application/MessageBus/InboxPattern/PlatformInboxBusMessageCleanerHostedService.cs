@@ -10,7 +10,7 @@ namespace Easy.Platform.Application.MessageBus.InboxPattern;
 
 public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProcessHostedService
 {
-    public const int MinimumRetryCleanInboxMessageTimesToWarning = 2;
+    public const int MinimumRetryCleanInboxMessageTimesToWarning = 3;
 
     protected readonly PlatformInboxConfig InboxConfig;
 
@@ -57,14 +57,14 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
                     if (currentRetry >= MinimumRetryCleanInboxMessageTimesToWarning)
                         Logger.LogWarning(
                             ex,
-                            $"Retry CleanInboxEventBusMessage {currentRetry} time(s) failed with error: {ex.Message}. [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]");
+                            $"Retry CleanInboxEventBusMessage {currentRetry} time(s) failed. [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]");
                 });
         }
         catch (Exception ex)
         {
             Logger.LogError(
                 ex,
-                $"CleanInboxEventBusMessage failed with error: {ex.Message}. [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]");
+                $"CleanInboxEventBusMessage failed. [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]");
         }
 
         isProcessing = false;
@@ -133,6 +133,7 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
                             await inboxEventBusMessageRepo.DeleteManyAsync(
                                 expiredMessages,
                                 dismissSendEvent: true,
+                                sendEntityEventConfigure: null,
                                 cancellationToken);
 
                             await uow.CompleteAsync(cancellationToken);

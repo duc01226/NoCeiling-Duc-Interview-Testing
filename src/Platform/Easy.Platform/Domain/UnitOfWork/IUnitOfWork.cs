@@ -87,7 +87,7 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
     public bool Completed { get; protected set; }
     public bool Disposed { get; protected set; }
 
-    public SemaphoreSlim SemaphoreSlim { get; } = new(1, 1);
+    protected SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(1, 1);
 
     public IUnitOfWork ParentUnitOfWork { get; set; }
 
@@ -131,12 +131,12 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
 
     public Task LockAsync()
     {
-        return SemaphoreSlim.WaitAsync();
+        return NotThreadSafeDbContextQueryLock.WaitAsync();
     }
 
     public void ReleaseLock()
     {
-        SemaphoreSlim.Release();
+        NotThreadSafeDbContextQueryLock.Release();
     }
 
     public void Dispose()
@@ -153,7 +153,7 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
     {
         if (disposing)
             // Dispose managed state (managed objects).
-            SemaphoreSlim.Dispose();
+            NotThreadSafeDbContextQueryLock.Dispose();
 
         Disposed = true;
     }

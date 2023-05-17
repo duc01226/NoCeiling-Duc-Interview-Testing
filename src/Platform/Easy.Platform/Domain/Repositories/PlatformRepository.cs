@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
+using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.UnitOfWork;
 
 namespace Easy.Platform.Domain.Repositories;
@@ -257,22 +258,24 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Expression<Func<TEntity, bool>> predicate,
         Action<TEntity> updateAction,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         var updateItems = await GetAllAsync(predicate, cancellationToken)
             .ThenAction(items => items.ForEach(updateAction));
 
-        return await UpdateManyAsync(updateItems, dismissSendEvent, cancellationToken);
+        return await UpdateManyAsync(updateItems, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
     }
 
     public async Task<List<TEntity>> DeleteManyAsync(
         Expression<Func<TEntity, bool>> predicate,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         var toDeleteEntities = await GetAllAsync(predicate, cancellationToken);
 
-        return await DeleteManyAsync(toDeleteEntities, dismissSendEvent, cancellationToken);
+        return await DeleteManyAsync(toDeleteEntities, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
     }
 
     public IUnitOfWork TryGetCurrentActiveUow()
@@ -288,57 +291,68 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     public abstract Task<TEntity> CreateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public abstract Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public abstract Task<List<TEntity>> CreateOrUpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public abstract Task<TEntity> UpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public abstract Task<TEntity> DeleteAsync(
         TPrimaryKey entityId,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public abstract Task<TEntity> DeleteAsync(
         TEntity entity,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public abstract Task<List<TEntity>> CreateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public abstract Task<List<TEntity>> UpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public abstract Task<List<TEntity>> DeleteManyAsync(
         List<TPrimaryKey> entityIds,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public abstract Task<List<TEntity>> DeleteManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public abstract Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         Expression<Func<TEntity, bool>> customCheckExistingPredicate,
         bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     protected abstract void HandleDisposeUsingOnceTimeContextLogic<TResult>(

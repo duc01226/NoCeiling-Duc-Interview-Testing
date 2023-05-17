@@ -21,7 +21,7 @@ public class ClearCacheOnSaveSnippetTextCommandEventHandler : PlatformCqrsComman
     }
 
     // Demo can override to config either this handler run in a background thread
-    protected override bool AllowHandleInBackgroundThread(PlatformCqrsCommandEvent<SaveSnippetTextCommand> notification)
+    protected override bool AllowHandleParallelInBackgroundThread(PlatformCqrsCommandEvent<SaveSnippetTextCommand> notification)
     {
         return true;
     }

@@ -56,12 +56,12 @@ public static class ConfigureWebApplicationExtensions
     /// If the request path is empty default, return "Service is up" for health check that this api service is online.<br />
     /// This should be placed after UseEndpoints or MapControllers
     /// </summary>
-    public static void UseDefaultResponseHealthCheckForEmptyRootPath(this IApplicationBuilder applicationBuilder)
+    public static void UseDefaultResponseHealthCheckForPath(this IApplicationBuilder applicationBuilder, params string[] supportPaths)
     {
         applicationBuilder.Run(
             async context =>
             {
-                if (context.Request.Path == "/")
+                if (context.Request.Path == "/" || supportPaths.Any(supportPath => context.Request.Path == $"/{supportPath.TrimStart('/')}"))
                     await context.Response.WriteAsync("Service is up.");
             });
     }

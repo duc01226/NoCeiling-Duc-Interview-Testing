@@ -45,7 +45,7 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
         ApplicationSettingContext = applicationSettingContext;
     }
 
-    public override bool EnableHandleEventFromInboxBusMessage => false;
+    public override bool EnableInboxEventBusMessage => false;
 
     protected override bool AutoOpenUow => false;
 
@@ -53,7 +53,7 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
 
     protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
 
-    protected override bool AllowHandleInBackgroundThread(TEvent notification)
+    protected override bool AllowHandleParallelInBackgroundThread(TEvent notification)
     {
         return false;
     }

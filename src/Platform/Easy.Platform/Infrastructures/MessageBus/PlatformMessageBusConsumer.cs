@@ -55,9 +55,8 @@ public interface IPlatformMessageBusConsumer
     {
         logger.LogError(
             e,
-            "Error Consume message bus. [Error:{Error}]; [ConsumerType:{ConsumerType}]; [MessageType:{MessageType}]; [RoutingKey:{RoutingKey}]; [MessageContent:{MessageContent}]" +
+            "Error Consume message bus. [ConsumerType:{ConsumerType}]; [MessageType:{MessageType}]; [RoutingKey:{RoutingKey}]; [MessageContent:{MessageContent}]" +
             $"Message Info: {{BusMessage}}.{Environment.NewLine}",
-            e.Message,
             consumerType.FullName,
             message.GetType().GetNameOrGenericTypeName(),
             routingKey,

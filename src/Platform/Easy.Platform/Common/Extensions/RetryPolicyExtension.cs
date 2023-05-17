@@ -17,7 +17,7 @@ public static class RetryPolicyExtension
         {
             onBeforeThrowFinalExceptionFn?.Invoke(e);
 
-            throw new Exception($"{e.Message}.", e);
+            throw;
         }
     }
 
@@ -34,7 +34,7 @@ public static class RetryPolicyExtension
         {
             onBeforeThrowFinalExceptionFn?.Invoke(e);
 
-            throw new Exception($"{e.Message}. ", e);
+            throw;
         }
     }
 
@@ -51,7 +51,7 @@ public static class RetryPolicyExtension
         {
             if (e.As<TException>() != null) onBeforeThrowFinalExceptionFn?.Invoke(e.As<TException>());
 
-            throw new Exception($"{e.Message}. ", e);
+            throw;
         }
     }
 
@@ -68,7 +68,7 @@ public static class RetryPolicyExtension
         {
             if (e.As<TException>() != null) onBeforeThrowFinalExceptionFn?.Invoke(e.As<TException>());
 
-            throw new Exception($"{e.Message}. ", e);
+            throw;
         }
     }
 
@@ -85,7 +85,7 @@ public static class RetryPolicyExtension
         {
             onBeforeThrowFinalExceptionFn?.Invoke(e);
 
-            throw new Exception($"{e.Message}. ", e);
+            throw;
         }
     }
 
@@ -102,7 +102,7 @@ public static class RetryPolicyExtension
         {
             onBeforeThrowFinalExceptionFn?.Invoke(e);
 
-            throw new Exception($"{e.Message}. ", e);
+            throw;
         }
     }
 }

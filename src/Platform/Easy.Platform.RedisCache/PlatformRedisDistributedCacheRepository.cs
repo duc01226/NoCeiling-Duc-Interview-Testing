@@ -90,7 +90,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         {
             Logger.LogError(
                 ex,
-                "[{GetType().Name}] SetToRedisCacheAsync failed. [CacheKey: {CacheKey}]. FullStackTrace:{FullStackTrace}",
+                "[{GetType().Name}] SetToRedisCacheAsync failed. [CacheKey: {CacheKey}]. [[FullStackTrace:{FullStackTrace}]]",
                 GetType().Name,
                 cacheKey,
                 stackTrace);
@@ -171,7 +171,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         {
             Logger.LogError(
                 ex,
-                "[{GetType().Name}] SetToRedisCacheAsync failed. [CacheKey: {CacheKey}]. [CacheValue: {CacheValue}]. FullStackTrace:{FullStackTrace}",
+                "[{GetType().Name}] SetToRedisCacheAsync failed. [CacheKey: {CacheKey}]. [CacheValue: {CacheValue}]. [[FullStackTrace:{FullStackTrace}]]",
                 GetType().Name,
                 cacheKey,
                 value.ToJson(),

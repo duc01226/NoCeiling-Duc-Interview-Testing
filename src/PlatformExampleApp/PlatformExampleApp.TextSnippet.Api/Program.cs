@@ -138,7 +138,7 @@ static void ConfigureRequestPipeline(WebApplication app)
 
     app.UseEndpoints(endpoints => endpoints.MapControllers());
 
-    app.UseDefaultResponseHealthCheckForEmptyRootPath();
+    app.UseDefaultResponseHealthCheckForPath();
 }
 
 static void BeforeRunInit(WebApplication webApplication)

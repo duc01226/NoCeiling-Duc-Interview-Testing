@@ -15,6 +15,9 @@ internal class DemoMigrateUpdateSeedDataWhenSeedDataLogicIsUpdated : PlatformDat
     public override string Name => "20220130_DemoMigrateUpdateSeedDataWhenSeedDataLogicIsUpdated";
     public override DateTime CreationDate => new(2022, 01, 30);
 
+    // Demo can override this to allow DataMigration execution parallel in background thread, allow not wait, do not block the application start
+    public override bool AllowRunInBackgroundThread => true;
+
     public override async Task Execute(TextSnippetDbContext dbContext)
     {
         await demoSeedDataUseCommandSolutionDataSeeder.SeedData(isReplaceNewSeedData: true);

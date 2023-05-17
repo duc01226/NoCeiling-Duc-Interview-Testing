@@ -15,12 +15,15 @@ internal class DemoMigrateDataCrossDb : PlatformDataMigrationExecutor<TextSnippe
     }
 
     public override string Name => "20500101000000_DemoMigrateDataCrossDb";
-    public override DateTime CreationDate => new DateTime(2050, 01, 01);
+    public override DateTime CreationDate => new(2050, 01, 01);
 
     /// <summary>
     /// This application data migration only valid until 2022/12/01
     /// </summary>
     public override DateTime? ExpirationDate => new DateTime(2050, 01, 01);
+
+    // Demo can override this to allow DataMigration execution parallel in background thread, allow not wait, do not block the application start
+    public override bool AllowRunInBackgroundThread => true;
 
     public override async Task Execute(TextSnippetMultiDbDemoDbContext dbContext)
     {

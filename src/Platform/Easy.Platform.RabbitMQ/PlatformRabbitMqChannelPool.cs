@@ -156,7 +156,7 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>
                 }
                 catch (Exception e)
                 {
-                    throw new Exception($"{GetType().Name} CreateConnection failed. {e.Message}. [FullStackTrace: {stackTrace}]", e);
+                    throw new Exception($"{GetType().Name} CreateConnection failed. {e.Message}. [[FullStackTrace: {stackTrace}]]", e);
                 }
             },
             retryAttempt => 1.Seconds(),

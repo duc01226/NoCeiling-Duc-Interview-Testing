@@ -21,7 +21,7 @@ public abstract class PlatformCqrsEntityEventApplicationHandler<TEntity> : Platf
 
     protected bool IsInjectingApplicationBusMessageProducer { get; }
 
-    protected override bool AllowHandleInBackgroundThread(PlatformCqrsEntityEvent<TEntity> notification)
+    protected override bool AllowHandleParallelInBackgroundThread(PlatformCqrsEntityEvent<TEntity> notification)
     {
         return !IsInjectingApplicationBusMessageProducer ||
                UnitOfWorkManager.TryGetCurrentActiveUow() == null ||

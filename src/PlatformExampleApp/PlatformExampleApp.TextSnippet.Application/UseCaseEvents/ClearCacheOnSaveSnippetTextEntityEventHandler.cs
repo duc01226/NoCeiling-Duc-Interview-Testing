@@ -21,7 +21,7 @@ public class ClearCacheOnSaveSnippetTextEntityEventHandler : PlatformCqrsEntityE
     }
 
     // Demo can override to config either this handler run in a background thread
-    protected override bool AllowHandleInBackgroundThread(PlatformCqrsEntityEvent<TextSnippetEntity> notification)
+    protected override bool AllowHandleParallelInBackgroundThread(PlatformCqrsEntityEvent<TextSnippetEntity> notification)
     {
         return true;
     }

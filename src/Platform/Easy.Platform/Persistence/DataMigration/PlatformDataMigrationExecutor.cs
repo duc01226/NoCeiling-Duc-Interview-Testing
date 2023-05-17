@@ -32,6 +32,11 @@ public interface IPlatformDataMigrationExecutor<in TDbContext> : IPlatformDataMi
     /// </summary>
     DateTime? ExpirationDate { get; }
 
+    /// <summary>
+    /// If true, Allow DataMigration execution in background thread, allow not wait, do not block the application start
+    /// </summary>
+    bool AllowRunInBackgroundThread { get; }
+
     Task Execute(TDbContext dbContext);
 
     bool IsExpired();
@@ -59,6 +64,8 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
     public abstract DateTime CreationDate { get; }
 
     public abstract Task Execute(TDbContext dbContext);
+
+    public virtual bool AllowRunInBackgroundThread => false;
 
     public bool IsExpired()
     {
