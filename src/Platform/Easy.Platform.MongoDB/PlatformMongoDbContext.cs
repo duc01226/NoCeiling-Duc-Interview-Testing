@@ -283,7 +283,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
 
         if (existingEntity != null)
             return await UpdateAsync<TEntity, TPrimaryKey>(
-                entity,
+                entity.WithIf(!entity.Id.Equals(existingEntity.Id), entity => entity.Id = existingEntity.Id),
                 existingEntity,
                 dismissSendEvent,
                 sendEntityEventConfigure,

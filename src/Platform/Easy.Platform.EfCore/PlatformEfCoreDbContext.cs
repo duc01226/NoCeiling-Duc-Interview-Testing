@@ -356,7 +356,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
         if (existingEntity != null)
             return await UpdateAsync<TEntity, TPrimaryKey>(
-                entity,
+                entity.WithIf(!entity.Id.Equals(existingEntity.Id), entity => entity.Id = existingEntity.Id),
                 existingEntity,
                 dismissSendEvent,
                 sendEntityEventConfigure,

@@ -13,7 +13,6 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
     private readonly IPlatformApplicationUserContextKeyToClaimTypeMapper claimTypeMapper;
     private readonly MethodInfo getValueByGenericTypeMethodInfo;
     private readonly IHttpContextAccessor httpContextAccessor;
-    private readonly object setValueLock = new();
 
     public PlatformAspNetApplicationUserContext(
         IHttpContextAccessor httpContextAccessor,
@@ -37,18 +36,11 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
 
         if (TryGetValueFromHttpContext(contextKey, out T foundValue))
         {
-            SetValue(foundValue, contextKey);
+            ManuallySetValueItemsDic.AddOrUpdate(contextKey, key => foundValue, (key, currentValue) => foundValue);
             return foundValue;
         }
 
         return default;
-    }
-
-    public object GetValue(Type valueType, string contextKey = "")
-    {
-        return getValueByGenericTypeMethodInfo
-            .MakeGenericMethod(valueType)
-            .Invoke(this, parameters: new object[] { contextKey });
     }
 
     public void SetValue(object value, string contextKey = "")
@@ -56,12 +48,9 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
         if (contextKey == null)
             throw new ArgumentNullException(nameof(contextKey));
 
-        lock (setValueLock)
-        {
-            ManuallySetValueItemsDic.Upsert(contextKey, value);
+        ManuallySetValueItemsDic.Upsert(contextKey, value);
 
-            CurrentHttpContext()?.Items.Upsert(contextKey, value);
-        }
+        CurrentHttpContext()?.Items.Upsert(contextKey, value);
     }
 
     public List<string> GetAllKeys()
@@ -87,6 +76,13 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
     {
         CurrentHttpContext()?.Items.Clear();
         ManuallySetValueItemsDic.Clear();
+    }
+
+    public object GetValue(Type valueType, string contextKey = "")
+    {
+        return getValueByGenericTypeMethodInfo
+            .MakeGenericMethod(valueType)
+            .Invoke(this, parameters: new object[] { contextKey });
     }
 
     /// <summary>

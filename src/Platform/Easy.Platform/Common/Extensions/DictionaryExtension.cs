@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 namespace Easy.Platform.Common.Extensions;
 
 public static class DictionaryExtension
@@ -7,8 +9,10 @@ public static class DictionaryExtension
     /// </summary>
     public static TDic Upsert<TDic, TKey, TValue>(this TDic dictionary, TKey key, TValue value) where TDic : IDictionary<TKey, TValue>
     {
-        dictionary.Remove(key);
-        dictionary.Add(key, value);
+        if (dictionary.ContainsKey(key))
+            dictionary[key] = value;
+        else
+            dictionary.Add(key, value);
 
         return dictionary;
     }
@@ -16,8 +20,17 @@ public static class DictionaryExtension
     /// <inheritdoc cref="Upsert{TDic,TKey,TValue}" />
     public static IDictionary<TKey, TValue> Upsert<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, TValue value)
     {
-        dictionary.Remove(key);
-        dictionary.Add(key, value);
+        if (dictionary.ContainsKey(key))
+            dictionary[key] = value;
+        else
+            dictionary.Add(key, value);
+
+        return dictionary;
+    }
+
+    public static ConcurrentDictionary<TKey, TValue> Upsert<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dictionary, TKey key, TValue value)
+    {
+        dictionary.AddOrUpdate(key, key => value, (key, currentValue) => value);
 
         return dictionary;
     }

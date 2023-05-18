@@ -69,7 +69,6 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
     /// </summary>
     /// <param name="entity"></param>
     /// <param name="dismissSendEvent"></param>
-    /// <param name="customCheckExistingPredicateBuilder">Used to help to check entity existence to update by other props than default using Id. Example: p => p.Name == toUpsertEntity.Name</param>
     /// <param name="sendEntityEventConfigure"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
