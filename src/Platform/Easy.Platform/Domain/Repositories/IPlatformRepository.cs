@@ -64,15 +64,34 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// CreateOrUpdateAsync
+    /// </summary>
+    /// <param name="entity"></param>
+    /// <param name="dismissSendEvent"></param>
+    /// <param name="customCheckExistingPredicateBuilder">Used to help to check entity existence to update by other props than default using Id. Example: p => p.Name == toUpsertEntity.Name</param>
+    /// <param name="sendEntityEventConfigure"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// CreateOrUpdateManyAsync
+    /// </summary>
+    /// <param name="entities"></param>
+    /// <param name="dismissSendEvent"></param>
+    /// <param name="customCheckExistingPredicateBuilder">Used to help to check entity existence to update by other props than default using Id. Example: toUpsertEntity => p => p.Name == toUpsertEntity.Name</param>
+    /// <param name="sendEntityEventConfigure"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public Task<List<TEntity>> CreateOrUpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
         Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 

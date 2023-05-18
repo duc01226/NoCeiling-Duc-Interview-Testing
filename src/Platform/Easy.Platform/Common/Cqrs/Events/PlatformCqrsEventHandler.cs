@@ -48,16 +48,16 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                 var currentDataContextAllValues = BuildDataContextBeforeNewScopeExecution();
 
                 Util.TaskRunner.QueueActionInBackground(
-                    () =>
+                    async () =>
                     {
                         // Retry RetryOnFailedTimes to help resilient PlatformCqrsEventHandler. Sometime parallel, create/update concurrency could lead to error
                         if (RetryOnFailedTimes > 0)
-                            return Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                            return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                                 () => DoExecuteNewInstanceInBackgroundThread(this, GetType(), notification, currentDataContextAllValues),
                                 retryCount: RetryOnFailedTimes,
                                 sleepDurationProvider: retryAttempt => RetryOnFailedDelaySeconds.Seconds());
 
-                        return DoExecuteNewInstanceInBackgroundThread(this, GetType(), notification, currentDataContextAllValues);
+                        return await DoExecuteNewInstanceInBackgroundThread(this, GetType(), notification, currentDataContextAllValues);
                     },
                     () => PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>)),
                     cancellationToken: default);
@@ -89,7 +89,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         return true;
     }
 
-    protected async Task DoExecuteNewInstanceInBackgroundThread(
+    protected async Task<ValueTuple> DoExecuteNewInstanceInBackgroundThread(
         PlatformCqrsEventHandler<TEvent> previousInstance,
         Type eventHandlerType,
         TEvent notification,
@@ -112,6 +112,8 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                     thisHandlerNewInstance.LogError(notification, e, PlatformGlobal.LoggerFactory);
                 }
             });
+
+        return ValueTuple.Create();
     }
 
     protected virtual void CopyPropertiesToNewInstanceBeforeExecution(
@@ -151,7 +153,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         CreateLogger(loggerFactory)
             .LogError(
                 exception,
-                "[PlatformCqrsEventHandler] Handle event failed. EventType:{EventType}; HandlerType:{HandlerType}. EventContent:{EventContent}",
+                "[PlatformCqrsEventHandler] Handle event failed. [[EventType:{EventType}]]; [[HandlerType:{HandlerType}]]. [[EventContent:{EventContent}]].",
                 notification.GetType().Name,
                 GetType().Name,
                 notification.ToJson());

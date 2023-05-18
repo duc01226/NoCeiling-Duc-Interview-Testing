@@ -303,6 +303,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     public abstract Task<List<TEntity>> CreateOrUpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
         Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 

@@ -1,8 +1,6 @@
 using Easy.Platform.AspNetCore;
 using Easy.Platform.AspNetCore.Extensions;
-using Easy.Platform.Common;
 using Easy.Platform.Common.DependencyInjection;
-using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -15,6 +13,7 @@ var configuration = PlatformConfigurationBuilder.GetConfigurationBuilder().Build
 
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(configuration)
+    .ApplyDefaultPlatformConfiguration()
     .CreateLogger();
 
 try

@@ -46,16 +46,16 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
 
             InvokeOnCompleted(this, EventArgs.Empty);
         }
-        catch (DbUpdateConcurrencyException e)
+        catch (DbUpdateConcurrencyException ex)
         {
             throw new PlatformDomainRowVersionConflictException(
-                $"{GetType().Name} complete uow failed because of {nameof(DbUpdateConcurrencyException)}. [[FullStackTrace:{fullStackTrace}]]",
-                e);
+                $"{GetType().Name} complete uow failed because of {nameof(DbUpdateConcurrencyException)}. [[Exception:{ex}]]. [[FullStackTrace:{ex.StackTrace}{Environment.NewLine}FromFullStackTrace:{fullStackTrace}]]");
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            InvokeOnFailed(this, new UnitOfWorkFailedArgs(e));
-            throw new Exception($"{GetType().Name} complete uow failed. [[FullStackTrace:{fullStackTrace}]]", e);
+            InvokeOnFailed(this, new UnitOfWorkFailedArgs(ex));
+            throw new Exception(
+                $"{GetType().Name} complete uow failed. [[Exception:{ex}]]. [[FullStackTrace:{ex.StackTrace}{Environment.NewLine}FromFullStackTrace:{fullStackTrace}]]");
         }
     }
 

@@ -1,10 +1,11 @@
+using System.Collections.Concurrent;
 using System.ComponentModel;
 
 namespace Easy.Platform.Application.Context.UserContext.Default;
 
 public class PlatformDefaultApplicationUserContext : IPlatformApplicationUserContext
 {
-    private readonly Dictionary<string, object> userContextData = new();
+    private readonly ConcurrentDictionary<string, object> userContextData = new();
 
     public T GetValue<T>(string contextKey = "")
     {

@@ -76,7 +76,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
     {
         // Store stack trace before call Migrate() to keep the original stack trace to log
         // after Migrate() will lose full stack trace (may because it connect async to other external service)
-        var stackTrace = Environment.StackTrace;
+        var fullStackTrace = Environment.StackTrace;
 
         try
         {
@@ -84,9 +84,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
             await InsertDbInitializedApplicationDataMigrationHistory();
             await SaveChangesAsync();
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            throw new Exception($"{GetType().Name} Initialize failed. [[FullStackTrace: {stackTrace}]]", e);
+            throw new Exception(
+                $"{GetType().Name} Initialize failed. [[Exception:{ex}]]. [[FullStackTrace: {ex.StackTrace}{Environment.NewLine}FromFullStackTrace:{fullStackTrace}]]");
         }
 
         async Task InsertDbInitializedApplicationDataMigrationHistory()
@@ -282,7 +283,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
 
         if (existingEntity != null)
             return await UpdateAsync<TEntity, TPrimaryKey>(
-                entity.With(_ => _.Id = existingEntity.Id),
+                entity,
                 existingEntity,
                 dismissSendEvent,
                 sendEntityEventConfigure,

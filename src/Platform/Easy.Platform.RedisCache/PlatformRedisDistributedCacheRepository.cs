@@ -80,7 +80,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
     {
         // Store stack trace before call redisCache.Value.GetAsync to keep the original stack trace to log
         // after redisCache.Value.GetAsync will lose full stack trace (may because it connect async to other external service)
-        var stackTrace = Environment.StackTrace;
+        var fullStackTrace = Environment.StackTrace;
 
         try
         {
@@ -90,10 +90,10 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         {
             Logger.LogError(
                 ex,
-                "[{GetType().Name}] SetToRedisCacheAsync failed. [CacheKey: {CacheKey}]. [[FullStackTrace:{FullStackTrace}]]",
-                GetType().Name,
+                "RemoveAsync failed. [[Exception:{Exception}]]. [CacheKey: {CacheKey}]. [[FullStackTrace:{FullStackTrace}]]",
+                ex.ToString(),
                 cacheKey,
-                stackTrace);
+                $"{ex.StackTrace}{Environment.NewLine}FromFullStackTrace:{fullStackTrace}");
 
             throw new Exception($"{GetType().Name} RemoveAsync failed. {ex.Message}", ex);
         }
@@ -157,7 +157,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
     {
         // Store stack trace before call redisCache.Value.SetAsync to keep the original stack trace to log
         // after redisCache.Value.SetAsync will lose full stack trace (may because it connect async to other external service)
-        var stackTrace = Environment.StackTrace;
+        var fullStackTrace = Environment.StackTrace;
 
         try
         {
@@ -171,11 +171,10 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         {
             Logger.LogError(
                 ex,
-                "[{GetType().Name}] SetToRedisCacheAsync failed. [CacheKey: {CacheKey}]. [CacheValue: {CacheValue}]. [[FullStackTrace:{FullStackTrace}]]",
-                GetType().Name,
+                "SetToRedisCacheAsync failed. [[Exception:{Exception}]]. [CacheKey: {CacheKey}]. [[FullStackTrace:{FullStackTrace}]]",
+                ex.ToString(),
                 cacheKey,
-                value.ToJson(),
-                stackTrace);
+                $"{ex.StackTrace}{Environment.NewLine}FromFullStackTrace:{fullStackTrace}");
 
             throw new Exception($"{GetType().Name} SetToRedisCacheAsync failed. {ex.Message}", ex);
         }

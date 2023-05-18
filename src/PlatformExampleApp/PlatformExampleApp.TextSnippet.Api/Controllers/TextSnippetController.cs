@@ -160,6 +160,17 @@ public class TextSnippetController : PlatformBaseController
         };
     }
 
+    [HttpGet]
+    [Route("DemoUseCreateOrUpdateMany")]
+    public async Task<DemoUseCreateOrUpdateManyCommandResult> DemoUseCreateOrUpdateMany([FromQuery] DemoUseCreateOrUpdateManyCommand request)
+    {
+        var result = await Cqrs.SendCommand(new DemoUseCreateOrUpdateManyCommand());
+
+        return result;
+    }
+
+    //DemoUseCreateOrUpdateManyCommand
+
     private static void RandomThrowToTestHandleInternalException(int percentChance = 5)
     {
         if (PlatformGlobal.Configuration.GetSection("RandomThrowExceptionForTesting").Get<bool?>() == true)

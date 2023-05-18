@@ -306,13 +306,20 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<List<TEntity>> CreateOrUpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
         Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         if (entities.IsEmpty()) return entities.ToTask();
 
         return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(entities, null, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
+            uow => GetUowDbContext(uow)
+                .CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
+                    entities,
+                    customCheckExistingPredicateBuilder,
+                    dismissSendEvent,
+                    sendEntityEventConfigure,
+                    cancellationToken));
     }
 
     public override Task<TEntity> UpdateAsync(

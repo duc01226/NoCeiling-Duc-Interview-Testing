@@ -181,21 +181,14 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                 // If not then create new scope to open new uow so that multiple events handlers from an event do not get conflicted
                 // uow in the same scope if not open new scope
                 if (AllowHandleParallelInBackgroundThread(@event) || CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository, @event))
-                {
                     using (var uow = UnitOfWorkManager.Begin())
                     {
                         await HandleAsync(@event, cancellationToken);
                         await uow.CompleteAsync(cancellationToken);
                     }
-                }
                 else
-                {
-                    var originalScopeDataContextValues = BuildDataContextBeforeNewScopeExecution();
-
                     using (var newScope = PlatformGlobal.RootServiceProvider.CreateScope())
                     {
-                        ReApplyDataContextInNewScopeExecution(newScope.ServiceProvider, originalScopeDataContextValues);
-
                         using (var uow = newScope.ServiceProvider.GetRequiredService<IUnitOfWorkManager>().Begin())
                         {
                             await newScope.ServiceProvider.GetRequiredService(GetType())
@@ -206,7 +199,6 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                             await uow.CompleteAsync(cancellationToken);
                         }
                     }
-                }
             }
             else
             {

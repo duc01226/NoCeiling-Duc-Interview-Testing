@@ -141,7 +141,7 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>
     {
         // Store stack trace before call CreateConnection to keep the original stack trace to log
         // after CreateConnection will lose full stack trace (may because it connect async to other external service)
-        var stackTrace = Environment.StackTrace;
+        var fullStackTrace = Environment.StackTrace;
 
         return Util.TaskRunner.WaitRetryThrowFinalException(
             () =>
@@ -154,9 +154,10 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>
 
                     return connectionFactory.CreateConnection(hostNames);
                 }
-                catch (Exception e)
+                catch (Exception ex)
                 {
-                    throw new Exception($"{GetType().Name} CreateConnection failed. {e.Message}. [[FullStackTrace: {stackTrace}]]", e);
+                    throw new Exception(
+                        $"{GetType().Name} CreateConnection failed. [[Exception:{ex}]]. [[FullStackTrace: {ex.StackTrace}{Environment.NewLine}FromFullStackTrace:{fullStackTrace}]]");
                 }
             },
             retryAttempt => 1.Seconds(),

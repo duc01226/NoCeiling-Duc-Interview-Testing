@@ -91,7 +91,7 @@ public interface IPlatformDbContext : IDisposable
             persistenceConfiguration.BadQueryWarning.IsLogWarningAsError ? LogLevel.Error : LogLevel.Warning,
             "[BadQueryWarning][IsLogWarningAsError:{IsLogWarningAsError}] Slow query execution. QueryElapsedTime.TotalMilliseconds:{QueryElapsedTime}. SlowQueryMillisecondsThreshold:{SlowQueryMillisecondsThreshold}. " +
             "BadQueryString:[{QueryString}]. " +
-            "FullTrackTrace:{TrackTrace}",
+            "BadQueryStringTrackTrace:{TrackTrace}",
             persistenceConfiguration.BadQueryWarning.IsLogWarningAsError,
             queryElapsedTime.TotalMilliseconds,
             persistenceConfiguration.BadQueryWarning.SlowQueryMillisecondsThreshold,
@@ -110,7 +110,7 @@ public interface IPlatformDbContext : IDisposable
             persistenceConfiguration.BadQueryWarning.IsLogWarningAsError ? LogLevel.Error : LogLevel.Warning,
             "[BadQueryWarning][IsLogWarningAsError:{IsLogWarningAsError}] Get too much of items into memory query execution. TotalItems:{TotalItems}; Threshold:{Threshold}. " +
             "BadQueryString:[{QueryString}]. " +
-            "FullTrackTrace:{TrackTrace}",
+            "BadQueryStringTrackTrace:{TrackTrace}",
             persistenceConfiguration.BadQueryWarning.IsLogWarningAsError,
             totalCount,
             persistenceConfiguration.BadQueryWarning.TotalItemsThreshold,

@@ -144,7 +144,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     {
         // Store stack trace before call Database.MigrateAsync() to keep the original stack trace to log
         // after Database.MigrateAsync() will lose full stack trace (may because it connect async to other external service)
-        var stackTrace = Environment.StackTrace;
+        var fullStackTrace = Environment.StackTrace;
 
         try
         {
@@ -152,9 +152,10 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             await InsertDbInitializedApplicationDataMigrationHistory();
             await SaveChangesAsync();
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            throw new Exception($"{GetType().Name} Initialize failed. [[FullStackTrace: {stackTrace}]]", e);
+            throw new Exception(
+                $"{GetType().Name} Initialize failed. [[Exception:{ex}]]. [[FullStackTrace: {ex.StackTrace}{Environment.NewLine}FromFullStackTrace:{fullStackTrace}]]");
         }
 
         async Task InsertDbInitializedApplicationDataMigrationHistory()
@@ -355,7 +356,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
         if (existingEntity != null)
             return await UpdateAsync<TEntity, TPrimaryKey>(
-                entity.With(_ => _.Id = existingEntity.Id),
+                entity,
                 existingEntity,
                 dismissSendEvent,
                 sendEntityEventConfigure,

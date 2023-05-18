@@ -33,6 +33,8 @@ public class ClearCacheOnSaveSnippetTextEntityEventHandler : PlatformCqrsEntityE
         PlatformCqrsEntityEvent<TextSnippetEntity> @event,
         CancellationToken cancellationToken)
     {
+        Util.RandomGenerator.DoByChance(percentChance: 50, () => throw new Exception("Test throw exception in event handler"));
+
         // Queue task to clear cache every 5 seconds for 3 times (mean that after 5,10,15s).
         // Delay because when save snippet text, fulltext index take amount of time to update, so that we wait
         // amount of time for fulltext index update

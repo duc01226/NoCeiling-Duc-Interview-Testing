@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Extensions.WhenCases;
+using Easy.Platform.Common.Logging;
 using Microsoft.Extensions.Logging;
 using Polly;
 
@@ -28,6 +29,18 @@ public static partial class Util
         /// <summary>
         /// Execute an action after a given of time.
         /// </summary>
+        public static async Task<TResult> QueueDelayAsyncAction<TResult>(
+            Func<CancellationToken, Task<TResult>> action,
+            TimeSpan delayTime,
+            CancellationToken cancellationToken = default)
+        {
+            await Task.Delay(delayTime, cancellationToken);
+            return await action(cancellationToken);
+        }
+
+        /// <summary>
+        /// Execute an action after a given of time.
+        /// </summary>
         public static async Task QueueDelayAction(
             Action action,
             TimeSpan delayTime,
@@ -43,21 +56,47 @@ public static partial class Util
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default)
         {
-            // Must use stack trace BEFORE Task.RunBECAUSE after call get data function, the stack trace get lost, only back to task.run.
-            var loggingFullStackTrace = Environment.StackTrace;
+            // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
+            var fullStackTrace = Environment.StackTrace;
 
             Task.Run(
                 async () =>
                 {
+                    PlatformGlobalLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
+
                     try
                     {
                         await QueueDelayAsyncAction(action, TimeSpan.FromSeconds(delayTimeSeconds), cancellationToken);
                     }
                     catch (Exception ex)
                     {
-                        loggerFactory()
-                            .LogError(ex, "Run in background thread failed. [[FullStackTrace: {FullStackTrace}]]", loggingFullStackTrace);
-                        throw;
+                        loggerFactory().LogError(ex, "Run in background thread failed.");
+                    }
+                },
+                cancellationToken);
+        }
+
+        public static void QueueActionInBackground<TResult>(
+            Func<CancellationToken, Task<TResult>> action,
+            Func<ILogger> loggerFactory,
+            int delayTimeSeconds = 0,
+            CancellationToken cancellationToken = default)
+        {
+            // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
+            var fullStackTrace = Environment.StackTrace;
+
+            Task.Run(
+                async () =>
+                {
+                    PlatformGlobalLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
+
+                    try
+                    {
+                        await QueueDelayAsyncAction(action, TimeSpan.FromSeconds(delayTimeSeconds), cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        loggerFactory().LogError(ex, "Run in background thread failed.");
                     }
                 },
                 cancellationToken);
@@ -72,27 +111,36 @@ public static partial class Util
             QueueActionInBackground(_ => action(), loggerFactory, delayTimeSeconds, cancellationToken);
         }
 
+        public static void QueueActionInBackground<TResult>(
+            Func<Task<TResult>> action,
+            Func<ILogger> loggerFactory,
+            int delayTimeSeconds = 0,
+            CancellationToken cancellationToken = default)
+        {
+            QueueActionInBackground(_ => action(), loggerFactory, delayTimeSeconds, cancellationToken);
+        }
+
         public static void QueueActionInBackground(
             Action action,
             Func<ILogger> loggerFactory,
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default)
         {
-            // Must use stack trace BEFORE Task.RunBECAUSE after call get data function, the stack trace get lost, only back to task.run.
-            var loggingFullStackTrace = Environment.StackTrace;
+            // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
+            var fullStackTrace = Environment.StackTrace;
 
             Task.Run(
                 async () =>
                 {
+                    PlatformGlobalLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
+
                     try
                     {
                         await QueueDelayAction(action, TimeSpan.FromSeconds(delayTimeSeconds), cancellationToken);
                     }
                     catch (Exception ex)
                     {
-                        loggerFactory()
-                            .LogError(ex, "Run in background thread failed. [[FullStackTrace: {FullStackTrace}]]", loggingFullStackTrace);
-                        throw;
+                        loggerFactory().LogError(ex, "Run in background thread failed.");
                     }
                 },
                 cancellationToken);
@@ -127,21 +175,21 @@ public static partial class Util
             bool executeOnceImmediately = false,
             CancellationToken cancellationToken = default)
         {
-            // Must use stack trace BEFORE Task.RunBECAUSE after call get data function, the stack trace get lost, only back to task.run.
-            var loggingFullStackTrace = Environment.StackTrace;
+            // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
+            var fullStackTrace = Environment.StackTrace;
 
             Task.Run(
                 async () =>
                 {
+                    PlatformGlobalLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
+
                     try
                     {
                         await QueueIntervalAsyncAction(action, intervalTimeInSeconds, maximumIntervalExecutionCount, executeOnceImmediately, cancellationToken);
                     }
                     catch (Exception ex)
                     {
-                        loggerFactory()
-                            .LogError(ex, "Run in background thread failed. [[FullStackTrace: {FullStackTrace}]]", loggingFullStackTrace);
-                        throw;
+                        loggerFactory().LogError(ex, "Run in background thread failed.");
                     }
                 },
                 cancellationToken);

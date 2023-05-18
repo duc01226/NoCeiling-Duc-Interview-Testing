@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Security.Claims;
 using Easy.Platform.Application.Context.UserContext;
@@ -12,6 +13,7 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
     private readonly IPlatformApplicationUserContextKeyToClaimTypeMapper claimTypeMapper;
     private readonly MethodInfo getValueByGenericTypeMethodInfo;
     private readonly IHttpContextAccessor httpContextAccessor;
+    private readonly object setValueLock = new();
 
     public PlatformAspNetApplicationUserContext(
         IHttpContextAccessor httpContextAccessor,
@@ -23,7 +25,7 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
             GetType().GetMethods().First(p => p.IsGenericMethod && p.Name == nameof(GetValue) && p.GetGenericArguments().Length == 1 && p.IsPublic);
     }
 
-    protected Dictionary<string, object> ManuallySetValueItemsDic { get; } = new();
+    protected ConcurrentDictionary<string, object> ManuallySetValueItemsDic { get; } = new();
 
     public T GetValue<T>(string contextKey = "")
     {
@@ -54,9 +56,12 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
         if (contextKey == null)
             throw new ArgumentNullException(nameof(contextKey));
 
-        ManuallySetValueItemsDic.Upsert(contextKey, value);
+        lock (setValueLock)
+        {
+            ManuallySetValueItemsDic.Upsert(contextKey, value);
 
-        CurrentHttpContext()?.Items.Upsert(contextKey, value);
+            CurrentHttpContext()?.Items.Upsert(contextKey, value);
+        }
     }
 
     public List<string> GetAllKeys()
