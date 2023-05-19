@@ -129,7 +129,7 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
                     .As<IEnumerable<Cell>>();
             }
             // catch StaleElementReferenceException when if table has been updated and render again then just consider that row is empty no cell
-            catch (StaleElementReferenceException e)
+            catch (StaleElementReferenceException)
             {
                 return Enumerable.Empty<Cell>();
             }
@@ -148,7 +148,7 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
                 };
             }
             // catch StaleElementReferenceException when if table has been updated and render again then just consider that row is empty no cell
-            catch (StaleElementReferenceException e)
+            catch (StaleElementReferenceException)
             {
                 return null;
             }

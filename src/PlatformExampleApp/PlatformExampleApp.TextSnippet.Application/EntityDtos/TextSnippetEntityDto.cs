@@ -27,7 +27,7 @@ public class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, Guid>
 
     public TimeOnly? TimeOnly { get; set; }
 
-    public ExampleAddressValueObject? Address { get; set; }
+    public ExampleAddressValueObject Address { get; set; }
 
     public DateTime? CreatedDate { get; set; }
 
@@ -41,7 +41,7 @@ public class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, Guid>
     /// </summary>
     public FullName FullName { get; set; }
 
-    protected override object? GetSubmittedId()
+    protected override object GetSubmittedId()
     {
         return Id;
     }

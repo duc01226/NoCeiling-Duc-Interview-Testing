@@ -153,7 +153,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                     existingInboxMessage,
                     cancellationToken);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 // If failed for some reason like concurrency token conflict or entity is not existing, try to update again by Id
                 await UpdateExistingInboxProcessedMessageAsync(

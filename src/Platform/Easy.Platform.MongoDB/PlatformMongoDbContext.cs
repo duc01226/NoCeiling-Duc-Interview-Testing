@@ -70,7 +70,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryCollection.AsQueryable();
 
-    public IUnitOfWork? MappedUnitOfWork { get; set; }
+    public IUnitOfWork MappedUnitOfWork { get; set; }
 
     public virtual async Task Initialize(IServiceProvider serviceProvider)
     {

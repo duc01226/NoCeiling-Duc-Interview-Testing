@@ -1,3 +1,4 @@
+#nullable enable
 using Easy.Platform.Common.Extensions;
 
 namespace Easy.Platform.Common;

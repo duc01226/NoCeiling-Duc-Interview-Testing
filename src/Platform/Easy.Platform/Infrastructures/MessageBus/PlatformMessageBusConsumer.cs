@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+#nullable enable
 using System.Text.Json;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
@@ -26,7 +26,7 @@ public interface IPlatformMessageBusConsumer
 
     bool DisableSlowProcessWarning();
 
-    JsonSerializerOptions CustomJsonSerializerOptions();
+    JsonSerializerOptions? CustomJsonSerializerOptions();
 
     /// <summary>
     /// Default is 0. Return bigger number order to execute it later by order ascending
@@ -96,7 +96,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
         return false;
     }
 
-    public virtual JsonSerializerOptions CustomJsonSerializerOptions()
+    public virtual JsonSerializerOptions? CustomJsonSerializerOptions()
     {
         return null;
     }
@@ -133,7 +133,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
         string routingKey,
         bool isLogConsumerProcessTime,
         double slowProcessWarningTimeMilliseconds = DefaultProcessWarningTimeMilliseconds,
-        ILogger logger = null)
+        ILogger? logger = null)
     {
         logger?.LogInformation(
             "[MessageBus] Start invoking consumer. Name: {ConsumerName}. RoutingKey: {RoutingKey}. TrackingId: {TrackingId}",
@@ -238,7 +238,7 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
         return true;
     }
 
-    public static ILogger CreateLogger([AllowNull] ILoggerFactory? loggerFactory)
+    public static ILogger CreateLogger(ILoggerFactory? loggerFactory)
     {
         return (loggerFactory ?? PlatformGlobal.LoggerFactory).CreateLogger(typeof(PlatformMessageBusConsumer));
     }

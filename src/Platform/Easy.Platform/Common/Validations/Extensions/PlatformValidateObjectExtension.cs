@@ -1,3 +1,4 @@
+#nullable enable
 using System.Linq.Expressions;
 using Easy.Platform.Common.Extensions;
 
@@ -52,7 +53,7 @@ public static class PlatformValidateObjectExtension
         this TValue value,
         Func<TValue, bool> must,
         string expected,
-        string actual)
+        string? actual)
     {
         return PlatformValidationResult<TValue>.Validate(
             value,
@@ -137,7 +138,7 @@ public static class PlatformValidateObjectExtension
         this TValue value,
         Func<TValue, bool> mustNot,
         string expected,
-        string actual)
+        string? actual)
     {
         return PlatformValidationResult<TValue>.ValidateNot(
             value,
@@ -185,12 +186,12 @@ public static class PlatformValidateObjectExtension
 
     #region ValidateFound
 
-    public static PlatformValidationResult<T> ValidateFound<T>(this T? obj, string errorMsg = null)
+    public static PlatformValidationResult<T> ValidateFound<T>(this T? obj, string? errorMsg = null)
     {
-        return obj != null ? PlatformValidationResult.Valid(obj) : PlatformValidationResult.Invalid(obj, errorMsg ?? "Not found");
+        return obj != null ? PlatformValidationResult.Valid(obj) : PlatformValidationResult.Invalid(obj!, errorMsg ?? "Not found");
     }
 
-    public static PlatformValidationResult<IEnumerable<T>> ValidateFound<T>(this IEnumerable<T> objects, string errorMsg = null)
+    public static PlatformValidationResult<IEnumerable<T>> ValidateFound<T>(this IEnumerable<T>? objects, string? errorMsg = null)
     {
         var objectsList = objects?.ToList();
 
@@ -199,7 +200,10 @@ public static class PlatformValidateObjectExtension
             : PlatformValidationResult.Invalid(objectsList.As<IEnumerable<T>>(), errorMsg);
     }
 
-    public static PlatformValidationResult<List<T>> ValidateFoundAll<T>(this List<T> objects, List<T> mustFoundAllItems, Func<List<T>, string> notFoundObjectsToErrorMsg)
+    public static PlatformValidationResult<List<T>?> ValidateFoundAll<T>(
+        this List<T>? objects,
+        List<T> mustFoundAllItems,
+        Func<List<T>, string> notFoundObjectsToErrorMsg)
     {
         var notFoundObjects = mustFoundAllItems.Except(objects ?? new List<T>()).ToList();
 
@@ -219,24 +223,24 @@ public static class PlatformValidateObjectExtension
             : PlatformValidationResult.Valid(objects);
     }
 
-    public static PlatformValidationResult<T> ValidateFound<T>(this T? obj, Func<T, bool> and, string errorMsg = null)
+    public static PlatformValidationResult<T> ValidateFound<T>(this T? obj, Func<T, bool> and, string? errorMsg = null)
     {
-        return obj != null && and(obj) ? PlatformValidationResult.Valid(obj) : PlatformValidationResult.Invalid(obj, errorMsg);
+        return obj != null && and(obj) ? PlatformValidationResult.Valid(obj) : PlatformValidationResult.Invalid(obj!, errorMsg);
     }
 
-    public static PlatformValidationResult<T> ValidateFound<T>(this T? obj, Func<T, Task<bool>> and, string errorMsg = null)
+    public static PlatformValidationResult<T> ValidateFound<T>(this T? obj, Func<T, Task<bool>> and, string? errorMsg = null)
     {
-        return obj.ValidateFound(p => and(obj).GetResult(), errorMsg);
+        return obj.ValidateFound(p => and(p).GetResult(), errorMsg);
     }
 
-    public static async Task<PlatformValidationResult<T>> ValidateFoundAsync<T>(this T? obj, Func<T, Task<bool>> and, string errorMsg = null)
+    public static async Task<PlatformValidationResult<T>> ValidateFoundAsync<T>(this T? obj, Func<T, Task<bool>> and, string? errorMsg = null)
     {
         var andResultCondition = obj != null && await and(obj);
 
         return obj.ValidateFound(p => andResultCondition, errorMsg);
     }
 
-    public static PlatformValidationResult<IQueryable<T>> ValidateFoundAny<T>(this IQueryable<T> query, Expression<Func<T, bool>> any, string errorMsg = null)
+    public static PlatformValidationResult<IQueryable<T>> ValidateFoundAny<T>(this IQueryable<T> query, Expression<Func<T, bool>> any, string? errorMsg = null)
     {
         return query.Any(any) ? PlatformValidationResult.Valid(query) : PlatformValidationResult.Invalid(query, errorMsg);
     }

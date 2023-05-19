@@ -1,3 +1,5 @@
+#nullable enable
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 
 namespace Easy.Platform.Common.Extensions;
@@ -26,7 +28,7 @@ public static class ListExtension
     /// <summary>
     /// Remove item in this and return removed items
     /// </summary>
-    public static List<T> RemoveMany<T>(this IList<T> items, IList<T> toRemoveItems)
+    public static List<T> RemoveMany<T>(this IList<T> items, IList<T> toRemoveItems) where T : notnull
     {
         var toRemoveItemsDic = toRemoveItems.ToDictionary(p => p);
 
@@ -45,7 +47,7 @@ public static class ListExtension
         return removedItems;
     }
 
-    public static T RemoveFirst<T>(this IList<T> items, Func<T, bool> predicate)
+    public static T? RemoveFirst<T>(this IList<T> items, Func<T, bool> predicate)
     {
         var toRemoveItem = items.FirstOrDefault(predicate);
 
@@ -105,7 +107,7 @@ public static class ListExtension
         return !items.Any();
     }
 
-    public static bool IsNullOrEmpty<T>(this IEnumerable<T> items)
+    public static bool IsNullOrEmpty<T>(this IEnumerable<T>? items)
     {
         return items == null || !items.Any();
     }
@@ -328,7 +330,7 @@ public static class ListExtension
         return items.SelectMany(p => p);
     }
 
-    public static ValueTuple<Dictionary<TKey, T>, List<TKey>> ToDictionaryWithKeysList<T, TKey>(this IEnumerable<T> items, Func<T, TKey> selectKey)
+    public static ValueTuple<Dictionary<TKey, T>, List<TKey>> ToDictionaryWithKeysList<T, TKey>(this IEnumerable<T> items, Func<T, TKey> selectKey) where TKey : notnull
     {
         var dict = items.ToDictionary(selectKey, p => p);
         var keys = dict.Keys.ToList();
@@ -379,24 +381,24 @@ public static class ListExtension
             .ToList();
     }
 
-    public static string JoinToString<T>(this IEnumerable<T> items, string separator = "")
+    public static string? JoinToString<T>([NotNullIfNotNull(nameof(items))] this IEnumerable<T>? items, string separator = "") where T : notnull
     {
         return items != null ? string.Join(separator, items.Select(p => p.ToString())) : null;
     }
 
-    public static string JoinToString<T>(this IEnumerable<T> items, char separator)
+    public static string? JoinToString<T>(this IEnumerable<T> items, char separator) where T : notnull
     {
         return JoinToString(items, separator.ToString());
     }
 
     // Add this to fix ambiguous evocation with other library by help compiler to select exact type extension
-    public static bool IsNullOrEmpty<T>(this List<T> items)
+    public static bool IsNullOrEmpty<T>(this List<T>? items)
     {
         return items == null || !items.Any();
     }
 
     // Add this to fix ambiguous evocation with other library by help compiler to select exact type extension
-    public static bool IsNullOrEmpty<TKey, TValue>(this Dictionary<TKey, TValue> items)
+    public static bool IsNullOrEmpty<TKey, TValue>(this Dictionary<TKey, TValue>? items) where TKey : notnull
     {
         return items == null || !items.Any();
     }
@@ -408,7 +410,7 @@ public static class ListExtension
 
     public static IEnumerable<TResult> SelectManyNullable<TSource, TResult>(
         this IEnumerable<TSource> source,
-        Func<TSource, IEnumerable<TResult>> selector)
+        Func<TSource, IEnumerable<TResult>?> selector)
     {
         return source.SelectMany(p => selector(p) ?? new List<TResult>());
     }

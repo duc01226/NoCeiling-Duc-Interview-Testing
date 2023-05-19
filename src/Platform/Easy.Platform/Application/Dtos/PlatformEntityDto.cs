@@ -1,3 +1,4 @@
+#nullable enable
 using Easy.Platform.Common.Dtos;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Validations;

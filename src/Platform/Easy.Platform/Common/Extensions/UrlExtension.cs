@@ -1,3 +1,4 @@
+#nullable enable
 using System.Net;
 using System.Web;
 
@@ -19,7 +20,7 @@ public static class UrlExtension
         {
             return str.ToUri();
         }
-        catch (Exception e)
+        catch (Exception)
         {
             return null;
         }
@@ -37,12 +38,12 @@ public static class UrlExtension
             .Uri;
     }
 
-    public static Dictionary<string, string> QueryParams(this Uri url)
+    public static Dictionary<string, string?> QueryParams(this Uri url)
     {
         return url.Query.PipeIfOrDefault(
             queryStr => !queryStr.IsNullOrEmpty(),
             queryStr => HttpUtility.ParseQueryString(queryStr).Pipe(queryNvc => queryNvc.AllKeys.ToDictionary(k => k!, k => queryNvc[k])),
-            new Dictionary<string, string>());
+            new Dictionary<string, string?>());
     }
 
     public static string ToQueryString(this Dictionary<string, string> queryParams)

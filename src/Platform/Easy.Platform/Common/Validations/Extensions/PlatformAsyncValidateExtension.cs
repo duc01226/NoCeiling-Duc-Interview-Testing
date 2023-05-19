@@ -1,3 +1,4 @@
+#nullable enable
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 
@@ -134,7 +135,7 @@ public static class PlatformAsyncValidateExtension
         return valueTask.Then(value => value.Validate(must, errorMsg));
     }
 
-    public static Task<PlatformValidationResult<List<T>>> ThenValidateFoundAllAsync<T>(
+    public static Task<PlatformValidationResult<List<T>?>> ThenValidateFoundAllAsync<T>(
         this Task<List<T>> objectsTask,
         List<T> mustFoundAllItems,
         Func<List<T>, string> notFoundObjectsToErrorMsg)
@@ -151,12 +152,12 @@ public static class PlatformAsyncValidateExtension
         return objectsTask.Then(p => p.ValidateFoundAllBy(foundBy, toFoundByObjects, notFoundByObjectsToErrorMsg));
     }
 
-    public static Task<PlatformValidationResult<T>> ThenValidateFoundAsync<T>(this Task<T?> objTask, string errorMsg = null)
+    public static Task<PlatformValidationResult<T>> ThenValidateFoundAsync<T>(this Task<T?> objTask, string? errorMsg = null)
     {
         return objTask.Then(p => p.ValidateFound(errorMsg));
     }
 
-    public static Task<PlatformValidationResult<IEnumerable<T>>> ThenValidateFoundAsync<T>(this Task<IEnumerable<T>> objectsTask, string errorMsg = null)
+    public static Task<PlatformValidationResult<IEnumerable<T>>> ThenValidateFoundAsync<T>(this Task<IEnumerable<T>> objectsTask, string? errorMsg = null)
     {
         return objectsTask.Then(p => p.ValidateFound(errorMsg));
     }

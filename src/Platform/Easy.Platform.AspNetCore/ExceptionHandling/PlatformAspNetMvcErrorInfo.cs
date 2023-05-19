@@ -16,7 +16,7 @@ public class PlatformAspNetMvcErrorInfo
 
     public string Message { get; set; }
 
-    public string? DeveloperExceptionMessage { get; set; }
+    public string DeveloperExceptionMessage { get; set; }
 
     public Dictionary<string, object> FormattedMessagePlaceholderValues { get; set; }
 

@@ -1,3 +1,4 @@
+#nullable enable
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
@@ -25,8 +26,8 @@ public interface IPlatformDbContext : IDisposable
         ILogger logger,
         IPlatformPersistenceConfiguration persistenceConfiguration,
         bool forWriteQuery,
-        [AllowNull] IEnumerable<TSource> resultQuery,
-        [AllowNull] Func<string> resultQueryStringBuilder)
+        IEnumerable<TSource>? resultQuery,
+        Func<string>? resultQueryStringBuilder)
     {
         // Must use stack trace BEFORE await fn() BECAUSE after call get data function, the stack trace get lost because
         // some unknown reason (ToListAsync, FirstOrDefault, XXAsync from ef-core, mongo-db). Could be the thread/task context has been changed
@@ -57,7 +58,7 @@ public interface IPlatformDbContext : IDisposable
             var queryResultCount = queryForResultList?.Count;
 
             if (queryForResultList?.Count >= persistenceConfiguration.BadQueryWarning.TotalItemsThreshold)
-                LogTooMuchDataInMemoryBadQueryWarning(queryResultCount.Value, logger, persistenceConfiguration, loggingFullStackTrace, resultQueryStringBuilder);
+                LogTooMuchDataInMemoryBadQueryWarning(queryResultCount ?? 0, logger, persistenceConfiguration, loggingFullStackTrace, resultQueryStringBuilder);
         }
 
         static async Task<TResult> HandleLogSlowQueryBadQueryWarning(
@@ -128,7 +129,7 @@ public interface IPlatformDbContext : IDisposable
 
     public Task Initialize(IServiceProvider serviceProvider);
 
-    public Task<TSource> FirstOrDefaultAsync<TSource>(
+    public Task<TSource?> FirstOrDefaultAsync<TSource>(
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default);
 
@@ -137,7 +138,7 @@ public interface IPlatformDbContext : IDisposable
         CancellationToken cancellationToken = default);
 
     public Task<int> CountAsync<TEntity>(
-        Expression<Func<TEntity, bool>> predicate = null,
+        Expression<Func<TEntity, bool>>? predicate = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity;
 
     public Task<int> CountAsync<TSource>(
@@ -145,7 +146,7 @@ public interface IPlatformDbContext : IDisposable
         CancellationToken cancellationToken = default);
 
     public Task<bool> AnyAsync<TEntity>(
-        Expression<Func<TEntity, bool>> predicate = null,
+        Expression<Func<TEntity, bool>>? predicate = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity;
 
     public Task<bool> AnyAsync<TSource>(
@@ -167,26 +168,26 @@ public interface IPlatformDbContext : IDisposable
     public Task<List<TEntity>> CreateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public async Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
         Expression<Func<TEntity, bool>> predicate,
         Action<TEntity> updateAction,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var toUpdateEntities = await GetAllAsync<TEntity, TEntity>(query => query.Where(predicate), cancellationToken)
@@ -198,31 +199,31 @@ public interface IPlatformDbContext : IDisposable
     public Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
         TPrimaryKey entityId,
         bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
         List<TPrimaryKey> entityIds,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
         Expression<Func<TEntity, bool>> predicate,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var toDeleteEntities = await GetAllAsync(GetQuery<TEntity>().Where(predicate), cancellationToken);
@@ -233,14 +234,14 @@ public interface IPlatformDbContext : IDisposable
     public Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public Task<TEntity> CreateOrUpdateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
-        Expression<Func<TEntity, bool>> customCheckExistingPredicate = null,
+        Expression<Func<TEntity, bool>>? customCheckExistingPredicate = null,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     /// <summary>
@@ -249,9 +250,9 @@ public interface IPlatformDbContext : IDisposable
     /// </summary>
     public Task<List<TEntity>> CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
-        Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
+        Func<TEntity, Expression<Func<TEntity, bool>>>? customCheckExistingPredicateBuilder = null,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public async Task EnsureEntitiesValid<TEntity, TPrimaryKey>(List<TEntity> entities, CancellationToken cancellationToken)

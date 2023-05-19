@@ -1,3 +1,4 @@
+#nullable enable
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Text;
@@ -16,22 +17,22 @@ public static class StringExtension
 
     public static string EnsureNotNullOrWhiteSpace(this string? target, Func<Exception> exception)
     {
-        return target.Ensure(must: target => !string.IsNullOrWhiteSpace(target), exception);
+        return target.Ensure(must: target => !string.IsNullOrWhiteSpace(target), exception)!;
     }
 
     public static string EnsureNotNullOrEmpty(this string? target, Func<Exception> exception)
     {
-        return target.Ensure(must: target => !string.IsNullOrEmpty(target), exception);
+        return target.Ensure(must: target => !string.IsNullOrEmpty(target), exception)!;
     }
 
-    public static T ParseToSerializableType<T>(this string strValue)
+    public static T ParseToSerializableType<T>(this string? strValue)
     {
-        return strValue != null ? PlatformJsonSerializer.Deserialize<T>(PlatformJsonSerializer.Serialize(strValue)) : default;
+        return strValue != null ? PlatformJsonSerializer.Deserialize<T>(PlatformJsonSerializer.Serialize(strValue)) : default!;
     }
 
-    public static object ParseToSerializableType(this string strValue, Type serializeType)
+    public static object ParseToSerializableType(this string? strValue, Type serializeType)
     {
-        return strValue != null ? PlatformJsonSerializer.Deserialize(PlatformJsonSerializer.Serialize(strValue), serializeType) : default;
+        return strValue != null ? PlatformJsonSerializer.Deserialize(PlatformJsonSerializer.Serialize(strValue), serializeType) : default!;
     }
 
     public static string SliceFromRight(this string strValue, int fromIndex, int toIndex = 0)
@@ -39,22 +40,22 @@ public static class StringExtension
         return strValue.Substring(toIndex, strValue.Length - fromIndex);
     }
 
-    public static bool IsNotNullOrEmpty([NotNullWhen(true)] this string strValue)
+    public static bool IsNotNullOrEmpty([NotNullWhen(true)] this string? strValue)
     {
         return !string.IsNullOrEmpty(strValue);
     }
 
-    public static bool IsNotNullOrWhiteSpace([NotNullWhen(true)] this string strValue)
+    public static bool IsNotNullOrWhiteSpace([NotNullWhen(true)] this string? strValue)
     {
         return !string.IsNullOrWhiteSpace(strValue);
     }
 
-    public static bool IsNullOrEmpty([MaybeNullWhen(true)] this string strValue)
+    public static bool IsNullOrEmpty(this string? strValue)
     {
         return string.IsNullOrEmpty(strValue);
     }
 
-    public static bool IsNullOrWhiteSpace([MaybeNullWhen(true)] this string strValue)
+    public static bool IsNullOrWhiteSpace(this string? strValue)
     {
         return string.IsNullOrWhiteSpace(strValue);
     }
@@ -78,7 +79,7 @@ public static class StringExtension
         }
         catch
         {
-            return PlatformValidationResult<T>.Invalid(default, $"Can't parse '{enumStringValue}' to enum {nameof(T)}");
+            return PlatformValidationResult<T>.Invalid(default!, $"Can't parse '{enumStringValue}' to enum {nameof(T)}");
         }
     }
 
@@ -101,7 +102,7 @@ public static class StringExtension
         return str.Substring(0, str.IndexOf(beforeChar));
     }
 
-    public static string ToBase64String(this string str)
+    public static string? ToBase64String(this string? str)
     {
         return str != null ? Convert.ToBase64String(Encoding.UTF8.GetBytes(str)) : null;
     }
@@ -122,7 +123,7 @@ public static class StringExtension
         }
     }
 
-    public static bool ContainsIgnoreCase(this string str, string value)
+    public static bool ContainsIgnoreCase(this string? str, string value)
     {
         return str?.Contains(value, StringComparison.InvariantCultureIgnoreCase) == true;
     }

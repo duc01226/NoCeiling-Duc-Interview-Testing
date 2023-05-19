@@ -54,7 +54,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         return GetUowDbContext(uow).Set<TEntity>();
     }
 
-    public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
+    public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return GetTable(uow)
             .AsQueryable()
@@ -122,7 +122,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
     protected override void HandleDisposeUsingOnceTimeContextLogic<TResult>(
         IUnitOfWork uow,
         bool doesNeedKeepUowForQueryOrEnumerableExecutionLater,
-        Expression<Func<TEntity, object>>[]? loadRelatedEntities,
+        Expression<Func<TEntity, object>>[] loadRelatedEntities,
         TResult result)
     {
         var needDisposeContext = !doesNeedKeepUowForQueryOrEnumerableExecutionLater;

@@ -41,7 +41,7 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
         Configuration = configuration;
     }
 
-    public static int DefaultSeedingMinimumDummyItemsCount => PlatformEnvironment.IsDevelopment ? 100 : 100000;
+    public static int DefaultSeedingMinimumDummyItemsCount => PlatformEnvironment.IsDevelopment ? 100 : 10000;
 
     /// <summary>
     /// Default value is SeedingMinimumDummyItemsCount; <br />

@@ -1,4 +1,6 @@
+#nullable enable
 using System.Linq.Expressions;
+using Easy.Platform.Common.Exceptions.Extensions;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Entities;
@@ -27,30 +29,30 @@ public interface IPlatformRepository<TEntity, TPrimaryKey> : IPlatformRepository
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
     public Task<List<TEntity>> GetAllAsync(
-        Expression<Func<TEntity, bool>> predicate = null,
+        Expression<Func<TEntity, bool>>? predicate = null,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
     public Task<TEntity> FirstAsync(
-        Expression<Func<TEntity, bool>> predicate = null,
+        Expression<Func<TEntity, bool>>? predicate = null,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
     public Task<TEntity?> FirstOrDefaultAsync(
-        Expression<Func<TEntity, bool>> predicate = null,
+        Expression<Func<TEntity, bool>>? predicate = null,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
     public Task<int> CountAsync(
-        Expression<Func<TEntity, bool>> predicate = null,
+        Expression<Func<TEntity, bool>>? predicate = null,
         CancellationToken cancellationToken = default);
 
     public Task<bool> AnyAsync(
-        Expression<Func<TEntity, bool>> predicate = null,
+        Expression<Func<TEntity, bool>>? predicate = null,
         CancellationToken cancellationToken = default);
 
     public IEnumerable<TEntity> GetAllEnumerable(
-        Expression<Func<TEntity, bool>> predicate = null,
+        Expression<Func<TEntity, bool>>? predicate = null,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 }
@@ -61,7 +63,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
     public Task<TEntity> CreateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -75,7 +77,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
     public Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -90,77 +92,77 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
     public Task<List<TEntity>> CreateOrUpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Func<TEntity, Expression<Func<TEntity, bool>>>? customCheckExistingPredicateBuilder = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public Task<TEntity> UpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public Task<TEntity> DeleteAsync(
         TPrimaryKey entityId,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public Task<TEntity> DeleteAsync(
         TEntity entity,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> CreateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> UpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> UpdateManyAsync(
         Expression<Func<TEntity, bool>> predicate,
         Action<TEntity> updateAction,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> DeleteManyAsync(
         List<TPrimaryKey> entityIds,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> DeleteManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> DeleteManyAsync(
         Expression<Func<TEntity, bool>> predicate,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         Expression<Func<TEntity, bool>> customCheckExistingPredicate,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
     public async Task<TEntity> CreateIfNotExistAsync(
         TEntity entity,
         Expression<Func<TEntity, bool>> predicate,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         var isExisted = await AnyAsync(predicate, cancellationToken: cancellationToken);
@@ -265,6 +267,46 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
+
+    public Task<TEntity> FirstAsync(
+        IQueryable<TEntity> query,
+        CancellationToken cancellationToken = default)
+    {
+        return FirstOrDefaultAsync(query, cancellationToken).Then(_ => _.EnsureFound($"{typeof(TEntity).Name} is not found"));
+    }
+
+    public Task<TEntity> FirstAsync(
+        Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
+    {
+        return FirstOrDefaultAsync(queryBuilder, cancellationToken, loadRelatedEntities).Then(_ => _.EnsureFound($"{typeof(TEntity).Name} is not found"));
+    }
+
+    public Task<TEntity> FirstAsync(
+        Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
+    {
+        return FirstOrDefaultAsync(queryBuilder, cancellationToken, loadRelatedEntities).Then(_ => _.EnsureFound($"{typeof(TEntity).Name} is not found"));
+    }
+
+    public Task<TSelector> FirstAsync<TSelector>(
+        Func<IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
+    {
+        return FirstOrDefaultAsync(queryBuilder, cancellationToken, loadRelatedEntities).Then(_ => _.EnsureFound($"{typeof(TEntity).Name} is not found"));
+    }
+
+    public Task<TSelector> FirstAsync<TSelector>(
+        Func<IUnitOfWork, IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
+        CancellationToken cancellationToken = default,
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
+    {
+        return FirstOrDefaultAsync(queryBuilder, cancellationToken, loadRelatedEntities).Then(_ => _.EnsureFound($"{typeof(TEntity).Name} is not found"));
+    }
+
     public Task<List<TSelector>> GetAllAsync<TSelector>(
         Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
@@ -362,7 +404,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
         Expression<Func<TEntity, bool>> predicate,
         int pageSize,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         await Util.Pager.ExecuteScrollingPagingAsync(
@@ -389,7 +431,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
         Action<TEntity> updateAction,
         int pageSize,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         await Util.Pager.ExecutePagingAsync(
@@ -417,7 +459,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
         Action<TEntity> updateAction,
         int pageSize,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         await Util.Pager.ExecuteScrollingPagingAsync(

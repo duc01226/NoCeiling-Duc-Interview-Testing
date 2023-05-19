@@ -33,7 +33,7 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         return GetUowDbContext(uow).GetCollection<TEntity>();
     }
 
-    public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
+    public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return GetTable(uow).AsQueryable();
     }
@@ -54,7 +54,7 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
 
         return await DoToListAsync(source, cancellationToken);
 
-        async Task<List<TSource>> DoToListAsync<TSource>(
+        async Task<List<TSource>> DoToListAsync(
             IEnumerable<TSource> source,
             CancellationToken cancellationToken = default)
         {

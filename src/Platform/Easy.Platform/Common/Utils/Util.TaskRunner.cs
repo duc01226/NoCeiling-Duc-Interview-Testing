@@ -755,7 +755,7 @@ public static partial class Util
         public static T WaitUntil<T, TAny>(
             T target,
             Func<bool> condition,
-            Func<T, TAny>? continueWaitOnlyWhen = null,
+            Func<T, TAny> continueWaitOnlyWhen = null,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {
@@ -806,7 +806,7 @@ public static partial class Util
             T target,
             Func<T, TResult> getResult,
             Func<TResult, bool> condition,
-            Func<T, TAny>? continueWaitOnlyWhen = null,
+            Func<T, TAny> continueWaitOnlyWhen = null,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {
@@ -865,8 +865,8 @@ public static partial class Util
 
         public static TResult WaitUntilGetSuccess<T, TResult, TAny>(
             T target,
-            Func<T, TResult?> getResult,
-            Func<T, TAny>? continueWaitOnlyWhen = null,
+            Func<T, TResult> getResult,
+            Func<T, TAny> continueWaitOnlyWhen = null,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {

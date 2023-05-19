@@ -251,7 +251,7 @@ public interface IPage : IUiComponent
 
         return BuildPathRouteParamRegex.Replace(
             pagePathRoute,
-            match => pagePathRouteParams![GetPathRouteParamName(match)]);
+            match => pagePathRouteParams[GetPathRouteParamName(match)]);
     }
 
     public static Uri BuildFullUrl<TPage>(TPage page) where TPage : IPage
@@ -280,7 +280,7 @@ public interface IPage : IUiComponent
     {
         return page.QueryParams.PipeIfOrDefault(
             when: page.QueryParams?.Any() == true,
-            thenPipe: _ => page.QueryParams.ToQueryString(),
+            thenPipe: _ => page.QueryParams!.ToQueryString(),
             defaultValue: "");
     }
 
@@ -303,7 +303,7 @@ public interface IPage : IUiComponent
                 errorMsg: errors => AssertHelper.Failed(
                     generalMsg: "Has errors displayed on Page",
                     expected: "No errors displayed on Page",
-                    actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)))
+                    actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)!))
             .Of(page);
     }
 
@@ -318,7 +318,7 @@ public interface IPage : IUiComponent
                 errorMsg: errors => AssertHelper.Failed(
                     generalMsg: "Has no errors displayed on Page",
                     expected: "Has some errors displayed on Page",
-                    actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)))
+                    actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)!))
             .Of(page);
     }
 
@@ -334,7 +334,7 @@ public interface IPage : IUiComponent
                 errorMsg: errors => AssertHelper.Failed(
                     generalMsg: "Has no errors displayed on Page",
                     expected: $"Must has error \"{errorMsg}\" displayed on Page",
-                    actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)))
+                    actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)!))
             .Of(page);
     }
 
@@ -664,7 +664,7 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
             getResult: p => getResult(this.As<TPage>()),
             continueWaitOnlyWhen,
             maxWaitSeconds ?? DefaultMaxWaitSeconds,
-            waitForMsg);
+            waitForMsg)!;
     }
 
     public TPage WaitUntil(
@@ -715,8 +715,8 @@ public class GeneralCurrentActivePage<TSettings> : Page<GeneralCurrentActivePage
 
     public override string Title => WebDriver.Title;
     public override IWebElement? GlobalSpinnerElement { get; } = null;
-    public override string? GeneralErrorElementsCssSelector => ".error";
-    public override string? FormValidationErrorElementsCssSelector => ".error";
+    public override string GeneralErrorElementsCssSelector => ".error";
+    public override string FormValidationErrorElementsCssSelector => ".error";
     public override string PageContentLoadedElementIndicatorSelector => "body";
 
     public override string AppName =>

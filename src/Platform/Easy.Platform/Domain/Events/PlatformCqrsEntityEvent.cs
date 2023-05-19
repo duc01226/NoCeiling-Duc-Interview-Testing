@@ -189,7 +189,7 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent
     }
 
     /// <inheritdoc cref="PlatformCqrsEvent.SetForceWaitEventHandlerFinished{THandler,TEvent}"/>
-    public new virtual PlatformCqrsEntityEvent<TEntity> SetForceWaitEventHandlerFinished<THandler>()
+    public virtual PlatformCqrsEntityEvent<TEntity> SetForceWaitEventHandlerFinished<THandler>()
         where THandler : IPlatformCqrsEventHandler<PlatformCqrsEntityEvent<TEntity>>
     {
         return SetForceWaitEventHandlerFinished(typeof(THandler)).Cast<PlatformCqrsEntityEvent<TEntity>>();

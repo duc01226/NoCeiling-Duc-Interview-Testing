@@ -1,3 +1,4 @@
+#nullable enable
 using System.Linq.Expressions;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common.Cqrs;
@@ -22,7 +23,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         IPlatformCqrs cqrs,
         IServiceProvider serviceProvider) : base(unitOfWorkManager, cqrs, serviceProvider)
     {
-        PersistenceConfiguration = serviceProvider.GetService<PlatformPersistenceConfiguration<TDbContext>>();
+        PersistenceConfiguration = serviceProvider.GetRequiredService<PlatformPersistenceConfiguration<TDbContext>>();
         Logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(PlatformPersistenceRepository<,,,>));
     }
 
@@ -91,7 +92,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => FirstOrDefaultAsync(query.Where(p => p.Id.Equals(id)), cancellationToken)
+            (uow, query) => FirstOrDefaultAsync(query.Where(p => p.Id!.Equals(id)), cancellationToken)
                 .EnsureFound($"{typeof(TEntity).Name} with Id {id} is not found"),
             loadRelatedEntities);
     }
@@ -112,7 +113,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     }
 
     public override IEnumerable<TEntity> GetAllEnumerable(
-        Expression<Func<TEntity, bool>> predicate = null,
+        Expression<Func<TEntity, bool>>? predicate = null,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
@@ -150,7 +151,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     }
 
     public override Task<TEntity> FirstAsync(
-        Expression<Func<TEntity, bool>> predicate = null,
+        Expression<Func<TEntity, bool>>? predicate = null,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
@@ -160,8 +161,8 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             loadRelatedEntities);
     }
 
-    public override Task<TEntity> FirstOrDefaultAsync(
-        Expression<Func<TEntity, bool>> predicate = null,
+    public override Task<TEntity?> FirstOrDefaultAsync(
+        Expression<Func<TEntity, bool>>? predicate = null,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
@@ -171,12 +172,12 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     }
 
     public override Task<int> CountAsync(
-        Expression<Func<TEntity, bool>> predicate = null,
+        Expression<Func<TEntity, bool>>? predicate = null,
         CancellationToken cancellationToken = default)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => CountAsync(query.WhereIf(predicate != null, predicate), cancellationToken),
-            Array.Empty<Expression<Func<TEntity, object>>>());
+            Array.Empty<Expression<Func<TEntity, object?>>>());
     }
 
     public override Task<int> CountAsync(IQueryable<TEntity> query, CancellationToken cancellationToken = default)
@@ -185,12 +186,12 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     }
 
     public override Task<bool> AnyAsync(
-        Expression<Func<TEntity, bool>> predicate = null,
+        Expression<Func<TEntity, bool>>? predicate = null,
         CancellationToken cancellationToken = default)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => AnyAsync(query.WhereIf(predicate != null, predicate), cancellationToken),
-            Array.Empty<Expression<Func<TEntity, object>>>());
+            Array.Empty<Expression<Func<TEntity, object?>>>());
     }
 
     public override Task<int> CountAsync<TQueryItemResult>(
@@ -199,7 +200,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => CountAsync(queryBuilder(query), cancellationToken),
-            Array.Empty<Expression<Func<TEntity, object>>>());
+            Array.Empty<Expression<Func<TEntity, object?>>>());
     }
 
     public override Task<int> CountAsync<TQueryItemResult>(
@@ -208,7 +209,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => CountAsync(queryBuilder(uow, query), cancellationToken),
-            Array.Empty<Expression<Func<TEntity, object>>>());
+            Array.Empty<Expression<Func<TEntity, object?>>>());
     }
 
     public override Task<List<TSelector>> GetAllAsync<TSelector>(
@@ -234,7 +235,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<List<TSelector>> GetAllAsync<TSelector>(
         Func<IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => ToListAsync(queryBuilder(query), cancellationToken),
@@ -244,27 +245,27 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<List<TSelector>> GetAllAsync<TSelector>(
         Func<IUnitOfWork, IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => ToListAsync(queryBuilder(uow, query), cancellationToken),
             loadRelatedEntities);
     }
 
-    public override Task<TSelector> FirstOrDefaultAsync<TSelector>(
+    public override async Task<TSelector?> FirstOrDefaultAsync<TSelector>(
         Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities) where TSelector : default
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(queryBuilder(query), cancellationToken),
             loadRelatedEntities);
     }
 
-    public override Task<TSelector> FirstOrDefaultAsync<TSelector>(
+    public override Task<TSelector?> FirstOrDefaultAsync<TSelector>(
         Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
+        params Expression<Func<TEntity, object?>>[] loadRelatedEntities) where TSelector : default
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => FirstOrDefaultAsync(queryBuilder(uow, query), cancellationToken),
@@ -274,7 +275,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<TEntity> CreateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForWrite(
@@ -284,7 +285,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForWrite(
@@ -295,7 +296,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         TEntity entity,
         Expression<Func<TEntity, bool>> customCheckExistingPredicate,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForWrite(
@@ -306,8 +307,8 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<List<TEntity>> CreateOrUpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Func<TEntity, Expression<Func<TEntity, bool>>>? customCheckExistingPredicateBuilder = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         if (entities.IsEmpty()) return entities.ToTask();
@@ -325,7 +326,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<TEntity> UpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForWrite(
@@ -335,7 +336,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override async Task<TEntity> DeleteAsync(
         TPrimaryKey entityId,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
@@ -345,7 +346,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override async Task<TEntity> DeleteAsync(
         TEntity entity,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
@@ -355,7 +356,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<List<TEntity>> CreateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         if (entities.IsEmpty()) return entities.ToTask();
@@ -367,7 +368,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<List<TEntity>> UpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         if (entities.IsEmpty()) return entities.ToTask();
@@ -379,7 +380,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<List<TEntity>> DeleteManyAsync(
         List<TPrimaryKey> entityIds,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForWrite(
@@ -389,7 +390,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<List<TEntity>> DeleteManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default)
     {
         if (entities.IsEmpty()) return entities.ToTask();
