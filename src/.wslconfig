@@ -1,0 +1,4 @@
+[wsl2]
+# Copy this file to the current user folder. Example: C:\Users\Duc . This file will help limit ram using from docker
+memory=5000MB # Limits VM memory in WSL 2 to 4 GB
+processors=16 # Makes the WSL 2 VM use two virtual processors

@@ -9,6 +9,7 @@ set RandomThrowExceptionForTesting=true
 docker-compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example kill
 docker-compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example rm -f
 docker volume prune -f
+docker volume prune -a -f
 REM Do up/kill/up again because up the first time to create volume. It may have i/o errors for some container when container try to init right away. So we kill and up again
 docker-compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example up --remove-orphans --detach
 docker-compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example kill
