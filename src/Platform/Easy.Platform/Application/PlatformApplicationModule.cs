@@ -46,6 +46,8 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
     {
     }
 
+    protected override bool AutoScanAssemblyRegisterCqrs => true;
+
     /// <summary>
     /// Override this to true to auto register default caching module, which include default memory caching repository.
     /// <br></br>
@@ -120,8 +122,8 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                             await ExecuteDataSeederWithLog(dataSeeder, logger);
                         }
                     },
-                    retryAttempt => 10.Seconds(),
-                    retryCount: PlatformEnvironment.IsDevelopment ? 5 : 10,
+                    retryAttempt => 15.Seconds(),
+                    retryCount: 20,
                     onRetry: (ex, timeSpan, currentRetry, context) =>
                     {
                         if (currentRetry >= MinimumRetryTimesToWarning)
@@ -267,13 +269,13 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             InboxConfigProvider,
             ServiceLifeTime.Transient,
             replaceIfExist: true,
-            DependencyInjectionExtension.ReplaceServiceStrategy.ByService);
+            DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
         serviceCollection.Register(
             serviceType: typeof(PlatformOutboxConfig),
             OutboxConfigProvider,
             ServiceLifeTime.Transient,
             replaceIfExist: true,
-            DependencyInjectionExtension.ReplaceServiceStrategy.ByService);
+            DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
     }
 
     protected override async Task InternalInit(IServiceScope serviceScope)
@@ -325,7 +327,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                 typeof(PlatformDefaultApplicationUserContextAccessor),
                 ServiceLifeTime.Singleton,
                 replaceIfExist: true,
-                DependencyInjectionExtension.ReplaceServiceStrategy.ByService);
+                DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
     }
 
     private void RegisterMessageBus(IServiceCollection serviceCollection)

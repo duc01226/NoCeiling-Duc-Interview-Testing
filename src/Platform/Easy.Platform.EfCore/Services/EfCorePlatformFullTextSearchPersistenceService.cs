@@ -103,7 +103,7 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
         IQueryable<T> query,
         string searchText,
         Expression<Func<T, object>>[] inFullTextSearchProps,
-        bool fullTextExactMatch = false,
+        bool fullTextAccurateMatch = true,
         Expression<Func<T, object>>[] includeStartWithProps = null)
     {
         if (string.IsNullOrWhiteSpace(searchText))
@@ -120,7 +120,7 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
             searchText,
             ignoredSpecialCharactersSearchWords,
             fullTextSearchPropNames,
-            fullTextExactMatch,
+            fullTextAccurateMatch,
             includeStartWithPropNames);
 
         return searchedQuery;

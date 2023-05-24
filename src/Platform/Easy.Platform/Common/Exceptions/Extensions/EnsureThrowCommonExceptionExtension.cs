@@ -21,7 +21,7 @@ public static class EnsureThrowCommonExceptionExtension
 
     public static T EnsurePermissionValid<T>(this T value, Func<T, Task<bool>> must, string errorMsg)
     {
-        return value.Validate(p => must(value).GetResult(), errorMsg).EnsurePermissionValid();
+        return value.Validate(_ => must(value).GetResult(), errorMsg).EnsurePermissionValid();
     }
 
     public static async Task<T> EnsurePermissionValidAsync<T>(this Task<PlatformValidationResult<T>> valTask)
@@ -97,7 +97,7 @@ public static class EnsureThrowCommonExceptionExtension
         return query.ValidateFoundAny(any, errorMsg).WithNotFoundException().EnsureValid();
     }
 
-    public static async Task<T> EnsureFound<T>(this Task<T?> objectTask, string? errorMessage = null)
+    public static async Task<T> EnsureFound<T>(this Task<T> objectTask, string? errorMessage = null)
     {
         var obj = await objectTask;
         return obj.EnsureFound(errorMessage);

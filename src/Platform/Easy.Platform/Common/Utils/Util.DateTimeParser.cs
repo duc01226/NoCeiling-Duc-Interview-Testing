@@ -7,6 +7,14 @@ public static partial class Util
 {
     public static class DateTimeParser
     {
+        public static readonly string[] DefaultSupportDateOnlyFormats =
+        {
+            "yyyy/MM/dd",
+            "dd/MM/yyyy",
+            "yyyy-MM-dd",
+            "dd-MM-yyyy"
+        };
+
         public static DateTimeOffset? ParseDateTimeOffset(dynamic value)
         {
             return DateTimeOffset.TryParse(value, out DateTimeOffset dateTimeOffsetValue)
@@ -21,13 +29,13 @@ public static partial class Util
                 : null;
         }
 
-        public static DateTime? ToPredefinedDateTimeFormat(string dateTime, string[] dateTimeFormats)
+        public static DateTime? ToPredefinedDateTimeFormat(string dateTime, string[] dateTimeFormats = null)
         {
             if (dateTime.IsNullOrEmpty()) return null;
 
             return DateTime.TryParseExact(
                 s: dateTime.Trim(),
-                dateTimeFormats,
+                dateTimeFormats ?? DefaultSupportDateOnlyFormats,
                 provider: null,
                 style: DateTimeStyles.None,
                 out var result)

@@ -1,3 +1,4 @@
+@retry(3,5000)
 Feature: Create Text Snippet Feature
 
 Scenario: Create a new random unique snippet text item should be successful

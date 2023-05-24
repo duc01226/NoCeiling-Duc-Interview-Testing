@@ -25,10 +25,14 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
 
         var newScope = ServiceProvider.CreateScope();
 
-        return new PlatformAggregatedPersistenceUnitOfWork(
+        var uow = new PlatformAggregatedPersistenceUnitOfWork(
                 newScope.ServiceProvider.GetServices<IUnitOfWork>()
                     .Select(p => p.With(_ => _.CreatedByUnitOfWorkManager = this)).ToList(),
                 associatedServiceScope: newScope)
             .With(_ => _.CreatedByUnitOfWorkManager = this);
+
+        FreeCreatedUnitOfWorks.Add(uow);
+
+        return uow;
     }
 }

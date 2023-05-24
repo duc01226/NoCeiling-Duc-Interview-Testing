@@ -21,7 +21,9 @@ public static class DependencyInjectionExtension
         Assembly assembly,
         ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
         bool replaceIfExist = true,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool skipIfExist = false,
+        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
     {
         assembly.GetTypes()
             .Where(
@@ -35,13 +37,21 @@ public static class DependencyInjectionExtension
             .ForEach(
                 implementationType =>
                 {
-                    services.Register(implementationType, lifeTime, replaceIfExist);
+                    services.Register(
+                        implementationType,
+                        lifeTime,
+                        replaceIfExist,
+                        replaceStrategy: replaceStrategy,
+                        skipIfExist: skipIfExist,
+                        skipIfExistStrategy: skipIfExistStrategy);
 
                     services.RegisterInterfacesForImplementation(
                         implementationType,
                         lifeTime,
                         replaceIfExist,
-                        replaceStrategy);
+                        replaceStrategy,
+                        skipIfExist: skipIfExist,
+                        skipIfExistStrategy: skipIfExistStrategy);
                 });
 
         return services;
@@ -56,7 +66,9 @@ public static class DependencyInjectionExtension
         Assembly assembly,
         ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
         bool replaceIfExist = true,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool skipIfExist = false,
+        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
     {
         return RegisterAllFromType(
             services,
@@ -64,7 +76,9 @@ public static class DependencyInjectionExtension
             assembly,
             lifeTime,
             replaceIfExist,
-            replaceStrategy);
+            replaceStrategy,
+            skipIfExist: skipIfExist,
+            skipIfExistStrategy: skipIfExistStrategy);
     }
 
     /// <summary>
@@ -75,15 +89,19 @@ public static class DependencyInjectionExtension
         Type implementationType,
         ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
         bool replaceIfExist = true,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool skipIfExist = false,
+        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
     {
-        services.RegisterIfNotExist(implementationType, implementationType, lifeTime);
+        services.RegisterIfNotExist(implementationType, implementationType, lifeTime, skipIfExistStrategy);
 
         services.RegisterInterfacesForImplementation(
             implementationType,
             lifeTime,
             replaceIfExist,
-            replaceStrategy);
+            replaceStrategy,
+            skipIfExist: skipIfExist,
+            skipIfExistStrategy: skipIfExistStrategy);
 
         return services;
     }
@@ -97,9 +115,9 @@ public static class DependencyInjectionExtension
         Func<IServiceProvider, object> implementationFactory,
         ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
         bool replaceIfExist = true,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
-        services.RegisterIfNotExist(implementationType, implementationType, lifeTime);
+        services.RegisterIfNotExist(implementationType, implementationType, lifeTime, CheckRegisteredStrategy.ByBoth);
 
         services.RegisterInterfacesForImplementation(
             implementationType,
@@ -112,13 +130,13 @@ public static class DependencyInjectionExtension
     }
 
     /// <summary>
-    ///     <inheritdoc cref="RegisterAllForImplementation(IServiceCollection,Type,ServiceLifeTime,bool,ReplaceServiceStrategy)" />
+    ///     <inheritdoc cref="RegisterAllForImplementation(IServiceCollection,Type,ServiceLifeTime,bool,CheckRegisteredStrategy)" />
     /// </summary>
     public static IServiceCollection RegisterAllForImplementation<TImplementation>(
         this IServiceCollection services,
         ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
         bool replaceIfExist = true,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
         return RegisterAllForImplementation(
             services,
@@ -154,8 +172,20 @@ public static class DependencyInjectionExtension
         Type implementationType,
         ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
         bool replaceIfExist = true,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool skipIfExist = false,
+        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
     {
+        if (skipIfExist)
+        {
+            if (skipIfExistStrategy == CheckRegisteredStrategy.ByBoth &&
+                services.Any(p => p.ServiceType == serviceType && p.ImplementationType == implementationType)) return services;
+            if (skipIfExistStrategy == CheckRegisteredStrategy.ByService &&
+                services.Any(p => p.ServiceType == serviceType)) return services;
+            if (skipIfExistStrategy == CheckRegisteredStrategy.ByImplementation &&
+                services.Any(p => p.ImplementationType == implementationType)) return services;
+        }
+
         switch (lifeTime)
         {
             case ServiceLifeTime.Scoped:
@@ -186,7 +216,7 @@ public static class DependencyInjectionExtension
         this IServiceCollection services,
         ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
         bool replaceIfExist = true,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
         return Register(
             services,
@@ -199,22 +229,30 @@ public static class DependencyInjectionExtension
 
     public static IServiceCollection RegisterIfNotExist<TService, TImplementation>(
         this IServiceCollection services,
-        ServiceLifeTime lifeTime)
+        ServiceLifeTime lifeTime,
+        CheckRegisteredStrategy checkExistingStrategy)
     {
         return RegisterIfNotExist(
             services,
             typeof(TService),
             typeof(TImplementation),
-            lifeTime);
+            lifeTime,
+            checkExistingStrategy);
     }
 
     public static IServiceCollection RegisterIfNotExist(
         this IServiceCollection services,
         Type serviceType,
         Type implementationType,
-        ServiceLifeTime lifeTime)
+        ServiceLifeTime lifeTime,
+        CheckRegisteredStrategy checkExistingStrategy)
     {
-        if (services.Any(p => p.ServiceType == serviceType && p.ImplementationType == implementationType)) return services;
+        if (checkExistingStrategy == CheckRegisteredStrategy.ByBoth &&
+            services.Any(p => p.ServiceType == serviceType && p.ImplementationType == implementationType)) return services;
+        if (checkExistingStrategy == CheckRegisteredStrategy.ByService &&
+            services.Any(p => p.ServiceType == serviceType)) return services;
+        if (checkExistingStrategy == CheckRegisteredStrategy.ByImplementation &&
+            services.Any(p => p.ImplementationType == implementationType)) return services;
 
         return Register(
             services,
@@ -269,7 +307,9 @@ public static class DependencyInjectionExtension
         Type implementationType,
         ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
         bool replaceIfExist = true,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool skipIfExist = false,
+        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
     {
         return Register(
             services,
@@ -277,14 +317,16 @@ public static class DependencyInjectionExtension
             implementationType,
             lifeTime,
             replaceIfExist,
-            replaceStrategy);
+            replaceStrategy,
+            skipIfExist: skipIfExist,
+            skipIfExistStrategy: skipIfExistStrategy);
     }
 
     public static IServiceCollection Register<TService>(
         this IServiceCollection services,
         ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
         bool replaceIfExist = true,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
         return Register(
             services,
@@ -299,7 +341,7 @@ public static class DependencyInjectionExtension
         Func<IServiceProvider, TService> implementationFunc,
         ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
         bool replaceIfExist = true,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
         return Register(
             services,
@@ -314,7 +356,7 @@ public static class DependencyInjectionExtension
         this IServiceCollection services,
         TService instance,
         bool replaceIfExist = true,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
         return Register(
             services,
@@ -331,7 +373,7 @@ public static class DependencyInjectionExtension
         Func<IServiceProvider, TImplementation> implementationFunc,
         ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
         bool replaceIfExist = true,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
         switch (lifeTime)
         {
@@ -362,7 +404,7 @@ public static class DependencyInjectionExtension
         this IServiceCollection services,
         Type hostedServiceType,
         bool replaceIfExist = true,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
         return services.Register(
             typeof(IHostedService),
@@ -375,7 +417,7 @@ public static class DependencyInjectionExtension
     public static IServiceCollection RegisterHostedService<THostedService>(
         this IServiceCollection services,
         bool replaceIfExist = true,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth) where THostedService : class, IHostedService
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth) where THostedService : class, IHostedService
     {
         return services.RegisterHostedService(
             typeof(THostedService),
@@ -387,7 +429,7 @@ public static class DependencyInjectionExtension
         this IServiceCollection services,
         Type serviceType,
         Type implementationType,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
         RemoveIfExist(
             services,
@@ -402,7 +444,7 @@ public static class DependencyInjectionExtension
         this IServiceCollection services,
         Type serviceType,
         Type implementationType,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
         RemoveIfExist(
             services,
@@ -417,7 +459,7 @@ public static class DependencyInjectionExtension
         this IServiceCollection services,
         Type serviceType,
         Type implementationType,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
         RemoveIfExist(
             services,
@@ -432,7 +474,7 @@ public static class DependencyInjectionExtension
         this IServiceCollection services,
         Type serviceType,
         Func<IServiceProvider, TImplementation> implementationFactory,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
         RemoveIfExist(
             services,
@@ -447,7 +489,7 @@ public static class DependencyInjectionExtension
         this IServiceCollection services,
         Type serviceType,
         Func<IServiceProvider, TImplementation> implementationFactory,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
         RemoveIfExist(
             services,
@@ -462,7 +504,7 @@ public static class DependencyInjectionExtension
         this IServiceCollection services,
         Type serviceType,
         Func<IServiceProvider, TImplementation> implementationFactory,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
         RemoveIfExist(
             services,
@@ -475,7 +517,7 @@ public static class DependencyInjectionExtension
 
     public static IServiceCollection ReplaceTransient<TService, TImplementation>(
         this IServiceCollection services,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
         where TService : class
         where TImplementation : class, TService
     {
@@ -484,7 +526,7 @@ public static class DependencyInjectionExtension
 
     public static IServiceCollection ReplaceScoped<TService, TImplementation>(
         this IServiceCollection services,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
         where TService : class
         where TImplementation : class, TService
     {
@@ -493,7 +535,7 @@ public static class DependencyInjectionExtension
 
     public static IServiceCollection ReplaceSingleton<TService, TImplementation>(
         this IServiceCollection services,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
         where TService : class
         where TImplementation : class, TService
     {
@@ -515,15 +557,15 @@ public static class DependencyInjectionExtension
         IServiceCollection services,
         Type serviceType,
         Type implementationType,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
         return replaceStrategy switch
         {
-            ReplaceServiceStrategy.ByService => RemoveIfExist(services, p => p.ServiceType == serviceType),
-            ReplaceServiceStrategy.ByImplementation => RemoveIfExist(
+            CheckRegisteredStrategy.ByService => RemoveIfExist(services, p => p.ServiceType == serviceType),
+            CheckRegisteredStrategy.ByImplementation => RemoveIfExist(
                 services,
                 p => p.ImplementationType == implementationType),
-            ReplaceServiceStrategy.ByBoth => RemoveIfExist(
+            CheckRegisteredStrategy.ByBoth => RemoveIfExist(
                 services,
                 p => p.ServiceType == serviceType && p.ImplementationType == implementationType),
             _ => throw new ArgumentOutOfRangeException(nameof(replaceStrategy), replaceStrategy, null)
@@ -535,7 +577,9 @@ public static class DependencyInjectionExtension
         Type implementationType,
         ServiceLifeTime lifeTime,
         bool replaceIfExist,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool skipIfExist = false,
+        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
     {
         if (implementationType.IsGenericType)
             implementationType
@@ -548,7 +592,9 @@ public static class DependencyInjectionExtension
                         implementationType,
                         lifeTime,
                         replaceIfExist,
-                        replaceStrategy));
+                        replaceStrategy,
+                        skipIfExist: skipIfExist,
+                        skipIfExistStrategy: skipIfExistStrategy));
         else
             implementationType
                 .GetInterfaces()
@@ -560,7 +606,9 @@ public static class DependencyInjectionExtension
                         implementationType,
                         lifeTime,
                         replaceIfExist,
-                        replaceStrategy));
+                        replaceStrategy,
+                        skipIfExist: skipIfExist,
+                        skipIfExistStrategy: skipIfExistStrategy));
     }
 
     public static Func<Type, bool> DefaultIgnoreRegisterLibraryInterfacesForImplementationExpr()
@@ -574,7 +622,7 @@ public static class DependencyInjectionExtension
         Func<IServiceProvider, TImplementation> implementationFactory,
         ServiceLifeTime lifeTime,
         bool replaceIfExist,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
         RegisterInterfacesForImplementation(
             services,
@@ -591,7 +639,7 @@ public static class DependencyInjectionExtension
         Func<IServiceProvider, object> implementationFactory,
         ServiceLifeTime lifeTime,
         bool replaceIfExist,
-        ReplaceServiceStrategy replaceStrategy = ReplaceServiceStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
         if (implementationType.IsGenericType)
             implementationType
@@ -890,7 +938,7 @@ public static class DependencyInjectionExtension
             maxExecutionCount: maxExecutionCount);
     }
 
-    public enum ReplaceServiceStrategy
+    public enum CheckRegisteredStrategy
     {
         ByService,
         ByImplementation,

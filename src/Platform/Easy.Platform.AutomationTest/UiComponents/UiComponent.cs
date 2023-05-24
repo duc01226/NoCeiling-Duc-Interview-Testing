@@ -148,16 +148,14 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
 
     public virtual string Text => RootElement?.Text ?? "";
 
-    public virtual string GetAttribute(string attributeName) => RootElement?.GetAttribute(attributeName) ?? "";
+    public virtual string GetAttribute(string attributeName)
+    {
+        return RootElement?.GetAttribute(attributeName) ?? "";
+    }
 
     public bool IsClickable()
     {
         return RootElement?.IsClickable() == true;
-    }
-
-    public bool IsSelected()
-    {
-        return RootElement?.IsSelected() == true;
     }
 
     public bool IsDisplayed()
@@ -281,6 +279,11 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
         return IUiComponent.FindChildElements(component: this, childElementSelector);
     }
 
+    public bool IsSelected()
+    {
+        return RootElement?.IsSelected() == true;
+    }
+
     public TComponent ReplaceTextValue(string text, string? childElementSelector = null)
     {
         return InternalReplaceTextValue(text, childElementSelector, enterBeforeFocusOut: false);
@@ -300,6 +303,11 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
     {
         Util.TaskRunner.Wait(millisecondsToWait: (int)(waitSeconds * 1000));
         return (TComponent)this;
+    }
+
+    public string? Value()
+    {
+        return RootElement?.Value();
     }
 
     private TComponent InternalReplaceTextValue(string newTextValue, string? childElementSelector, bool enterBeforeFocusOut = false)

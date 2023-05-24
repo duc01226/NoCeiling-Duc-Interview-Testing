@@ -56,7 +56,7 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
 
     public static int DefaultActiveDelaySeedingInBackgroundBySeconds => 30;
     public static int DefaultDelayRetryCheckSeedDataBySeconds => 5;
-    public static int DefaultMaxWaitSeedDataBySyncMessagesBySeconds => 300;
+    public static int DefaultMaxWaitSeedDataBySyncMessagesBySeconds => DefaultDelayRetryCheckSeedDataBySeconds * 20;
 
     /// <summary>
     /// Default is true. Override this if you want to start uow yourself or not want to

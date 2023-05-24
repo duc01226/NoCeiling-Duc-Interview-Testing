@@ -1,5 +1,4 @@
 #nullable enable
-using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 
 namespace Easy.Platform.Common.Extensions;
@@ -381,12 +380,12 @@ public static class ListExtension
             .ToList();
     }
 
-    public static string? JoinToString<T>([NotNullIfNotNull(nameof(items))] this IEnumerable<T>? items, string separator = "") where T : notnull
+    public static string JoinToString<T>(this IEnumerable<T>? items, string separator = "") where T : notnull
     {
-        return items != null ? string.Join(separator, items.Select(p => p.ToString())) : null;
+        return items != null ? string.Join(separator, items.Select(p => p.ToString())) : string.Empty;
     }
 
-    public static string? JoinToString<T>(this IEnumerable<T> items, char separator) where T : notnull
+    public static string JoinToString<T>(this IEnumerable<T> items, char separator) where T : notnull
     {
         return JoinToString(items, separator.ToString());
     }

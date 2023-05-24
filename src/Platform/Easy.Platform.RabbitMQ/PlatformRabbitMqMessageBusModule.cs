@@ -48,7 +48,7 @@ public abstract class PlatformRabbitMqMessageBusModule : PlatformMessageBusModul
     {
         await base.InternalInit(serviceScope);
 
-        await ServiceProvider.GetRequiredService<PlatformRabbitMqProcessInitializerService>().StartProcess(default);
+        await ServiceProvider.GetRequiredService<PlatformRabbitMqProcessInitializerService>().StartProcess();
     }
 
     protected abstract PlatformRabbitMqOptions RabbitMqOptionsFactory(IServiceProvider serviceProvider);

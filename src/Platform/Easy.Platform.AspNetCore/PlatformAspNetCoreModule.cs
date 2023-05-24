@@ -29,6 +29,8 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation();
 
+    protected override bool AutoScanAssemblyRegisterCqrs => true;
+
     /// <summary>
     /// Default is True. Override this return to False if you need to seed data manually
     /// </summary>
@@ -119,7 +121,7 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
             typeof(PlatformAspNetApplicationUserContextAccessor),
             ServiceLifeTime.Singleton,
             replaceIfExist: true,
-            DependencyInjectionExtension.ReplaceServiceStrategy.ByService);
+            DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
 
         RegisterUserContextKeyToClaimTypeMapper(serviceCollection);
     }

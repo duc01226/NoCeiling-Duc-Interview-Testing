@@ -13,14 +13,14 @@ public interface IPlatformFullTextSearchPersistenceService : IPersistenceService
     /// <param name="query">Query to search on.</param>
     /// <param name="searchText">Search text.</param>
     /// <param name="inFullTextSearchProps">List of property expression to search by full-text on.</param>
-    /// <param name="fullTextExactMatch">Whether search fulltext matching exact phrase or not</param>
+    /// <param name="fullTextAccurateMatch">Whether search fulltext matching exact phrase or not</param>
     /// <param name="includeStartWithProps">List of property expression to search by startWith on.</param>
     /// <returns>Filtered by search text query.</returns>
     public IQueryable<T> Search<T>(
         IQueryable<T> query,
         string searchText,
         Expression<Func<T, object>>[] inFullTextSearchProps,
-        bool fullTextExactMatch = false,
+        bool fullTextAccurateMatch = true,
         Expression<Func<T, object>>[] includeStartWithProps = null) where T : class;
 
     public bool IsSupportQuery<T>(IQueryable<T> query) where T : class;
@@ -39,14 +39,14 @@ public abstract class PlatformFullTextSearchPersistenceService : IPlatformFullTe
         IQueryable<T> query,
         string searchText,
         Expression<Func<T, object>>[] inFullTextSearchProps,
-        bool fullTextExactMatch = false,
+        bool fullTextAccurateMatch = true,
         Expression<Func<T, object>>[] includeStartWithProps = null) where T : class
     {
         var byFirstSupportQueryHelperFilterQuery = !IsSupportQuery(query)
-            ? TrySearchByFirstSupportQueryHelper(query, searchText, inFullTextSearchProps, fullTextExactMatch, includeStartWithProps)
+            ? TrySearchByFirstSupportQueryHelper(query, searchText, inFullTextSearchProps, fullTextAccurateMatch, includeStartWithProps)
             : null;
 
-        return byFirstSupportQueryHelperFilterQuery ?? DoSearch(query, searchText, inFullTextSearchProps, fullTextExactMatch, includeStartWithProps);
+        return byFirstSupportQueryHelperFilterQuery ?? DoSearch(query, searchText, inFullTextSearchProps, fullTextAccurateMatch, includeStartWithProps);
     }
 
     public abstract bool IsSupportQuery<T>(IQueryable<T> query) where T : class;
@@ -55,7 +55,7 @@ public abstract class PlatformFullTextSearchPersistenceService : IPlatformFullTe
         IQueryable<T> query,
         string searchText,
         Expression<Func<T, object>>[] inFullTextSearchProps,
-        bool fullTextExactMatch = false,
+        bool fullTextAccurateMatch = true,
         Expression<Func<T, object>>[] includeStartWithProps = null) where T : class;
 
     protected IQueryable<T> TrySearchByFirstSupportQueryHelper<T>(

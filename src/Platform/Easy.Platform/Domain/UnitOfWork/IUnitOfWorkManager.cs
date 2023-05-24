@@ -70,6 +70,7 @@ public interface IUnitOfWorkManager : IDisposable
 public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
 {
     protected readonly List<IUnitOfWork> CurrentUnitOfWorks = new();
+    protected readonly List<IUnitOfWork> FreeCreatedUnitOfWorks = new();
 
     private IUnitOfWork globalUow;
 
@@ -147,6 +148,10 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
             // free managed resources
             CurrentUnitOfWorks.ForEach(currentUnitOfWork => currentUnitOfWork.Dispose());
             CurrentUnitOfWorks.Clear();
+
+            FreeCreatedUnitOfWorks.ForEach(currentUnitOfWork => currentUnitOfWork.Dispose());
+            FreeCreatedUnitOfWorks.Clear();
+
             globalUow?.Dispose();
         }
     }

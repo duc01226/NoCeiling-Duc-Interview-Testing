@@ -147,7 +147,7 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
             Assembly,
             ServiceLifeTime.Scoped,
             replaceIfExist: true,
-            replaceStrategy: DependencyInjectionExtension.ReplaceServiceStrategy.ByService);
+            replaceStrategy: DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
     }
 
     private void RegisterRepositories(IServiceCollection serviceCollection)

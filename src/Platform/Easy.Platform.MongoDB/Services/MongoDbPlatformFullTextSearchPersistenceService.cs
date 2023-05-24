@@ -21,13 +21,13 @@ public class MongoDbPlatformFullTextSearchPersistenceService : PlatformFullTextS
         IQueryable<T> query,
         string searchText,
         Expression<Func<T, object>>[] inFullTextSearchProps,
-        bool fullTextExactMatch = false,
+        bool fullTextAccurateMatch = true,
         Expression<Func<T, object>>[] includeStartWithProps = null)
     {
         if (string.IsNullOrWhiteSpace(searchText))
             return query;
 
-        var textSearchMongoFilter = BuildTextSearchMongoFilterDefinition<T>(searchText, fullTextExactMatch);
+        var textSearchMongoFilter = BuildTextSearchMongoFilterDefinition<T>(searchText, fullTextAccurateMatch);
         var startsWithFilter = includeStartWithProps?.Any() == true
             ? BuildStartsWithMongoFilterDefinition(searchText, includeStartWithProps)
             : null;
@@ -40,10 +40,10 @@ public class MongoDbPlatformFullTextSearchPersistenceService : PlatformFullTextS
 
     public static FilterDefinition<T> BuildTextSearchMongoFilterDefinition<T>(
         string searchText,
-        bool fullTextExactMatch)
+        bool fullTextAccurateMatch)
     {
         return Builders<T>.Filter.Text(
-            fullTextExactMatch ? $"\"{searchText.Trim()}\"" : searchText.Trim(),
+            fullTextAccurateMatch ? $"\"{searchText.Trim()}\"" : searchText.Trim(),
             new TextSearchOptions
             {
                 CaseSensitive = false,

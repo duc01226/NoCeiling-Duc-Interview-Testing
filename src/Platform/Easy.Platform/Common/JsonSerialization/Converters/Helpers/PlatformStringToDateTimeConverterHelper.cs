@@ -1,17 +1,12 @@
 using System.Globalization;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.Utils;
 
 namespace Easy.Platform.Common.JsonSerialization.Converters.Helpers;
 
 public static class PlatformStringToDateTimeConverterHelper
 {
-    public static readonly string[] SupportDateOnlyFormats =
-    {
-        "yyyy/MM/dd",
-        "dd/MM/yyyy",
-        "yyyy-MM-dd",
-        "dd-MM-yyyy"
-    };
+    public static readonly string[] SupportDateOnlyFormats = Util.DateTimeParser.DefaultSupportDateOnlyFormats;
 
     public static DateTime? TryRead(string dateTimeStr)
     {

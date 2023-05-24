@@ -8,6 +8,7 @@ using Easy.Platform.Common;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Timing;
 using Easy.Platform.Infrastructures.MessageBus;
+using Easy.Platform.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Context.Propagation;
@@ -79,7 +80,7 @@ public class PlatformRabbitMqProcessInitializerService
 
     public IModel CurrentChannel => mqChannelPool.GlobalChannel;
 
-    public async Task StartProcess(CancellationToken cancellationToken)
+    public async Task StartProcess(CancellationToken cancellationToken = default)
     {
         await StartProcessLock.WaitAsync(cancellationToken);
 
@@ -279,6 +280,13 @@ public class PlatformRabbitMqProcessInitializerService
     {
         try
         {
+            await Task.Run(
+                () =>
+                {
+                    IPlatformModule.WaitAllModulesInitiated(typeof(IPlatformPersistenceModule));
+                },
+                currentCancellationToken);
+
             var canProcessConsumerTypes = rabbitMqMessage.RoutingKey.Pipe(
                 routingKey =>
                 {

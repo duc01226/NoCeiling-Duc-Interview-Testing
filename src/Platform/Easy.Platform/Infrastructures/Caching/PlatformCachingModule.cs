@@ -99,7 +99,7 @@ public class PlatformCachingModule : PlatformInfrastructureModule
                 DefaultPlatformCacheEntryOptions,
                 ServiceLifeTime.Transient,
                 replaceIfExist: true,
-                DependencyInjectionExtension.ReplaceServiceStrategy.ByService);
+                DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
         else if (serviceCollection.All(p => p.ServiceType != typeof(PlatformCacheEntryOptions)))
             serviceCollection.Register<PlatformCacheEntryOptions>();
     }

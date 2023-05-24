@@ -19,7 +19,7 @@ public class DummyPerformanceTestTextSnippetApplicationDataSeeder : PlatformAppl
         this.textSnippetRepository = textSnippetRepository;
     }
 
-    public override int DelaySeedingInBackgroundBySeconds => 30;
+    public override int DelaySeedingInBackgroundBySeconds => DefaultActiveDelaySeedingInBackgroundBySeconds;
 
     protected override async Task InternalSeedData(bool isReplaceNewSeed = false)
     {

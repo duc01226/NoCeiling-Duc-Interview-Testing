@@ -5,6 +5,7 @@ using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
+using Easy.Platform.Common.Utils;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +18,8 @@ namespace Easy.Platform.Common;
 
 public interface IPlatformModule
 {
+    public const int DefaultMaxWaitModuleInitiatedSeconds = 600;
+
     /// <summary>
     /// Higher Priority value mean the module init will be executed before lower Priority value in the same level module dependencies
     /// <br />
@@ -39,6 +42,21 @@ public interface IPlatformModule
     public bool Initiated { get; }
 
     public Action<TracerProviderBuilder> AdditionalTracingConfigure { get; }
+
+    public static void WaitAllModulesInitiated(Type moduleType)
+    {
+        Util.TaskRunner.WaitUntil(
+            () =>
+            {
+                var modules = PlatformGlobal.RootServiceProvider.GetServices(moduleType).Select(p => p.As<IPlatformModule>());
+
+                return modules.All(p => p.Initiated);
+            },
+            maxWaitSeconds: DefaultMaxWaitModuleInitiatedSeconds,
+            waitForMsg: $"Wait for all modules of type {moduleType.Name} get initiated",
+            waitIntervalSeconds: 5);
+    }
+
     public List<IPlatformModule> AllDependencyModules(IServiceCollection useServiceCollection = null);
 
     public static bool CheckIsRootModule(IPlatformModule module)
@@ -77,7 +95,7 @@ public abstract class PlatformModule : IPlatformModule
 {
     public const int DefaultExecuteInitPriority = 10;
     public const int ExecuteInitPriorityNextLevelDistance = 10;
-    public const int MinimumRetryTimesToWarning = 3;
+    public const int MinimumRetryTimesToWarning = 2;
 
     protected static readonly ConcurrentDictionary<string, Assembly> ExecutedRegisterByAssemblies = new();
 
@@ -92,6 +110,8 @@ public abstract class PlatformModule : IPlatformModule
     }
 
     protected ILogger Logger { get; init; }
+
+    protected virtual bool AutoScanAssemblyRegisterCqrs => false;
 
     public bool IsRootModule => IPlatformModule.CheckIsRootModule(this);
 
@@ -301,28 +321,29 @@ public abstract class PlatformModule : IPlatformModule
         return new DistributedTracingConfig();
     }
 
-    private void RegisterDefaultLogs(IServiceCollection serviceCollection)
+    protected void RegisterDefaultLogs(IServiceCollection serviceCollection)
     {
         serviceCollection.RegisterIfServiceNotExist(typeof(ILoggerFactory), typeof(LoggerFactory));
         serviceCollection.RegisterIfServiceNotExist(typeof(ILogger<>), typeof(Logger<>));
         serviceCollection.RegisterIfServiceNotExist(typeof(ILogger), sp => sp.GetRequiredService<ILoggerFactory>().CreateLogger("DefaultLogger"));
     }
 
-    private void RegisterCqrs(IServiceCollection serviceCollection)
+    protected void RegisterCqrs(IServiceCollection serviceCollection)
     {
-        ExecuteRegisterByAssemblyOnlyOnce(
-            assembly =>
-            {
-                serviceCollection.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
+        if (AutoScanAssemblyRegisterCqrs)
+            ExecuteRegisterByAssemblyOnlyOnce(
+                assembly =>
+                {
+                    serviceCollection.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
 
-                serviceCollection.Register<IPlatformCqrs, PlatformCqrs>();
-                serviceCollection.RegisterAllFromType(conventionalType: typeof(IPipelineBehavior<,>), assembly);
-            },
-            Assembly,
-            actionName: nameof(RegisterCqrs));
+                    serviceCollection.Register<IPlatformCqrs, PlatformCqrs>();
+                    serviceCollection.RegisterAllFromType(conventionalType: typeof(IPipelineBehavior<,>), assembly);
+                },
+                Assembly,
+                actionName: nameof(RegisterCqrs));
     }
 
-    private void RegisterAllModuleDependencies(IServiceCollection serviceCollection)
+    protected void RegisterAllModuleDependencies(IServiceCollection serviceCollection)
     {
         ModuleTypeDependencies()
             .Select(moduleTypeProvider => moduleTypeProvider(Configuration))

@@ -175,7 +175,7 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
             Assembly,
             ServiceLifeTime.Transient,
             replaceIfExist: true,
-            DependencyInjectionExtension.ReplaceServiceStrategy.ByService);
+            DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
         // Register default PlatformMongoDbUnitOfWork if not exist implementation in the concrete inherit persistence module
         if (serviceCollection.NotExist(p => p.ServiceType == typeof(IPlatformMongoDbPersistenceUnitOfWork<TDbContext>)))
             serviceCollection.RegisterAllForImplementation<PlatformMongoDbPersistenceUnitOfWork<TDbContext>>();

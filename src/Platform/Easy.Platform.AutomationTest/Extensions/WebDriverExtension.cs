@@ -95,8 +95,13 @@ public static class WebDriverExtension
         var page = IPage
             .CreateInstance<TPage, TSettings>(webDriver, settings)
             .With(page => page.QueryParams = webDriver.Url.ToUri().QueryParams())
-            .With(page => page.PathRouteParams = IPage.BuildPathRouteParams(webDriver.Url.ToUri().Path(), page.PathRoute))
-            .AssertIsCurrentActivePage();
+            .With(page => page.PathRouteParams = IPage.BuildPathRouteParams(webDriver.Url.ToUri().Path(), page.PathRoute));
+
+        page
+            .WaitUntil(
+                p => p.ValidateIsCurrentActivePage(),
+                maxWaitSeconds: page.DefaultMaxWaitSeconds,
+                waitForMsg: $"{typeof(TPage).Name} to be loaded successfully. Reason: {page.ValidateIsCurrentActivePage().ErrorsMsg()}");
 
         return page;
     }

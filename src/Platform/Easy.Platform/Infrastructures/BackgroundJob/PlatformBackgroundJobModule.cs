@@ -36,12 +36,12 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
 
         serviceCollection.RegisterAllFromType<IPlatformBackgroundJobScheduler>(
             Assembly,
-            replaceStrategy: DependencyInjectionExtension.ReplaceServiceStrategy.ByService);
+            replaceStrategy: DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
 
         serviceCollection.RegisterAllFromType<IPlatformBackgroundJobProcessingService>(
             Assembly,
             ServiceLifeTime.Singleton,
-            replaceStrategy: DependencyInjectionExtension.ReplaceServiceStrategy.ByService);
+            replaceStrategy: DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
 
         serviceCollection.RegisterHostedService<PlatformBackgroundJobStartProcessHostedService>();
     }

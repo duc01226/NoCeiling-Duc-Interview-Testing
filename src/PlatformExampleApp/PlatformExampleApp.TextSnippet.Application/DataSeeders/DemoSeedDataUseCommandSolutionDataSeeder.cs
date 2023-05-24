@@ -22,7 +22,7 @@ public class DemoSeedDataUseCommandSolutionDataSeeder : PlatformApplicationDataS
     {
     }
 
-    public override int DelaySeedingInBackgroundBySeconds => 30;
+    public override int DelaySeedingInBackgroundBySeconds => DefaultActiveDelaySeedingInBackgroundBySeconds;
 
     public override int SeedOrder => 2;
 

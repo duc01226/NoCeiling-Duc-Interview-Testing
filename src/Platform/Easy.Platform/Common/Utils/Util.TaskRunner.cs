@@ -736,8 +736,6 @@ public static partial class Util
             var startWaitTime = DateTime.UtcNow;
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
-            Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
-
             while (!condition(getResult(target)))
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
@@ -761,8 +759,6 @@ public static partial class Util
         {
             var startWaitTime = DateTime.UtcNow;
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
-
-            Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
 
             try
             {
@@ -812,8 +808,6 @@ public static partial class Util
         {
             var startWaitTime = DateTime.UtcNow;
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
-
-            Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
 
             try
             {
@@ -873,8 +867,6 @@ public static partial class Util
             var startWaitTime = DateTime.UtcNow;
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
-            Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
-
             try
             {
                 while (true)
@@ -925,8 +917,6 @@ public static partial class Util
             var startWaitTime = DateTime.UtcNow;
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
-            Thread.Sleep((int)(waitIntervalSeconds * 1000));
-
             while (!condition())
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     Thread.Sleep((int)(waitIntervalSeconds * 1000));
@@ -947,8 +937,6 @@ public static partial class Util
         {
             var startWaitTime = DateTime.UtcNow;
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
-
-            Thread.Sleep((int)(waitIntervalSeconds * 1000));
 
             while (!await condition())
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
@@ -980,7 +968,6 @@ public static partial class Util
             var startWaitTime = DateTime.UtcNow;
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
-            Thread.Sleep((int)(waitIntervalSeconds * 1000));
             while (!whenDo.HasMatchedCase())
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     Thread.Sleep((int)(waitIntervalSeconds * 1000));

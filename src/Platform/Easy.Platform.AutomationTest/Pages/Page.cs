@@ -16,7 +16,7 @@ public interface IPage : IUiComponent
     public string Origin { get; }
 
     /// <summary>
-    /// Used to build the path of the page after the origin. The full url is: {Origin}/{Path}{QueryParamsUrlPart}. See <see cref="BuildFullUrl{TPage}" />. <br/>
+    /// Used to build the path of the page after the origin. The full url is: {Origin}/{Path}{QueryParamsUrlPart}. See <see cref="BuildFullUrl{TPage}" />. <br />
     /// Example: /Users; /Users/{id}/Detail
     /// </summary>
     public string PathRoute { get; }
@@ -41,7 +41,7 @@ public interface IPage : IUiComponent
     public IWebElement? GlobalSpinnerElement { get; }
 
     /// <summary>
-    /// Default max wait seconds value is used for all .WaitUntil method from a page 
+    /// Default max wait seconds value is used for all .WaitUntil method from a page
     /// when max wait is not given
     /// </summary>
     public int DefaultMaxWaitSeconds { get; }
@@ -81,6 +81,11 @@ public interface IPage : IUiComponent
         return ValidatePageHasNoErrors(page: this, p => p.AllErrorElements());
     }
 
+    public PlatformValidationResult<IPage> ValidatePageHasNoGeneralErrors()
+    {
+        return ValidatePageHasNoErrors(page: this, p => p.GeneralErrorElements());
+    }
+
     public PlatformValidationResult<IPage> ValidatePageHasSomeErrors()
     {
         return ValidatePageHasSomeErrors(page: this, p => p.AllErrorElements());
@@ -94,6 +99,11 @@ public interface IPage : IUiComponent
     public IPage AssertPageHasNoErrors()
     {
         return ValidatePageHasNoErrors().AssertValid();
+    }
+
+    public IPage AssertPageHasNoGeneralErrors()
+    {
+        return ValidatePageHasNoGeneralErrors().AssertValid();
     }
 
     public IPage AssertPageHasSomeErrors()
@@ -390,11 +400,15 @@ public interface IPage<TPage, TSettings> : IPage<TSettings>
 
     public new PlatformValidationResult<TPage> ValidatePageHasNoErrors();
 
+    public new PlatformValidationResult<TPage> ValidatePageHasNoGeneralErrors();
+
     public new PlatformValidationResult<TPage> ValidatePageHasSomeErrors();
 
     public new PlatformValidationResult<TPage> ValidatePageMustHasError(string errorMsg);
 
     public new TPage AssertPageHasNoErrors();
+
+    public new TPage AssertPageHasNoGeneralErrors();
 
     public new TPage AssertPageHasSomeErrors();
 
@@ -528,6 +542,11 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         return IPage.ValidatePageHasNoErrors(page: this.As<TPage>(), p => p.AllErrorElements());
     }
 
+    public PlatformValidationResult<TPage> ValidatePageHasNoGeneralErrors()
+    {
+        return IPage.ValidatePageHasNoErrors(page: this.As<TPage>(), p => p.GeneralErrorElements());
+    }
+
     public PlatformValidationResult<TPage> ValidatePageHasSomeErrors()
     {
         return IPage.ValidatePageHasSomeErrors(page: this.As<TPage>(), p => p.AllErrorElements());
@@ -546,6 +565,11 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
     public TPage AssertPageHasNoErrors()
     {
         return ValidatePageHasNoErrors().AssertValid();
+    }
+
+    public TPage AssertPageHasNoGeneralErrors()
+    {
+        return ValidatePageHasNoGeneralErrors().AssertValid();
     }
 
     public TPage AssertPageHasSomeErrors()
@@ -638,7 +662,7 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         string waitForMsg = "Page Content is loaded and displayed successfully")
     {
         return WaitUntil(
-                until: _ => WebDriver.TryFindElement(PageContentLoadedElementIndicatorSelector)?.Displayed == true,
+                until: _ => _.ValidateIsCurrentActivePage() && WebDriver.TryFindElement(PageContentLoadedElementIndicatorSelector)?.Displayed == true,
                 maxWaitSeconds: maxWaitForLoadingDataSeconds ?? DefaultMaxWaitSeconds,
                 waitForMsg: waitForMsg)
             .WaitGlobalSpinnerStopped(maxWaitForLoadingDataSeconds);

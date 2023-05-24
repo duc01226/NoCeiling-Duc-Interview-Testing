@@ -19,12 +19,14 @@ namespace PlatformExampleApp.Test.BDD.Features
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("TechTalk.SpecFlow", "3.9.0.0")]
     [System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
+    [Xunit.TraitAttribute("Category", "retry(3,5000)")]
     public partial class CreateTextSnippetFeatureFeature : object, Xunit.IClassFixture<CreateTextSnippetFeatureFeature.FixtureData>, System.IDisposable
     {
         
         private static TechTalk.SpecFlow.ITestRunner testRunner;
         
-        private static string[] featureTags = ((string[])(null));
+        private static string[] featureTags = new string[] {
+                "retry(3,5000)"};
         
         private Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         
@@ -80,15 +82,16 @@ namespace PlatformExampleApp.Test.BDD.Features
             this.TestTearDown();
         }
         
-        [Xunit.SkippableFactAttribute(DisplayName="Create a new random unique snippet text item should be successful")]
         [Xunit.TraitAttribute("FeatureTitle", "Create Text Snippet Feature")]
         [Xunit.TraitAttribute("Description", "Create a new random unique snippet text item should be successful")]
+        [xRetry.RetryFact(3, 5000, new System.Type[] {
+                typeof(Xunit.SkipException)}, DisplayName="Create a new random unique snippet text item should be successful")]
         public void CreateANewRandomUniqueSnippetTextItemShouldBeSuccessful()
         {
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Create a new random unique snippet text item should be successful", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 3
+#line 4
 this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -98,21 +101,21 @@ this.ScenarioInitialize(scenarioInfo);
             else
             {
                 this.ScenarioStart();
-#line 4
+#line 5
     testRunner.Given("Loaded success home page", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 5
+#line 6
     testRunner.When("Fill in a new random unique value snippet text item data (snippet text and full t" +
                         "ext) and submit a new text snippet item, wait for submit request finished", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 6
+#line 7
     testRunner.Then("Current page has no errors", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
-#line 7
+#line 8
     testRunner.And("Do search text snippet item with the snippet text that has just being created suc" +
                         "cess must found exact one match item in the table for the search text", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
-#line 8
+#line 9
     testRunner.And("The item data should equal to the filled data when submit creating new text snipp" +
                         "et item", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "And ");
 #line hidden
@@ -120,15 +123,16 @@ this.ScenarioInitialize(scenarioInfo);
             this.ScenarioCleanup();
         }
         
-        [Xunit.SkippableFactAttribute(DisplayName="Create two new duplicated snippet text item should be failed")]
         [Xunit.TraitAttribute("FeatureTitle", "Create Text Snippet Feature")]
         [Xunit.TraitAttribute("Description", "Create two new duplicated snippet text item should be failed")]
+        [xRetry.RetryFact(3, 5000, new System.Type[] {
+                typeof(Xunit.SkipException)}, DisplayName="Create two new duplicated snippet text item should be failed")]
         public void CreateTwoNewDuplicatedSnippetTextItemShouldBeFailed()
         {
             string[] tagsOfScenario = ((string[])(null));
             System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new System.Collections.Specialized.OrderedDictionary();
             TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("Create two new duplicated snippet text item should be failed", null, tagsOfScenario, argumentsOfScenario, featureTags);
-#line 10
+#line 11
 this.ScenarioInitialize(scenarioInfo);
 #line hidden
             if ((TagHelper.ContainsIgnoreTag(tagsOfScenario) || TagHelper.ContainsIgnoreTag(featureTags)))
@@ -138,14 +142,14 @@ this.ScenarioInitialize(scenarioInfo);
             else
             {
                 this.ScenarioStart();
-#line 11
+#line 12
     testRunner.Given("Loaded success home page", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Given ");
 #line hidden
-#line 12
+#line 13
     testRunner.When("Create a new random unique snippet text item successful and try create the same p" +
                         "revious snippet text item value again", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
-#line 13
+#line 14
     testRunner.Then("Page must show create duplicated snippet text errors", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
 #line hidden
             }

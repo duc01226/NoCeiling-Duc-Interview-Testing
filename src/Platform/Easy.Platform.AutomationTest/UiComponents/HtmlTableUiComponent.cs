@@ -77,7 +77,7 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
         public int ColIndex { get; set; }
         public int RowIndex { get; set; }
         public string? ColName { get; set; }
-        public string? Value { get; set; }
+        public string? CellValue { get; set; }
     }
 
     public class Row : UiComponent<Row>
@@ -144,7 +144,7 @@ public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
                     ColIndex = cellIndex,
                     RowIndex = RowIndex,
                     ColName = headers().ElementAtOrDefault(cellIndex).PipeIfNotNull(thenPipe: p => GetHeaderName(arg: p!)),
-                    Value = cellElement.Text
+                    CellValue = cellElement.Text
                 };
             }
             // catch StaleElementReferenceException when if table has been updated and render again then just consider that row is empty no cell

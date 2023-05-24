@@ -99,7 +99,7 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
             Assembly,
             ServiceLifeTime.Transient,
             replaceIfExist: true,
-            DependencyInjectionExtension.ReplaceServiceStrategy.ByService);
+            DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
         // Register default PlatformMongoDbUnitOfWork if not any implementation in the concrete inherit persistence module
         if (serviceCollection.NotExist(p => p.ServiceType == typeof(IPlatformEfCorePersistenceUnitOfWork<TDbContext>)))
             serviceCollection.RegisterAllForImplementation<PlatformEfCorePersistenceUnitOfWork<TDbContext>>();
