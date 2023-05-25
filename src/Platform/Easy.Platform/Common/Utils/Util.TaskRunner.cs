@@ -747,6 +747,23 @@ public static partial class Util
             return getResult(target);
         }
 
+        public static TResult TryWaitUntilGetValidResult<T, TResult>(
+            T target,
+            Func<T, TResult> getResult,
+            Func<TResult, bool> condition,
+            double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
+            string waitForMsg = null)
+        {
+            var startWaitTime = DateTime.UtcNow;
+            var maxWaitMilliseconds = maxWaitSeconds * 1000;
+
+            while (!condition(getResult(target)))
+                if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
+                    Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
+
+            return getResult(target);
+        }
+
         /// <summary>
         /// Wait until the condition met. Stop wait immediately if continueWaitOnlyWhen assert failed throw exception
         /// </summary>

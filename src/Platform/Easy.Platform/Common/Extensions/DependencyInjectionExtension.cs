@@ -910,6 +910,35 @@ public static class DependencyInjectionExtension
             pageSize: pageSize);
     }
 
+    public static async Task ExecuteInjectScopedPagingAsync(
+        this IServiceProvider serviceProvider,
+        long maxItemCount,
+        int pageSize,
+        int maxRetryCount,
+        int retrySleepMilliseconds,
+        Delegate method,
+        params object[] manuallyParams)
+    {
+        method.Method
+            .Validate(
+                must: p => p.GetParameters().Length >= 2 && p.GetParameters().Take(2).All(_ => _.ParameterType == typeof(int)),
+                "Method parameters must start with (int skipCount, int pageSize)")
+            .EnsureValid();
+
+        await Util.Pager.ExecutePagingAsync(
+            async (skipCount, pageSize) =>
+            {
+                await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                    () => serviceProvider.ExecuteInjectScopedAsync(
+                        method,
+                        manuallyParams: Util.ListBuilder.NewArray<object>(skipCount, pageSize).Concat(manuallyParams).ToArray()),
+                    retryCount: maxRetryCount,
+                    sleepDurationProvider: retryAttempt => retrySleepMilliseconds.Milliseconds());
+            },
+            maxItemCount: maxItemCount,
+            pageSize: pageSize);
+    }
+
     /// <summary>
     /// Support ExecuteInjectScopedAsync scrolling paging. <br />
     /// Then the "manuallyParams" for the method. And the last will be the object you want to be dependency injected

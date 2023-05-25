@@ -41,6 +41,11 @@ public interface IUiComponent
     /// </summary>
     public IWebElement? RootElement { get; }
 
+    /// <summary>
+    /// Resilient try get RootElement until it's available
+    /// </summary>
+    public IWebElement? TryRootElement { get; }
+
     public string Text { get; }
 
     public string GetAttribute(string attributeName);
@@ -89,13 +94,13 @@ public interface IUiComponent
     {
         return childElementSelector
             .PipeIfNotNull(
-                thenPipe: childElementSelector => component.RootElement?.FindElement(by: By.CssSelector(childElementSelector)),
-                component.RootElement);
+                thenPipe: childElementSelector => component.TryRootElement?.FindElement(by: By.CssSelector(childElementSelector)),
+                component.TryRootElement);
     }
 
     public static List<IWebElement> FindChildElements(IUiComponent component, string childElementSelector)
     {
-        return component.RootElement?.FindElements(by: By.CssSelector(childElementSelector)).ToList() ?? new List<IWebElement>();
+        return component.TryRootElement?.FindElements(by: By.CssSelector(childElementSelector)).ToList() ?? new List<IWebElement>();
     }
 }
 
@@ -145,6 +150,14 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
     public IWebElement? RootElement =>
         Util.TaskRunner.WaitRetryThrowFinalException<IWebElement?, StaleElementReferenceException>(
             executeFunc: () => DirectReferenceRootElement?.Invoke() ?? IUiComponent.FindRootElementBySelector(component: this));
+
+    public IWebElement? TryRootElement =>
+        Util.TaskRunner.TryWaitUntilGetValidResult(
+            this,
+            p => RootElement,
+            elementResult => elementResult != null,
+            maxWaitSeconds: 5,
+            waitForMsg: $"'{FullPathRootElementSelector}' to be available");
 
     public virtual string Text => RootElement?.Text ?? "";
 
