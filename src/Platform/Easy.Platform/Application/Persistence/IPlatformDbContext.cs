@@ -53,12 +53,10 @@ public interface IPlatformDbContext : IDisposable
             string loggingFullStackTrace,
             [AllowNull] Func<string> resultQueryStringBuilder)
         {
-            var queryForResultList = resultQuery?.ToList();
+            var queryResultCount = resultQuery?.Count() ?? 0;
 
-            var queryResultCount = queryForResultList?.Count;
-
-            if (queryForResultList?.Count >= persistenceConfiguration.BadQueryWarning.TotalItemsThreshold)
-                LogTooMuchDataInMemoryBadQueryWarning(queryResultCount ?? 0, logger, persistenceConfiguration, loggingFullStackTrace, resultQueryStringBuilder);
+            if (queryResultCount >= persistenceConfiguration.BadQueryWarning.TotalItemsThreshold)
+                LogTooMuchDataInMemoryBadQueryWarning(queryResultCount, logger, persistenceConfiguration, loggingFullStackTrace, resultQueryStringBuilder);
         }
 
         static async Task<TResult> HandleLogSlowQueryBadQueryWarning(
