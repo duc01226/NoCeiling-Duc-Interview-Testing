@@ -6,6 +6,6 @@ public abstract class PlatformMongoInboxBusMessageClassMapping : PlatformMongoBa
 {
 }
 
-public class PlatformDefaultMongoInboxBusMessageClassMapping : PlatformMongoInboxBusMessageClassMapping
+public sealed class PlatformDefaultMongoInboxBusMessageClassMapping : PlatformMongoInboxBusMessageClassMapping
 {
 }

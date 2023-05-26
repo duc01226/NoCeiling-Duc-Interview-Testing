@@ -2,7 +2,7 @@ using RabbitMQ.Client;
 
 namespace Easy.Platform.RabbitMQ;
 
-public class PlatformRabbitMqOptions
+public sealed class PlatformRabbitMqOptions
 {
     public string HostNames { get; set; }
 

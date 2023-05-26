@@ -15,7 +15,7 @@ public interface IPlatformBackgroundThreadFullStackTraceContext
 {
 }
 
-public class PlatformBackgroundThreadFullStackTraceContextAccessor : IPlatformBackgroundThreadFullStackTraceContextAccessor
+public sealed class PlatformBackgroundThreadFullStackTraceContextAccessor : IPlatformBackgroundThreadFullStackTraceContextAccessor
 {
     private static readonly AsyncLocal<FullStackTraceContextHolder> FullStackTraceContextCurrent = new();
 

@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.MessageBus.OutboxPattern;
 
-public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
+public sealed class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
 {
     public const int DefaultResilientRetiredCount = 5;
     public const int DefaultResilientRetiredDelayMilliseconds = 200;
@@ -305,26 +305,24 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 loggerFactory: CreateLogger,
                 cancellationToken: cancellationToken);
         else
-            // Do not use async, just call.WaitResult()
-            // WHY: Never use async lambda on event handler, because it's equivalent to async void, which fire async task and forget
-            // this will lead to a lot of potential bug and issues.
-            currentUow.OnCompleted += (sender, args) =>
-            {
-                // Try to process sending newProcessingOutboxMessage first time immediately after task completed
-                // WHY: we can wait for the background process handle the message but try to do it
-                // immediately if possible is better instead of waiting for the background process
-                Util.TaskRunner.QueueActionInBackground(
-                    () => PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
-                        SendExistingOutboxMessageInNewUowAsync<TMessage>,
-                        createdProcessingOutboxMessage,
-                        message,
-                        routingKey,
-                        retryProcessFailedMessageInSecondsUnit,
-                        cancellationToken,
-                        logger),
-                    loggerFactory: CreateLogger,
-                    cancellationToken: cancellationToken);
-            };
+            currentUow.OnCompleted.Add(
+                async () =>
+                {
+                    // Try to process sending newProcessingOutboxMessage first time immediately after task completed
+                    // WHY: we can wait for the background process handle the message but try to do it
+                    // immediately if possible is better instead of waiting for the background process
+                    Util.TaskRunner.QueueActionInBackground(
+                        () => PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
+                            SendExistingOutboxMessageInNewUowAsync<TMessage>,
+                            createdProcessingOutboxMessage,
+                            message,
+                            routingKey,
+                            retryProcessFailedMessageInSecondsUnit,
+                            cancellationToken,
+                            logger),
+                        loggerFactory: CreateLogger,
+                        cancellationToken: cancellationToken);
+                });
     }
 
     private static ILogger CreateLogger()

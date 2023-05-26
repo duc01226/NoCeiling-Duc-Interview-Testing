@@ -19,7 +19,7 @@ using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
 namespace PlatformExampleApp.TextSnippet.Application.UseCaseCommands;
 
-public class SaveSnippetTextCommand : PlatformCqrsCommand<SaveSnippetTextCommandResult>
+public sealed class SaveSnippetTextCommand : PlatformCqrsCommand<SaveSnippetTextCommandResult>
 {
     public TextSnippetEntityDto Data { get; set; }
 
@@ -47,12 +47,12 @@ public class SaveSnippetTextCommand : PlatformCqrsCommand<SaveSnippetTextCommand
     }
 }
 
-public class SaveSnippetTextCommandResult : PlatformCqrsCommandResult
+public sealed class SaveSnippetTextCommandResult : PlatformCqrsCommandResult
 {
     public TextSnippetEntityDto SavedData { get; set; }
 }
 
-public class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandler<SaveSnippetTextCommand, SaveSnippetTextCommandResult>
+public sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandler<SaveSnippetTextCommand, SaveSnippetTextCommandResult>
 {
     private readonly ILogger<SaveSnippetTextCommandHandler> logger;
 

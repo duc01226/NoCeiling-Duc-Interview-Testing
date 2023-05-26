@@ -9,7 +9,7 @@ using PlatformExampleApp.TextSnippet.Domain.Entities;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.MultiDbDemo.Mongo;
 
-public class TextSnippetMultiDbDemoDbContext : PlatformMongoDbContext<TextSnippetMultiDbDemoDbContext>
+public sealed class TextSnippetMultiDbDemoDbContext : PlatformMongoDbContext<TextSnippetMultiDbDemoDbContext>
 {
     public TextSnippetMultiDbDemoDbContext(
         IOptions<PlatformMongoOptions<TextSnippetMultiDbDemoDbContext>> options,

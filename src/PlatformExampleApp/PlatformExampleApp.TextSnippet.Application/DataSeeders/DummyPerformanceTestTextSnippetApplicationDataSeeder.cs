@@ -6,7 +6,7 @@ using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
 namespace PlatformExampleApp.TextSnippet.Application.DataSeeders;
 
-public class DummyPerformanceTestTextSnippetApplicationDataSeeder : PlatformApplicationDataSeeder
+public sealed class DummyPerformanceTestTextSnippetApplicationDataSeeder : PlatformApplicationDataSeeder
 {
     private readonly ITextSnippetRootRepository<TextSnippetEntity> textSnippetRepository;
 

@@ -4,7 +4,7 @@ using Hangfire.Mongo.Migration.Strategies.Backup;
 
 namespace Easy.Platform.HangfireBackgroundJob;
 
-public class PlatformHangfireUseMongoStorageOptions
+public sealed class PlatformHangfireUseMongoStorageOptions
 {
     public const string DefaultDatabaseName = "HangfireBackgroundJob";
 

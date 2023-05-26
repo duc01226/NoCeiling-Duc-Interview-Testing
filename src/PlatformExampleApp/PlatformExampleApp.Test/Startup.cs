@@ -5,7 +5,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace PlatformExampleApp.Test;
 
-internal class Startup : BaseStartup
+internal sealed class Startup : BaseStartup
 {
     // Uncomment this code, change the example "fallbackAspCoreEnv: "Development.Docker"" to the specific environment to run test in visual studio
     // Because when you click run in visual studio, ASPNETCORE_ENVIRONMENT is missing which

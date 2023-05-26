@@ -8,7 +8,7 @@ using PlatformExampleApp.TextSnippet.Domain.Entities;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.MultiDbDemo.Mongo.DemoMigrateDataCrossDb;
 
-public class DemoMigrateDataCrossDbContext : PlatformMongoDbContext<DemoMigrateDataCrossDbContext>
+public sealed class DemoMigrateDataCrossDbContext : PlatformMongoDbContext<DemoMigrateDataCrossDbContext>
 {
     public DemoMigrateDataCrossDbContext(
         IOptions<PlatformMongoOptions<DemoMigrateDataCrossDbContext>> options,

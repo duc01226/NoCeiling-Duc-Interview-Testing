@@ -86,6 +86,11 @@ public interface IPage : IUiComponent
         return ValidatePageHasNoErrors(page: this, p => p.GeneralErrorElements());
     }
 
+    public PlatformValidationResult<IPage> ValidatePageHasNoFormValidationErrors()
+    {
+        return ValidatePageHasNoErrors(page: this, p => p.FormValidationErrorElements());
+    }
+
     public PlatformValidationResult<IPage> ValidatePageHasSomeErrors()
     {
         return ValidatePageHasSomeErrors(page: this, p => p.AllErrorElements());
@@ -96,6 +101,11 @@ public interface IPage : IUiComponent
         return ValidatePageMustHasErrors(page: this, p => p.AllErrorElements(), errorMsg);
     }
 
+    public PlatformValidationResult<IPage> ValidatePageOnlyHasError(string errorMsg)
+    {
+        return ValidatePageOnlyHasErrors(page: this, p => p.AllErrorElements(), errorMsg);
+    }
+
     public IPage AssertPageHasNoErrors()
     {
         return ValidatePageHasNoErrors().AssertValid();
@@ -104,6 +114,11 @@ public interface IPage : IUiComponent
     public IPage AssertPageHasNoGeneralErrors()
     {
         return ValidatePageHasNoGeneralErrors().AssertValid();
+    }
+
+    public IPage AssertPageHasNoFormValidationErrors()
+    {
+        return ValidatePageHasNoFormValidationErrors().AssertValid();
     }
 
     public IPage AssertPageHasSomeErrors()
@@ -344,6 +359,23 @@ public interface IPage : IUiComponent
                 errorMsg: errors => AssertHelper.Failed(
                     generalMsg: "Has no errors displayed on Page",
                     expected: $"Must has error \"{errorMsg}\" displayed on Page",
+                    actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)!))
+            .Of(page);
+    }
+
+    public static PlatformValidationResult<TPage> ValidatePageOnlyHasErrors<TPage>(TPage page, Func<TPage, IEnumerable<IWebElement>> pageErrors, string errorMsg)
+        where TPage : IPage
+    {
+        if (page.ValidateIsCurrentActivePage() == false)
+            return PlatformValidationResult.Valid(page);
+
+        return pageErrors(page)
+            .ToList()
+            .Validate(
+                must: errors => errors.Any() && errors.All(predicate: p => p.Text.ContainsIgnoreCase(errorMsg)),
+                errorMsg: errors => AssertHelper.Failed(
+                    generalMsg: $"Has no errors or has other errors than [{errorMsg}] displayed on Page",
+                    expected: $"Must has only error \"{errorMsg}\" displayed on Page",
                     actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)!))
             .Of(page);
     }
@@ -751,7 +783,7 @@ public class GeneralCurrentActivePage<TSettings> : Page<GeneralCurrentActivePage
     public override string Origin => WebDriver.Url.ToUri().Origin();
 }
 
-public class DefaultGeneralCurrentActivePage : GeneralCurrentActivePage<AutomationTestSettings>
+public sealed class DefaultGeneralCurrentActivePage : GeneralCurrentActivePage<AutomationTestSettings>
 {
     public DefaultGeneralCurrentActivePage(IWebDriver webDriver, AutomationTestSettings settings) : base(webDriver, settings)
     {

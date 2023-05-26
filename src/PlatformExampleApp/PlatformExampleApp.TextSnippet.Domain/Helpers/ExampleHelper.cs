@@ -9,7 +9,7 @@ namespace PlatformExampleApp.TextSnippet.Domain.Helpers;
 /// This is just an example helper to solve internal logic reuse code for domain layer. <br/>
 /// It's auto registered when define it implement IPlatformHelper
 /// </summary>
-public class ExampleHelper : IPlatformHelper
+public sealed class ExampleHelper : IPlatformHelper
 {
     private readonly IPlatformFullTextSearchPersistenceService fullTextSearchPersistenceService;
     private readonly ITextSnippetRepository<MultiDbDemoEntity> multiDbDemoEntityRepository;

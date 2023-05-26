@@ -11,7 +11,7 @@ namespace PlatformExampleApp.Test.BDD;
  * Note: Use <EnableXunitDependencyInjectionDefaultTestFrameworkAttribute>false</EnableXunitDependencyInjectionDefaultTestFrameworkAttribute> in csproj
  * https://github.com/pengweiqhca/Xunit.DependencyInjection/issues/26 . We use our own startup file
  */
-internal class Startup : BaseStartup
+internal sealed class Startup : BaseStartup
 {
     [ScenarioDependencies]
     public static IServiceCollection SpecFlowConfigureServices()

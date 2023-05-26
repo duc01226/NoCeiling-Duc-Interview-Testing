@@ -7,11 +7,11 @@ using PlatformExampleApp.TextSnippet.Domain.Services;
 
 namespace PlatformExampleApp.TextSnippet.Application.UseCaseCommands;
 
-public class DemoUseDemoDomainServiceCommand : PlatformCqrsCommand<DemoUseDemoDomainServiceCommandResult>
+public sealed class DemoUseDemoDomainServiceCommand : PlatformCqrsCommand<DemoUseDemoDomainServiceCommandResult>
 {
 }
 
-public class DemoUseDemoDomainServiceCommandResult : PlatformCqrsCommandResult
+public sealed class DemoUseDemoDomainServiceCommandResult : PlatformCqrsCommandResult
 {
     public TransferSnippetTextToMultiDbDemoEntityNameService.TransferSnippetTextToMultiDbDemoEntityNameResult
         TransferSnippetTextToMultiDbDemoEntityNameResult
@@ -21,7 +21,7 @@ public class DemoUseDemoDomainServiceCommandResult : PlatformCqrsCommandResult
     }
 }
 
-public class DemoUseDemoDomainServiceCommandHandler : PlatformCqrsCommandApplicationHandler<DemoUseDemoDomainServiceCommand, DemoUseDemoDomainServiceCommandResult>
+public sealed class DemoUseDemoDomainServiceCommandHandler : PlatformCqrsCommandApplicationHandler<DemoUseDemoDomainServiceCommand, DemoUseDemoDomainServiceCommandResult>
 {
     // Demo use demoDomainService
     private readonly TransferSnippetTextToMultiDbDemoEntityNameService transferSnippetTextToMultiDbDemoEntityNameService;

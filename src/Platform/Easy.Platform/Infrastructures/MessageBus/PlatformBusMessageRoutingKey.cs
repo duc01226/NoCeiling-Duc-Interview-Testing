@@ -8,7 +8,7 @@ using FluentValidation;
 
 namespace Easy.Platform.Infrastructures.MessageBus;
 
-public class PlatformBusMessageRoutingKey : IEqualityComparer<PlatformBusMessageRoutingKey>
+public sealed class PlatformBusMessageRoutingKey : IEqualityComparer<PlatformBusMessageRoutingKey>
 {
     /// <summary>
     /// MatchAllPatternValue = "*"

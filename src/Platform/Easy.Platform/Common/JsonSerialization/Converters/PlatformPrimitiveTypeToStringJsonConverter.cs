@@ -6,7 +6,7 @@ namespace Easy.Platform.Common.JsonSerialization.Converters;
 /// <summary>
 /// Support auto primitive type to string on Deserialize
 /// </summary>
-public class PlatformPrimitiveTypeToStringJsonConverter : JsonConverter<string>
+public sealed class PlatformPrimitiveTypeToStringJsonConverter : JsonConverter<string>
 {
     public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {

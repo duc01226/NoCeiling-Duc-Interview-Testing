@@ -8,7 +8,7 @@ namespace Easy.Platform.AspNetCore.Middleware;
 /// <summary>
 /// This middleware will add a generated guid request id in to headers. It should be added at the first middleware or second after UseGlobalExceptionHandlerMiddleware
 /// </summary>
-public class PlatformRequestIdGeneratorMiddleware : PlatformMiddleware
+public sealed class PlatformRequestIdGeneratorMiddleware : PlatformMiddleware
 {
     private readonly IPlatformApplicationUserContextAccessor applicationUserContextAccessor;
 

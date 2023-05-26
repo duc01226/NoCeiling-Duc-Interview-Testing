@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.FireBasePushNotification;
 
-internal class FireBasePushNotificationService : IPushNotificationPlatformService
+internal sealed class FireBasePushNotificationService : IPushNotificationPlatformService
 {
     private readonly IFcmSender fcmSender;
     private readonly ILogger<FireBasePushNotificationService> logger;

@@ -1,4 +1,3 @@
-using Easy.Platform.Common.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -10,13 +9,13 @@ namespace Easy.Platform.Common.Hosting;
 /// </summary>
 public abstract class PlatformHostedService : IHostedService, IDisposable
 {
+    protected readonly SemaphoreSlim AsyncStartProcessLock = new SemaphoreSlim(1, 1);
+    protected readonly SemaphoreSlim AsyncStopProcessLock = new SemaphoreSlim(1, 1);
     protected readonly ILogger Logger;
 
     protected bool ProcessStarted;
     protected bool ProcessStopped;
     protected readonly IServiceProvider ServiceProvider;
-    private readonly object startProcessLock = new();
-    private readonly object stopProcessLock = new();
 
     public PlatformHostedService(IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
     {
@@ -32,29 +31,41 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        lock (startProcessLock)
+        try
         {
+            await AsyncStartProcessLock.WaitAsync(cancellationToken);
+
             if (ProcessStarted) return;
 
-            StartProcess(cancellationToken).WaitResult();
+            await StartProcess(cancellationToken);
 
             ProcessStarted = true;
 
             Logger.LogInformation($"Process of {GetType().Name} Started");
         }
+        finally
+        {
+            AsyncStartProcessLock.Release();
+        }
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        lock (stopProcessLock)
+        try
         {
+            await AsyncStopProcessLock.WaitAsync(cancellationToken);
+
             if (!ProcessStarted || ProcessStopped) return;
 
-            StopProcess(cancellationToken).WaitResult();
+            await StopProcess(cancellationToken);
 
             ProcessStopped = true;
 
             Logger.LogInformation($"Process of {GetType().Name} Stopped");
+        }
+        finally
+        {
+            AsyncStopProcessLock.Release();
         }
     }
 
@@ -67,7 +78,11 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
             DisposeManagedResource();
     }
 
-    protected virtual void DisposeManagedResource() { }
+    protected virtual void DisposeManagedResource()
+    {
+        AsyncStartProcessLock?.Dispose();
+        AsyncStopProcessLock?.Dispose();
+    }
 
     public static ILogger CreateLogger(ILoggerFactory loggerFactory)
     {

@@ -483,10 +483,11 @@ dotnet_diagnostic.CA1416.severity = suggestion
 dotnet_diagnostic.CA1846.severity = none
 dotnet_diagnostic.CA1710.severity = none
 dotnet_diagnostic.CA2200.severity = none
-dotnet_diagnostic.CA1852.severity = none
+dotnet_diagnostic.CA1852.severity = warning
 dotnet_diagnostic.CA1311.severity = none
 dotnet_diagnostic.CA1854.severity = none
 
+dotnet_diagnostic.CS0628.severity = none
 dotnet_diagnostic.CS4014.severity = error
 
 dotnet_diagnostic.CS1998.severity = none
@@ -701,3 +702,16 @@ dotnet_diagnostic.S1133.severity = warning
 
 # S3878: Remove array creation and simply pass element for params parameter
 dotnet_diagnostic.S3878.severity = suggestion
+
+# CS8618: Non-nullable variable must contain a non-null value when exiting constructor. Consider declaring it as nullable.
+dotnet_diagnostic.CS8618.severity = suggestion
+
+# CLASS0001: Seal classes that do not have any virtual or abstract methods, properties, events, or indexers
+dotnet_diagnostic.CLASS0001.severity = none
+
+dotnet_diagnostic.RETURN0001.severity = none
+dotnet_diagnostic.ENUM0001.severity = none
+dotnet_diagnostic.ENUM0003.severity = none
+dotnet_diagnostic.ASYNC0001.severity = none
+dotnet_diagnostic.ASYNC0004.severity = none
+dotnet_diagnostic.ASYNC0002.severity = none

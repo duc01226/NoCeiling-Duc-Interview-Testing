@@ -5,7 +5,7 @@ using Easy.Platform.Common.ValueObjects.Abstract;
 
 namespace Easy.Platform.Common.ValueObjects;
 
-public class FullName : PlatformValueObject<FullName>
+public sealed class FullName : PlatformValueObject<FullName>
 {
     public FullName()
     {

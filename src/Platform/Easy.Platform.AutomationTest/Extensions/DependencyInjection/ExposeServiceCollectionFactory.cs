@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Easy.Platform.AutomationTest.Extensions.DependencyInjection;
 
-public class ExposeServiceCollectionFactory : IServiceProviderFactory<IServiceCollection>
+public sealed class ExposeServiceCollectionFactory : IServiceProviderFactory<IServiceCollection>
 {
     private readonly DefaultServiceProviderFactory defaultFactory = new();
 

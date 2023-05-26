@@ -6,7 +6,7 @@ using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
 namespace PlatformExampleApp.TextSnippet.Application.DataSeeders;
 
-public class TextSnippetApplicationDataSeeder : PlatformApplicationDataSeeder
+public sealed class TextSnippetApplicationDataSeeder : PlatformApplicationDataSeeder
 {
     private readonly ITextSnippetRootRepository<MultiDbDemoEntity> multiDbDemoEntityRepository;
     private readonly ITextSnippetRootRepository<TextSnippetEntity> textSnippetRepository;

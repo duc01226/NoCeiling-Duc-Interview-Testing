@@ -5,7 +5,7 @@ namespace Easy.Platform.FireBasePushNotification.GoogleFcm;
 /// <summary>
 /// Firebase cloud message result
 /// </summary>
-internal class FcmResult
+internal sealed class FcmResult
 {
     [JsonPropertyName("message_id")]
     public string MessageId { get; set; }

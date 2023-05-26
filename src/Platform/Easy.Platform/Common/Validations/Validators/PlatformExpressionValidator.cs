@@ -3,7 +3,7 @@ using FluentValidation;
 
 namespace Easy.Platform.Common.Validations.Validators;
 
-public class PlatformExpressionValidator<T> : PlatformValidator<T>
+public sealed class PlatformExpressionValidator<T> : PlatformValidator<T>
 {
     public PlatformExpressionValidator(Expression<Func<T, bool>> must, string errorMessage)
     {

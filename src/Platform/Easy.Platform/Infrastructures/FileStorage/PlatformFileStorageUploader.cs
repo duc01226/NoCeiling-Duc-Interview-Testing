@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace Easy.Platform.Infrastructures.FileStorage;
 
-public class PlatformFileStorageUploader
+public sealed class PlatformFileStorageUploader
 {
     private string contentType;
     private PlatformFileStorageUploader() { }

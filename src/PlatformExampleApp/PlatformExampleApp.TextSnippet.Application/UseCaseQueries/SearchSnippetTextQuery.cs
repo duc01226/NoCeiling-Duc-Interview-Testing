@@ -13,7 +13,7 @@ using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
 namespace PlatformExampleApp.TextSnippet.Application.UseCaseQueries;
 
-public class SearchSnippetTextQuery : PlatformCqrsPagedQuery<SearchSnippetTextQueryResult, TextSnippetEntityDto>
+public sealed class SearchSnippetTextQuery : PlatformCqrsPagedQuery<SearchSnippetTextQueryResult, TextSnippetEntityDto>
 {
     public string SearchText { get; set; }
     public Guid? SearchId { get; set; }
@@ -22,14 +22,14 @@ public class SearchSnippetTextQuery : PlatformCqrsPagedQuery<SearchSnippetTextQu
     public string SearchSingleAddress { get; set; }
 }
 
-public class SearchSnippetTextQueryResult : PlatformCqrsQueryPagedResult<TextSnippetEntityDto>
+public sealed class SearchSnippetTextQueryResult : PlatformCqrsQueryPagedResult<TextSnippetEntityDto>
 {
     public SearchSnippetTextQueryResult(List<TextSnippetEntityDto> items, long totalCount, IPlatformPagedRequest pagedRequest) : base(items, totalCount, pagedRequest)
     {
     }
 }
 
-public class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicationHandler<SearchSnippetTextQuery, SearchSnippetTextQueryResult>
+public sealed class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicationHandler<SearchSnippetTextQuery, SearchSnippetTextQueryResult>
 {
     // This is just a demo that helper is used by Application Commands/Queries
     // ReSharper disable once NotAccessedField.Local

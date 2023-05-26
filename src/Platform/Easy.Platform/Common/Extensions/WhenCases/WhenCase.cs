@@ -167,7 +167,7 @@ public class WhenCase<TSource, TTarget> : WhenCase
         return this;
     }
 
-    public class CaseItem
+    public sealed class CaseItem
     {
         public CaseItem(Func<TSource, bool> @case, Func<TSource, Task<TTarget>> then)
         {
@@ -353,7 +353,7 @@ public class WhenCase<TSource, TTarget> : WhenCase
     #endregion
 }
 
-public class WhenCase<TSource> : WhenCase<TSource, object>
+public sealed class WhenCase<TSource> : WhenCase<TSource, object>
 {
     public WhenCase(TSource source, params CaseItem[] cases) : base(source, cases)
     {

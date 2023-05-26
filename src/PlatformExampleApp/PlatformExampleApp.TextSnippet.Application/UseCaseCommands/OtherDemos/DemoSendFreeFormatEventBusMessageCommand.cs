@@ -8,13 +8,13 @@ using PlatformExampleApp.TextSnippet.Application.MessageBus.FreeFormatMessages;
 
 namespace PlatformExampleApp.TextSnippet.Application.UseCaseCommands;
 
-public class DemoSendFreeFormatEventBusMessageCommand : PlatformCqrsCommand<DemoSendFreeFormatEventBusMessageCommandResult>
+public sealed class DemoSendFreeFormatEventBusMessageCommand : PlatformCqrsCommand<DemoSendFreeFormatEventBusMessageCommandResult>
 {
     public string Property1 { get; set; }
     public int Property2 { get; set; }
 }
 
-public class DemoSendFreeFormatEventBusMessageCommandResult : PlatformCqrsCommandResult
+public sealed class DemoSendFreeFormatEventBusMessageCommandResult : PlatformCqrsCommandResult
 {
 }
 

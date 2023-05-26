@@ -3,7 +3,7 @@ using PlatformExampleApp.TextSnippet.Application.DataSeeders;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.DataMigrations;
 
-internal class DemoMigrateUpdateSeedDataWhenSeedDataLogicIsUpdated : PlatformDataMigrationExecutor<TextSnippetDbContext>
+internal sealed class DemoMigrateUpdateSeedDataWhenSeedDataLogicIsUpdated : PlatformDataMigrationExecutor<TextSnippetDbContext>
 {
     private readonly DemoSeedDataUseCommandSolutionDataSeeder demoSeedDataUseCommandSolutionDataSeeder;
 

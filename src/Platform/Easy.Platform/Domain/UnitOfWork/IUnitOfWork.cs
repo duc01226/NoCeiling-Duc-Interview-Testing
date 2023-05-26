@@ -18,8 +18,8 @@ public interface IUnitOfWork : IDisposable
 
     public IUnitOfWork ParentUnitOfWork { get; set; }
 
-    public event EventHandler OnCompleted;
-    public event EventHandler<UnitOfWorkFailedArgs> OnFailed;
+    public List<Func<Task>> OnCompleted { get; set; }
+    public List<Func<UnitOfWorkFailedArgs, Task>> OnFailed { get; set; }
 
     /// <summary>
     /// Completes this unit of work.
@@ -72,7 +72,7 @@ public interface IUnitOfWork : IDisposable
     }
 }
 
-public class UnitOfWorkFailedArgs
+public sealed class UnitOfWorkFailedArgs
 {
     public UnitOfWorkFailedArgs(Exception exception)
     {
@@ -91,8 +91,8 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
 
     public IUnitOfWork ParentUnitOfWork { get; set; }
 
-    public event EventHandler OnCompleted;
-    public event EventHandler<UnitOfWorkFailedArgs> OnFailed;
+    public List<Func<Task>> OnCompleted { get; set; } = new List<Func<Task>>();
+    public List<Func<UnitOfWorkFailedArgs, Task>> OnFailed { get; set; } = new List<Func<UnitOfWorkFailedArgs, Task>>();
     public List<IUnitOfWork> InnerUnitOfWorks { get; protected set; } = new();
     public IUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
 
@@ -109,11 +109,11 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
 
             Completed = true;
 
-            InvokeOnCompleted(this, EventArgs.Empty);
+            await InvokeOnCompleted();
         }
         catch (Exception e)
         {
-            InvokeOnFailed(this, new UnitOfWorkFailedArgs(e));
+            await InvokeOnFailed(new UnitOfWorkFailedArgs(e));
             throw;
         }
     }
@@ -163,13 +163,13 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
         return Task.CompletedTask;
     }
 
-    protected void InvokeOnCompleted(object sender, EventArgs e)
+    protected async Task InvokeOnCompleted()
     {
-        OnCompleted?.Invoke(sender, e);
+        await OnCompleted.ForEachAsync(p => p.Invoke());
     }
 
-    protected void InvokeOnFailed(object sender, UnitOfWorkFailedArgs e)
+    protected async Task InvokeOnFailed(UnitOfWorkFailedArgs e)
     {
-        OnFailed?.Invoke(sender, e);
+        await OnFailed.ForEachAsync(p => p.Invoke(e));
     }
 }

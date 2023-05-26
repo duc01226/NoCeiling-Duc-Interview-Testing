@@ -7,7 +7,7 @@ namespace Easy.Platform.HangfireBackgroundJob;
 /// Using service provider activator to resolve object when activate background job.
 /// Activate by serviceProvider first. If not success then use class Activator.
 /// </summary>
-public class PlatformHangfireActivator : JobActivator
+public sealed class PlatformHangfireActivator : JobActivator
 {
     private readonly IServiceProvider serviceProvider;
 
@@ -27,7 +27,7 @@ public class PlatformHangfireActivator : JobActivator
     }
 }
 
-public class PlatformHangfireJobActivatorScope : JobActivatorScope
+public sealed class PlatformHangfireJobActivatorScope : JobActivatorScope
 {
     private readonly IServiceScope serviceScope;
 

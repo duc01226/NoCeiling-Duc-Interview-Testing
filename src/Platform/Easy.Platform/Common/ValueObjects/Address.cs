@@ -3,7 +3,7 @@ using Easy.Platform.Common.ValueObjects.Abstract;
 
 namespace Easy.Platform.Common.ValueObjects;
 
-public class Address : PlatformValueObject<Address>
+public sealed class Address : PlatformValueObject<Address>
 {
     public Address() { }
 

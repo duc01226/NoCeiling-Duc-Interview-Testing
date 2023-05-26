@@ -8,15 +8,15 @@ using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
 namespace PlatformExampleApp.TextSnippet.Application.UseCaseCommands;
 
-public class DemoUseCreateOrUpdateManyCommand : PlatformCqrsCommand<DemoUseCreateOrUpdateManyCommandResult>
+public sealed class DemoUseCreateOrUpdateManyCommand : PlatformCqrsCommand<DemoUseCreateOrUpdateManyCommandResult>
 {
 }
 
-public class DemoUseCreateOrUpdateManyCommandResult : PlatformCqrsCommandResult
+public sealed class DemoUseCreateOrUpdateManyCommandResult : PlatformCqrsCommandResult
 {
 }
 
-public class DemoUseCreateOrUpdateManyCommandHandler : PlatformCqrsCommandApplicationHandler<DemoUseCreateOrUpdateManyCommand, DemoUseCreateOrUpdateManyCommandResult>
+public sealed class DemoUseCreateOrUpdateManyCommandHandler : PlatformCqrsCommandApplicationHandler<DemoUseCreateOrUpdateManyCommand, DemoUseCreateOrUpdateManyCommandResult>
 {
     private readonly ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository;
 

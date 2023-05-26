@@ -2,7 +2,7 @@ using System.Linq.Expressions;
 
 namespace Easy.Platform.Common.Validations.Validators;
 
-public class PlatformCheckUniqueValidator<T> : PlatformValidator<T>
+public sealed class PlatformCheckUniqueValidator<T> : PlatformValidator<T>
 {
     public PlatformCheckUniqueValidator(
         T targetItem,

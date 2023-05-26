@@ -13,7 +13,7 @@ namespace PlatformExampleApp.TextSnippet.Application.MessageBus.Consumers.Entity
 /// </summary>
 // Use self routing key binding [PlatformConsumerRoutingKey(messageGroup: PlatformCqrsEntityEvent.EventTypeValue, messageType: nameof(TextSnippetEntityEventBusMessage))]
 // for SendByMessageSelfRoutingKey in Producer is True
-public class SnippetTextEntityEventBusConsumer : PlatformCqrsEntityEventBusMessageConsumer<TextSnippetEntityEventBusMessage, TextSnippetEntity>
+public sealed class SnippetTextEntityEventBusConsumer : PlatformCqrsEntityEventBusMessageConsumer<TextSnippetEntityEventBusMessage, TextSnippetEntity>
 {
     public SnippetTextEntityEventBusConsumer(
         ILoggerFactory loggerFactory,

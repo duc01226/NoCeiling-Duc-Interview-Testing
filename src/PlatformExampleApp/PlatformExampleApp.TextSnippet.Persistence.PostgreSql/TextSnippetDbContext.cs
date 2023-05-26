@@ -10,7 +10,7 @@ using PlatformExampleApp.TextSnippet.Application.Persistence;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql;
 
-public class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDbContext>, ITextSnippetDbContext
+public sealed class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDbContext>, ITextSnippetDbContext
 {
     public TextSnippetDbContext(
         DbContextOptions<TextSnippetDbContext> options,

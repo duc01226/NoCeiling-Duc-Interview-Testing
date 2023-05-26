@@ -1,6 +1,6 @@
 namespace Easy.Platform.Infrastructures.MessageBus;
 
-public class PlatformInvokeConsumerException : Exception
+public sealed class PlatformInvokeConsumerException : Exception
 {
     public PlatformInvokeConsumerException(
         Exception e,

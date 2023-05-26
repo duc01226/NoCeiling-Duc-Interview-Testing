@@ -22,17 +22,12 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         if (!mappedToDbContextUow.IsPseudoTransactionUow() && !hasSupportOutboxEvent)
-        {
-            mappedToDbContextUow.OnCompleted += (object sender, EventArgs e) =>
-            {
-                // Do not use async, just call.WaitResult()
-                // WHY: Never use async lambda on event handler, because it's equivalent to async void, which fire async task and forget
-                // this will lead to a lot of potential bug and issues.
-                mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs
-                    .SendEntityEvent(entity, crudAction, sendEntityEventConfigure, cancellationToken)
-                    .WaitResult();
-            };
-        }
+            mappedToDbContextUow.OnCompleted.Add(
+                async () =>
+                {
+                    await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs
+                        .SendEntityEvent(entity, crudAction, sendEntityEventConfigure, cancellationToken);
+                });
         else
             await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs
                 .SendEntityEvent(entity, crudAction, sendEntityEventConfigure, cancellationToken);
@@ -120,7 +115,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
         return result;
     }
 
-    /// <inheritdoc cref="PlatformCqrsEvent.SetForceWaitEventHandlerFinished"/>
+    /// <inheritdoc cref="PlatformCqrsEvent.SetForceWaitEventHandlerFinished" />
     public new virtual PlatformCqrsEntityEvent SetForceWaitEventHandlerFinished<THandler, TEvent>()
         where THandler : IPlatformCqrsEventHandler<TEvent>
         where TEvent : PlatformCqrsEntityEvent, new()
@@ -188,7 +183,7 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent
         return MemberwiseClone().As<PlatformCqrsEntityEvent<TEntity>>();
     }
 
-    /// <inheritdoc cref="PlatformCqrsEvent.SetForceWaitEventHandlerFinished{THandler,TEvent}"/>
+    /// <inheritdoc cref="PlatformCqrsEvent.SetForceWaitEventHandlerFinished{THandler,TEvent}" />
     public virtual PlatformCqrsEntityEvent<TEntity> SetForceWaitEventHandlerFinished<THandler>()
         where THandler : IPlatformCqrsEventHandler<PlatformCqrsEntityEvent<TEntity>>
     {

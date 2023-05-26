@@ -5,7 +5,7 @@ using PlatformExampleApp.TextSnippet.Domain.ValueObjects;
 
 namespace PlatformExampleApp.TextSnippet.Application.EntityDtos;
 
-public class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, Guid>
+public sealed class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, Guid>
 {
     public TextSnippetEntityDto() { }
 

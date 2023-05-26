@@ -3,7 +3,7 @@ using Easy.Platform.Domain.Entities;
 
 namespace Easy.Platform.Domain.Exceptions;
 
-public class PlatformDomainEntityNotFoundException<TEntity> : PlatformNotFoundException where TEntity : IEntity
+public sealed class PlatformDomainEntityNotFoundException<TEntity> : PlatformNotFoundException where TEntity : IEntity
 {
     public PlatformDomainEntityNotFoundException(string entityId, Exception innerException = null) : base(
         BuildErrorMsg(entityId),

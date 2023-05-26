@@ -40,7 +40,7 @@ public class PlatformDefaultApplicationUserContextAccessor : IPlatformApplicatio
         return new PlatformDefaultApplicationUserContext();
     }
 
-    private sealed class UserContextHolder
+    protected sealed class UserContextHolder
     {
         public IPlatformApplicationUserContext Context { get; set; }
     }

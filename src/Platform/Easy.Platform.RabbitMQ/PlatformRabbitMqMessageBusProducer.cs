@@ -12,7 +12,7 @@ namespace Easy.Platform.RabbitMQ;
 /// <summary>
 /// Implementation to send message. Publish message to suitable exchange
 /// </summary>
-public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
+public sealed class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
 {
     public static readonly ActivitySource ActivitySource = new(nameof(PlatformRabbitMqMessageBusProducer));
     public static readonly TextMapPropagator TracingActivityPropagator = Propagators.DefaultTextMapPropagator;

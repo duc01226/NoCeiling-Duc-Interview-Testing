@@ -1,6 +1,6 @@
 namespace Easy.Platform.Application.MessageBus.OutboxPattern;
 
-public class PlatformOutboxConfig
+public sealed class PlatformOutboxConfig
 {
     /// <summary>
     /// This is used to calculate the next retry process message time.

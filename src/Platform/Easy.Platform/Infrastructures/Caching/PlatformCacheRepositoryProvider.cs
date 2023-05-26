@@ -36,7 +36,7 @@ public interface IPlatformCacheRepositoryProvider
         where TCollectionCacheKeyProvider : PlatformCollectionCacheKeyProvider;
 }
 
-public class PlatformCacheRepositoryProvider : IPlatformCacheRepositoryProvider
+public sealed class PlatformCacheRepositoryProvider : IPlatformCacheRepositoryProvider
 {
     private readonly List<IPlatformCacheRepository> registeredCacheRepositories;
 

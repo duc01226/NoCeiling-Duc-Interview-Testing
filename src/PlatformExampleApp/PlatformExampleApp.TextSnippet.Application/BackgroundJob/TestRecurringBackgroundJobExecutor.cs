@@ -12,7 +12,7 @@ using PlatformExampleApp.TextSnippet.Domain.Repositories;
 namespace PlatformExampleApp.TextSnippet.Application.BackgroundJob;
 
 //[PlatformRecurringJob("* * * * *")]
-public class TestRecurringBackgroundJobExecutor : PlatformApplicationBackgroundJobExecutor
+public sealed class TestRecurringBackgroundJobExecutor : PlatformApplicationBackgroundJobExecutor
 {
     private readonly IPlatformApplicationBusMessageProducer busMessageProducer;
     private readonly IPlatformCqrs cqrs;

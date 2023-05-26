@@ -369,7 +369,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
     }
 }
 
-public class PlatformApplicationAutoClearDistributedCacheOnInitOptions
+public sealed class PlatformApplicationAutoClearDistributedCacheOnInitOptions
 {
     private HashSet<string> autoClearContexts;
     public bool EnableAutoClearDistributedCacheOnInit { get; set; }

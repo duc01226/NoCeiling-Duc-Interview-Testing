@@ -25,7 +25,7 @@ public interface IWebDriverManager
     public IWebDriver CreateLocalMachineWebDriver(IDriverConfig config, string version = "Latest", Architecture architecture = Architecture.Auto);
 }
 
-public class WebDriverManager : IWebDriverManager
+public sealed class WebDriverManager : IWebDriverManager
 {
     public WebDriverManager(AutomationTestSettings settings)
     {

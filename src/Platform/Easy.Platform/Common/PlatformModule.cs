@@ -18,7 +18,7 @@ namespace Easy.Platform.Common;
 
 public interface IPlatformModule
 {
-    public const int DefaultMaxWaitModuleInitiatedSeconds = 600;
+    public const int DefaultMaxWaitModuleInitiatedSeconds = 86400 * 5;
 
     /// <summary>
     /// Higher Priority value mean the module init will be executed before lower Priority value in the same level module dependencies
@@ -45,6 +45,10 @@ public interface IPlatformModule
 
     public static void WaitAllModulesInitiated(Type moduleType)
     {
+        if (PlatformGlobal.RootServiceProvider.GetServices(moduleType).Select(p => p.As<IPlatformModule>()).All(p => p.Initiated)) return;
+
+        PlatformGlobal.CreateDefaultLogger().LogInformation("[Platform] Start WaitAllModulesInitiated of type {ModuleType} started", moduleType.Name);
+
         Util.TaskRunner.WaitUntil(
             () =>
             {
@@ -52,9 +56,11 @@ public interface IPlatformModule
 
                 return modules.All(p => p.Initiated);
             },
-            maxWaitSeconds: DefaultMaxWaitModuleInitiatedSeconds,
+            maxWaitSeconds: PlatformGlobal.RootServiceProvider.GetServices(moduleType).Count() * DefaultMaxWaitModuleInitiatedSeconds,
             waitForMsg: $"Wait for all modules of type {moduleType.Name} get initiated",
             waitIntervalSeconds: 5);
+
+        PlatformGlobal.CreateDefaultLogger().LogInformation("[Platform] WaitAllModulesInitiated of type {ModuleType} finished", moduleType.Name);
     }
 
     public List<IPlatformModule> AllDependencyModules(IServiceCollection useServiceCollection = null);
@@ -91,7 +97,7 @@ public interface IPlatformModule
 /// get module service in collection and call module.Init();
 /// Init module to start running init for all other modules and this module itself
 /// </summary>
-public abstract class PlatformModule : IPlatformModule
+public abstract class PlatformModule : IPlatformModule, IDisposable
 {
     public const int DefaultExecuteInitPriority = 10;
     public const int ExecuteInitPriorityNextLevelDistance = 10;
@@ -99,8 +105,8 @@ public abstract class PlatformModule : IPlatformModule
 
     protected static readonly ConcurrentDictionary<string, Assembly> ExecutedRegisterByAssemblies = new();
 
-    protected readonly object InitLock = new();
-    protected readonly object RegisterLock = new();
+    protected readonly SemaphoreSlim InitLockAsync = new SemaphoreSlim(1, 1);
+    protected readonly SemaphoreSlim RegisterLockAsync = new SemaphoreSlim(1, 1);
 
     public PlatformModule(IServiceProvider serviceProvider, IConfiguration configuration)
     {
@@ -112,6 +118,12 @@ public abstract class PlatformModule : IPlatformModule
     protected ILogger Logger { get; init; }
 
     protected virtual bool AutoScanAssemblyRegisterCqrs => false;
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
 
     public bool IsRootModule => IPlatformModule.CheckIsRootModule(this);
 
@@ -157,8 +169,10 @@ public abstract class PlatformModule : IPlatformModule
 
     public void RegisterServices(IServiceCollection serviceCollection)
     {
-        lock (RegisterLock)
+        try
         {
+            RegisterLockAsync.Wait();
+
             if (RegisterServicesExecuted)
                 return;
 
@@ -175,12 +189,18 @@ public abstract class PlatformModule : IPlatformModule
             if (JsonSerializerCurrentOptions() != null)
                 PlatformJsonSerializer.SetCurrentOptions(JsonSerializerCurrentOptions());
         }
+        finally
+        {
+            RegisterLockAsync.Release();
+        }
     }
 
     public virtual async Task Init()
     {
-        lock (InitLock)
+        try
         {
+            await InitLockAsync.WaitAsync();
+
             if (Initiated)
                 return;
 
@@ -189,16 +209,20 @@ public abstract class PlatformModule : IPlatformModule
             // Because PlatformModule is singleton => ServiceProvider of it is the root ServiceProvider
             PlatformGlobal.SetRootServiceProvider(ServiceProvider);
 
-            InitAllModuleDependencies().WaitResult();
+            await InitAllModuleDependencies();
 
             using (var scope = ServiceProvider.CreateScope())
             {
-                InternalInit(scope).WaitResult();
+                await InternalInit(scope);
             }
 
             Initiated = true;
 
             Logger.LogInformation("[PlatformModule] {Module} initiated", GetType().Name);
+        }
+        finally
+        {
+            InitLockAsync.Release();
         }
     }
 
@@ -237,6 +261,14 @@ public abstract class PlatformModule : IPlatformModule
     public virtual List<Func<IConfiguration, Type>> ModuleTypeDependencies()
     {
         return new List<Func<IConfiguration, Type>>();
+    }
+
+    protected virtual void Dispose(bool isDisposing)
+    {
+        if (!isDisposing) return;
+
+        InitLockAsync?.Dispose();
+        RegisterLockAsync?.Dispose();
     }
 
     protected void RegisterDistributedTracing(IServiceCollection serviceCollection)
@@ -350,7 +382,7 @@ public abstract class PlatformModule : IPlatformModule
             .ForEach(moduleType => serviceCollection.RegisterModule(moduleType));
     }
 
-    public class DistributedTracingConfig
+    public sealed class DistributedTracingConfig
     {
         public bool Enabled { get; set; }
         public Action<TracerProviderBuilder> AdditionalTraceConfig { get; set; }

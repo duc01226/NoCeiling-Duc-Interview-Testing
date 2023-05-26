@@ -3,7 +3,7 @@ using FluentValidation;
 
 namespace Easy.Platform.Common.Validations.Validators;
 
-public class PlatformSingleValidator<TTarget, TProperty> : PlatformValidator<TTarget>
+public sealed class PlatformSingleValidator<TTarget, TProperty> : PlatformValidator<TTarget>
 {
     public PlatformSingleValidator(
         Expression<Func<TTarget, TProperty>> ruleForPropExpr,

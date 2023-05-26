@@ -6,22 +6,28 @@ using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.MultiDbDemo.Mongo;
 
-internal class TextSnippetMultiDbDemoRepository<TEntity> :
-    PlatformMongoDbRepository<TEntity, Guid, TextSnippetMultiDbDemoDbContext>,
-    ITextSnippetRepository<TEntity>
+internal sealed class TextSnippetMultiDbDemoRepository<TEntity>
+    : PlatformMongoDbRepository<TEntity, Guid, TextSnippetMultiDbDemoDbContext>,
+        ITextSnippetRepository<TEntity>
     where TEntity : class, IEntity<Guid>, new()
 {
-    public TextSnippetMultiDbDemoRepository(IUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(unitOfWorkManager, cqrs, serviceProvider)
+    public TextSnippetMultiDbDemoRepository(IUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
+        unitOfWorkManager,
+        cqrs,
+        serviceProvider)
     {
     }
 }
 
-internal class TextSnippetMultiDbDemoRootRepository<TEntity> :
-    PlatformMongoDbRootRepository<TEntity, Guid, TextSnippetMultiDbDemoDbContext>,
-    ITextSnippetRootRepository<TEntity>
+internal sealed class TextSnippetMultiDbDemoRootRepository<TEntity>
+    : PlatformMongoDbRootRepository<TEntity, Guid, TextSnippetMultiDbDemoDbContext>,
+        ITextSnippetRootRepository<TEntity>
     where TEntity : class, IRootEntity<Guid>, new()
 {
-    public TextSnippetMultiDbDemoRootRepository(IUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(unitOfWorkManager, cqrs, serviceProvider)
+    public TextSnippetMultiDbDemoRootRepository(IUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
+        unitOfWorkManager,
+        cqrs,
+        serviceProvider)
     {
     }
 }

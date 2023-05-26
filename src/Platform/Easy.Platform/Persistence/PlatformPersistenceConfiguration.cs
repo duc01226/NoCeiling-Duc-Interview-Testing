@@ -23,11 +23,11 @@ public class PlatformPersistenceConfiguration : IPlatformPersistenceConfiguratio
     public PlatformPersistenceConfigurationBadQueryWarningConfig BadQueryWarning { get; set; } = new();
 }
 
-public class PlatformPersistenceConfiguration<TDbContext> : PlatformPersistenceConfiguration
+public sealed class PlatformPersistenceConfiguration<TDbContext> : PlatformPersistenceConfiguration
 {
 }
 
-public class PlatformPersistenceConfigurationBadQueryWarningConfig
+public sealed class PlatformPersistenceConfigurationBadQueryWarningConfig
 {
     public bool IsEnabled { get; set; }
 

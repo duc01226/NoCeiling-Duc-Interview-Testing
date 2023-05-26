@@ -2,7 +2,7 @@ using Easy.Platform.Infrastructures.FileStorage;
 
 namespace Easy.Platform.AzureFileStorage;
 
-public class PlatformAzureFileStorageConfiguration : PlatformFileStorageOptions
+public sealed class PlatformAzureFileStorageConfiguration : PlatformFileStorageOptions
 {
     /// <summary>
     /// Connection string to azure blob. Ex: DefaultEndpointsProtocol=https;AccountName=xxx;AccountKey=xxx;EndpointSuffix=core.windows.net

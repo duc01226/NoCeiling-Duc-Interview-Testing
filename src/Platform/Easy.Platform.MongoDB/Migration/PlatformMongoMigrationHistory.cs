@@ -1,6 +1,6 @@
 namespace Easy.Platform.MongoDB.Migration;
 
-public class PlatformMongoMigrationHistory
+public sealed class PlatformMongoMigrationHistory
 {
     private DateTime? createdDate;
 

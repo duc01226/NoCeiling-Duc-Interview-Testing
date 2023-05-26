@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.AzureFileStorage;
 
-public class PlatformAzureFileStorageService : IPlatformFileStorageService
+public sealed class PlatformAzureFileStorageService : IPlatformFileStorageService
 {
     private readonly BlobServiceClient blobServiceClient;
     private readonly PlatformAzureFileStorageConfiguration fileStorageConfiguration;

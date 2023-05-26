@@ -2,7 +2,7 @@ using FluentValidation.Results;
 
 namespace Easy.Platform.Common.Validations;
 
-public class PlatformValidationError : ValidationFailure
+public sealed class PlatformValidationError : ValidationFailure
 {
     public PlatformValidationError(ValidationFailure failure) : base(
         failure.PropertyName,

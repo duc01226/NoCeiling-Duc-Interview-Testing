@@ -8,7 +8,7 @@ using PlatformExampleApp.TextSnippet.Application.BackgroundJob;
 
 namespace PlatformExampleApp.TextSnippet.Application.UseCaseCommands;
 
-public class DemoScheduleBackgroundJobManuallyCommand : PlatformCqrsCommand<DemoScheduleBackgroundJobManuallyCommandResult>
+public sealed class DemoScheduleBackgroundJobManuallyCommand : PlatformCqrsCommand<DemoScheduleBackgroundJobManuallyCommandResult>
 {
     public static readonly string DefaultUpdateTextSnippetFullText =
         "DemoScheduleBackgroundJobManually NewSnippetText";
@@ -16,7 +16,7 @@ public class DemoScheduleBackgroundJobManuallyCommand : PlatformCqrsCommand<Demo
     public string NewSnippetText { get; set; } = DefaultUpdateTextSnippetFullText;
 }
 
-public class DemoScheduleBackgroundJobManuallyCommandResult : PlatformCqrsCommandResult
+public sealed class DemoScheduleBackgroundJobManuallyCommandResult : PlatformCqrsCommandResult
 {
     public string ScheduledJobId { get; set; }
 }

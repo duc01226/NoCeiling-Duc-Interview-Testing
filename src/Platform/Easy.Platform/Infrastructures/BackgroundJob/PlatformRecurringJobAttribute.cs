@@ -19,7 +19,7 @@ namespace Easy.Platform.Infrastructures.BackgroundJob;
 /// Run daily at midnight 0h: 0 0 * * *
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface)]
-public class PlatformRecurringJobAttribute : Attribute
+public sealed class PlatformRecurringJobAttribute : Attribute
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="PlatformRecurringJobAttribute"/> class.

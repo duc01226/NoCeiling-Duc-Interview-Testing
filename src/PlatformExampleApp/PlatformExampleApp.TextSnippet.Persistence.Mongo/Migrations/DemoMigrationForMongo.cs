@@ -2,7 +2,7 @@ using Easy.Platform.MongoDB.Migration;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.Mongo.Migrations;
 
-internal class DemoMigrationForMongo : PlatformMongoMigrationExecutor<TextSnippetDbContext>
+internal sealed class DemoMigrationForMongo : PlatformMongoMigrationExecutor<TextSnippetDbContext>
 {
     public override string Name => "20230901000000_DemoMigrationForMongo";
     public override DateTime? OnlyForDbInitBeforeDate => new DateTime(2023, 09, 01);

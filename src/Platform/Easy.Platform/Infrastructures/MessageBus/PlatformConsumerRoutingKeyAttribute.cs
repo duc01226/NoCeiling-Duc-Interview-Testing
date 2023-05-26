@@ -8,7 +8,7 @@ namespace Easy.Platform.Infrastructures.MessageBus;
 /// If not defined, consumer will bind to default free format message routing key from <inheritdoc cref="PlatformBusMessageRoutingKey.BuildDefaultRoutingKey" />
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-public class PlatformConsumerRoutingKeyAttribute : Attribute
+public sealed class PlatformConsumerRoutingKeyAttribute : Attribute
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="PlatformConsumerRoutingKeyAttribute" /> class.

@@ -5,7 +5,7 @@ using Easy.Platform.Common.JsonSerialization.Converters.Helpers;
 
 namespace Easy.Platform.Common.JsonSerialization.Converters;
 
-public class PlatformDateTimeJsonConverter : JsonConverter<DateTime>
+public sealed class PlatformDateTimeJsonConverter : JsonConverter<DateTime>
 {
     public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {

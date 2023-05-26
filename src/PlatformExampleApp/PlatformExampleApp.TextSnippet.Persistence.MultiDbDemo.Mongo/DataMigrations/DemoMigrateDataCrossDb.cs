@@ -5,7 +5,7 @@ using PlatformExampleApp.TextSnippet.Persistence.MultiDbDemo.Mongo.DemoMigrateDa
 
 namespace PlatformExampleApp.TextSnippet.Persistence.MultiDbDemo.Mongo.DataMigrations;
 
-internal class DemoMigrateDataCrossDb : PlatformDataMigrationExecutor<TextSnippetMultiDbDemoDbContext>
+internal sealed class DemoMigrateDataCrossDb : PlatformDataMigrationExecutor<TextSnippetMultiDbDemoDbContext>
 {
     private readonly DemoMigrateDataCrossDbContext demoMigrateDataCrossDbContext;
 

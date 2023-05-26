@@ -1,6 +1,6 @@
 namespace Easy.Platform.Infrastructures.MessageBus;
 
-public class PlatformBusMessageIdentity
+public sealed class PlatformBusMessageIdentity
 {
     /// <summary>
     /// Indicate which user id generate the message

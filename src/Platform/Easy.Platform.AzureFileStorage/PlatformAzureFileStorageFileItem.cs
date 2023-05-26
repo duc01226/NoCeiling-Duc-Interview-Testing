@@ -4,7 +4,7 @@ using Easy.Platform.Infrastructures.FileStorage;
 
 namespace Easy.Platform.AzureFileStorage;
 
-public class PlatformAzureFileStorageFileItem : IPlatformFileStorageFileItem
+public sealed class PlatformAzureFileStorageFileItem : IPlatformFileStorageFileItem
 {
     public const string BlobDescriptionKey = "Description";
 

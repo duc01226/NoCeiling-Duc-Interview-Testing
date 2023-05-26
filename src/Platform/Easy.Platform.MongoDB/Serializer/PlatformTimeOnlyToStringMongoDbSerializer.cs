@@ -5,7 +5,7 @@ using MongoDB.Bson.Serialization.Serializers;
 
 namespace Easy.Platform.MongoDB.Serializer;
 
-public class PlatformTimeOnlyToStringMongoDbSerializer : SerializerBase<TimeOnly>, IPlatformMongoBaseSerializer<TimeOnly>
+public sealed class PlatformTimeOnlyToStringMongoDbSerializer : SerializerBase<TimeOnly>, IPlatformMongoBaseSerializer<TimeOnly>
 {
     public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, TimeOnly value)
     {
@@ -24,7 +24,7 @@ public class PlatformTimeOnlyToStringMongoDbSerializer : SerializerBase<TimeOnly
     }
 }
 
-public class PlatformNullableTimeOnlyToStringMongoDbSerializer : SerializerBase<TimeOnly?>, IPlatformMongoBaseSerializer<TimeOnly?>
+public sealed class PlatformNullableTimeOnlyToStringMongoDbSerializer : SerializerBase<TimeOnly?>, IPlatformMongoBaseSerializer<TimeOnly?>
 {
     public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, TimeOnly? value)
     {

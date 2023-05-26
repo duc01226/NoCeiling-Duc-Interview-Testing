@@ -13,7 +13,7 @@ namespace PlatformExampleApp.TextSnippet.Application.DataSeeders;
 /// <summary>
 /// Use command to seed data is also like real testing the command too
 /// </summary>
-public class DemoSeedDataUseCommandSolutionDataSeeder : PlatformApplicationDataSeeder
+public sealed class DemoSeedDataUseCommandSolutionDataSeeder : PlatformApplicationDataSeeder
 {
     public DemoSeedDataUseCommandSolutionDataSeeder(
         IUnitOfWorkManager unitOfWorkManager,

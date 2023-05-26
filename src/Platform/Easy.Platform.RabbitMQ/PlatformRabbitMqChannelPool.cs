@@ -61,7 +61,7 @@ public class PlatformRabbitMqChannelPool : DefaultObjectPool<IModel>, IDisposabl
     }
 }
 
-public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>
+public sealed class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>
 {
     private readonly IConnectionFactory connectionFactory;
 

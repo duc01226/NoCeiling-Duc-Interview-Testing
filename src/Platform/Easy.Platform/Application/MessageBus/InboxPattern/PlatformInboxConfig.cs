@@ -1,6 +1,6 @@
 namespace Easy.Platform.Application.MessageBus.InboxPattern;
 
-public class PlatformInboxConfig
+public sealed class PlatformInboxConfig
 {
     /// <summary>
     /// This is used to calculate the next retry process message time.

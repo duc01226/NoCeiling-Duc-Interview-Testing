@@ -7,7 +7,7 @@ using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
 namespace PlatformExampleApp.TextSnippet.Application.BackgroundJob;
 
-public class DemoScheduleBackgroundJobManuallyCommandBackgroundJobExecutor
+public sealed class DemoScheduleBackgroundJobManuallyCommandBackgroundJobExecutor
     : PlatformApplicationBackgroundJobExecutor<DemoScheduleBackgroundJobManuallyCommandBackgroundJobExecutorParam>
 {
     private readonly ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository;
@@ -33,7 +33,7 @@ public class DemoScheduleBackgroundJobManuallyCommandBackgroundJobExecutor
     }
 }
 
-public class DemoScheduleBackgroundJobManuallyCommandBackgroundJobExecutorParam
+public sealed class DemoScheduleBackgroundJobManuallyCommandBackgroundJobExecutorParam
 {
     public string NewSnippetText { get; set; }
 }

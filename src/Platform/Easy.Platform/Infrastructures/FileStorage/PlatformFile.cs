@@ -12,7 +12,7 @@ public interface IPlatformFile
     public Task<byte[]> GetFileBinaries();
 }
 
-public class PlatformHttpFormFile : IPlatformFile
+public sealed class PlatformHttpFormFile : IPlatformFile
 {
     public IFormFile FormFile { get; set; }
 
@@ -40,7 +40,7 @@ public class PlatformHttpFormFile : IPlatformFile
     }
 }
 
-public class PlatformStreamFile : IPlatformFile
+public sealed class PlatformStreamFile : IPlatformFile
 {
     public Stream Stream { get; set; }
     public string FileName { get; set; }

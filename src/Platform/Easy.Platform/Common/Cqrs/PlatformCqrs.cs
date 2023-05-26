@@ -64,7 +64,7 @@ public interface IPlatformCqrs
         CancellationToken cancellationToken = default);
 }
 
-public class PlatformCqrs : IPlatformCqrs
+public sealed class PlatformCqrs : IPlatformCqrs
 {
     private readonly IMediator mediator;
 

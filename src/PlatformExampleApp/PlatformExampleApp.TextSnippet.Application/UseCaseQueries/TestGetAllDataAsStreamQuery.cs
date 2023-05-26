@@ -12,7 +12,7 @@ namespace PlatformExampleApp.TextSnippet.Application.UseCaseQueries;
 /// <summary>
 /// // Test get very big data stream to see data downloading streaming by return IEnumerable. Return data as stream using IEnumerable do not load all data into memory
 /// </summary>
-public class TestGetAllDataAsStreamQuery : PlatformCqrsQuery<TestGetAllDataAsStreamQueryResult>
+public sealed class TestGetAllDataAsStreamQuery : PlatformCqrsQuery<TestGetAllDataAsStreamQueryResult>
 {
 }
 
@@ -23,7 +23,7 @@ public class TestGetAllDataAsStreamQueryResult
     public IEnumerable<TextSnippetEntityDto> EnumerableResultFromAsyncEnumerable { get; set; }
 }
 
-public class TestGetAllDataAsStreamQueryHandler : PlatformCqrsQueryApplicationHandler<TestGetAllDataAsStreamQuery, TestGetAllDataAsStreamQueryResult>
+public sealed class TestGetAllDataAsStreamQueryHandler : PlatformCqrsQueryApplicationHandler<TestGetAllDataAsStreamQuery, TestGetAllDataAsStreamQueryResult>
 {
     private readonly ITextSnippetRepository<TextSnippetEntity> textSnippetRepository;
 

@@ -7,7 +7,7 @@ public abstract class PlatformCqrsCommandEvent : PlatformCqrsEvent
     public const string EventTypeValue = nameof(PlatformCqrsCommandEvent);
 }
 
-public class PlatformCqrsCommandEvent<TCommand> : PlatformCqrsCommandEvent
+public sealed class PlatformCqrsCommandEvent<TCommand> : PlatformCqrsCommandEvent
     where TCommand : class, IPlatformCqrsCommand, new()
 {
     public PlatformCqrsCommandEvent() { }

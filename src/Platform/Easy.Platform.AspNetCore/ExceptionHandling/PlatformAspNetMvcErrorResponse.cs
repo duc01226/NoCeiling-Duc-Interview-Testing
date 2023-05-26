@@ -2,7 +2,7 @@ using System.Net;
 
 namespace Easy.Platform.AspNetCore.ExceptionHandling;
 
-public class PlatformAspNetMvcErrorResponse
+public sealed class PlatformAspNetMvcErrorResponse
 {
     public PlatformAspNetMvcErrorResponse(
         PlatformAspNetMvcErrorInfo error,

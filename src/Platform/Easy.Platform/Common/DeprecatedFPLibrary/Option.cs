@@ -2,7 +2,7 @@ using Easy.Platform.Common.Extensions;
 
 namespace Easy.Platform.Common.DeprecatedFPLibrary;
 
-public class Option
+public sealed class Option
 {
     public readonly struct None
     {

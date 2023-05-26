@@ -4,7 +4,7 @@ namespace Easy.Platform.AzureFileStorage;
 /// Azure Storage is structured as the first folder is container
 /// Following path will structure as blobName
 /// </summary>
-public class PlatformAzureBlobPathInfo
+public sealed class PlatformAzureBlobPathInfo
 {
     public PlatformAzureBlobPathInfo(string containerName, string blobName)
     {

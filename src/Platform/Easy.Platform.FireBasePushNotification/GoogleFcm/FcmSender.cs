@@ -19,7 +19,7 @@ internal interface IFcmSender
 /// <summary>
 /// Firebase Cloud message sender
 /// </summary>
-internal class FcmSender : IFcmSender
+internal sealed class FcmSender : IFcmSender
 {
     private readonly HttpClient http;
     private readonly FireBasePushNotificationSettings settings;
@@ -83,7 +83,7 @@ internal class FcmSender : IFcmSender
     }
 }
 
-public class GoogleNotification
+public sealed class GoogleNotification
 {
     [JsonPropertyName("to")]
     public string To { get; set; }
@@ -106,7 +106,7 @@ public class GoogleNotification
         };
     }
 
-    public class DataPayload
+    public sealed class DataPayload
     {
         [JsonPropertyName("title")]
         public string Title { get; set; }

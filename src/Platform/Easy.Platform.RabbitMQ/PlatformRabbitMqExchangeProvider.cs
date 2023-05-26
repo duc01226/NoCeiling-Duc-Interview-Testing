@@ -10,7 +10,7 @@ public interface IPlatformRabbitMqExchangeProvider
     string GetExchangeName(string routingKey);
 }
 
-public class PlatformRabbitMqExchangeProvider : IPlatformRabbitMqExchangeProvider
+public sealed class PlatformRabbitMqExchangeProvider : IPlatformRabbitMqExchangeProvider
 {
     public string GetExchangeName(string routingKey)
     {

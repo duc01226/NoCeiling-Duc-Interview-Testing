@@ -7,7 +7,7 @@ using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
 namespace PlatformExampleApp.TextSnippet.Persistence;
 
-internal class TextSnippetRepository<TEntity>
+internal sealed class TextSnippetRepository<TEntity>
     : PlatformEfCoreRepository<TEntity, Guid, TextSnippetDbContext>, ITextSnippetRepository<TEntity>
     where TEntity : class, IEntity<Guid>, new()
 {
@@ -21,7 +21,7 @@ internal class TextSnippetRepository<TEntity>
     }
 }
 
-internal class TextSnippetRootRepository<TEntity>
+internal sealed class TextSnippetRootRepository<TEntity>
     : PlatformEfCoreRootRepository<TEntity, Guid, TextSnippetDbContext>, ITextSnippetRootRepository<TEntity>
     where TEntity : class, IRootEntity<Guid>, new()
 {

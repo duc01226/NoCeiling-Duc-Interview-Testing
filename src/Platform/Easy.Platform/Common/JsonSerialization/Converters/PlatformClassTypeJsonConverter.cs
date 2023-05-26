@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Easy.Platform.Common.JsonSerialization.Converters;
 
-public class PlatformClassTypeJsonConverter : JsonConverter<Type>
+public sealed class PlatformClassTypeJsonConverter : JsonConverter<Type>
 {
     public override Type Read(
         ref Utf8JsonReader reader,

@@ -230,7 +230,7 @@ public static class TaskExtension
         if (continueOnCapturedContext != null)
             task.ConfigureAwait(continueOnCapturedContext!.Value).GetAwaiter().GetResult();
         else
-            task.GetAwaiter().GetResult();
+            task.ConfigureAwait(false).GetAwaiter().GetResult();
     }
 
     /// <summary>

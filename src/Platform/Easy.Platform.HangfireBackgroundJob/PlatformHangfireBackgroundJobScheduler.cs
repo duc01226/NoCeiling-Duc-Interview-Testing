@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Easy.Platform.HangfireBackgroundJob;
 
-public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobScheduler
+public sealed class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobScheduler
 {
     private readonly IServiceProvider serviceProvider;
 

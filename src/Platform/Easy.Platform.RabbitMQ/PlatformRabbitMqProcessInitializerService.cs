@@ -23,7 +23,7 @@ namespace Easy.Platform.RabbitMQ;
 /// Name/Consumer Message Name via RoutingKey.
 /// Then start to connect listening messages, execute consumer which handle the suitable message
 /// </summary>
-public class PlatformRabbitMqProcessInitializerService
+public sealed class PlatformRabbitMqProcessInitializerService
 {
     public const int CheckToRestartProcessMaxFailedCounter = 100;
     public const int CheckToRestartProcessDelaySeconds = 6;
@@ -281,10 +281,7 @@ public class PlatformRabbitMqProcessInitializerService
         try
         {
             await Task.Run(
-                () =>
-                {
-                    IPlatformModule.WaitAllModulesInitiated(typeof(IPlatformPersistenceModule));
-                },
+                () => IPlatformModule.WaitAllModulesInitiated(typeof(IPlatformPersistenceModule)),
                 currentCancellationToken);
 
             var canProcessConsumerTypes = rabbitMqMessage.RoutingKey.Pipe(

@@ -9,7 +9,7 @@ namespace Easy.Platform.Domain.Entities;
 /// Property with JsonIgnoreAttribute or IgnoreAddPropertyValueUpdatedDomainEventAttribute will be ignored
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property)]
-public class TrackValueUpdatedDomainEventAttribute : Attribute
+public sealed class TrackValueUpdatedDomainEventAttribute : Attribute
 {
 }
 

@@ -185,7 +185,7 @@ public static class WebElementExtension
     /// <summary>
     /// StaleWebElementWrapper help to get any thing from an element and return default value if the element get staled
     /// </summary>
-    public class StaleWebElementWrapper
+    public sealed class StaleWebElementWrapper
     {
         private readonly IWebElement element;
 
