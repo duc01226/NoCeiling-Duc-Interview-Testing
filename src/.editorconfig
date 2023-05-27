@@ -483,7 +483,7 @@ dotnet_diagnostic.CA1416.severity = suggestion
 dotnet_diagnostic.CA1846.severity = none
 dotnet_diagnostic.CA1710.severity = none
 dotnet_diagnostic.CA2200.severity = none
-dotnet_diagnostic.CA1852.severity = warning
+dotnet_diagnostic.CA1852.severity = error
 dotnet_diagnostic.CA1311.severity = none
 dotnet_diagnostic.CA1854.severity = none
 

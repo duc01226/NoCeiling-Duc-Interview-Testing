@@ -11,6 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Roslyn.Analyzers" Version="1.0.3.4" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\Platform\Easy.Platform.AutomationTest\Easy.Platform.AutomationTest.csproj" />
   </ItemGroup>
 

@@ -9,6 +9,9 @@ using Microsoft.OpenApi.Models;
 using PlatformExampleApp.TextSnippet.Api;
 using Serilog;
 
+// CA1852 Type 'Program' can be sealed because it has no subtypes in its containing assembly and is not externally visible
+#pragma warning disable CA1852
+
 var configuration = PlatformConfigurationBuilder.GetConfigurationBuilder().Build();
 
 Log.Logger = new LoggerConfiguration()
