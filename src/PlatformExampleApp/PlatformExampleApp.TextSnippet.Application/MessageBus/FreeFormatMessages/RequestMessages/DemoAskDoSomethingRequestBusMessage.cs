@@ -12,6 +12,6 @@ namespace PlatformExampleApp.TextSnippet.Application.MessageBus.FreeFormatMessag
 ///
 /// Example: EmailServiceSendEmailRequestBusMessage
 /// </summary>
-public class DemoAskDoSomethingRequestBusMessage : PlatformTrackableBusMessage
+public sealed class DemoAskDoSomethingRequestBusMessage : PlatformTrackableBusMessage
 {
 }

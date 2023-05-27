@@ -9,7 +9,7 @@ namespace PlatformExampleApp.TextSnippet.Application.Helpers;
 /// This is just an example helper to solve internal logic reuse code for application layer
 /// It's auto registered when define it implement IPlatformHelper
 /// </summary>
-public sealed class ExampleHelper : IPlatformHelper
+internal sealed class ExampleHelper : IPlatformHelper
 {
     private readonly IPlatformFullTextSearchPersistenceService fullTextSearchPersistenceService;
     private readonly ITextSnippetRepository<MultiDbDemoEntity> multiDbDemoEntityRepository;
@@ -45,7 +45,7 @@ public sealed class ExampleHelper : IPlatformHelper
     }
 }
 
-public class SearchEntityByNameHelperResult
+internal sealed class SearchEntityByNameHelperResult
 {
     public TextSnippetEntity FirstFoundTextSnippet { get; set; }
     public MultiDbDemoEntity FirstFoundMultiDbDemo { get; set; }

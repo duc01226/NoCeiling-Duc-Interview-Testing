@@ -17,7 +17,7 @@ namespace PlatformExampleApp.TextSnippet.Application.MessageBus.Consumers.FreeFo
 ///
 /// This is example the LEADER-SERVICE listen to an request message from other to do serve the request
 /// </summary>
-public class DemoAskDoSomethingRequestBusMessageConsumer : PlatformApplicationMessageBusConsumer<DemoAskDoSomethingRequestBusMessage>
+internal sealed class DemoAskDoSomethingRequestBusMessageConsumer : PlatformApplicationMessageBusConsumer<DemoAskDoSomethingRequestBusMessage>
 {
     public DemoAskDoSomethingRequestBusMessageConsumer(
         ILoggerFactory loggerFactory,

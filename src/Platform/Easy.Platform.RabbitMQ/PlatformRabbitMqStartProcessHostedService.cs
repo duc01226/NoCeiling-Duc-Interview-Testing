@@ -8,7 +8,7 @@ namespace Easy.Platform.RabbitMQ;
 /// Name/Consumer Message Name via RoutingKey.
 /// Then start to connect listening messages, execute consumer which handle the suitable message
 /// </summary>
-public sealed class PlatformRabbitMqStartProcessHostedService : PlatformHostedService
+public class PlatformRabbitMqStartProcessHostedService : PlatformHostedService
 {
     private readonly PlatformRabbitMqProcessInitializerService rabbitMqProcessInitializerService;
 

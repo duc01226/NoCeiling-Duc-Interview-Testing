@@ -156,7 +156,7 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
 /// <summary>
 /// This will use Like Operation for fulltext search
 /// </summary>
-public sealed class LikeOperationEfCorePlatformFullTextSearchPersistenceService : EfCorePlatformFullTextSearchPersistenceService
+public class LikeOperationEfCorePlatformFullTextSearchPersistenceService : EfCorePlatformFullTextSearchPersistenceService
 {
     public LikeOperationEfCorePlatformFullTextSearchPersistenceService(IServiceProvider serviceProvider) : base(serviceProvider)
     {

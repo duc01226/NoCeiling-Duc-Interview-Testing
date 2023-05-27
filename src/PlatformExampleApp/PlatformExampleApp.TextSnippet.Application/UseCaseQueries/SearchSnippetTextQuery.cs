@@ -29,7 +29,7 @@ public sealed class SearchSnippetTextQueryResult : PlatformCqrsQueryPagedResult<
     }
 }
 
-public sealed class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicationHandler<SearchSnippetTextQuery, SearchSnippetTextQueryResult>
+internal sealed class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicationHandler<SearchSnippetTextQuery, SearchSnippetTextQueryResult>
 {
     // This is just a demo that helper is used by Application Commands/Queries
     // ReSharper disable once NotAccessedField.Local

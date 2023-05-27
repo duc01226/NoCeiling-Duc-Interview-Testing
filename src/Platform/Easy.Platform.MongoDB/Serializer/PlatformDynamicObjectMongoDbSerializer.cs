@@ -6,7 +6,7 @@ using MongoDB.Bson.Serialization.Serializers;
 
 namespace Easy.Platform.MongoDB.Serializer;
 
-public sealed class PlatformDynamicObjectMongoDbSerializer : ObjectSerializer, IPlatformMongoAutoRegisterBaseSerializer<object>
+public class PlatformDynamicObjectMongoDbSerializer : ObjectSerializer, IPlatformMongoAutoRegisterBaseSerializer<object>
 {
     public override object Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
     {

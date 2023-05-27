@@ -8,7 +8,7 @@ namespace Easy.Platform.Common.JsonSerialization.Converters;
 /// This is used to fix deserialize object add ValueKind to value
 /// https://github.com/dotnet/runtime/issues/31408
 /// </summary>
-public sealed class PlatformObjectJsonConverter : JsonConverter<object>
+public class PlatformObjectJsonConverter : JsonConverter<object>
 {
     /// <summary>
     /// This help to fix issues. Using <see cref="JsonSerializer" />

@@ -37,7 +37,7 @@ public abstract class PlatformCqrsDomainEventBusMessageProducer<TDomainEvent>
     }
 }
 
-public sealed class PlatformCqrsDomainEventBusMessage<TDomainEvent> : PlatformBusMessage<TDomainEvent>
+public class PlatformCqrsDomainEventBusMessage<TDomainEvent> : PlatformBusMessage<TDomainEvent>
     where TDomainEvent : PlatformCqrsDomainEvent, new()
 {
 }

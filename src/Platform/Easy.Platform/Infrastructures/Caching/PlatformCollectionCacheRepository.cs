@@ -382,7 +382,7 @@ public abstract class PlatformCollectionCacheRepository<TCollectionCacheKeyProvi
     }
 }
 
-public sealed class PlatformCollectionMemoryCacheRepository<TCollectionCacheKeyProvider> : PlatformCollectionCacheRepository<TCollectionCacheKeyProvider>
+public class PlatformCollectionMemoryCacheRepository<TCollectionCacheKeyProvider> : PlatformCollectionCacheRepository<TCollectionCacheKeyProvider>
     where TCollectionCacheKeyProvider : PlatformCollectionCacheKeyProvider
 {
     public PlatformCollectionMemoryCacheRepository(
@@ -401,7 +401,7 @@ public sealed class PlatformCollectionMemoryCacheRepository<TCollectionCacheKeyP
     }
 }
 
-public sealed class PlatformCollectionDistributedCacheRepository<TCollectionCacheKeyProvider> : PlatformCollectionCacheRepository<TCollectionCacheKeyProvider>
+public class PlatformCollectionDistributedCacheRepository<TCollectionCacheKeyProvider> : PlatformCollectionCacheRepository<TCollectionCacheKeyProvider>
     where TCollectionCacheKeyProvider : PlatformCollectionCacheKeyProvider
 {
     public PlatformCollectionDistributedCacheRepository(

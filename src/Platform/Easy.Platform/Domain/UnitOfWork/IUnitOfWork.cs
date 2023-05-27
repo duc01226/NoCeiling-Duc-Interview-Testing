@@ -72,7 +72,7 @@ public interface IUnitOfWork : IDisposable
     }
 }
 
-public sealed class UnitOfWorkFailedArgs
+public class UnitOfWorkFailedArgs
 {
     public UnitOfWorkFailedArgs(Exception exception)
     {

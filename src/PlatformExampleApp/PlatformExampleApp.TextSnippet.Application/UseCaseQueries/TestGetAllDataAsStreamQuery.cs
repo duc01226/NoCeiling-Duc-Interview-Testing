@@ -23,7 +23,7 @@ public class TestGetAllDataAsStreamQueryResult
     public IEnumerable<TextSnippetEntityDto> EnumerableResultFromAsyncEnumerable { get; set; }
 }
 
-public sealed class TestGetAllDataAsStreamQueryHandler : PlatformCqrsQueryApplicationHandler<TestGetAllDataAsStreamQuery, TestGetAllDataAsStreamQueryResult>
+internal sealed class TestGetAllDataAsStreamQueryHandler : PlatformCqrsQueryApplicationHandler<TestGetAllDataAsStreamQuery, TestGetAllDataAsStreamQueryResult>
 {
     private readonly ITextSnippetRepository<TextSnippetEntity> textSnippetRepository;
 

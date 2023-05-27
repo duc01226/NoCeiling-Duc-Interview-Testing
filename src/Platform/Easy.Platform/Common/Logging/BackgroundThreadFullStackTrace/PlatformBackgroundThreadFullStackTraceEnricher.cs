@@ -3,7 +3,7 @@ using Serilog.Events;
 
 namespace Easy.Platform.Common.Logging.BackgroundThreadFullStackTrace;
 
-public sealed class PlatformBackgroundThreadFullStackTraceEnricher : ILogEventEnricher
+public class PlatformBackgroundThreadFullStackTraceEnricher : ILogEventEnricher
 {
     public const string PlatformBackgroundThreadFullStackTraceLogPropertyName = "PlatformBackgroundThreadFullStackTrace";
 

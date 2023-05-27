@@ -6,7 +6,7 @@ using MongoDB.Driver.Linq;
 
 namespace Easy.Platform.MongoDB.Services;
 
-public sealed class MongoDbPlatformFullTextSearchPersistenceService : PlatformFullTextSearchPersistenceService
+public class MongoDbPlatformFullTextSearchPersistenceService : PlatformFullTextSearchPersistenceService
 {
     public MongoDbPlatformFullTextSearchPersistenceService(IServiceProvider serviceProvider) : base(serviceProvider)
     {

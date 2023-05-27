@@ -55,7 +55,7 @@ public interface IPlatformCqrsRequestAuditInfo
     public string AuditRequestByUserId { get; }
 }
 
-public sealed class PlatformCqrsRequestAuditInfo : IPlatformCqrsRequestAuditInfo
+public class PlatformCqrsRequestAuditInfo : IPlatformCqrsRequestAuditInfo
 {
     public PlatformCqrsRequestAuditInfo() { }
 

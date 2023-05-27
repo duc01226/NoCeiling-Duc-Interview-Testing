@@ -7,7 +7,7 @@ namespace Easy.Platform.RabbitMQ.Outbox;
 /// <summary>
 /// <inheritdoc cref="PlatformSendOutboxBusMessageHostedService" />
 /// </summary>
-public sealed class PlatformRabbitMqSendOutboxBusMessageHostedService : PlatformSendOutboxBusMessageHostedService
+public class PlatformRabbitMqSendOutboxBusMessageHostedService : PlatformSendOutboxBusMessageHostedService
 {
     public PlatformRabbitMqSendOutboxBusMessageHostedService(
         IServiceProvider serviceProvider,

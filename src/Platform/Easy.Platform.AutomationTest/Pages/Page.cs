@@ -783,7 +783,7 @@ public class GeneralCurrentActivePage<TSettings> : Page<GeneralCurrentActivePage
     public override string Origin => WebDriver.Url.ToUri().Origin();
 }
 
-public sealed class DefaultGeneralCurrentActivePage : GeneralCurrentActivePage<AutomationTestSettings>
+public class DefaultGeneralCurrentActivePage : GeneralCurrentActivePage<AutomationTestSettings>
 {
     public DefaultGeneralCurrentActivePage(IWebDriver webDriver, AutomationTestSettings settings) : base(webDriver, settings)
     {

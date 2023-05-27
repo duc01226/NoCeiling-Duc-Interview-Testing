@@ -3,7 +3,7 @@ using System.ComponentModel;
 
 namespace Easy.Platform.Application.Context.UserContext.Default;
 
-public sealed class PlatformDefaultApplicationUserContext : IPlatformApplicationUserContext
+public class PlatformDefaultApplicationUserContext : IPlatformApplicationUserContext
 {
     private readonly ConcurrentDictionary<string, object> userContextData = new();
 

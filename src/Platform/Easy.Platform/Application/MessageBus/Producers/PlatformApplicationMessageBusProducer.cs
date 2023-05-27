@@ -168,7 +168,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
             messageAction: messageAction);
     }
 
-    public sealed class PlatformPseudoMessageBusProducer : IPlatformMessageBusProducer
+    public class PlatformPseudoMessageBusProducer : IPlatformMessageBusProducer
     {
         public Task<TMessage> SendAsync<TMessage>(
             TMessage message,

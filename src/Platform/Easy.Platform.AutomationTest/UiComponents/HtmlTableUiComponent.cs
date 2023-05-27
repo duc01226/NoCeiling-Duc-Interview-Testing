@@ -3,7 +3,7 @@ using OpenQA.Selenium;
 
 namespace Easy.Platform.AutomationTest.UiComponents;
 
-public sealed class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
+public class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
 {
     public HtmlTableUiComponent(
         IWebDriver webDriver,
@@ -65,7 +65,7 @@ public sealed class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
         return rowToClick;
     }
 
-    public sealed class Cell : UiComponent<Cell>
+    public class Cell : UiComponent<Cell>
     {
         public Cell(IWebDriver webDriver, Func<IWebElement>? directReferenceRootElement, IUiComponent? parent = null) : base(
             webDriver,
@@ -80,7 +80,7 @@ public sealed class HtmlTableUiComponent : UiComponent<HtmlTableUiComponent>
         public string? CellValue { get; set; }
     }
 
-    public sealed class Row : UiComponent<Row>
+    public class Row : UiComponent<Row>
     {
         public Row(
             IWebDriver webDriver,

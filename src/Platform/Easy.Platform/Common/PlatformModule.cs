@@ -382,7 +382,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
             .ForEach(moduleType => serviceCollection.RegisterModule(moduleType));
     }
 
-    public sealed class DistributedTracingConfig
+    public class DistributedTracingConfig
     {
         public bool Enabled { get; set; }
         public Action<TracerProviderBuilder> AdditionalTraceConfig { get; set; }

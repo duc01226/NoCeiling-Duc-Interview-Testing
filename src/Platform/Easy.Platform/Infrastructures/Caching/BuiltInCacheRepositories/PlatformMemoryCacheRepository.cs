@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace Easy.Platform.Infrastructures.Caching.BuiltInCacheRepositories;
 
-public sealed class PlatformMemoryCacheRepository : PlatformCacheRepository, IPlatformMemoryCacheRepository
+public class PlatformMemoryCacheRepository : PlatformCacheRepository, IPlatformMemoryCacheRepository
 {
     private readonly MemoryDistributedCache memoryDistributedCache;
 

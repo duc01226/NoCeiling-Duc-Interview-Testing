@@ -12,6 +12,6 @@ namespace PlatformExampleApp.TextSnippet.Application.MessageBus.FreeFormatMessag
 ///
 /// Example: AccountServiceUserCreatedEventBusMessage
 /// </summary>
-public class DemoSomethingHappenedEventBusMessage : PlatformTrackableBusMessage
+public sealed class DemoSomethingHappenedEventBusMessage : PlatformTrackableBusMessage
 {
 }

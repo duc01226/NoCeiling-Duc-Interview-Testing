@@ -1,6 +1,6 @@
 ﻿namespace Easy.Platform.FireBasePushNotification;
 
-public sealed class FireBasePushNotificationSettings
+public class FireBasePushNotificationSettings
 {
     /// <summary>
     /// FCM Sender ID

@@ -52,7 +52,7 @@ public sealed class SaveSnippetTextCommandResult : PlatformCqrsCommandResult
     public TextSnippetEntityDto SavedData { get; set; }
 }
 
-public sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandler<SaveSnippetTextCommand, SaveSnippetTextCommandResult>
+internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplicationHandler<SaveSnippetTextCommand, SaveSnippetTextCommandResult>
 {
     private readonly ILogger<SaveSnippetTextCommandHandler> logger;
 

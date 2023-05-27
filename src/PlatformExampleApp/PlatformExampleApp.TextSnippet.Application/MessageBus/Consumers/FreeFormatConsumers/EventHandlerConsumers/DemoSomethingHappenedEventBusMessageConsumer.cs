@@ -17,7 +17,7 @@ namespace PlatformExampleApp.TextSnippet.Application.MessageBus.Consumers.FreeFo
 ///
 /// This is example one other feature services want to listen to an event from LEADER-SERVICE to do their own logic
 /// </summary>
-public class DemoSomethingHappenedEventBusMessageConsumer : PlatformApplicationMessageBusConsumer<DemoSomethingHappenedEventBusMessage>
+internal sealed class DemoSomethingHappenedEventBusMessageConsumer : PlatformApplicationMessageBusConsumer<DemoSomethingHappenedEventBusMessage>
 {
     public DemoSomethingHappenedEventBusMessageConsumer(
         ILoggerFactory loggerFactory,

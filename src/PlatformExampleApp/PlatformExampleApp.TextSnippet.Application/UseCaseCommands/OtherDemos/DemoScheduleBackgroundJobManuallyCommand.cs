@@ -21,7 +21,7 @@ public sealed class DemoScheduleBackgroundJobManuallyCommandResult : PlatformCqr
     public string ScheduledJobId { get; set; }
 }
 
-public class DemoScheduleBackgroundJobManuallyCommandHandler
+internal sealed class DemoScheduleBackgroundJobManuallyCommandHandler
     : PlatformCqrsCommandApplicationHandler<DemoScheduleBackgroundJobManuallyCommand, DemoScheduleBackgroundJobManuallyCommandResult>
 {
     private readonly IPlatformBackgroundJobScheduler backgroundJobScheduler;

@@ -14,7 +14,7 @@ namespace PlatformExampleApp.TextSnippet.Application.MessageBus.Consumers.Comman
 /// </summary>
 // Use self routing key binding [PlatformConsumerRoutingKey(messageGroup: PlatformCqrsCommandEvent.EventTypeValue, messageType: "PlatformCqrsCommandEvent<SaveSnippetTextCommand>")]
 // for SendByMessageSelfRoutingKey in Producer is True
-public class SaveSnippetTextCommandEventBusMessageConsumer : PlatformCqrsCommandEventBusMessageConsumer<SaveSnippetTextCommand>
+internal sealed class SaveSnippetTextCommandEventBusMessageConsumer : PlatformCqrsCommandEventBusMessageConsumer<SaveSnippetTextCommand>
 {
     public SaveSnippetTextCommandEventBusMessageConsumer(
         ILoggerFactory loggerFactory,

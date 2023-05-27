@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace Easy.Platform.AspNetCore.Context.UserContext;
 
-public sealed class PlatformAspNetApplicationUserContext : IPlatformApplicationUserContext
+public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserContext
 {
     private readonly IPlatformApplicationUserContextKeyToClaimTypeMapper claimTypeMapper;
     private readonly MethodInfo getValueByGenericTypeMethodInfo;

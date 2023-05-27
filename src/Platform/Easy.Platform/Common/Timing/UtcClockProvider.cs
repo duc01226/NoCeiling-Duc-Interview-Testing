@@ -1,6 +1,6 @@
 namespace Easy.Platform.Common.Timing;
 
-public sealed class UtcClockProvider : IClockProvider
+public class UtcClockProvider : IClockProvider
 {
     public DateTime Now => DateTime.UtcNow;
 

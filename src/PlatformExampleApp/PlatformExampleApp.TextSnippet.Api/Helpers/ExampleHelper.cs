@@ -6,6 +6,6 @@ namespace PlatformExampleApp.TextSnippet.Application.Helpers;
 /// This is just an example helper to solve internal logic reuse code for any layer
 /// It's auto registered when define it implement IPlatformHelper
 /// </summary>
-public sealed class ExampleBelongToApiPresentationLayerHelper : IPlatformHelper
+internal sealed class ExampleBelongToApiPresentationLayerHelper : IPlatformHelper
 {
 }

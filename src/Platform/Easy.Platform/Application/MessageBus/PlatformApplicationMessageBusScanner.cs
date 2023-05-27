@@ -5,7 +5,7 @@ using Easy.Platform.Infrastructures.MessageBus;
 
 namespace Easy.Platform.Application.MessageBus;
 
-public sealed class PlatformApplicationMessageBusScanner : PlatformMessageBusScanner
+public class PlatformApplicationMessageBusScanner : PlatformMessageBusScanner
 {
     public PlatformApplicationMessageBusScanner(IServiceProvider serviceProvider) : base(serviceProvider)
     {

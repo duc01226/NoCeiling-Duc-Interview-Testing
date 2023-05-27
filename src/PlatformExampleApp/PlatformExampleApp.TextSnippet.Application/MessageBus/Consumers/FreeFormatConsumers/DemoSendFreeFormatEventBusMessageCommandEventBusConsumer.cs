@@ -5,7 +5,7 @@ using PlatformExampleApp.TextSnippet.Application.MessageBus.FreeFormatMessages;
 
 namespace PlatformExampleApp.TextSnippet.Application.MessageBus.Consumers.FreeFormatConsumers;
 
-public sealed class DemoSendFreeFormatEventBusMessageCommandEventBusConsumer
+internal sealed class DemoSendFreeFormatEventBusMessageCommandEventBusConsumer
     : PlatformApplicationMessageBusConsumer<DemoSendFreeFormatEventBusMessage>
 {
     public DemoSendFreeFormatEventBusMessageCommandEventBusConsumer(ILoggerFactory loggerFactory, IUnitOfWorkManager uowManager, IServiceProvider serviceProvider) : base(
@@ -30,7 +30,7 @@ public sealed class DemoSendFreeFormatEventBusMessageCommandEventBusConsumer
 /// <summary>
 /// Use DemoSendFreeFormatInboxEventBusMessageCommandEventBusConsumer if you need to use platform repository/use inbox messages pattern
 /// </summary>
-public sealed class DemoSendFreeFormatInboxEventBusMessageCommandApplicationEventBusConsumer
+internal sealed class DemoSendFreeFormatInboxEventBusMessageCommandApplicationEventBusConsumer
     : PlatformApplicationMessageBusConsumer<DemoSendFreeFormatEventBusMessage>
 {
     public DemoSendFreeFormatInboxEventBusMessageCommandApplicationEventBusConsumer(

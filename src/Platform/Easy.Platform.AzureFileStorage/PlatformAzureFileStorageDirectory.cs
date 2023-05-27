@@ -4,7 +4,7 @@ using Easy.Platform.Infrastructures.FileStorage;
 
 namespace Easy.Platform.AzureFileStorage;
 
-public sealed class PlatformAzureFileStorageDirectory : IPlatformFileStorageDirectory
+public class PlatformAzureFileStorageDirectory : IPlatformFileStorageDirectory
 {
     private static readonly HashSet<string> ReservedFileNames = new()
     {

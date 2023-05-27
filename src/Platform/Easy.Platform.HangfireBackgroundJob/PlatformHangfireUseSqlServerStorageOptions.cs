@@ -2,7 +2,7 @@ using Hangfire.SqlServer;
 
 namespace Easy.Platform.HangfireBackgroundJob;
 
-public sealed class PlatformHangfireUseSqlServerStorageOptions
+public class PlatformHangfireUseSqlServerStorageOptions
 {
     public static readonly SqlServerStorageOptions DefaultStorageOptions = new()
     {

@@ -64,7 +64,7 @@ public interface ISupportDomainEventsEntity
         }
     }
 
-    public sealed class PropertyValueUpdatedDomainEvent<TValue> : PropertyValueUpdatedDomainEvent
+    public class PropertyValueUpdatedDomainEvent<TValue> : PropertyValueUpdatedDomainEvent
     {
         public new TValue OriginalValue { get; set; }
         public new TValue NewValue { get; set; }

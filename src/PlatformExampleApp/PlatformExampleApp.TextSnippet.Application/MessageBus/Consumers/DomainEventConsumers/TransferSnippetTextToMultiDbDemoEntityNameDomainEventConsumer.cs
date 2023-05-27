@@ -12,7 +12,7 @@ namespace PlatformExampleApp.TextSnippet.Application.MessageBus.Consumers.Domain
 /// </summary>
 // Use self routing key binding [PlatformConsumerRoutingKey(messageGroup: PlatformCqrsDomainEvent.EventTypeValue, messageType: nameof(TransferSnippetTextToMultiDbDemoEntityNameDomainEvent))]
 // for SendByMessageSelfRoutingKey in Producer is True
-public class TransferSnippetTextToMultiDbDemoEntityNameDomainEventConsumer
+internal sealed class TransferSnippetTextToMultiDbDemoEntityNameDomainEventConsumer
     : PlatformCqrsDomainEventBusMessageConsumer<TransferSnippetTextToMultiDbDemoEntityNameDomainEvent>
 {
     public TransferSnippetTextToMultiDbDemoEntityNameDomainEventConsumer(

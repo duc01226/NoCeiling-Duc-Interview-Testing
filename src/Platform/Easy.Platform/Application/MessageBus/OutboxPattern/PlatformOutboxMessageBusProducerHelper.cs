@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.MessageBus.OutboxPattern;
 
-public sealed class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
+public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
 {
     public const int DefaultResilientRetiredCount = 5;
     public const int DefaultResilientRetiredDelayMilliseconds = 200;

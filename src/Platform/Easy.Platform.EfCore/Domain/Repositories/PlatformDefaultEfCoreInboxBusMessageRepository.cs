@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Easy.Platform.EfCore.Domain.Repositories;
 
-public sealed class PlatformDefaultEfCoreInboxBusMessageRepository<TDbContext>
+public class PlatformDefaultEfCoreInboxBusMessageRepository<TDbContext>
     : PlatformEfCoreRootRepository<PlatformInboxBusMessage, string, TDbContext>, IPlatformInboxBusMessageRepository
     where TDbContext : PlatformEfCoreDbContext<TDbContext>
 {

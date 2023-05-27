@@ -10,7 +10,7 @@ namespace Easy.Platform.AspNetCore.Context.UserContext;
 /// Implementation of <see cref="IPlatformApplicationUserContextAccessor"/>
 /// Inspired by Microsoft.AspNetCore.Http.HttpContextAccessor
 /// </summary>
-public sealed class PlatformAspNetApplicationUserContextAccessor : PlatformDefaultApplicationUserContextAccessor
+public class PlatformAspNetApplicationUserContextAccessor : PlatformDefaultApplicationUserContextAccessor
 {
     private readonly IServiceProvider serviceProvider;
 

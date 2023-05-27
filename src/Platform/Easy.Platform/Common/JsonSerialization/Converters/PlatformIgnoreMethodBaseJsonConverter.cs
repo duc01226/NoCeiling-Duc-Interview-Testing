@@ -7,7 +7,7 @@ namespace Easy.Platform.Common.JsonSerialization.Converters;
 /// <summary>
 /// Fix exception when serialize class with have MethodBase type is not supported
 /// </summary>
-public sealed class PlatformIgnoreMethodBaseJsonConverter : JsonConverter<MethodBase>
+public class PlatformIgnoreMethodBaseJsonConverter : JsonConverter<MethodBase>
 {
     public override MethodBase Read(
         ref Utf8JsonReader reader,

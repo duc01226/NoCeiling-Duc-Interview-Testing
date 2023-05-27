@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Easy.Platform.EfCore.EntityConfiguration.ValueComparers;
 
-public sealed class ToJsonValueComparer<T> : ValueComparer<T>
+public class ToJsonValueComparer<T> : ValueComparer<T>
 {
     protected ToJsonValueComparer(bool favorStructuralComparisons) : base(favorStructuralComparisons)
     {

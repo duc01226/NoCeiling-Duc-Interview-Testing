@@ -2,7 +2,7 @@ using OpenQA.Selenium;
 
 namespace Easy.Platform.AutomationTest.UiComponents;
 
-public sealed class GeneralUiComponent : UiComponent<GeneralUiComponent>
+public class GeneralUiComponent : UiComponent<GeneralUiComponent>
 {
     public GeneralUiComponent(IWebDriver webDriver, Func<IWebElement>? directReferenceRootElement, IUiComponent? parent = null) : base(
         webDriver,

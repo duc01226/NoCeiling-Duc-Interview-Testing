@@ -3,7 +3,7 @@ using Easy.Platform.Common.Validations.Exceptions;
 
 namespace Easy.Platform.Domain.Exceptions;
 
-public sealed class PlatformDomainValidationException : PlatformDomainException, IPlatformValidationException
+public class PlatformDomainValidationException : PlatformDomainException, IPlatformValidationException
 {
     public PlatformDomainValidationException(PlatformValidationResult validationResult) : base(
         validationResult.ToString())

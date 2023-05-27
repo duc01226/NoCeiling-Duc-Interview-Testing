@@ -2,7 +2,7 @@ using Hangfire.PostgreSql;
 
 namespace Easy.Platform.HangfireBackgroundJob;
 
-public sealed class PlatformHangfireUsePostgreSqlStorageOptions
+public class PlatformHangfireUsePostgreSqlStorageOptions
 {
     public static readonly PostgreSqlStorageOptions DefaultStorageOptions = new();
 

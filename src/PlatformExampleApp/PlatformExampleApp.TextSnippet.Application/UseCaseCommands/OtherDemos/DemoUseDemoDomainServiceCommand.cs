@@ -21,7 +21,7 @@ public sealed class DemoUseDemoDomainServiceCommandResult : PlatformCqrsCommandR
     }
 }
 
-public sealed class DemoUseDemoDomainServiceCommandHandler : PlatformCqrsCommandApplicationHandler<DemoUseDemoDomainServiceCommand, DemoUseDemoDomainServiceCommandResult>
+internal sealed class DemoUseDemoDomainServiceCommandHandler : PlatformCqrsCommandApplicationHandler<DemoUseDemoDomainServiceCommand, DemoUseDemoDomainServiceCommandResult>
 {
     // Demo use demoDomainService
     private readonly TransferSnippetTextToMultiDbDemoEntityNameService transferSnippetTextToMultiDbDemoEntityNameService;

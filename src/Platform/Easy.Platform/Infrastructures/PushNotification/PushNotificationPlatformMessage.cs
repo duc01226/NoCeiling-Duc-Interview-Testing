@@ -4,7 +4,7 @@ using Easy.Platform.Common.Validations;
 
 namespace Easy.Platform.Infrastructures.PushNotification;
 
-public sealed class PushNotificationPlatformMessage : IPlatformDto<PushNotificationPlatformMessage>
+public class PushNotificationPlatformMessage : IPlatformDto<PushNotificationPlatformMessage>
 {
     public string DeviceId { get; set; }
     public string Title { get; set; }

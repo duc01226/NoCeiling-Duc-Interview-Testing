@@ -4,7 +4,7 @@ using System.Text.Json.Serialization.Metadata;
 
 namespace Easy.Platform.Common.JsonSerialization;
 
-public sealed class PlatformPrivateConstructorContractResolver : DefaultJsonTypeInfoResolver
+public class PlatformPrivateConstructorContractResolver : DefaultJsonTypeInfoResolver
 {
     public override JsonTypeInfo GetTypeInfo(Type type, JsonSerializerOptions options)
     {

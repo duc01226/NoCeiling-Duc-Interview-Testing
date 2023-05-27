@@ -13,6 +13,7 @@ using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Application.MessageBus.Producers;
 using Easy.Platform.Application.MessageBus.Producers.CqrsEventProducers;
 using Easy.Platform.Application.Persistence;
+using Easy.Platform.Application.Services;
 using Easy.Platform.Common;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Common.Extensions;
@@ -256,6 +257,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         RegisterApplicationSettingContext(serviceCollection);
         RegisterDefaultApplicationUserContext(serviceCollection);
         serviceCollection.RegisterIfServiceNotExist<IUnitOfWorkManager, PlatformPseudoApplicationUnitOfWorkManager>(ServiceLifeTime.Scoped);
+        serviceCollection.RegisterAllFromType<IPlatformApplicationService>(Assembly);
 
         serviceCollection.RegisterAllFromType<IPlatformDbContext>(Assembly, ServiceLifeTime.Scoped);
         serviceCollection.RegisterAllFromType<IPlatformInfrastructureService>(Assembly);
@@ -369,7 +371,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
     }
 }
 
-public sealed class PlatformApplicationAutoClearDistributedCacheOnInitOptions
+public class PlatformApplicationAutoClearDistributedCacheOnInitOptions
 {
     private HashSet<string> autoClearContexts;
     public bool EnableAutoClearDistributedCacheOnInit { get; set; }

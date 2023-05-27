@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.Cqrs.Events.InboxSupport;
 
-public sealed class PlatformCqrsEventInboxBusMessageConsumer : PlatformApplicationMessageBusConsumer<PlatformBusMessage<PlatformCqrsEventBusMessagePayload>>
+public class PlatformCqrsEventInboxBusMessageConsumer : PlatformApplicationMessageBusConsumer<PlatformBusMessage<PlatformCqrsEventBusMessagePayload>>
 {
     public PlatformCqrsEventInboxBusMessageConsumer(ILoggerFactory loggerFactory, IUnitOfWorkManager uowManager, IServiceProvider serviceProvider) : base(
         loggerFactory,
@@ -56,7 +56,7 @@ public sealed class PlatformCqrsEventInboxBusMessageConsumer : PlatformApplicati
     }
 }
 
-public sealed class PlatformCqrsEventBusMessagePayload
+public class PlatformCqrsEventBusMessagePayload
 {
     public string EventJson { get; set; }
     public string EventTypeFullName { get; set; }

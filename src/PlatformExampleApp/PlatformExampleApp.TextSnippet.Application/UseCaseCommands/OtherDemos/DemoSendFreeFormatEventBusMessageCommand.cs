@@ -18,7 +18,7 @@ public sealed class DemoSendFreeFormatEventBusMessageCommandResult : PlatformCqr
 {
 }
 
-public class DemoSendFreeFormatEventBusMessageCommandHandler
+internal sealed class DemoSendFreeFormatEventBusMessageCommandHandler
     : PlatformCqrsCommandApplicationHandler<DemoSendFreeFormatEventBusMessageCommand, DemoSendFreeFormatEventBusMessageCommandResult>
 {
     private readonly IPlatformApplicationBusMessageProducer busMessageProducer;

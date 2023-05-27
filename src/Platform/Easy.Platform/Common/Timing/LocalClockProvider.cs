@@ -1,6 +1,6 @@
 ﻿namespace Easy.Platform.Common.Timing;
 
-public sealed class LocalClockProvider : IClockProvider
+public class LocalClockProvider : IClockProvider
 {
     public DateTime Now => DateTime.Now;
 

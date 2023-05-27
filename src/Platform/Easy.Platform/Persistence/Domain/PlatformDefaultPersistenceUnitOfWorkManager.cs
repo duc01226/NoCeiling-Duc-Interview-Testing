@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Easy.Platform.Persistence.Domain;
 
-public sealed class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkManager
+public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkManager
 {
     protected readonly IServiceProvider ServiceProvider;
 

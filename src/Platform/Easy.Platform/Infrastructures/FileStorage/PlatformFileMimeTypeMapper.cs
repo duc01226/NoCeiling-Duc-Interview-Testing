@@ -3,7 +3,7 @@ namespace Easy.Platform.Infrastructures.FileStorage;
 /// <summary>
 /// Provides a mapping between file extensions and MIME types.
 /// </summary>
-public sealed class PlatformFileMimeTypeMapper
+public class PlatformFileMimeTypeMapper
 {
     public const string UnknownBinary = "application/octet-stream";
 

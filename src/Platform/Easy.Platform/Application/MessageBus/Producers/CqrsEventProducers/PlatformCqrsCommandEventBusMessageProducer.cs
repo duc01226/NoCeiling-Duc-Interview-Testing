@@ -37,7 +37,7 @@ public abstract class PlatformCqrsCommandEventBusMessageProducer<TCommand>
     }
 }
 
-public sealed class PlatformCqrsCommandEventBusMessage<TCommand> : PlatformBusMessage<PlatformCqrsCommandEvent<TCommand>>
+public class PlatformCqrsCommandEventBusMessage<TCommand> : PlatformBusMessage<PlatformCqrsCommandEvent<TCommand>>
     where TCommand : class, IPlatformCqrsCommand, new()
 {
 }

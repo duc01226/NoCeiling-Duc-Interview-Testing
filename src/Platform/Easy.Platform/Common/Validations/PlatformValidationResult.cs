@@ -457,14 +457,14 @@ public class PlatformValidationResult<TValue> : ValidationResult
             .ToList();
     }
 
-    public sealed class LogicalAndValidationsChainItem
+    public class LogicalAndValidationsChainItem
     {
         public Func<TValue, PlatformValidationResult<TValue>> ValidationFn { get; set; }
         public int Position { get; set; }
     }
 }
 
-public sealed class PlatformValidationResult : PlatformValidationResult<object>
+public class PlatformValidationResult : PlatformValidationResult<object>
 {
     public PlatformValidationResult(
         object value,

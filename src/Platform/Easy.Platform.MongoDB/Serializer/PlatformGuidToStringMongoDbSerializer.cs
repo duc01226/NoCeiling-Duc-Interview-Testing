@@ -5,7 +5,7 @@ using MongoDB.Bson.Serialization.Serializers;
 
 namespace Easy.Platform.MongoDB.Serializer;
 
-public sealed class PlatformGuidToStringMongoDbSerializer : SerializerBase<Guid>, IPlatformMongoBaseSerializer<Guid>
+public class PlatformGuidToStringMongoDbSerializer : SerializerBase<Guid>, IPlatformMongoBaseSerializer<Guid>
 {
     private readonly GuidSerializer guidAsBinarySerializer = new GuidSerializer(BsonType.Binary);
 
@@ -23,7 +23,7 @@ public sealed class PlatformGuidToStringMongoDbSerializer : SerializerBase<Guid>
     }
 }
 
-public sealed class PlatformNullableGuidToStringMongoDbSerializer : SerializerBase<Guid?>, IPlatformMongoBaseSerializer<Guid?>
+public class PlatformNullableGuidToStringMongoDbSerializer : SerializerBase<Guid?>, IPlatformMongoBaseSerializer<Guid?>
 {
     private readonly GuidSerializer guidAsBinarySerializer = new GuidSerializer(BsonType.Binary);
 

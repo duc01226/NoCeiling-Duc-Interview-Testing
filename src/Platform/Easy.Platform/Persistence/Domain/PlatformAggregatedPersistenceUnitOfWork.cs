@@ -15,7 +15,7 @@ public interface IPlatformAggregatedPersistenceUnitOfWork : IUnitOfWork
 /// The aggregated unit of work is to support multi database type in a same application.
 /// Each item in InnerUnitOfWorks present a REAL unit of work including a db context
 /// </summary>
-public sealed class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlatformAggregatedPersistenceUnitOfWork
+public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlatformAggregatedPersistenceUnitOfWork
 {
     /// <summary>
     /// Store associatedServiceScope to destroy it when uow is create, using and destroy

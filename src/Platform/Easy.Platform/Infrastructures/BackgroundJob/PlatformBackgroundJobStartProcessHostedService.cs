@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Infrastructures.BackgroundJob;
 
-public sealed class PlatformBackgroundJobStartProcessHostedService : PlatformHostedService
+public class PlatformBackgroundJobStartProcessHostedService : PlatformHostedService
 {
     private readonly IPlatformBackgroundJobProcessingService backgroundJobProcessingService;
 

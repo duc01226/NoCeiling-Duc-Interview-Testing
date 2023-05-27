@@ -4,7 +4,7 @@ using Easy.Platform.Domain.Exceptions;
 
 namespace Easy.Platform.AspNetCore.ExceptionHandling;
 
-public sealed class PlatformAspNetMvcErrorInfo
+public class PlatformAspNetMvcErrorInfo
 {
     private const string DefaultServerErrorMessage =
         "There is an unexpected error during the processing of the request. Please try again or contact the Administrator for help.";

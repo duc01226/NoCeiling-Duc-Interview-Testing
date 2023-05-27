@@ -83,7 +83,7 @@ internal sealed class FcmSender : IFcmSender
     }
 }
 
-public sealed class GoogleNotification
+public class GoogleNotification
 {
     [JsonPropertyName("to")]
     public string To { get; set; }
@@ -106,7 +106,7 @@ public sealed class GoogleNotification
         };
     }
 
-    public sealed class DataPayload
+    public class DataPayload
     {
         [JsonPropertyName("title")]
         public string Title { get; set; }

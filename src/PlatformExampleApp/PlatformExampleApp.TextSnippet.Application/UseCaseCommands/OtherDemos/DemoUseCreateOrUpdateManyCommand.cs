@@ -16,7 +16,7 @@ public sealed class DemoUseCreateOrUpdateManyCommandResult : PlatformCqrsCommand
 {
 }
 
-public sealed class DemoUseCreateOrUpdateManyCommandHandler : PlatformCqrsCommandApplicationHandler<DemoUseCreateOrUpdateManyCommand, DemoUseCreateOrUpdateManyCommandResult>
+internal sealed class DemoUseCreateOrUpdateManyCommandHandler : PlatformCqrsCommandApplicationHandler<DemoUseCreateOrUpdateManyCommand, DemoUseCreateOrUpdateManyCommandResult>
 {
     private readonly ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository;
 

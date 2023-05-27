@@ -10,7 +10,7 @@ namespace Easy.Platform.AzureFileStorage;
 /// Platform module define to register PlatformAzureFileStorageService. <br />
 /// Example: <br />
 /// <code>
-/// public sealed class ExampleServiceAbcAzureBlobFileStorageInfrastructureModule : PlatformAzureFileStorageModule
+/// public class ExampleServiceAbcAzureBlobFileStorageInfrastructureModule : PlatformAzureFileStorageModule
 /// {
 ///     public ExampleServiceAbcAzureBlobFileStorageInfrastructureModule(IServiceProvider serviceProvider, IConfiguration configuration) : base(serviceProvider, configuration)
 ///     {
