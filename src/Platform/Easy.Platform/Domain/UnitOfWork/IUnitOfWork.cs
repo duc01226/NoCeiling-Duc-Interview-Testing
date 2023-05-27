@@ -166,10 +166,14 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
     protected async Task InvokeOnCompleted()
     {
         await OnCompleted.ForEachAsync(p => p.Invoke());
+
+        OnCompleted.Clear();
     }
 
     protected async Task InvokeOnFailed(UnitOfWorkFailedArgs e)
     {
         await OnFailed.ForEachAsync(p => p.Invoke(e));
+
+        OnFailed.Clear();
     }
 }
