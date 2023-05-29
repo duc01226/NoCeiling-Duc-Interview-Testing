@@ -14,11 +14,13 @@ public class TextSnippetEntityEventBusMessageProducer
     public TextSnippetEntityEventBusMessageProducer(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
+        IServiceProvider serviceProvider,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
         IPlatformApplicationUserContextAccessor userContextAccessor,
         IPlatformApplicationSettingContext applicationSettingContext) : base(
         loggerFactory,
         unitOfWorkManager,
+        serviceProvider,
         applicationBusMessageProducer,
         userContextAccessor,
         applicationSettingContext)

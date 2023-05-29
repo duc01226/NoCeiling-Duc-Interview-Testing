@@ -78,7 +78,8 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                     CreateGlobalLogger,
                     InboxConfig.RetryProcessFailedMessageInSecondsUnit,
                     allowProcessInBackgroundThread: AllowProcessInboxMessageInBackgroundThread,
-                    HandleDirectlyExistingInboxMessage);
+                    HandleDirectlyExistingInboxMessage,
+                    handleInUow: null);
             }
             else
             {

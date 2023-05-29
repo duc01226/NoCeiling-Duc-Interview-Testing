@@ -4,13 +4,14 @@ using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.UnitOfWork;
-using static Easy.Platform.Domain.Entities.ISupportDomainEventsEntity;
 
 namespace Easy.Platform.Domain.Events;
 
-public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
+public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowEvent
 {
     public const string EventTypeValue = nameof(PlatformCqrsEntityEvent);
+
+    public string SourceUowId { get; set; }
 
     public static async Task SendEvent<TEntity, TPrimaryKey>(
         IUnitOfWork mappedToDbContextUow,
@@ -21,16 +22,11 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent
         CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        if (!mappedToDbContextUow.IsPseudoTransactionUow() && !hasSupportOutboxEvent)
-            mappedToDbContextUow.OnCompleted.Add(
-                async () =>
-                {
-                    await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs
-                        .SendEntityEvent(entity, crudAction, sendEntityEventConfigure, cancellationToken);
-                });
-        else
-            await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs
-                .SendEntityEvent(entity, crudAction, sendEntityEventConfigure, cancellationToken);
+        var entityEvent = new PlatformCqrsEntityEvent<TEntity>(entity, crudAction)
+            .With(_ => sendEntityEventConfigure?.Invoke(_))
+            .With(_ => _.SourceUowId = mappedToDbContextUow.Id);
+
+        await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs.SendEvent(entityEvent, cancellationToken);
     }
 
     public static async Task<TResult> ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TResult>(
@@ -161,20 +157,20 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent
     /// </summary>
     public List<KeyValuePair<string, string>> DomainEvents { get; set; } = new();
 
-    public List<TEvent> FindDomainEvents<TEvent>() where TEvent : DomainEvent
+    public List<TEvent> FindDomainEvents<TEvent>() where TEvent : ISupportDomainEventsEntity.DomainEvent
     {
         return DomainEvents
-            .Where(p => p.Key == DomainEvent.GetDefaultDomainEventName<TEvent>())
+            .Where(p => p.Key == ISupportDomainEventsEntity.DomainEvent.GetDefaultDomainEventName<TEvent>())
             .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<TEvent>(p.Value))
             .ToList();
     }
 
-    public PropertyValueUpdatedDomainEvent<TValue> FindPropertyValueUpdatedDomainEvent<TValue>(
+    public ISupportDomainEventsEntity.PropertyValueUpdatedDomainEvent<TValue> FindPropertyValueUpdatedDomainEvent<TValue>(
         Expression<Func<TEntity, TValue>> property)
     {
         return DomainEvents
-            .Where(p => p.Key == DomainEvent.GetDefaultDomainEventName<PropertyValueUpdatedDomainEvent>())
-            .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<PropertyValueUpdatedDomainEvent<TValue>>(p.Value))
+            .Where(p => p.Key == ISupportDomainEventsEntity.DomainEvent.GetDefaultDomainEventName<ISupportDomainEventsEntity.PropertyValueUpdatedDomainEvent>())
+            .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<ISupportDomainEventsEntity.PropertyValueUpdatedDomainEvent<TValue>>(p.Value))
             .FirstOrDefault(p => p.PropertyName == property.GetPropertyName());
     }
 

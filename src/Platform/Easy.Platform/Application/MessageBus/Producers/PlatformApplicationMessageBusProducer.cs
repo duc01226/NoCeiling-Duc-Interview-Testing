@@ -42,6 +42,7 @@ public interface IPlatformApplicationBusMessageProducer
         TMessage message,
         bool autoSaveOutboxMessage = true,
         bool forceUseDefaultRoutingKey = false,
+        string sourceOutboxUowId = null,
         CancellationToken cancellationToken = default)
         where TMessage : class, new();
 
@@ -72,7 +73,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
     protected IPlatformApplicationUserContextAccessor UserContextAccessor { get; }
     protected PlatformOutboxConfig OutboxConfig { get; }
 
-    public Task<TMessage> SendAsync<TMessage, TMessagePayload>(
+    public async Task<TMessage> SendAsync<TMessage, TMessagePayload>(
         string trackId,
         TMessagePayload messagePayload,
         string messageGroup = null,
@@ -85,27 +86,30 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
     {
         var message = BuildPlatformBusMessage<TMessage, TMessagePayload>(trackId, messagePayload, messageGroup, messageAction);
 
-        return SendMessageAsync(
+        return await SendMessageAsync(
             message,
             forceUseDefaultRoutingKey
                 ? PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(message.GetType(), ApplicationSettingContext.ApplicationName)
                 : message.RoutingKey(),
             autoSaveOutboxMessage,
+            null,
             cancellationToken);
     }
 
-    public Task<TMessage> SendAsync<TMessage>(
+    public async Task<TMessage> SendAsync<TMessage>(
         TMessage message,
         bool autoSaveOutboxMessage = true,
         bool forceUseDefaultRoutingKey = false,
+        string sourceOutboxUowId = null,
         CancellationToken cancellationToken = default) where TMessage : class, new()
     {
-        return SendMessageAsync(
+        return await SendMessageAsync(
             message,
             routingKey: forceUseDefaultRoutingKey || message.As<IPlatformSelfRoutingKeyBusMessage>() == null
                 ? PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(message.GetType(), ApplicationSettingContext.ApplicationName)
                 : message.As<IPlatformSelfRoutingKeyBusMessage>().RoutingKey(),
             autoSaveOutboxMessage,
+            sourceOutboxUowId,
             cancellationToken);
     }
 
@@ -128,6 +132,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
         TMessage message,
         string routingKey,
         bool autoSaveOutboxMessage,
+        string sourceOutboxUowId,
         CancellationToken cancellationToken)
         where TMessage : class, new()
     {
@@ -147,6 +152,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
                 routingKey,
                 OutboxConfig.RetryProcessFailedMessageInSecondsUnit,
                 handleExistingOutboxMessage: null,
+                sourceOutboxUowId: sourceOutboxUowId,
                 cancellationToken);
 
             return message;

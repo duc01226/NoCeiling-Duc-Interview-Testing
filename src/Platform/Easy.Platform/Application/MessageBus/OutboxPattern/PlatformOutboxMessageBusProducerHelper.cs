@@ -4,7 +4,6 @@ using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
-using Easy.Platform.Persistence.Domain;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -34,6 +33,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         string routingKey,
         double retryProcessFailedMessageInSecondsUnit,
         PlatformOutboxBusMessage handleExistingOutboxMessage = null,
+        string sourceOutboxUowId = null,
         CancellationToken cancellationToken = default) where TMessage : class, new()
     {
         if (serviceProvider.GetService<IPlatformOutboxBusMessageRepository>() != null)
@@ -48,6 +48,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         routingKey,
                         retryProcessFailedMessageInSecondsUnit,
                         handleExistingOutboxMessage,
+                        sourceOutboxUowId,
                         cancellationToken,
                         CreateLogger(),
                         outboxBusMessageRepository,
@@ -63,6 +64,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         routingKey,
                         retryProcessFailedMessageInSecondsUnit,
                         handleExistingOutboxMessage,
+                        sourceOutboxUowId,
                         cancellationToken,
                         CreateLogger(),
                         outboxBusMessageRepository,
@@ -80,6 +82,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         string routingKey,
         double retryProcessFailedMessageInSecondsUnit,
         PlatformOutboxBusMessage handleExistingOutboxMessage,
+        string sourceOutboxUowId,
         CancellationToken cancellationToken,
         ILogger logger,
         IPlatformOutboxBusMessageRepository outboxBusMessageRepository,
@@ -108,6 +111,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 message,
                 routingKey,
                 retryProcessFailedMessageInSecondsUnit,
+                sourceOutboxUowId,
                 cancellationToken,
                 logger,
                 unitOfWorkManager,
@@ -257,6 +261,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         TMessage message,
         string routingKey,
         double retryProcessFailedMessageInSecondsUnit,
+        string sourceOutboxUowId,
         CancellationToken cancellationToken,
         ILogger logger,
         IUnitOfWorkManager unitOfWorkManager,
@@ -286,13 +291,12 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
             retryCount: DefaultResilientRetiredCount);
 
-        var currentUow = unitOfWorkManager.TryGetCurrentActiveUow();
+        var currentActiveUow = sourceOutboxUowId != null
+            ? unitOfWorkManager.TryGetCurrentOrCreatedActiveUow(sourceOutboxUowId)
+            : unitOfWorkManager.TryGetCurrentActiveUow();
         // WHY: Do not need to wait for uow completed if the uow for db do not handle actually transaction.
         // Can execute it immediately without waiting for uow to complete
-        if (currentUow == null ||
-            currentUow.IsPseudoTransactionUow() ||
-            (currentUow is IPlatformAggregatedPersistenceUnitOfWork currentAggregatedPersistenceUow &&
-             currentAggregatedPersistenceUow.IsPseudoTransactionUow(outboxBusMessageRepository.CurrentActiveUow())))
+        if (currentActiveUow == null)
             Util.TaskRunner.QueueActionInBackground(
                 () => PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
                     SendExistingOutboxMessageAsync<TMessage>,
@@ -305,23 +309,20 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 loggerFactory: CreateLogger,
                 cancellationToken: cancellationToken);
         else
-            currentUow.OnCompleted.Add(
+            currentActiveUow.OnCompletedActions.Add(
                 async () =>
                 {
                     // Try to process sending newProcessingOutboxMessage first time immediately after task completed
                     // WHY: we can wait for the background process handle the message but try to do it
                     // immediately if possible is better instead of waiting for the background process
-                    Util.TaskRunner.QueueActionInBackground(
-                        () => PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
-                            SendExistingOutboxMessageInNewUowAsync<TMessage>,
-                            createdProcessingOutboxMessage,
-                            message,
-                            routingKey,
-                            retryProcessFailedMessageInSecondsUnit,
-                            cancellationToken,
-                            logger),
-                        loggerFactory: CreateLogger,
-                        cancellationToken: cancellationToken);
+                    await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
+                        SendExistingOutboxMessageInNewUowAsync<TMessage>,
+                        createdProcessingOutboxMessage,
+                        message,
+                        routingKey,
+                        retryProcessFailedMessageInSecondsUnit,
+                        cancellationToken,
+                        logger);
                 });
     }
 

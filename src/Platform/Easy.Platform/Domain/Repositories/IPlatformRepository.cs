@@ -12,7 +12,16 @@ namespace Easy.Platform.Domain.Repositories;
 /// </summary>
 public interface IPlatformRepository
 {
+    /// <summary>
+    /// Return current active uow. May throw exception if not existing one.
+    /// </summary>
     public IUnitOfWork CurrentActiveUow();
+
+    /// <summary>
+    /// Return current or created active uow which has uowId equal given uowId. May throw exception if not existing one.
+    /// </summary>
+    public IUnitOfWork CurrentOrCreatedActiveUow(string uowId);
+
     public IUnitOfWorkManager UowManager();
 }
 

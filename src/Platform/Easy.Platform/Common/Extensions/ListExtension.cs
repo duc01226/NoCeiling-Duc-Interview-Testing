@@ -482,4 +482,22 @@ public static class ListExtension
 
         return false;
     }
+
+    /// <summary>
+    /// Filter return (matchedFilterResult, remainingFilterResult)
+    /// </summary>
+    public static ValueTuple<List<TSource>, List<TSource>> FilterSplitResult<TSource>(this IEnumerable<TSource> source, Func<TSource, bool> predicate)
+    {
+        var matchedFilterResult = new List<TSource>();
+        var remainingFilterResult = new List<TSource>();
+
+        source.ForEach(
+            item =>
+            {
+                if (predicate(item)) matchedFilterResult.Add(item);
+                else remainingFilterResult.Add(item);
+            });
+
+        return (matchedFilterResult, remainingFilterResult);
+    }
 }

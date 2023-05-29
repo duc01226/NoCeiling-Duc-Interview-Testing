@@ -44,7 +44,7 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
 
             Completed = true;
 
-            await InvokeOnCompleted();
+            await InvokeOnCompletedActions();
         }
         catch (DbUpdateConcurrencyException ex)
         {
@@ -53,7 +53,7 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
         }
         catch (Exception ex)
         {
-            await InvokeOnFailed(new UnitOfWorkFailedArgs(ex));
+            await InvokeOnFailedActions(new UnitOfWorkFailedArgs(ex));
             throw new Exception(
                 $"{GetType().Name} complete uow failed. [[Exception:{ex}]]. [[FullStackTrace:{ex.StackTrace}{Environment.NewLine}FromFullStackTrace:{fullStackTrace}]]");
         }

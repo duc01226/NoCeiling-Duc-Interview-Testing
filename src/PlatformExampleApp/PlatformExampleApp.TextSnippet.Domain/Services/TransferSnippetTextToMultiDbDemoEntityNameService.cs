@@ -1,5 +1,6 @@
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Services;
+using Easy.Platform.Domain.UnitOfWork;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Events;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
@@ -17,8 +18,9 @@ public class TransferSnippetTextToMultiDbDemoEntityNameService : PlatformDomainS
 
     public TransferSnippetTextToMultiDbDemoEntityNameService(
         IPlatformCqrs cqrs,
+        IUnitOfWorkManager unitOfWorkManager,
         ITextSnippetRootRepository<TextSnippetEntity> textSnippetRepository,
-        ITextSnippetRootRepository<MultiDbDemoEntity> multiDbDemoEntityRepository) : base(cqrs)
+        ITextSnippetRootRepository<MultiDbDemoEntity> multiDbDemoEntityRepository) : base(cqrs, unitOfWorkManager)
     {
         this.textSnippetRepository = textSnippetRepository;
         this.multiDbDemoEntityRepository = multiDbDemoEntityRepository;

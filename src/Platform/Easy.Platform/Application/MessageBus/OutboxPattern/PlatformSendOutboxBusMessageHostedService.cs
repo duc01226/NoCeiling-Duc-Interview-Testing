@@ -150,6 +150,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
                         toHandleOutboxMessage.RoutingKey,
                         retryProcessFailedMessageInSecondsUnit,
                         handleExistingOutboxMessage: toHandleOutboxMessage,
+                        sourceOutboxUowId: null,
                         cancellationToken);
                 }
                 else

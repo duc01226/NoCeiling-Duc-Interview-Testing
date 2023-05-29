@@ -1,9 +1,17 @@
+using System.Diagnostics.CodeAnalysis;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.Utils;
 
 namespace Easy.Platform.Domain.UnitOfWork;
 
 public interface IUnitOfWork : IDisposable
 {
+    /// <summary>
+    /// Generated Unique Uow Id
+    /// </summary>
+    public string Id { get; set; }
+
     /// <summary>
     /// By default a uow usually present a db context, then the InnerUnitOfWorks is empty. <br />
     /// Some application could use multiple db in one service, which then the current uow could be a aggregation uow of multiple db context uow. <br />
@@ -18,8 +26,8 @@ public interface IUnitOfWork : IDisposable
 
     public IUnitOfWork ParentUnitOfWork { get; set; }
 
-    public List<Func<Task>> OnCompleted { get; set; }
-    public List<Func<UnitOfWorkFailedArgs, Task>> OnFailed { get; set; }
+    public List<Func<Task>> OnCompletedActions { get; set; }
+    public List<Func<UnitOfWorkFailedArgs, Task>> OnFailedActions { get; set; }
 
     /// <summary>
     /// Completes this unit of work.
@@ -70,6 +78,25 @@ public interface IUnitOfWork : IDisposable
             ? this.As<TUnitOfWork>()
             : InnerUnitOfWorks.FirstUowOfType<TUnitOfWork>();
     }
+
+    /// <summary>
+    /// Get itself or inner uow which is has Id equal uowId.
+    /// </summary>
+    [return: MaybeNull]
+    public IUnitOfWork UowOfId(string uowId)
+    {
+        if (Id == uowId) return this;
+
+        for (var i = InnerUnitOfWorks.Count - 1; i >= 0; i--)
+        {
+            if (InnerUnitOfWorks[i].Id == uowId) return InnerUnitOfWorks[i];
+
+            var innerUow = InnerUnitOfWorks[i].UowOfId(uowId);
+            if (innerUow != null) return innerUow;
+        }
+
+        return null;
+    }
 }
 
 public class UnitOfWorkFailedArgs
@@ -89,10 +116,12 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
 
     protected SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(1, 1);
 
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+
     public IUnitOfWork ParentUnitOfWork { get; set; }
 
-    public List<Func<Task>> OnCompleted { get; set; } = new List<Func<Task>>();
-    public List<Func<UnitOfWorkFailedArgs, Task>> OnFailed { get; set; } = new List<Func<UnitOfWorkFailedArgs, Task>>();
+    public List<Func<Task>> OnCompletedActions { get; set; } = new();
+    public List<Func<UnitOfWorkFailedArgs, Task>> OnFailedActions { get; set; } = new();
     public List<IUnitOfWork> InnerUnitOfWorks { get; protected set; } = new();
     public IUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
 
@@ -109,11 +138,11 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
 
             Completed = true;
 
-            await InvokeOnCompleted();
+            await InvokeOnCompletedActions();
         }
         catch (Exception e)
         {
-            await InvokeOnFailed(new UnitOfWorkFailedArgs(e));
+            await InvokeOnFailedActions(new UnitOfWorkFailedArgs(e));
             throw;
         }
     }
@@ -163,17 +192,24 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
         return Task.CompletedTask;
     }
 
-    protected async Task InvokeOnCompleted()
+    protected virtual async Task InvokeOnCompletedActions()
     {
-        await OnCompleted.ForEachAsync(p => p.Invoke());
+        if (OnCompletedActions.IsEmpty()) return;
 
-        OnCompleted.Clear();
+        Util.TaskRunner.QueueActionInBackground(
+            async () =>
+            {
+                await OnCompletedActions.ForEachAsync(p => p.Invoke());
+
+                OnCompletedActions.Clear();
+            },
+            () => PlatformGlobal.LoggerFactory.CreateLogger(GetType().Name));
     }
 
-    protected async Task InvokeOnFailed(UnitOfWorkFailedArgs e)
+    protected async Task InvokeOnFailedActions(UnitOfWorkFailedArgs e)
     {
-        await OnFailed.ForEachAsync(p => p.Invoke(e));
+        await OnFailedActions.ForEachAsync(p => p.Invoke(e));
 
-        OnFailed.Clear();
+        OnFailedActions.Clear();
     }
 }

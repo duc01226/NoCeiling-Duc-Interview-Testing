@@ -15,13 +15,14 @@ internal sealed class ClearCacheOnSaveSnippetTextCommandEventHandler : PlatformC
     public ClearCacheOnSaveSnippetTextCommandEventHandler(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
-        IPlatformCacheRepositoryProvider cacheRepositoryProvider) : base(loggerFactory, unitOfWorkManager)
+        IServiceProvider serviceProvider,
+        IPlatformCacheRepositoryProvider cacheRepositoryProvider) : base(loggerFactory, unitOfWorkManager, serviceProvider)
     {
         this.cacheRepositoryProvider = cacheRepositoryProvider;
     }
 
     // Demo can override to config either this handler run in a background thread
-    protected override bool AllowHandleParallelInBackgroundThread(PlatformCqrsCommandEvent<SaveSnippetTextCommand> notification)
+    protected override bool AllowHandleInBackgroundThread(PlatformCqrsCommandEvent<SaveSnippetTextCommand> notification)
     {
         return true;
     }
@@ -33,6 +34,9 @@ internal sealed class ClearCacheOnSaveSnippetTextCommandEventHandler : PlatformC
         PlatformCqrsCommandEvent<SaveSnippetTextCommand> @event,
         CancellationToken cancellationToken)
     {
+        // Test slow event do not affect main command
+        await Task.Delay(5.Seconds(), cancellationToken);
+
         // Queue task to clear cache every 5 seconds for 3 times (mean that after 5,10,15s).
         // Delay because when save snippet text, fulltext index take amount of time to update, so that we wait
         // amount of time for fulltext index update

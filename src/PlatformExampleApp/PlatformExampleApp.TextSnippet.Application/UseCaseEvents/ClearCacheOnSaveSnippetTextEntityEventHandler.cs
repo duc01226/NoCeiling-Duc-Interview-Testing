@@ -15,13 +15,14 @@ internal sealed class ClearCacheOnSaveSnippetTextEntityEventHandler : PlatformCq
     public ClearCacheOnSaveSnippetTextEntityEventHandler(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
-        IPlatformCacheRepositoryProvider cacheRepositoryProvider) : base(loggerFactory, unitOfWorkManager)
+        IServiceProvider serviceProvider,
+        IPlatformCacheRepositoryProvider cacheRepositoryProvider) : base(loggerFactory, unitOfWorkManager, serviceProvider)
     {
         this.cacheRepositoryProvider = cacheRepositoryProvider;
     }
 
     // Demo can override to config either this handler run in a background thread
-    protected override bool AllowHandleParallelInBackgroundThread(PlatformCqrsEntityEvent<TextSnippetEntity> notification)
+    protected override bool AllowHandleInBackgroundThread(PlatformCqrsEntityEvent<TextSnippetEntity> notification)
     {
         return true;
     }
@@ -33,6 +34,9 @@ internal sealed class ClearCacheOnSaveSnippetTextEntityEventHandler : PlatformCq
         PlatformCqrsEntityEvent<TextSnippetEntity> @event,
         CancellationToken cancellationToken)
     {
+        // Test slow event do not affect main command
+        await Task.Delay(5.Seconds(), cancellationToken);
+
         Util.RandomGenerator.DoByChance(percentChance: 50, () => throw new Exception("Test throw exception in event handler"));
 
         // Queue task to clear cache every 5 seconds for 3 times (mean that after 5,10,15s).

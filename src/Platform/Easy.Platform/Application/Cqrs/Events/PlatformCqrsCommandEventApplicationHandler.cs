@@ -9,9 +9,11 @@ public abstract class PlatformCqrsCommandEventApplicationHandler<TCommand> : Pla
 {
     protected PlatformCqrsCommandEventApplicationHandler(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager unitOfWorkManager) : base(
+        IUnitOfWorkManager unitOfWorkManager,
+        IServiceProvider serviceProvider) : base(
         loggerFactory,
-        unitOfWorkManager)
+        unitOfWorkManager,
+        serviceProvider)
     {
     }
 

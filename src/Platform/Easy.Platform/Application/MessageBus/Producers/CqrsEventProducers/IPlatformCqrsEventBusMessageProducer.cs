@@ -3,6 +3,7 @@ using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Cqrs.Events;
 using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
 using MediatR;
@@ -36,9 +37,10 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
     public PlatformCqrsEventBusMessageProducer(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
+        IServiceProvider serviceProvider,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
         IPlatformApplicationUserContextAccessor userContextAccessor,
-        IPlatformApplicationSettingContext applicationSettingContext) : base(loggerFactory, unitOfWorkManager)
+        IPlatformApplicationSettingContext applicationSettingContext) : base(loggerFactory, unitOfWorkManager, serviceProvider)
     {
         ApplicationBusMessageProducer = applicationBusMessageProducer;
         UserContextAccessor = userContextAccessor;
@@ -53,9 +55,9 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
 
     protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
 
-    protected override bool AllowHandleParallelInBackgroundThread(TEvent notification)
+    protected override bool AllowHandleInBackgroundThread(TEvent notification)
     {
-        return false;
+        return !ApplicationBusMessageProducer.HasOutboxMessageSupport();
     }
 
     protected abstract TMessage BuildMessage(TEvent @event);
@@ -82,6 +84,7 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
         await ApplicationBusMessageProducer.SendAsync(
             BuildMessage(@event),
             forceUseDefaultRoutingKey: !SendByMessageSelfRoutingKey(),
+            sourceOutboxUowId: @event.As<IPlatformUowEvent>()?.SourceUowId,
             cancellationToken: cancellationToken);
     }
 

@@ -10,6 +10,9 @@ namespace Easy.Platform.HangfireBackgroundJob;
 
 public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobScheduler
 {
+    public const string AutoRecurringJobIdByTypeSuffix = "_Auto_";
+    public const int DefaultMaxLengthJobId = 100;
+
     private readonly IServiceProvider serviceProvider;
 
     public PlatformHangfireBackgroundJobScheduler(IServiceProvider serviceProvider)
@@ -66,15 +69,24 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
     public void UpsertRecurringJob<TJobExecutor>(Func<string> cronExpression = null, TimeZoneInfo timeZone = null)
         where TJobExecutor : IPlatformBackgroundJobExecutor
     {
-        var cronExpressionValue = PlatformRecurringJobAttribute.GetCronExpressionInfo<TJobExecutor>() ??
-                                  cronExpression?.Invoke();
-        if (cronExpressionValue == null)
-            throw new Exception(
-                "Either recurring job must have cron expression from PlatformRecurringJobAttribute or cronExpression param must be not null");
+        var cronExpressionValue = EnsureValidToUpsertRecurringJob(typeof(TJobExecutor), cronExpression);
 
         RecurringJob.AddOrUpdate(
-            BuildRecurringJobId<TJobExecutor>(),
+            BuildAutoRecurringJobIdByType<TJobExecutor>(),
             () => ExecuteBackgroundJob<TJobExecutor>(),
+            cronExpressionValue,
+            timeZone ?? Clock.CurrentTimeZone);
+    }
+
+    public void UpsertRecurringJob<TJobExecutor, TJobExecutorParam>(TJobExecutorParam jobExecutorParam, Func<string> cronExpression = null, TimeZoneInfo timeZone = null)
+        where TJobExecutor : IPlatformBackgroundJobExecutor<TJobExecutorParam> where TJobExecutorParam : class
+    {
+        var cronExpressionValue = EnsureValidToUpsertRecurringJob(typeof(TJobExecutor), cronExpression);
+        var jobExecutorParamJson = jobExecutorParam?.ToJson();
+
+        RecurringJob.AddOrUpdate(
+            BuildAutoRecurringJobIdByType<TJobExecutor>(),
+            () => ExecuteBackgroundJob(typeof(TJobExecutor), jobExecutorParamJson),
             cronExpressionValue,
             timeZone ?? Clock.CurrentTimeZone);
     }
@@ -84,41 +96,73 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
         Func<string> cronExpression = null,
         TimeZoneInfo timeZone = null)
     {
-        EnsureJobExecutorTypeValid(jobExecutorType);
-
-        var cronExpressionValue = PlatformRecurringJobAttribute.GetCronExpressionInfo(jobExecutorType) ??
-                                  cronExpression?.Invoke();
-        if (cronExpressionValue == null)
-            throw new Exception(
-                "Either recurring job must have cron expression from PlatformRecurringJobAttribute or cronExpression param must be not null");
+        var cronExpressionValue = EnsureValidToUpsertRecurringJob(jobExecutorType, cronExpression);
 
         RecurringJob.AddOrUpdate(
-            BuildRecurringJobId(jobExecutorType),
+            BuildAutoRecurringJobIdByType(jobExecutorType),
             () => ExecuteBackgroundJob(jobExecutorType, null),
+            cronExpressionValue,
+            timeZone ?? Clock.CurrentTimeZone);
+    }
+
+    public void UpsertRecurringJob(Type jobExecutorType, object jobExecutorParam, Func<string> cronExpression = null, TimeZoneInfo timeZone = null)
+    {
+        var cronExpressionValue = EnsureValidToUpsertRecurringJob(jobExecutorType, cronExpression);
+        var jobExecutorParamJson = jobExecutorParam?.ToJson();
+
+        RecurringJob.AddOrUpdate(
+            BuildAutoRecurringJobIdByType(jobExecutorType),
+            () => ExecuteBackgroundJob(jobExecutorType, jobExecutorParamJson),
+            cronExpressionValue,
+            timeZone ?? Clock.CurrentTimeZone);
+    }
+
+    public void UpsertRecurringJob(
+        string recurringJobId,
+        Type jobExecutorType,
+        Func<string> cronExpression = null,
+        TimeZoneInfo timeZone = null)
+    {
+        var cronExpressionValue = EnsureValidToUpsertRecurringJob(jobExecutorType, cronExpression);
+
+        RecurringJob.AddOrUpdate(
+            recurringJobId.TakeTop(DefaultMaxLengthJobId),
+            () => ExecuteBackgroundJob(jobExecutorType, null),
+            cronExpressionValue,
+            timeZone ?? Clock.CurrentTimeZone);
+    }
+
+    public void UpsertRecurringJob(string recurringJobId, Type jobExecutorType, object jobExecutorParam, Func<string> cronExpression = null, TimeZoneInfo timeZone = null)
+    {
+        var cronExpressionValue = EnsureValidToUpsertRecurringJob(jobExecutorType, cronExpression);
+        var jobExecutorParamJson = jobExecutorParam?.ToJson();
+
+        RecurringJob.AddOrUpdate(
+            recurringJobId.TakeTop(DefaultMaxLengthJobId),
+            () => ExecuteBackgroundJob(jobExecutorType, jobExecutorParamJson),
             cronExpressionValue,
             timeZone ?? Clock.CurrentTimeZone);
     }
 
     public void RemoveRecurringJobIfExist(string recurringJobId)
     {
-        RecurringJob.RemoveIfExists(recurringJobId);
+        RecurringJob.RemoveIfExists(recurringJobId.TakeTop(DefaultMaxLengthJobId));
     }
 
     public void TriggerRecurringJob<TJobExecutor>() where TJobExecutor : IPlatformBackgroundJobExecutor
     {
-        RecurringJob.TriggerJob(BuildRecurringJobId<TJobExecutor>());
+        RecurringJob.TriggerJob(BuildAutoRecurringJobIdByType<TJobExecutor>());
     }
 
     public void RemoveAllRecurringJobs()
     {
-        using (var connection = JobStorage.Current.GetConnection())
-        {
-            foreach (var recurringJob in connection.GetRecurringJobs())
-                RecurringJob.RemoveIfExists(recurringJob.Id);
-        }
+        var allExistingRecurringJobIds = AllExistingRecurringJobIds();
+
+        foreach (var recurringJobId in allExistingRecurringJobIds)
+            RecurringJob.RemoveIfExists(recurringJobId);
     }
 
-    public HashSet<string> AllRecurringJobIds()
+    public HashSet<string> AllExistingRecurringJobIds()
     {
         using (var connection = JobStorage.Current.GetConnection())
         {
@@ -129,13 +173,14 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
     public void ReplaceAllRecurringBackgroundJobs(List<IPlatformBackgroundJobExecutor> newAllRecurringJobs)
     {
         // Remove obsolete recurring job, job is not existed in the all current recurring declared jobs in source code
-        var allCurrentRecurringJobExecutorIds = newAllRecurringJobs
-            .Select(p => BuildRecurringJobId(p.GetType()))
+        var newCurrentRecurringJobExecutorIds = newAllRecurringJobs
+            .Select(p => BuildAutoRecurringJobIdByType(p.GetType()))
             .ToHashSet();
+        var allExistingRecurringJobIds = AllExistingRecurringJobIds();
 
-        foreach (var existedRecurringJobId in AllRecurringJobIds())
-            if (!allCurrentRecurringJobExecutorIds.Contains(existedRecurringJobId))
-                RemoveRecurringJobIfExist(existedRecurringJobId);
+        foreach (var existingAutoRecurringJobId in allExistingRecurringJobIds.Where(p => p.StartsWith(AutoRecurringJobIdByTypeSuffix)))
+            if (!newCurrentRecurringJobExecutorIds.Contains(existingAutoRecurringJobId))
+                RemoveRecurringJobIfExist(existingAutoRecurringJobId);
 
         // Upsert all new recurring jobs
         newAllRecurringJobs.ForEach(
@@ -155,16 +200,28 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
             jobExecutorParam?.ToJson());
     }
 
-    public string BuildRecurringJobId<TJobExecutor>() where TJobExecutor : IPlatformBackgroundJobExecutor
+    public string BuildAutoRecurringJobIdByType<TJobExecutor>() where TJobExecutor : IPlatformBackgroundJobExecutor
     {
-        return BuildRecurringJobId(typeof(TJobExecutor));
+        return BuildAutoRecurringJobIdByType(typeof(TJobExecutor));
     }
 
-    public string BuildRecurringJobId(Type jobExecutorType)
+    public string BuildAutoRecurringJobIdByType(Type jobExecutorType)
     {
         EnsureJobExecutorTypeValid(jobExecutorType);
 
-        return $"{jobExecutorType.Name}.{nameof(IPlatformBackgroundJobExecutor.Execute)}";
+        return $"{AutoRecurringJobIdByTypeSuffix}.{jobExecutorType.Name}".TakeTop(DefaultMaxLengthJobId);
+    }
+
+    protected string EnsureValidToUpsertRecurringJob(Type jobExecutorType, Func<string> cronExpression)
+    {
+        EnsureJobExecutorTypeValid(jobExecutorType);
+
+        var cronExpressionValue = PlatformRecurringJobAttribute.GetCronExpressionInfo(jobExecutorType) ??
+                                  cronExpression?.Invoke();
+        if (cronExpressionValue == null)
+            throw new Exception(
+                "Either recurring job must have cron expression from PlatformRecurringJobAttribute or cronExpression param must be not null");
+        return cronExpressionValue;
     }
 
     public void ExecuteBackgroundJob(Type jobExecutorType, string jobExecutorParamJson)

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Easy.Platform.Common.Timing;
 using MediatR;
 
@@ -21,14 +22,15 @@ public abstract class PlatformCqrsEvent : INotification
 
     /// <summary>
     /// Add handler type fullname If you want to force wait handler to be handling successfully to continue. By default, handlers for entity event executing
-    /// in background thread and you dont need to wait for it. The command will return immediately. <br/>
+    /// in background thread and you dont need to wait for it. The command will return immediately. <br />
     /// Sometime you could want to wait for handler done
     /// </summary>
+    [JsonIgnore]
     public HashSet<string> ForceWaitEventHandlerFinishedFullNames { get; set; }
 
     /// <summary>
     /// Set handler type fullname If you want to force wait handler to be handling successfully to continue. By default, handlers for entity event executing
-    /// in background thread and you dont need to wait for it. The command will return immediately. <br/>
+    /// in background thread and you dont need to wait for it. The command will return immediately. <br />
     /// Sometime you could want to wait for handler done
     /// </summary>
     public virtual PlatformCqrsEvent SetForceWaitEventHandlerFinished(params Type[] eventHandlerTypes)
@@ -38,7 +40,7 @@ public abstract class PlatformCqrsEvent : INotification
         return this;
     }
 
-    /// <inheritdoc cref="SetForceWaitEventHandlerFinished"/>
+    /// <inheritdoc cref="SetForceWaitEventHandlerFinished" />
     public virtual PlatformCqrsEvent SetForceWaitEventHandlerFinished<THandler, TEvent>()
         where THandler : IPlatformCqrsEventHandler<TEvent>
         where TEvent : PlatformCqrsEvent, new()
@@ -49,5 +51,10 @@ public abstract class PlatformCqrsEvent : INotification
     public bool HasForceWaitEventHandler(Type eventHandlerType)
     {
         return ForceWaitEventHandlerFinishedFullNames?.Contains(eventHandlerType.FullName) == true;
+    }
+
+    public bool AnyForceWaitEventHandler()
+    {
+        return ForceWaitEventHandlerFinishedFullNames?.Any() == true;
     }
 }

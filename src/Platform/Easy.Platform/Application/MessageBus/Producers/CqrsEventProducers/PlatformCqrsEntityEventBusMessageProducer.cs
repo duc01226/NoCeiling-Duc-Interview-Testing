@@ -16,20 +16,17 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
     protected PlatformCqrsEntityEventBusMessageProducer(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
+        IServiceProvider serviceProvider,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
         IPlatformApplicationUserContextAccessor userContextAccessor,
         IPlatformApplicationSettingContext applicationSettingContext) : base(
         loggerFactory,
         unitOfWorkManager,
+        serviceProvider,
         applicationBusMessageProducer,
         userContextAccessor,
         applicationSettingContext)
     {
-    }
-
-    protected override bool AllowHandleParallelInBackgroundThread(PlatformCqrsEntityEvent<TEntity> notification)
-    {
-        return UnitOfWorkManager.TryGetCurrentActiveUow() == null || UnitOfWorkManager.CurrentActiveUow().IsPseudoTransactionUow();
     }
 
     protected override TMessage BuildMessage(PlatformCqrsEntityEvent<TEntity> @event)

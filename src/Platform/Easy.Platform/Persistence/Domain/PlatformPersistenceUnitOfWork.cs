@@ -25,8 +25,8 @@ public abstract class PlatformPersistenceUnitOfWork<TDbContext> : PlatformUnitOf
     {
         base.Dispose(disposing);
 
+        // Dispose managed state (managed objects).
         if (disposing)
-            // Dispose managed state (managed objects).
             DbContext?.Dispose();
 
         Disposed = true;

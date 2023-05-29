@@ -39,6 +39,12 @@ public interface IUnitOfWorkManager : IDisposable
     public IUnitOfWork CurrentActiveUow();
 
     /// <summary>
+    /// Gets currently latest or created active unit of work has id equal uowId.
+    /// <exception cref="Exception">Throw exception if there is not active unit of work.</exception>
+    /// </summary>
+    public IUnitOfWork CurrentOrCreatedActiveUow(string uowId);
+
+    /// <summary>
     /// Gets currently latest active unit of work of type <see cref="TUnitOfWork" />.
     /// <exception cref="Exception">Throw exception if there is not active unit of work.</exception>
     /// </summary>
@@ -51,9 +57,20 @@ public interface IUnitOfWorkManager : IDisposable
     public IUnitOfWork TryGetCurrentActiveUow();
 
     /// <summary>
+    /// Gets currently latest or created active unit of work has id equal uowId. Return null if no active uow
+    /// </summary>
+    [return: MaybeNull]
+    public IUnitOfWork TryGetCurrentOrCreatedActiveUow(string uowId);
+
+    /// <summary>
     /// Check that is there any currently latest active unit of work
     /// </summary>
     public bool HasCurrentActiveUow();
+
+    /// <summary>
+    /// Check that is there any currently latest or created active unit of work has id equal uowId
+    /// </summary>
+    public bool HasCurrentOrCreatedActiveUow(string uowId);
 
     /// <summary>
     /// Start a new unit of work. <br />
@@ -70,7 +87,7 @@ public interface IUnitOfWorkManager : IDisposable
 public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
 {
     protected readonly List<IUnitOfWork> CurrentUnitOfWorks = new();
-    protected readonly List<IUnitOfWork> FreeCreatedUnitOfWorks = new();
+    protected readonly Dictionary<string, IUnitOfWork> FreeCreatedUnitOfWorks = new();
 
     private IUnitOfWork globalUow;
 
@@ -92,13 +109,20 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
 
     public IUnitOfWork CurrentActiveUow()
     {
-        return CurrentUow()
-            .Ensure(
-                must: currentUow => currentUow != null,
-                "There's no current any uow has been begun.")
-            .Ensure(
-                must: currentUow => currentUow.IsActive(),
-                "Current unit of work has been completed or disposed.");
+        var currentUow = CurrentUow();
+
+        EnsureUowActive(currentUow);
+
+        return currentUow;
+    }
+
+    public IUnitOfWork CurrentOrCreatedActiveUow(string uowId)
+    {
+        var currentUow = CurrentOrCreatedUow(uowId);
+
+        EnsureUowActive(currentUow);
+
+        return currentUow;
     }
 
     public IUnitOfWork TryGetCurrentActiveUow()
@@ -108,9 +132,23 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
             : null;
     }
 
+    public IUnitOfWork TryGetCurrentOrCreatedActiveUow(string uowId)
+    {
+        var currentOrCreatedUow = CurrentOrCreatedUow(uowId);
+
+        return currentOrCreatedUow?.IsActive() == true
+            ? currentOrCreatedUow
+            : null;
+    }
+
     public bool HasCurrentActiveUow()
     {
         return CurrentUow()?.IsActive() == true;
+    }
+
+    public bool HasCurrentOrCreatedActiveUow(string uowId)
+    {
+        return CurrentOrCreatedUow(uowId)?.IsActive() == true;
     }
 
     public virtual IUnitOfWork Begin(bool suppressCurrentUow = true)
@@ -141,6 +179,36 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
         GC.SuppressFinalize(this);
     }
 
+    public virtual IUnitOfWork CurrentOrCreatedUow(string uowId)
+    {
+        RemoveAllInactiveUow();
+
+        return LastOrDefaultMatchedUowOfId(CurrentUnitOfWorks, uowId) ?? LastOrDefaultMatchedUowOfId(FreeCreatedUnitOfWorks.Values.ToList(), uowId);
+
+        static IUnitOfWork LastOrDefaultMatchedUowOfId(List<IUnitOfWork> unitOfWorks, string uowId)
+        {
+            for (var i = unitOfWorks.Count - 1; i >= 0; i--)
+            {
+                var matchedUow = unitOfWorks[i].UowOfId(uowId);
+
+                if (matchedUow != null) return matchedUow;
+            }
+
+            return null;
+        }
+    }
+
+    private static void EnsureUowActive(IUnitOfWork currentUow)
+    {
+        currentUow
+            .Ensure(
+                must: currentUow => currentUow != null,
+                "There's no current any uow has been begun.")
+            .Ensure(
+                must: currentUow => currentUow.IsActive(),
+                "Current unit of work has been completed or disposed.");
+    }
+
     protected virtual void Dispose(bool disposing)
     {
         if (disposing)
@@ -149,7 +217,7 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
             CurrentUnitOfWorks.ForEach(currentUnitOfWork => currentUnitOfWork.Dispose());
             CurrentUnitOfWorks.Clear();
 
-            FreeCreatedUnitOfWorks.ForEach(currentUnitOfWork => currentUnitOfWork.Dispose());
+            FreeCreatedUnitOfWorks.ForEach(currentUnitOfWork => currentUnitOfWork.Value.Dispose());
             FreeCreatedUnitOfWorks.Clear();
 
             globalUow?.Dispose();

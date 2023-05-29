@@ -8,9 +8,13 @@ namespace PlatformExampleApp.TextSnippet.Application.UseCaseEvents;
 
 internal sealed class DemoUsingPropertyValueUpdatedDomainEventOnSnippetTextEntityEventHandler : PlatformCqrsEntityEventApplicationHandler<TextSnippetEntity>
 {
-    public DemoUsingPropertyValueUpdatedDomainEventOnSnippetTextEntityEventHandler(ILoggerFactory loggerFactory, IUnitOfWorkManager unitOfWorkManager) : base(
+    public DemoUsingPropertyValueUpdatedDomainEventOnSnippetTextEntityEventHandler(
+        ILoggerFactory loggerFactory,
+        IUnitOfWorkManager unitOfWorkManager,
+        IServiceProvider serviceProvider) : base(
         loggerFactory,
-        unitOfWorkManager)
+        unitOfWorkManager,
+        serviceProvider)
     {
     }
 
@@ -23,6 +27,9 @@ internal sealed class DemoUsingPropertyValueUpdatedDomainEventOnSnippetTextEntit
 
     protected override async Task HandleAsync(PlatformCqrsEntityEvent<TextSnippetEntity> @event, CancellationToken cancellationToken)
     {
+        // Test slow event do not affect main command
+        await Task.Delay(5.Seconds(), cancellationToken);
+
         // DEMO USING PROPERTY CHANGED DOMAIN EVENT
         var snippetTextPropUpdatedEvent = @event.FindPropertyValueUpdatedDomainEvent(p => p.SnippetText);
         if (snippetTextPropUpdatedEvent != null)

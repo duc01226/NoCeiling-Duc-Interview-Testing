@@ -22,12 +22,14 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     protected IPlatformCqrs Cqrs { get; }
     protected IServiceProvider ServiceProvider { get; }
 
-    /// <summary>
-    /// Return current active uow. May throw exception if not existing one.
-    /// </summary>
     public IUnitOfWork CurrentActiveUow()
     {
         return UnitOfWorkManager.CurrentActiveUow().UowOfType<TUow>();
+    }
+
+    public IUnitOfWork CurrentOrCreatedActiveUow(string uowId)
+    {
+        return UnitOfWorkManager.CurrentOrCreatedActiveUow(uowId).UowOfType<TUow>();
     }
 
     public IUnitOfWorkManager UowManager()

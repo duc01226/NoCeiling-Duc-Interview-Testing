@@ -31,7 +31,7 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
                 associatedServiceScope: newScope)
             .With(_ => _.CreatedByUnitOfWorkManager = this);
 
-        FreeCreatedUnitOfWorks.Add(uow);
+        FreeCreatedUnitOfWorks.Add(uow.Id, uow);
 
         return uow;
     }

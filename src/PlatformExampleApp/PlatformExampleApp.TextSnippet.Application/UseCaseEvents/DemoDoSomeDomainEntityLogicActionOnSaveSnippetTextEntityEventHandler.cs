@@ -8,9 +8,13 @@ namespace PlatformExampleApp.TextSnippet.Application.UseCaseEvents;
 
 internal sealed class DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEventHandler : PlatformCqrsEntityEventApplicationHandler<TextSnippetEntity>
 {
-    public DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEventHandler(ILoggerFactory loggerFactory, IUnitOfWorkManager unitOfWorkManager) : base(
+    public DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEventHandler(
+        ILoggerFactory loggerFactory,
+        IUnitOfWorkManager unitOfWorkManager,
+        IServiceProvider serviceProvider) : base(
         loggerFactory,
-        unitOfWorkManager)
+        unitOfWorkManager,
+        serviceProvider)
     {
     }
 
@@ -23,6 +27,9 @@ internal sealed class DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEv
 
     protected override async Task HandleAsync(PlatformCqrsEntityEvent<TextSnippetEntity> @event, CancellationToken cancellationToken)
     {
+        // Test slow event do not affect main command
+        await Task.Delay(5.Seconds(), cancellationToken);
+
         var encryptSnippetTextEvent = @event
             .FindDomainEvents<TextSnippetEntity.EncryptSnippetTextDomainEvent>()
             .FirstOrDefault();

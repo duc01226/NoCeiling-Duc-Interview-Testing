@@ -14,10 +14,16 @@ public class TransferSnippetTextToMultiDbDemoEntityNameDomainEventSendWithDefaul
     public TransferSnippetTextToMultiDbDemoEntityNameDomainEventSendWithDefaultRoutingKeyEventBusMessageProducer(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
+        IServiceProvider serviceProvider,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
         IPlatformApplicationUserContextAccessor userContextAccessor,
-        IPlatformApplicationSettingContext applicationSettingContext) :
-        base(loggerFactory, unitOfWorkManager, applicationBusMessageProducer, userContextAccessor, applicationSettingContext)
+        IPlatformApplicationSettingContext applicationSettingContext) : base(
+        loggerFactory,
+        unitOfWorkManager,
+        serviceProvider,
+        applicationBusMessageProducer,
+        userContextAccessor,
+        applicationSettingContext)
     {
     }
 
