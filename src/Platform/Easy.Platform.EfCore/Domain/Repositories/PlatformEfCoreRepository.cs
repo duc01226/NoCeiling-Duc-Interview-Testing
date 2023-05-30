@@ -60,7 +60,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
             .AsQueryable()
             .PipeIf(
                 loadRelatedEntities.Any(),
-                query => loadRelatedEntities.Aggregate(query, (query, loadRelatedEntityFn) => query.Include(loadRelatedEntityFn)));
+                query => loadRelatedEntities.Aggregate(query, (query, loadRelatedEntityFn) => query.Include(loadRelatedEntityFn).DefaultIfEmpty()));
     }
 
     public override async Task<List<TSource>> ToListAsync<TSource>(
