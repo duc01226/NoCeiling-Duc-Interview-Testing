@@ -132,7 +132,8 @@ public interface IPlatformDbContext : IDisposable
         // after get data from database, it switched to I/O thread pool
         var loggingFullStackTrace = Environment.StackTrace;
 
-        HandleLogTooMuchDataInMemoryBadQueryWarning(resultQuery, persistenceConfiguration, logger, loggingFullStackTrace, resultQueryStringBuilder);
+        if (typeof(TResult).IsAssignableToGenericType(typeof(IEnumerable<>)) && resultQuery != null)
+            HandleLogTooMuchDataInMemoryBadQueryWarning(resultQuery, persistenceConfiguration, logger, loggingFullStackTrace, resultQueryStringBuilder);
 
         var result = await HandleLogSlowQueryBadQueryWarning(
             getResultFn,

@@ -85,11 +85,21 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         return source.As<IQueryable<TSource>>()?.AsAsyncEnumerable() ?? source.ToAsyncEnumerable();
     }
 
-    public override Task<TSource> FirstOrDefaultAsync<TSource>(
+    public override async Task<TSource> FirstOrDefaultAsync<TSource>(
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default)
     {
-        return source.FirstOrDefaultAsync(cancellationToken);
+        if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+            return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
+                () => source.FirstOrDefaultAsync(cancellationToken),
+                Logger,
+                PersistenceConfiguration,
+                forWriteQuery: false,
+                resultQuery: source,
+                resultQueryStringBuilder: source.As<IQueryable<TSource>>()
+                    ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+
+        return await source.FirstOrDefaultAsync(cancellationToken);
     }
 
     public override async Task<TSource> FirstOrDefaultAsync<TSource>(
@@ -102,21 +112,51 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         return query.FirstOrDefault();
     }
 
-    public override Task<TSource> FirstAsync<TSource>(
+    public override async Task<TSource> FirstAsync<TSource>(
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default)
     {
-        return source.FirstAsync(cancellationToken);
+        if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+            return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
+                () => source.FirstAsync(cancellationToken),
+                Logger,
+                PersistenceConfiguration,
+                forWriteQuery: false,
+                resultQuery: source,
+                resultQueryStringBuilder: source.As<IQueryable<TSource>>()
+                    ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+
+        return await source.FirstAsync(cancellationToken);
     }
 
-    public override Task<int> CountAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public override async Task<int> CountAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
-        return source.CountAsync(cancellationToken);
+        if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+            return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
+                () => source.CountAsync(cancellationToken),
+                Logger,
+                PersistenceConfiguration,
+                forWriteQuery: false,
+                resultQuery: source,
+                resultQueryStringBuilder: source.As<IQueryable<TSource>>()
+                    ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+
+        return await source.CountAsync(cancellationToken);
     }
 
-    public override Task<bool> AnyAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public override async Task<bool> AnyAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
-        return source.AnyAsync(cancellationToken);
+        if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+            return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
+                () => source.AnyAsync(cancellationToken),
+                Logger,
+                PersistenceConfiguration,
+                forWriteQuery: false,
+                resultQuery: source,
+                resultQueryStringBuilder: source.As<IQueryable<TSource>>()
+                    ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+
+        return await source.AnyAsync(cancellationToken);
     }
 
     protected override void HandleDisposeUsingOnceTimeContextLogic<TResult>(

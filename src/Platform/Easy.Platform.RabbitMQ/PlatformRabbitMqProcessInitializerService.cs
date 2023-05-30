@@ -209,15 +209,15 @@ public class PlatformRabbitMqProcessInitializerService
 
     private bool DeclareRabbitMqConfiguration()
     {
+        if (declareRabbitMqConfigurationFinished) return true;
+
+        InitRabbitMqChannel();
+
         // retryCount: messageBusManager.AllDefinedBusMessageAndConsumerBindingRoutingKeys().Count
         // to update the dictionary for queue that need to force delete to re-declare queue
         return Util.TaskRunner.WaitRetryThrowFinalException(
             () =>
             {
-                if (declareRabbitMqConfigurationFinished) return true;
-
-                InitRabbitMqChannel();
-
                 if (CurrentChannel != null)
                 {
                     DeclareRabbitMqExchangesAndQueuesConfiguration();
@@ -538,24 +538,17 @@ public class PlatformRabbitMqProcessInitializerService
 
     private IModel InitRabbitMqChannel()
     {
-        try
-        {
-            return Policy
-                .Handle<Exception>()
-                .WaitAndRetry(
-                    options.InitRabbitMqChannelRetryCount,
-                    retryAttempt => 10.Seconds())
-                .ExecuteAndThrowFinalException(
-                    () => mqChannelPool.InitGlobalChannel(),
-                    ex =>
-                    {
-                        Logger.LogError(ex, "Init rabbit-mq channel failed.");
-                    });
-        }
-        catch
-        {
-            return null;
-        }
+        return Policy
+            .Handle<Exception>()
+            .WaitAndRetry(
+                10,
+                retryAttempt => 10.Seconds())
+            .ExecuteAndThrowFinalException(
+                () => mqChannelPool.InitGlobalChannel(),
+                ex =>
+                {
+                    Logger.LogError(ex, "Init rabbit-mq channel failed.");
+                });
     }
 
     private void DeclareRabbitMqExchangesAndQueuesConfiguration()

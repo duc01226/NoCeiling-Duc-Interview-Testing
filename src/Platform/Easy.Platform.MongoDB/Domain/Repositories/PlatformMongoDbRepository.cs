@@ -82,11 +82,21 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         }
     }
 
-    public override Task<TSource> FirstOrDefaultAsync<TSource>(
+    public override async Task<TSource> FirstOrDefaultAsync<TSource>(
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default)
     {
-        return source.As<IMongoQueryable<TSource>>().FirstOrDefaultAsync(cancellationToken);
+        if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+            return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
+                () => source.As<IMongoQueryable<TSource>>().FirstOrDefaultAsync(cancellationToken),
+                Logger,
+                PersistenceConfiguration,
+                forWriteQuery: false,
+                resultQuery: source,
+                resultQueryStringBuilder: source.As<IMongoQueryable<TSource>>()
+                    ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+
+        return await source.As<IMongoQueryable<TSource>>().FirstOrDefaultAsync(cancellationToken);
     }
 
     public override async Task<TSource> FirstOrDefaultAsync<TSource>(
@@ -99,21 +109,51 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         return query.FirstOrDefault();
     }
 
-    public override Task<TSource> FirstAsync<TSource>(
+    public override async Task<TSource> FirstAsync<TSource>(
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default)
     {
-        return source.As<IMongoQueryable<TSource>>().FirstAsync(cancellationToken);
+        if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+            return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
+                () => source.As<IMongoQueryable<TSource>>().FirstAsync(cancellationToken),
+                Logger,
+                PersistenceConfiguration,
+                forWriteQuery: false,
+                resultQuery: source,
+                resultQueryStringBuilder: source.As<IMongoQueryable<TSource>>()
+                    ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+
+        return await source.As<IMongoQueryable<TSource>>().FirstAsync(cancellationToken);
     }
 
-    public override Task<int> CountAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public override async Task<int> CountAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
-        return source.As<IMongoQueryable<TSource>>().CountAsync(cancellationToken);
+        if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+            return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
+                () => source.As<IMongoQueryable<TSource>>().CountAsync(cancellationToken),
+                Logger,
+                PersistenceConfiguration,
+                forWriteQuery: false,
+                resultQuery: source,
+                resultQueryStringBuilder: source.As<IMongoQueryable<TSource>>()
+                    ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+
+        return await source.As<IMongoQueryable<TSource>>().CountAsync(cancellationToken);
     }
 
-    public override Task<bool> AnyAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
+    public override async Task<bool> AnyAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
-        return source.As<IMongoQueryable<TSource>>().AnyAsync(cancellationToken);
+        if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+            return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
+                () => source.As<IMongoQueryable<TSource>>().AnyAsync(cancellationToken),
+                Logger,
+                PersistenceConfiguration,
+                forWriteQuery: false,
+                resultQuery: source,
+                resultQueryStringBuilder: source.As<IMongoQueryable<TSource>>()
+                    ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+
+        return await source.As<IMongoQueryable<TSource>>().AnyAsync(cancellationToken);
     }
 
     protected override bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IUnitOfWork uow)
