@@ -2,6 +2,8 @@ namespace Easy.Platform.Persistence.DataMigration;
 
 public class PlatformDataMigrationHistory
 {
+    public const string DbInitializedMigrationHistoryName = "DbInitialized";
+
     private DateTime? createdDate;
 
     public PlatformDataMigrationHistory()

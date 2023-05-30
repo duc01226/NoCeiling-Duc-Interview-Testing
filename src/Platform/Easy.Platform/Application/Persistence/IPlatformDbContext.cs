@@ -1,14 +1,18 @@
 #nullable enable
+using System.Data.Common;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.Exceptions.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.Persistence;
@@ -16,10 +20,104 @@ namespace Easy.Platform.Application.Persistence;
 public interface IPlatformDbContext : IDisposable
 {
     public const int DefaultPageSize = 10;
+    public const int DefaultRunDataMigrationInBackgroundRetryCount = 10;
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery { get; }
 
     public IUnitOfWork MappedUnitOfWork { get; set; }
+
+    public ILogger Logger { get; }
+
+    public Task InsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity);
+
+    public async Task MigrateApplicationDataAsync<TDbContext>(IServiceProvider serviceProvider) where TDbContext : class, IPlatformDbContext<TDbContext>
+    {
+        PlatformDataMigrationExecutor<TDbContext>
+            .EnsureAllDataMigrationExecutorsHasUniqueName(GetType().Assembly, serviceProvider);
+
+        await PlatformDataMigrationExecutor<TDbContext>
+            .GetCanExecuteDataMigrationExecutors(GetType().Assembly, serviceProvider, ApplicationDataMigrationHistoryQuery)
+            .ForEachAsync(
+                async migrationExecution =>
+                {
+                    try
+                    {
+                        if (migrationExecution.AllowRunInBackgroundThread)
+                        {
+                            var migrationExecutionType = migrationExecution.GetType();
+                            var migrationExecutionName = migrationExecution.GetType();
+
+                            Util.TaskRunner.QueueActionInBackground(
+                                async () =>
+                                {
+                                    Logger.LogInformation($"Wait To Execute DataMigration {migrationExecutionName} in background thread");
+
+                                    var currentDbContextPersistenceModule = PlatformGlobal.RootServiceProvider
+                                        .GetRequiredService(
+                                            GetType().Assembly.GetTypes().First(p => p.IsAssignableTo(typeof(PlatformPersistenceModule<TDbContext>))))
+                                        .As<PlatformPersistenceModule<TDbContext>>();
+
+                                    await currentDbContextPersistenceModule.BackgroundThreadDataMigrationLock.WaitAsync();
+
+                                    await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                                        () => PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
+                                            async (IServiceProvider sp) =>
+                                            {
+                                                try
+                                                {
+                                                    await ExecuteDataMigrationExecutor(
+                                                        sp.GetRequiredService(migrationExecutionType).As<PlatformDataMigrationExecutor<TDbContext>>(),
+                                                        sp.GetRequiredService<TDbContext>());
+                                                }
+                                                finally
+                                                {
+                                                    currentDbContextPersistenceModule.BackgroundThreadDataMigrationLock.Release();
+                                                }
+                                            }),
+                                        retryCount: DefaultRunDataMigrationInBackgroundRetryCount,
+                                        sleepDurationProvider: retryAttempt => 10.Seconds(),
+                                        onRetry: (ex, timeSpan, currentRetry, ctx) =>
+                                        {
+                                            Logger.LogWarning(
+                                                ex,
+                                                $"Retry Execute DataMigration {migrationExecutionType.Name} {currentRetry} time(s).");
+                                        });
+                                },
+                                () => PlatformGlobal.LoggerFactory.CreateLogger(GetType()));
+                        }
+                        else
+                        {
+                            await ExecuteDataMigrationExecutor(migrationExecution, this.As<TDbContext>());
+                        }
+
+                        migrationExecution.Dispose();
+                    }
+                    catch (DbException ex)
+                    {
+                        Logger.LogError(
+                            ex,
+                            "MigrateApplicationDataAsync for migration {DataMigrationName} has errors. If in dev environment it may happens if migrate cross db, when other service db is not initiated. Usually for dev environment migrate cross service db when run system in the first-time could be ignored. ",
+                            migrationExecution.Name);
+
+                        if (!PlatformEnvironment.IsDevelopment)
+                            throw new Exception($"MigrateApplicationDataAsync for migration {migrationExecution.Name} has errors. {ex.Message}.", ex);
+                    }
+                });
+    }
+
+    public async Task ExecuteDataMigrationExecutor<TDbContext>(PlatformDataMigrationExecutor<TDbContext> migrationExecution, TDbContext dbContext)
+        where TDbContext : class, IPlatformDbContext
+    {
+        dbContext.Logger.LogInformation($"Migration {migrationExecution.Name} started.");
+
+        await migrationExecution.Execute(dbContext);
+
+        await InsertOneDataMigrationHistoryAsync(new PlatformDataMigrationHistory(migrationExecution.Name));
+
+        await dbContext.SaveChangesAsync();
+
+        dbContext.Logger.LogInformation($"Migration {migrationExecution.Name} finished.");
+    }
 
     public static async Task<TResult> ExecuteWithBadQueryWarningHandling<TResult, TSource>(
         Func<Task<TResult>> getResultFn,
@@ -122,8 +220,6 @@ public interface IPlatformDbContext : IDisposable
     public IQueryable<TEntity> GetQuery<TEntity>() where TEntity : class, IEntity;
 
     public void RunCommand(string command);
-
-    public Task MigrateApplicationDataAsync(IServiceProvider serviceProvider);
 
     public Task Initialize(IServiceProvider serviceProvider);
 
@@ -268,4 +364,9 @@ public interface IPlatformDbContext : IDisposable
             (predicate, token) => AnyAsync(GetQuery<TEntity>().Where(predicate), token),
             cancellationToken);
     }
+}
+
+public interface IPlatformDbContext<TDbContext> : IPlatformDbContext where TDbContext : IPlatformDbContext<TDbContext>
+{
+    public Task MigrateApplicationDataAsync(IServiceProvider serviceProvider);
 }

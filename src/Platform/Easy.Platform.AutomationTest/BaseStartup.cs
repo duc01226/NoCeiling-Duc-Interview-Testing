@@ -65,7 +65,7 @@ public abstract class BaseStartup
 
         services.AddScoped<IScopedLazyWebDriver, LazyWebDriver>();
         services.AddSingleton<ISingletonLazyWebDriver, LazyWebDriver>();
-        services.RegisterAllFromType(conventionalType: typeof(IBddStepsContext), GetType().Assembly, ServiceLifeTime.Scoped);
+        services.RegisterAllSelfImplementationFromType(conventionalType: typeof(IBddStepsContext), GetType().Assembly, ServiceLifeTime.Scoped);
 
         Services = services;
         GlobalDiServices = services;

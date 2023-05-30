@@ -14,7 +14,12 @@ public abstract class PlatformGlobal
 
     public static ILogger CreateDefaultLogger()
     {
-        return RootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Easy.Platform");
+        return CreateDefaultLogger(RootServiceProvider);
+    }
+
+    public static ILogger CreateDefaultLogger(IServiceProvider serviceProvider)
+    {
+        return serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Easy.Platform");
     }
 
     public static void SetRootServiceProvider(IServiceProvider rootServiceProvider)

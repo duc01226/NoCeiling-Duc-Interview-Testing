@@ -326,7 +326,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
 
     private static ILogger CreateLogger()
     {
-        return PlatformGlobal.LoggerFactory.CreateLogger(nameof(PlatformOutboxMessageBusProducerHelper));
+        return PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformOutboxMessageBusProducerHelper));
     }
 
     protected static void LogSendOutboxMessageFailed(Exception exception, PlatformOutboxBusMessage existingOutboxMessage, ILogger logger)

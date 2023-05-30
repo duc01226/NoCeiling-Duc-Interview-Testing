@@ -1,4 +1,3 @@
-using System.Data.Common;
 using System.Linq.Expressions;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.MessageBus.InboxPattern;
@@ -13,7 +12,6 @@ using Easy.Platform.MongoDB.Extensions;
 using Easy.Platform.MongoDB.Migration;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -21,20 +19,17 @@ using MongoDB.Driver;
 
 namespace Easy.Platform.MongoDB;
 
-public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
-    where TDbContext : PlatformMongoDbContext<TDbContext>
+public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TDbContext>
+    where TDbContext : PlatformMongoDbContext<TDbContext>, IPlatformDbContext<TDbContext>
 {
     public const string EnsureIndexesMigrationName = "EnsureIndexesAsync";
     public const string PlatformInboxBusMessageCollectionName = "InboxEventBusMessage";
     public const string PlatformOutboxBusMessageCollectionName = "OutboxEventBusMessage";
     public const string PlatformDataMigrationHistoryCollectionName = "MigrationHistory";
-    public const string DbInitializedApplicationDataMigrationHistoryName = "DbInitialized";
-    public const int DefaultRunDataMigrationInBackgroundRetryCount = 10;
 
     public readonly IMongoDatabase Database;
 
     protected readonly Lazy<Dictionary<Type, string>> EntityTypeToCollectionNameDictionary;
-    protected readonly ILogger Logger;
     protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
     protected readonly IPlatformApplicationUserContextAccessor UserContextAccessor;
 
@@ -70,7 +65,13 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryCollection.AsQueryable();
 
+    public async Task InsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity)
+    {
+        await ApplicationDataMigrationHistoryCollection.InsertOneAsync(entity);
+    }
+
     public IUnitOfWork MappedUnitOfWork { get; set; }
+    public ILogger Logger { get; }
 
     public virtual async Task Initialize(IServiceProvider serviceProvider)
     {
@@ -92,9 +93,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
 
         async Task InsertDbInitializedApplicationDataMigrationHistory()
         {
-            if (!await ApplicationDataMigrationHistoryCollection.AsQueryable().AnyAsync(p => p.Name == DbInitializedApplicationDataMigrationHistoryName))
+            if (!await ApplicationDataMigrationHistoryCollection.AsQueryable()
+                .AnyAsync(p => p.Name == PlatformDataMigrationHistory.DbInitializedMigrationHistoryName))
                 await ApplicationDataMigrationHistoryCollection.InsertOneAsync(
-                    new PlatformDataMigrationHistory(DbInitializedApplicationDataMigrationHistoryName));
+                    new PlatformDataMigrationHistory(PlatformDataMigrationHistory.DbInitializedMigrationHistoryName));
         }
     }
 
@@ -325,90 +327,14 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         return GetCollection<TEntity>().AsQueryable();
     }
 
-    public async Task MigrateApplicationDataAsync(IServiceProvider serviceProvider)
-    {
-        PlatformDataMigrationExecutor<TDbContext>
-            .EnsureAllDataMigrationExecutorsHasUniqueName(GetType().Assembly, serviceProvider);
-
-        await PlatformDataMigrationExecutor<TDbContext>
-            .GetCanExecuteDataMigrationExecutors(GetType().Assembly, serviceProvider, ApplicationDataMigrationHistoryQuery)
-            .ForEachAsync(
-                async migrationExecution =>
-                {
-                    try
-                    {
-                        var dbInitializedMigrationHistory = ApplicationDataMigrationHistoryCollection.AsQueryable()
-                            .First(p => p.Name == DbInitializedApplicationDataMigrationHistoryName);
-
-                        if (dbInitializedMigrationHistory.CreatedDate < migrationExecution.CreationDate)
-                        {
-                            if (migrationExecution.AllowRunInBackgroundThread)
-                            {
-                                var migrationExecutionType = migrationExecution.GetType();
-                                var migrationExecutionName = migrationExecution.GetType();
-
-                                Util.TaskRunner.QueueActionInBackground(
-                                    async () =>
-                                    {
-                                        Logger.LogInformation($"Wait To Execute DataMigration {migrationExecutionName} in background thread");
-
-                                        var currentDbContextPersistenceModule = PlatformGlobal.RootServiceProvider
-                                            .GetRequiredService(
-                                                GetType().Assembly.GetTypes().First(p => p.IsAssignableTo(typeof(PlatformPersistenceModule<TDbContext>))))
-                                            .As<PlatformPersistenceModule<TDbContext>>();
-
-                                        await currentDbContextPersistenceModule.BackgroundThreadDataMigrationLock.WaitAsync();
-
-                                        await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                                            () => PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
-                                                async (IServiceProvider sp) =>
-                                                {
-                                                    try
-                                                    {
-                                                        await ExecuteDataMigrationExecutor(
-                                                            sp.GetRequiredService(migrationExecutionType).As<PlatformDataMigrationExecutor<TDbContext>>(),
-                                                            sp.GetRequiredService<TDbContext>());
-                                                    }
-                                                    finally
-                                                    {
-                                                        currentDbContextPersistenceModule.BackgroundThreadDataMigrationLock.Release();
-                                                    }
-                                                }),
-                                            retryCount: DefaultRunDataMigrationInBackgroundRetryCount,
-                                            sleepDurationProvider: retryAttempt => 10.Seconds(),
-                                            onRetry: (ex, timeSpan, currentRetry, ctx) =>
-                                            {
-                                                Logger.LogWarning(
-                                                    ex,
-                                                    $"Retry Execute DataMigration {migrationExecutionType.Name} {currentRetry} time(s).");
-                                            });
-                                    },
-                                    () => CreateLogger(PlatformGlobal.LoggerFactory));
-                            }
-                            else
-                            {
-                                await ExecuteDataMigrationExecutor(migrationExecution, this.As<TDbContext>());
-                            }
-                        }
-
-                        migrationExecution.Dispose();
-                    }
-                    catch (DbException ex)
-                    {
-                        Logger.LogError(
-                            ex,
-                            "MigrateApplicationDataAsync for migration {DataMigrationName} has errors. If in dev environment it may happens if migrate cross db, when other service db is not initiated. Usually for dev environment migrate cross service db when run system in the first-time could be ignored. ",
-                            migrationExecution.Name);
-
-                        if (!PlatformEnvironment.IsDevelopment)
-                            throw new Exception($"MigrateApplicationDataAsync for migration {migrationExecution.Name} has errors. {ex.Message}.", ex);
-                    }
-                });
-    }
-
     public void RunCommand(string command)
     {
         Database.RunCommand<BsonDocument>(command);
+    }
+
+    public Task MigrateApplicationDataAsync(IServiceProvider serviceProvider)
+    {
+        return this.As<IPlatformDbContext>().MigrateApplicationDataAsync<TDbContext>(serviceProvider);
     }
 
     public void Dispose()
@@ -417,22 +343,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
         GC.SuppressFinalize(this);
     }
 
-    public static ILogger CreateLogger(ILoggerFactory loggerFactory)
+    public ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
-        return loggerFactory.CreateLogger(typeof(PlatformMongoDbContext<>));
-    }
-
-    public static async Task ExecuteDataMigrationExecutor(PlatformDataMigrationExecutor<TDbContext> migrationExecution, TDbContext dbContext)
-    {
-        dbContext.Logger.LogInformation($"Migration {migrationExecution.Name} started.");
-
-        await migrationExecution.Execute(dbContext);
-
-        await dbContext.ApplicationDataMigrationHistoryCollection.InsertOneAsync(new PlatformDataMigrationHistory(migrationExecution.Name));
-
-        await dbContext.SaveChangesAsync();
-
-        dbContext.Logger.LogInformation($"Migration {migrationExecution.Name} finished.");
+        return loggerFactory.CreateLogger(GetType());
     }
 
     public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
@@ -551,10 +464,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext
 
         EnsureAllMigrationExecutorsHasUniqueName();
 
-        var dbInitializedDate = ApplicationDataMigrationHistoryCollection.AsQueryable()
-                                    .FirstOrDefault(p => p.Name == DbInitializedApplicationDataMigrationHistoryName)
-                                    ?.CreatedDate ??
-                                DateTime.UtcNow;
+        var dbInitializedDate =
+            ApplicationDataMigrationHistoryQuery.FirstOrDefault(p => p.Name == PlatformDataMigrationHistory.DbInitializedMigrationHistoryName)?.CreatedDate ??
+            DateTime.UtcNow;
 
         await NotExecutedMigrationExecutors()
             .ForEachAsync(

@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Domain.UnitOfWork;
 
@@ -207,7 +208,7 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
 
                 OnCompletedActions.Clear();
             },
-            () => PlatformGlobal.LoggerFactory.CreateLogger(GetType().Name));
+            () => PlatformGlobal.LoggerFactory.CreateLogger(GetType()));
     }
 
     /// <summary>

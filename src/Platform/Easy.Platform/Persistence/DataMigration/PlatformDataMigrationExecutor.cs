@@ -1,5 +1,7 @@
 using System.Reflection;
 using Easy.Platform.Application.Persistence;
+using Easy.Platform.Common.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Easy.Platform.Persistence.DataMigration;
 
@@ -94,9 +96,9 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
     {
         var results = scanAssembly.GetTypes()
             .Where(p => p.IsAssignableTo(typeof(PlatformDataMigrationExecutor<TDbContext>)) && !p.IsAbstract)
-            .Select(p => (PlatformDataMigrationExecutor<TDbContext>)serviceProvider.GetService(p))
-            .Where(p => p != null)
+            .Select(p => ActivatorUtilities.CreateInstance(serviceProvider, p).As<PlatformDataMigrationExecutor<TDbContext>>())
             .ToList();
+
         return results;
     }
 
@@ -126,18 +128,20 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
         IServiceProvider serviceProvider,
         IQueryable<PlatformDataMigrationHistory> allApplicationDataMigrationHistoryQuery)
     {
+        var dbInitializedMigrationHistory = allApplicationDataMigrationHistoryQuery
+            .First(p => p.Name == PlatformDataMigrationHistory.DbInitializedMigrationHistoryName);
         var executedMigrationNames = allApplicationDataMigrationHistoryQuery.Select(p => p.Name).ToHashSet();
 
         var canExecutedMigrations = new List<PlatformDataMigrationExecutor<TDbContext>>();
 
         ScanAllDataMigrationExecutors(scanAssembly, serviceProvider)
             .OrderBy(x => x.GetOrderByValue())
-            .ToList()
             .ForEach(
                 migrationExecution =>
                 {
                     if (!executedMigrationNames.Contains(migrationExecution.Name) &&
-                        !migrationExecution.IsExpired())
+                        !migrationExecution.IsExpired() &&
+                        migrationExecution.CreationDate >= dbInitializedMigrationHistory.CreatedDate.Date)
                         canExecutedMigrations.Add(migrationExecution);
                     else
                         migrationExecution.Dispose();

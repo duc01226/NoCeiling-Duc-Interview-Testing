@@ -16,7 +16,7 @@ public static class ObjectGeneralExtension
         if (obj2 == null && obj1 != null)
             return true;
         if (obj1 != null)
-            return PlatformJsonSerializer.Serialize(obj1) != PlatformJsonSerializer.Serialize(obj2);
+            return PlatformJsonSerializer.Serialize(obj1, doNotTryUseRuntimeType: true) != PlatformJsonSerializer.Serialize(obj2, doNotTryUseRuntimeType: true);
 
         return false;
     }
@@ -51,17 +51,17 @@ public static class ObjectGeneralExtension
 
     public static string ToJson<T>(this T obj)
     {
-        return PlatformJsonSerializer.Serialize(obj);
+        return PlatformJsonSerializer.Serialize(obj, doNotTryUseRuntimeType: true);
     }
 
     public static string ToFormattedJson<T>(this T obj)
     {
-        return PlatformJsonSerializer.Serialize(obj, PlatformJsonSerializer.CurrentOptions.Value.Clone().With(_ => _.WriteIndented = true));
+        return PlatformJsonSerializer.Serialize(obj, PlatformJsonSerializer.CurrentOptions.Value.Clone().With(_ => _.WriteIndented = true), doNotTryUseRuntimeType: true);
     }
 
     public static string ToJson<T>(this T obj, JsonSerializerOptions options)
     {
-        return PlatformJsonSerializer.Serialize(obj, options);
+        return PlatformJsonSerializer.Serialize(obj, options, doNotTryUseRuntimeType: true);
     }
 
     public static string GetContentHash<T>(this T obj)
@@ -132,6 +132,6 @@ public static class ObjectGeneralExtension
 
     public static TObject DeepClone<TObject>(this TObject obj)
     {
-        return PlatformJsonSerializer.Deserialize<TObject>(PlatformJsonSerializer.Serialize(obj));
+        return PlatformJsonSerializer.Deserialize<TObject>(PlatformJsonSerializer.Serialize(obj, doNotTryUseRuntimeType: true));
     }
 }

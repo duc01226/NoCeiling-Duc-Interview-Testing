@@ -47,7 +47,9 @@ public interface IPlatformModule
     {
         if (PlatformGlobal.RootServiceProvider.GetServices(moduleType).Select(p => p.As<IPlatformModule>()).All(p => p.Initiated)) return;
 
-        PlatformGlobal.CreateDefaultLogger().LogInformation("[Platform] Start WaitAllModulesInitiated of type {ModuleType} started", moduleType.Name);
+        var logger = PlatformGlobal.CreateDefaultLogger();
+
+        logger.LogInformation("[Platform] Start WaitAllModulesInitiated of type {ModuleType} started", moduleType.Name);
 
         Util.TaskRunner.WaitUntil(
             () =>
@@ -60,7 +62,7 @@ public interface IPlatformModule
             waitForMsg: $"Wait for all modules of type {moduleType.Name} get initiated",
             waitIntervalSeconds: 5);
 
-        PlatformGlobal.CreateDefaultLogger().LogInformation("[Platform] WaitAllModulesInitiated of type {ModuleType} finished", moduleType.Name);
+        logger.LogInformation("[Platform] WaitAllModulesInitiated of type {ModuleType} finished", moduleType.Name);
     }
 
     public List<IPlatformModule> AllDependencyModules(IServiceCollection useServiceCollection = null);
@@ -105,8 +107,8 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
     protected static readonly ConcurrentDictionary<string, Assembly> ExecutedRegisterByAssemblies = new();
 
-    protected readonly SemaphoreSlim InitLockAsync = new SemaphoreSlim(1, 1);
-    protected readonly SemaphoreSlim RegisterLockAsync = new SemaphoreSlim(1, 1);
+    protected readonly SemaphoreSlim InitLockAsync = new(1, 1);
+    protected readonly SemaphoreSlim RegisterLockAsync = new(1, 1);
 
     public PlatformModule(IServiceProvider serviceProvider, IConfiguration configuration)
     {
@@ -357,7 +359,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
     {
         serviceCollection.RegisterIfServiceNotExist(typeof(ILoggerFactory), typeof(LoggerFactory));
         serviceCollection.RegisterIfServiceNotExist(typeof(ILogger<>), typeof(Logger<>));
-        serviceCollection.RegisterIfServiceNotExist(typeof(ILogger), sp => sp.GetRequiredService<ILoggerFactory>().CreateLogger("DefaultLogger"));
+        serviceCollection.RegisterIfServiceNotExist(typeof(ILogger), PlatformGlobal.CreateDefaultLogger);
     }
 
     protected void RegisterCqrs(IServiceCollection serviceCollection)
@@ -369,7 +371,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
                     serviceCollection.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
 
                     serviceCollection.Register<IPlatformCqrs, PlatformCqrs>();
-                    serviceCollection.RegisterAllFromType(conventionalType: typeof(IPipelineBehavior<,>), assembly);
+                    serviceCollection.RegisterAllSelfImplementationFromType(typeof(IPipelineBehavior<,>), assembly);
                 },
                 Assembly,
                 actionName: nameof(RegisterCqrs));

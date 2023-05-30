@@ -58,6 +58,43 @@ public static class DependencyInjectionExtension
     }
 
     /// <summary>
+    /// Register all concrete types in a module that is assignable to TConventional as itself
+    /// </summary>
+    public static IServiceCollection RegisterAllSelfImplementationFromType(
+        this IServiceCollection services,
+        Type conventionalType,
+        Assembly assembly,
+        ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
+        bool replaceIfExist = true,
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool skipIfExist = false,
+        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
+    {
+        assembly.GetTypes()
+            .Where(
+                implementationType => implementationType.IsClass &&
+                                      !implementationType.IsAbstract &&
+                                      (implementationType.IsAssignableTo(conventionalType) ||
+                                       (conventionalType!.IsGenericType &&
+                                        implementationType.IsGenericType &&
+                                        implementationType.IsAssignableToGenericType(conventionalType))))
+            .ToList()
+            .ForEach(
+                implementationType =>
+                {
+                    services.Register(
+                        implementationType,
+                        lifeTime,
+                        replaceIfExist,
+                        replaceStrategy: replaceStrategy,
+                        skipIfExist: skipIfExist,
+                        skipIfExistStrategy: skipIfExistStrategy);
+                });
+
+        return services;
+    }
+
+    /// <summary>
     /// Register all concrete types in a module that is assignable to TConventional as itself and it's implemented
     /// interfaces
     /// </summary>
@@ -71,6 +108,29 @@ public static class DependencyInjectionExtension
         CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
     {
         return RegisterAllFromType(
+            services,
+            typeof(TConventional),
+            assembly,
+            lifeTime,
+            replaceIfExist,
+            replaceStrategy,
+            skipIfExist: skipIfExist,
+            skipIfExistStrategy: skipIfExistStrategy);
+    }
+
+    /// <summary>
+    /// Register all concrete types in a module that is assignable to TConventional as itself
+    /// </summary>
+    public static IServiceCollection RegisterAllSelfImplementationFromType<TConventional>(
+        this IServiceCollection services,
+        Assembly assembly,
+        ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
+        bool replaceIfExist = true,
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool skipIfExist = false,
+        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
+    {
+        return RegisterAllSelfImplementationFromType(
             services,
             typeof(TConventional),
             assembly,
@@ -370,7 +430,7 @@ public static class DependencyInjectionExtension
     public static IServiceCollection Register<TImplementation>(
         this IServiceCollection services,
         Type serviceType,
-        Func<IServiceProvider, TImplementation> implementationFunc,
+        Func<IServiceProvider, TImplementation> implementationFactory,
         ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
         bool replaceIfExist = true,
         CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
@@ -379,21 +439,21 @@ public static class DependencyInjectionExtension
         {
             case ServiceLifeTime.Scoped:
                 if (replaceIfExist)
-                    services.ReplaceScoped(serviceType, implementationFunc, replaceStrategy);
+                    services.ReplaceScoped(serviceType, implementationFactory, replaceStrategy);
                 else
-                    services.AddScoped(serviceType, p => implementationFunc(p));
+                    services.AddScoped(serviceType, p => implementationFactory(p));
                 break;
             case ServiceLifeTime.Singleton:
                 if (replaceIfExist)
-                    services.ReplaceSingleton(serviceType, implementationFunc, replaceStrategy);
+                    services.ReplaceSingleton(serviceType, implementationFactory, replaceStrategy);
                 else
-                    services.AddSingleton(serviceType, p => implementationFunc(p));
+                    services.AddSingleton(serviceType, p => implementationFactory(p));
                 break;
             default:
                 if (replaceIfExist)
-                    services.ReplaceTransient(serviceType, implementationFunc, replaceStrategy);
+                    services.ReplaceTransient(serviceType, implementationFactory, replaceStrategy);
                 else
-                    services.AddTransient(serviceType, p => implementationFunc(p));
+                    services.AddTransient(serviceType, p => implementationFactory(p));
                 break;
         }
 

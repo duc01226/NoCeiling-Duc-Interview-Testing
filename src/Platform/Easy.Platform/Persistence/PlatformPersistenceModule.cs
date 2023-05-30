@@ -7,7 +7,6 @@ using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Repositories;
 using Easy.Platform.Domain.UnitOfWork;
-using Easy.Platform.Persistence.DataMigration;
 using Easy.Platform.Persistence.Domain;
 using Easy.Platform.Persistence.Services;
 using Microsoft.Extensions.Configuration;
@@ -91,7 +90,6 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
             RegisterOutboxEventBusMessageRepository(serviceCollection);
 
             serviceCollection.RegisterAllFromType<IPersistenceService>(Assembly);
-            serviceCollection.RegisterAllFromType<IPlatformDataMigrationExecutor>(Assembly);
         }
     }
 
@@ -164,7 +162,7 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
 
 /// <inheritdoc cref="PlatformPersistenceModule" />
 public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenceModule, IPlatformPersistenceModule
-    where TDbContext : class, IPlatformDbContext
+    where TDbContext : class, IPlatformDbContext<TDbContext>
 {
     protected PlatformPersistenceModule(IServiceProvider serviceProvider, IConfiguration configuration) : base(serviceProvider, configuration)
     {

@@ -24,6 +24,7 @@ public static class PlatformRegisterModuleServiceCollectionExtensions
             ServiceLifeTime.Singleton,
             replaceIfExist: true,
             DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
+
         RegisterModuleInstance(services, moduleType);
 
         var serviceProvider = services.BuildServiceProvider();
@@ -55,13 +56,13 @@ public static class PlatformRegisterModuleServiceCollectionExtensions
 
         services.Register(
             typeof(PlatformModule),
-            p => p.GetService(moduleType),
+            sp => sp.GetService(moduleType),
             ServiceLifeTime.Singleton,
             replaceIfExist: false);
 
         services.RegisterAllForImplementation(
             implementationType: moduleType,
-            implementationFactory: provider => provider.GetService(moduleType),
+            implementationFactory: sp => sp.GetService(moduleType),
             ServiceLifeTime.Singleton,
             replaceIfExist: false);
     }

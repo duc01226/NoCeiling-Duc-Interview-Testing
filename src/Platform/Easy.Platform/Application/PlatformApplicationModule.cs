@@ -252,7 +252,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         base.InternalRegister(serviceCollection);
 
         serviceCollection.RegisterAllFromType<IPlatformApplicationDataSeeder>(Assembly, ServiceLifeTime.Scoped);
-        serviceCollection.RegisterAllFromType<IPlatformCqrsEventApplicationHandler>(Assembly);
+        serviceCollection.RegisterAllSelfImplementationFromType<IPlatformCqrsEventApplicationHandler>(Assembly);
         RegisterMessageBus(serviceCollection);
         RegisterApplicationSettingContext(serviceCollection);
         RegisterDefaultApplicationUserContext(serviceCollection);
@@ -337,23 +337,23 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         serviceCollection.Register<IPlatformMessageBusScanner, PlatformApplicationMessageBusScanner>(ServiceLifeTime.Singleton);
 
         serviceCollection.Register<IPlatformApplicationBusMessageProducer, PlatformApplicationBusMessageProducer>();
-        serviceCollection.RegisterAllFromType(
+        serviceCollection.RegisterAllSelfImplementationFromType(
             typeof(IPlatformCqrsEventBusMessageProducer<>),
             Assembly);
-        serviceCollection.RegisterAllFromType(
+        serviceCollection.RegisterAllSelfImplementationFromType(
             typeof(PlatformCqrsCommandEventBusMessageProducer<>),
             Assembly);
-        serviceCollection.RegisterAllFromType(
+        serviceCollection.RegisterAllSelfImplementationFromType(
             typeof(PlatformCqrsEntityEventBusMessageProducer<,>),
             Assembly);
 
-        serviceCollection.RegisterAllFromType(
+        serviceCollection.RegisterAllSelfImplementationFromType(
             typeof(IPlatformMessageBusConsumer),
             typeof(PlatformApplicationModule).Assembly);
-        serviceCollection.RegisterAllFromType(
+        serviceCollection.RegisterAllSelfImplementationFromType(
             typeof(IPlatformMessageBusConsumer),
             Assembly);
-        serviceCollection.RegisterAllFromType(
+        serviceCollection.RegisterAllSelfImplementationFromType(
             typeof(IPlatformApplicationMessageBusConsumer<>),
             Assembly);
 
