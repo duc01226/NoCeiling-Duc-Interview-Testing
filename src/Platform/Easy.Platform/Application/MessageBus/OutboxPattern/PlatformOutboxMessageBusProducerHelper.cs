@@ -291,14 +291,12 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
             retryCount: DefaultResilientRetiredCount);
 
-        var currentActiveUow = sourceOutboxUowId != null
-            ? unitOfWorkManager.TryGetCurrentOrCreatedActiveUow(sourceOutboxUowId)
-            : unitOfWorkManager.TryGetCurrentActiveUow();
+        var currentActiveUow = unitOfWorkManager.TryGetCurrentOrCreatedActiveUow(sourceOutboxUowId);
         // WHY: Do not need to wait for uow completed if the uow for db do not handle actually transaction.
         // Can execute it immediately without waiting for uow to complete
         if (currentActiveUow == null)
             Util.TaskRunner.QueueActionInBackground(
-                () => PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
+                async () => await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
                     SendExistingOutboxMessageAsync<TMessage>,
                     createdProcessingOutboxMessage,
                     message,

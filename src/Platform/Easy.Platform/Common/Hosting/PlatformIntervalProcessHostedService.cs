@@ -15,7 +15,7 @@ public abstract class PlatformIntervalProcessHostedService : PlatformHostedServi
     protected override async Task StartProcess(CancellationToken cancellationToken)
     {
         Util.TaskRunner.QueueActionInBackground(
-            DoStartProcess,
+            async () => await DoStartProcess(),
             () => CreateLogger(PlatformGlobal.LoggerFactory),
             cancellationToken: cancellationToken);
 

@@ -364,7 +364,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
         // Sometime you could want to wait for handler done
         var savedDataWaitClearCacheDone = await textSnippetEntityRepository.CreateOrUpdateAsync(
             validToSaveEntity,
-            sendEntityEventConfigure: p => p.SetForceWaitEventHandlerFinished(
+            sendEntityEventConfigure: p => p.SetWaitHandlerExecutionFinishedImmediately(
                 typeof(ClearCacheOnSaveSnippetTextEntityEventHandler),
                 typeof(DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEventHandler)),
             cancellationToken: cancellationToken);

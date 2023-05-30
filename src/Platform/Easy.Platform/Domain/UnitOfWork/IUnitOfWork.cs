@@ -196,14 +196,32 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
     {
         if (OnCompletedActions.IsEmpty()) return;
 
+        var currentUserContextAllValues = BuildDataContextBeforeExecuteOnCompletedActionsInBackground();
+
         Util.TaskRunner.QueueActionInBackground(
             async () =>
             {
+                ReApplyDataContextInNewBackgroundThreadExecution(currentUserContextAllValues);
+
                 await OnCompletedActions.ForEachAsync(p => p.Invoke());
 
                 OnCompletedActions.Clear();
             },
             () => PlatformGlobal.LoggerFactory.CreateLogger(GetType().Name));
+    }
+
+    /// <summary>
+    /// // Need to get current user context outside of QueueActionInBackground to has data because it read current context by thread. If inside => other threads => lose identity/context data
+    /// </summary>
+    /// <returns></returns>
+    protected virtual Dictionary<string, object> BuildDataContextBeforeExecuteOnCompletedActionsInBackground()
+    {
+        return null;
+    }
+
+    protected virtual void ReApplyDataContextInNewBackgroundThreadExecution(Dictionary<string, object> dataContextBeforeNewScopeExecution)
+    {
+        // Default do not thing here.
     }
 
     protected async Task InvokeOnFailedActions(UnitOfWorkFailedArgs e)

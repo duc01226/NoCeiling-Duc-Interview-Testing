@@ -83,7 +83,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 {
                     if (allowProcessInBackgroundThread || toProcessInboxMessage == existedInboxMessage)
                         Util.TaskRunner.QueueActionInBackground(
-                            () => ExecuteConsumerForNewInboxMessage(
+                            async () => await ExecuteConsumerForNewInboxMessage(
                                 consumer.GetType(),
                                 message,
                                 toProcessInboxMessage,

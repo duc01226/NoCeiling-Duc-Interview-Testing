@@ -55,11 +55,6 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
 
     protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
 
-    protected override bool AllowHandleInBackgroundThread(TEvent notification)
-    {
-        return !ApplicationBusMessageProducer.HasOutboxMessageSupport();
-    }
-
     protected abstract TMessage BuildMessage(TEvent @event);
 
     protected override async Task HandleAsync(

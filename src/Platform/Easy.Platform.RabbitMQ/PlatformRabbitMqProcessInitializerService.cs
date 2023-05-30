@@ -96,7 +96,7 @@ public class PlatformRabbitMqProcessInitializerService
             StartConsumers();
 
             Util.TaskRunner.QueueActionInBackground(
-                () => StartCheckToRestartProcessInterval(cancellationToken),
+                async () => await StartCheckToRestartProcessInterval(cancellationToken),
                 () => Logger,
                 cancellationToken: cancellationToken);
 

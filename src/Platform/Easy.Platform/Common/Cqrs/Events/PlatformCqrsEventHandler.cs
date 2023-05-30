@@ -36,37 +36,23 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
     {
         if (!HandleWhen(notification)) return;
 
-        try
+        // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
+        // so the it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
+        if (AllowHandleInBackgroundThread(notification) &&
+            !ForceCurrentInstanceHandleInCurrentThread &&
+            !notification.MustWaitHandlerExecutionFinishedImmediately(GetType()))
         {
-            // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
-            // so the it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
-            if (AllowHandleInBackgroundThread(notification) &&
-                !ForceCurrentInstanceHandleInCurrentThread &&
-                !notification.HasForceWaitEventHandler(GetType()))
-            {
-                // Need to get current data context outside of QueueActionInBackground to has data because it read current context by thread. If inside => other threads => lose identity data
-                var currentDataContextAllValues = BuildDataContextBeforeNewScopeExecution();
+            // Need to get current data context outside of QueueActionInBackground to has data because it read current context by thread. If inside => other threads => lose identity data
+            var currentDataContextAllValues = BuildDataContextBeforeNewScopeExecution();
 
-                Util.TaskRunner.QueueActionInBackground(
-                    async () => await DoExecuteInstanceInNewScope(notification, currentDataContextAllValues),
-                    () => PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>)),
-                    cancellationToken: default);
-            }
-            else
-            {
-                if (RetryOnFailedTimes > 0)
-                    // Retry RetryOnFailedTimes to help resilient PlatformCqrsEventHandler. Sometime parallel, create/update concurrency could lead to error
-                    await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                        () => ExecuteHandleAsync(notification, cancellationToken),
-                        retryCount: RetryOnFailedTimes,
-                        sleepDurationProvider: retryAttempt => RetryOnFailedDelaySeconds.Seconds());
-                else
-                    await ExecuteHandleAsync(notification, cancellationToken);
-            }
+            Util.TaskRunner.QueueActionInBackground(
+                async () => await DoExecuteInstanceInNewScope(notification, currentDataContextAllValues),
+                () => PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>)),
+                cancellationToken: default);
         }
-        catch (Exception e)
+        else
         {
-            LogError(notification, e, LoggerFactory);
+            await ExecuteRetryHandleAsync(this, notification);
         }
     }
 
@@ -74,12 +60,11 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
     /// Default is True. If true, the event handler will run in separate thread scope with new instance
     /// and if exception, it won't affect the main flow
     /// </summary>
-    protected virtual bool AllowHandleInBackgroundThread(TEvent notification)
+    protected virtual bool AllowHandleInBackgroundThread(TEvent @event)
     {
         return true;
     }
 
-    // Return something to keep stack trace
     protected async Task DoExecuteInstanceInNewScope(
         TEvent notification,
         Dictionary<string, object> currentDataContextAllValues)
@@ -92,22 +77,27 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                     .With(newInstance => CopyPropertiesToNewInstanceBeforeExecution(this, newInstance))
                     .With(newInstance => newInstance.ReApplyDataContextInNewScopeExecution(sp, currentDataContextAllValues));
 
-                try
-                {
-                    // Retry RetryOnFailedTimes to help resilient PlatformCqrsEventHandler. Sometime parallel, create/update concurrency could lead to error
-                    if (RetryOnFailedTimes > 0)
-                        await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                            () => thisHandlerNewInstance.ExecuteHandleAsync(notification, default),
-                            retryCount: RetryOnFailedTimes,
-                            sleepDurationProvider: retryAttempt => RetryOnFailedDelaySeconds.Seconds());
-                    else
-                        await thisHandlerNewInstance.ExecuteHandleAsync(notification, default);
-                }
-                catch (Exception e)
-                {
-                    thisHandlerNewInstance.LogError(notification, e, PlatformGlobal.LoggerFactory);
-                }
+                await ExecuteRetryHandleAsync(thisHandlerNewInstance, notification);
             });
+    }
+
+    protected async Task ExecuteRetryHandleAsync(PlatformCqrsEventHandler<TEvent> handlerNewInstance, TEvent notification)
+    {
+        try
+        {
+            // Retry RetryOnFailedTimes to help resilient PlatformCqrsEventHandler. Sometime parallel, create/update concurrency could lead to error
+            if (RetryOnFailedTimes > 0)
+                await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                    () => handlerNewInstance.ExecuteHandleAsync(notification, default),
+                    retryCount: RetryOnFailedTimes,
+                    sleepDurationProvider: retryAttempt => RetryOnFailedDelaySeconds.Seconds());
+            else
+                await handlerNewInstance.ExecuteHandleAsync(notification, default);
+        }
+        catch (Exception e)
+        {
+            handlerNewInstance.LogError(notification, e, PlatformGlobal.LoggerFactory);
+        }
     }
 
     protected virtual void CopyPropertiesToNewInstanceBeforeExecution(

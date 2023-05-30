@@ -111,12 +111,12 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         return result;
     }
 
-    /// <inheritdoc cref="PlatformCqrsEvent.SetForceWaitEventHandlerFinished" />
-    public new virtual PlatformCqrsEntityEvent SetForceWaitEventHandlerFinished<THandler, TEvent>()
+    /// <inheritdoc cref="PlatformCqrsEvent.SetWaitHandlerExecutionFinishedImmediately" />
+    public virtual PlatformCqrsEntityEvent SetForceWaitEventHandlerFinished<THandler, TEvent>()
         where THandler : IPlatformCqrsEventHandler<TEvent>
         where TEvent : PlatformCqrsEntityEvent, new()
     {
-        return SetForceWaitEventHandlerFinished(typeof(THandler)).Cast<PlatformCqrsEntityEvent>();
+        return SetWaitHandlerExecutionFinishedImmediately(typeof(THandler)).Cast<PlatformCqrsEntityEvent>();
     }
 }
 
@@ -179,11 +179,11 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent
         return MemberwiseClone().As<PlatformCqrsEntityEvent<TEntity>>();
     }
 
-    /// <inheritdoc cref="PlatformCqrsEvent.SetForceWaitEventHandlerFinished{THandler,TEvent}" />
+    /// <inheritdoc cref="PlatformCqrsEvent.SetWaitHandlerExecutionFinishedImmediately{THandler,TEvent}" />
     public virtual PlatformCqrsEntityEvent<TEntity> SetForceWaitEventHandlerFinished<THandler>()
         where THandler : IPlatformCqrsEventHandler<PlatformCqrsEntityEvent<TEntity>>
     {
-        return SetForceWaitEventHandlerFinished(typeof(THandler)).Cast<PlatformCqrsEntityEvent<TEntity>>();
+        return SetWaitHandlerExecutionFinishedImmediately(typeof(THandler)).Cast<PlatformCqrsEntityEvent<TEntity>>();
     }
 }
 

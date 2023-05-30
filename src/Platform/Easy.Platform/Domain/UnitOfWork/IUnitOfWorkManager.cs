@@ -134,6 +134,8 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
 
     public IUnitOfWork TryGetCurrentOrCreatedActiveUow(string uowId)
     {
+        if (uowId == null) return TryGetCurrentActiveUow();
+
         var currentOrCreatedUow = CurrentOrCreatedUow(uowId);
 
         return currentOrCreatedUow?.IsActive() == true
