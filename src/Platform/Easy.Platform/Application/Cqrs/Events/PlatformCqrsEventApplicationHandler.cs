@@ -59,6 +59,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     protected bool IsInjectingApplicationBusMessageProducer { get; }
 
+    public virtual bool AutoDeleteProcessedInboxEventMessage => true;
+
     /// <summary>
     /// Default return True. When True, Support for store cqrs event handler as inbox if inbox bus message is enabled in persistence module
     /// </summary>
@@ -208,6 +210,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                     allowProcessInBackgroundThread: AllowHandleInBackgroundThread(@event),
                     handleDirectlyExistingInboxMessage: null,
                     handleInUow: eventSourceUow,
+                    autoDeleteProcessedMessage: AutoDeleteProcessedInboxEventMessage,
                     cancellationToken: cancellationToken);
             }
             else
@@ -231,6 +234,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                             allowProcessInBackgroundThread: AllowHandleInBackgroundThread(@event),
                             handleDirectlyExistingInboxMessage: null,
                             handleInUow: null,
+                            autoDeleteProcessedMessage: AutoDeleteProcessedInboxEventMessage,
                             cancellationToken: cancellationToken);
                     });
             }

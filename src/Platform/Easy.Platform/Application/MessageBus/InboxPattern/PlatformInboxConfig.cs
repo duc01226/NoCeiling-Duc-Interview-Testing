@@ -9,9 +9,9 @@ public class PlatformInboxConfig
     public double RetryProcessFailedMessageInSecondsUnit { get; set; } = PlatformInboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit;
 
     /// <summary>
-    /// To config how long a message can live in the database in seconds. Default is one week (7 days);
+    /// To config how long a processed message can live in the database in seconds. Default is one week (2 days);
     /// </summary>
-    public double DeleteProcessedMessageInSeconds { get; set; } = TimeSpan.FromDays(7).TotalSeconds;
+    public double DeleteProcessedMessageInSeconds { get; set; } = TimeSpan.FromDays(2).TotalSeconds;
 
     /// <summary>
     /// To config how long a message can live in the database in seconds. Default is two week (14 days);

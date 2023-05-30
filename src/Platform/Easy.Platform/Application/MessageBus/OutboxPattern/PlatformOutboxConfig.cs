@@ -14,9 +14,9 @@ public class PlatformOutboxConfig
     public bool StandaloneScopeForOutbox { get; set; }
 
     /// <summary>
-    /// To config how long a message can live in the database in seconds. Default is one week (7 day);
+    /// To config how long a message can live in the database in seconds. Default is one week (2 day);
     /// </summary>
-    public double DeleteProcessedMessageInSeconds { get; set; } = TimeSpan.FromDays(7).TotalSeconds;
+    public double DeleteProcessedMessageInSeconds { get; set; } = TimeSpan.FromDays(2).TotalSeconds;
 
     /// <summary>
     /// To config how long a message can live in the database in seconds. Default is two week (14 days);

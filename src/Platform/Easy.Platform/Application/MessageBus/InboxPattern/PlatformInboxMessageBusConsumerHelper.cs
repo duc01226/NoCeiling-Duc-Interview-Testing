@@ -30,6 +30,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         bool allowProcessInBackgroundThread,
         PlatformInboxBusMessage handleDirectlyExistingInboxMessage,
         IUnitOfWork handleInUow,
+        bool autoDeleteProcessedMessage = false,
         CancellationToken cancellationToken = default) where TMessage : class, new()
     {
         if (handleDirectlyExistingInboxMessage != null && handleDirectlyExistingInboxMessage.ConsumeStatus != PlatformInboxBusMessage.ConsumeStatuses.Processed)
@@ -42,6 +43,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 routingKey,
                 loggerFactory,
                 retryProcessFailedMessageInSecondsUnit,
+                autoDeleteProcessedMessage,
                 cancellationToken);
         }
         else if (handleDirectlyExistingInboxMessage == null)
@@ -77,6 +79,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                             message,
                             toProcessInboxMessage,
                             routingKey,
+                            autoDeleteProcessedMessage,
                             loggerFactory));
                 }
                 else
@@ -88,6 +91,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                                 message,
                                 toProcessInboxMessage,
                                 routingKey,
+                                autoDeleteProcessedMessage,
                                 loggerFactory),
                             loggerFactory,
                             cancellationToken: cancellationToken);
@@ -97,6 +101,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                             message,
                             toProcessInboxMessage,
                             routingKey,
+                            autoDeleteProcessedMessage,
                             loggerFactory);
                 }
             }
@@ -108,6 +113,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         TMessage message,
         PlatformInboxBusMessage newInboxMessage,
         string routingKey,
+        bool autoDeleteProcessedMessage,
         Func<ILogger> loggerFactory) where TMessage : class, new()
     {
         await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
@@ -153,6 +159,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         string routingKey,
         Func<ILogger> loggerFactory,
         double retryProcessFailedMessageInSecondsUnit,
+        bool autoDeleteProcessedMessage,
         CancellationToken cancellationToken) where TMessage : class, new()
     {
         try
@@ -162,10 +169,16 @@ public static class PlatformInboxMessageBusConsumerHelper
                 .HandleAsync(message, routingKey);
             try
             {
-                await UpdateExistingInboxProcessedMessageAsync(
-                    serviceProvider,
-                    existingInboxMessage,
-                    cancellationToken);
+                if (autoDeleteProcessedMessage)
+                    await DeleteExistingInboxProcessedMessageAsync(
+                        serviceProvider,
+                        existingInboxMessage,
+                        cancellationToken);
+                else
+                    await UpdateExistingInboxProcessedMessageAsync(
+                        serviceProvider,
+                        existingInboxMessage,
+                        cancellationToken);
             }
             catch (Exception)
             {
@@ -267,13 +280,25 @@ public static class PlatformInboxMessageBusConsumerHelper
         CancellationToken cancellationToken = default)
     {
         await serviceProvider.ExecuteInjectScopedAsync(
-            async (IUnitOfWorkManager uowManager, IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
+            async (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
             {
                 var toUpdateInboxMessage = existingInboxMessage
                     .With(_ => _.LastConsumeDate = DateTime.UtcNow)
                     .With(_ => _.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Processed);
 
                 await inboxBusMessageRepo.UpdateAsync(toUpdateInboxMessage, dismissSendEvent: true, sendEntityEventConfigure: null, cancellationToken);
+            });
+    }
+
+    public static async Task DeleteExistingInboxProcessedMessageAsync(
+        IServiceProvider serviceProvider,
+        PlatformInboxBusMessage existingInboxMessage,
+        CancellationToken cancellationToken = default)
+    {
+        await serviceProvider.ExecuteInjectScopedAsync(
+            async (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
+            {
+                await inboxBusMessageRepo.DeleteAsync(existingInboxMessage.Id, dismissSendEvent: true, sendEntityEventConfigure: null, cancellationToken);
             });
     }
 
