@@ -84,6 +84,11 @@ public static class PlatformInboxMessageBusConsumerHelper
                 }
                 else
                 {
+                    // Check try CompleteAsync current active uow if any to ensure that newInboxMessage will be saved
+                    // Do this to fix if someone open uow without complete it for some legacy project
+                    if (inboxBusMessageRepository.UowManager().TryGetCurrentActiveUow() != null)
+                        await inboxBusMessageRepository.UowManager().CurrentActiveUow().CompleteAsync(cancellationToken);
+
                     if (allowProcessInBackgroundThread || toProcessInboxMessage == existedInboxMessage)
                         Util.TaskRunner.QueueActionInBackground(
                             async () => await ExecuteConsumerForNewInboxMessage(
@@ -264,7 +269,9 @@ public static class PlatformInboxMessageBusConsumerHelper
         await serviceProvider.ExecuteInjectScopedAsync(
             async (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
             {
-                var existingInboxMessage = await inboxBusMessageRepo.FirstOrDefaultAsync(predicate: p => p.Id == existingInboxMessageId);
+                var existingInboxMessage = await inboxBusMessageRepo.FirstOrDefaultAsync(
+                    predicate: p => p.Id == existingInboxMessageId,
+                    cancellationToken: cancellationToken);
 
                 if (existingInboxMessage != null)
                     await UpdateExistingInboxProcessedMessageAsync(
