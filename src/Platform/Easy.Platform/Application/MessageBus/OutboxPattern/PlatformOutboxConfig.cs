@@ -37,9 +37,9 @@ public class PlatformOutboxConfig
     public int ProcessSendMessageRetryCount { get; set; } = 10;
 
     /// <summary>
-    /// To config how long a message can live in the database as Processing status in seconds. Default is 3600 seconds;
+    /// To config how long a message can live in the database as Processing status in seconds. Default is 300 seconds;
     /// This to handle that if message for some reason has been set as Processing but failed to process and has not been set
     /// back to failed.
     /// </summary>
-    public int MessageProcessingMaximumTimeInSeconds { get; set; } = 3600;
+    public int MessageProcessingMaximumTimeInSeconds { get; set; } = 300;
 }
