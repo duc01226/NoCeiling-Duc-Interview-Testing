@@ -2,6 +2,7 @@ using Easy.Platform.AspNetCore;
 using Easy.Platform.AspNetCore.Extensions;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Common.JsonSerialization;
+using Easy.Platform.EfCore.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +18,7 @@ var configuration = PlatformConfigurationBuilder.GetConfigurationBuilder().Build
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(configuration)
     .ApplyDefaultPlatformConfiguration()
+    .ApplyPlatformEfCoreSerilogFixMemoryIssues()
     .CreateLogger();
 
 try
