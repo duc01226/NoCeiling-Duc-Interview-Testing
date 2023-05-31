@@ -49,14 +49,17 @@ public static class ObjectGeneralExtension
         return Util.ListBuilder.New(obj);
     }
 
-    public static string ToJson<T>(this T obj)
+    public static string ToJson<T>(this T obj, bool forceUseRuntimeType = false)
     {
-        return PlatformJsonSerializer.Serialize(obj);
+        return PlatformJsonSerializer.Serialize(obj, forceUseRuntimeType: forceUseRuntimeType);
     }
 
-    public static string ToFormattedJson<T>(this T obj)
+    public static string ToFormattedJson<T>(this T obj, bool forceUseRuntimeType = false)
     {
-        return PlatformJsonSerializer.Serialize(obj, PlatformJsonSerializer.CurrentOptions.Value.Clone().With(_ => _.WriteIndented = true));
+        return PlatformJsonSerializer.Serialize(
+            obj,
+            PlatformJsonSerializer.CurrentOptions.Value.Clone().With(_ => _.WriteIndented = true),
+            forceUseRuntimeType);
     }
 
     public static string ToJson<T>(this T obj, JsonSerializerOptions options)

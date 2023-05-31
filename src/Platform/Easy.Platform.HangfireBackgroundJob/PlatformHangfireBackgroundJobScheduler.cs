@@ -40,7 +40,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
         return BackgroundJob.Schedule(
             () => ExecuteBackgroundJob(
                 typeof(TJobExecutor),
-                jobExecutorParam != null ? jobExecutorParam.ToJson() : null),
+                jobExecutorParam != null ? jobExecutorParam.ToJson(true) : null),
             enqueueAt);
     }
 
@@ -62,7 +62,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
         return BackgroundJob.Schedule(
             () => ExecuteBackgroundJob(
                 typeof(TJobExecutor),
-                jobExecutorParam != null ? jobExecutorParam.ToJson() : null),
+                jobExecutorParam != null ? jobExecutorParam.ToJson(true) : null),
             delay ?? TimeSpan.Zero);
     }
 
@@ -82,7 +82,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
         where TJobExecutor : IPlatformBackgroundJobExecutor<TJobExecutorParam> where TJobExecutorParam : class
     {
         var cronExpressionValue = EnsureValidToUpsertRecurringJob(typeof(TJobExecutor), cronExpression);
-        var jobExecutorParamJson = jobExecutorParam?.ToJson();
+        var jobExecutorParamJson = jobExecutorParam?.ToJson(true);
 
         RecurringJob.AddOrUpdate(
             BuildAutoRecurringJobIdByType<TJobExecutor>(),
@@ -108,7 +108,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
     public void UpsertRecurringJob(Type jobExecutorType, object jobExecutorParam, Func<string> cronExpression = null, TimeZoneInfo timeZone = null)
     {
         var cronExpressionValue = EnsureValidToUpsertRecurringJob(jobExecutorType, cronExpression);
-        var jobExecutorParamJson = jobExecutorParam?.ToJson();
+        var jobExecutorParamJson = jobExecutorParam?.ToJson(true);
 
         RecurringJob.AddOrUpdate(
             BuildAutoRecurringJobIdByType(jobExecutorType),
@@ -135,7 +135,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
     public void UpsertRecurringJob(string recurringJobId, Type jobExecutorType, object jobExecutorParam, Func<string> cronExpression = null, TimeZoneInfo timeZone = null)
     {
         var cronExpressionValue = EnsureValidToUpsertRecurringJob(jobExecutorType, cronExpression);
-        var jobExecutorParamJson = jobExecutorParam?.ToJson();
+        var jobExecutorParamJson = jobExecutorParam?.ToJson(true);
 
         RecurringJob.AddOrUpdate(
             recurringJobId.TakeTop(DefaultMaxLengthJobId),
@@ -197,7 +197,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
     {
         ExecuteBackgroundJob(
             typeof(TJobExecutor),
-            jobExecutorParam?.ToJson());
+            jobExecutorParam?.ToJson(true));
     }
 
     public string BuildAutoRecurringJobIdByType<TJobExecutor>() where TJobExecutor : IPlatformBackgroundJobExecutor

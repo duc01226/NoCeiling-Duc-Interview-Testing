@@ -16,6 +16,8 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.0.0-rc9.9" />
     <PackageReference Include="Roslyn.Analyzers" Version="1.0.3.4" />
     <PackageReference Include="Serilog.Exceptions.EntityFrameworkCore" Version="8.4.0" />
+    <PackageReference Include="Serilog.Exceptions.MsSqlServer" Version="8.4.0" />
+    <PackageReference Include="Serilog.Exceptions.SqlServer" Version="8.4.0" />
     <PackageReference Include="SonarAnalyzer.CSharp" Version="8.54.0.64047">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

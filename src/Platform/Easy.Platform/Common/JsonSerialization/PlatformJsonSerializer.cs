@@ -59,14 +59,19 @@ public static class PlatformJsonSerializer
         return ConfigOptions(new JsonSerializerOptions(), useJsonStringEnumConverter, useCamelCaseNaming, customConverters);
     }
 
+    public static string Serialize<TValue>(TValue value, bool forceUseRuntimeType)
+    {
+        return Serialize(value, customSerializerOptions: null, forceUseRuntimeType: forceUseRuntimeType);
+    }
+
     public static string Serialize<TValue>(TValue value)
     {
         return Serialize(value, customSerializerOptions: null);
     }
 
-    public static string Serialize<TValue>(TValue value, JsonSerializerOptions customSerializerOptions)
+    public static string Serialize<TValue>(TValue value, JsonSerializerOptions customSerializerOptions, bool forceUseRuntimeType = false)
     {
-        if (typeof(TValue).IsAbstract)
+        if (typeof(TValue).IsAbstract || forceUseRuntimeType)
             try
             {
                 // Try to use real runtime type to support TValue is abstract base type. Serialize exactly the type.
@@ -124,9 +129,10 @@ public static class PlatformJsonSerializer
 
     public static byte[] SerializeToUtf8Bytes<TValue>(
         TValue value,
-        JsonSerializerOptions customSerializerOptions = null)
+        JsonSerializerOptions customSerializerOptions = null,
+        bool forceUseRuntimeType = false)
     {
-        if (typeof(TValue).IsAbstract)
+        if (typeof(TValue).IsAbstract || forceUseRuntimeType)
             try
             {
                 // Try to use real runtime type to support TValue is abstract base type. Serialize exactly the type.

@@ -12,8 +12,13 @@ public class MemoryOptimizationBackgroundHostedService : PlatformIntervalProcess
 
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
-        GC.Collect();
-        GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
+        for (var i = 0; i <= GC.MaxGeneration; i++)
+        {
+            if (i == GC.MaxGeneration)
+                GC.Collect(i, GCCollectionMode.Aggressive, true, true);
+            else
+                GC.Collect(i, GCCollectionMode.Forced);
+        }
     }
 
     protected override TimeSpan ProcessTriggerIntervalTime()
