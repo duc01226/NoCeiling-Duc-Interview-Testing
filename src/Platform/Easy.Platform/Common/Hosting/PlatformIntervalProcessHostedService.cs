@@ -1,5 +1,4 @@
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Common.Hosting;
@@ -14,18 +13,10 @@ public abstract class PlatformIntervalProcessHostedService : PlatformHostedServi
 
     protected override async Task StartProcess(CancellationToken cancellationToken)
     {
-        Util.TaskRunner.QueueActionInBackground(
-            async () => await DoStartProcess(),
-            () => CreateLogger(PlatformGlobal.LoggerFactory),
-            cancellationToken: cancellationToken);
-
-        async Task DoStartProcess()
+        while (!ProcessStopped && !StoppingCts.IsCancellationRequested)
         {
-            while (!ProcessStopped && !cancellationToken.IsCancellationRequested)
-            {
-                await IntervalProcessAsync(cancellationToken);
-                await Task.Delay(ProcessTriggerIntervalTime(), cancellationToken);
-            }
+            await IntervalProcessAsync(cancellationToken);
+            await Task.Delay(ProcessTriggerIntervalTime(), cancellationToken);
         }
     }
 

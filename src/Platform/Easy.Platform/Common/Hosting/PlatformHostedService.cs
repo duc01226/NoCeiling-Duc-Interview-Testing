@@ -9,13 +9,15 @@ namespace Easy.Platform.Common.Hosting;
 /// </summary>
 public abstract class PlatformHostedService : IHostedService, IDisposable
 {
-    protected readonly SemaphoreSlim AsyncStartProcessLock = new SemaphoreSlim(1, 1);
-    protected readonly SemaphoreSlim AsyncStopProcessLock = new SemaphoreSlim(1, 1);
+    protected readonly SemaphoreSlim AsyncStartProcessLock = new(1, 1);
+    protected readonly SemaphoreSlim AsyncStopProcessLock = new(1, 1);
+    protected Task ExecuteTask;
     protected readonly ILogger Logger;
 
     protected bool ProcessStarted;
     protected bool ProcessStopped;
     protected readonly IServiceProvider ServiceProvider;
+    protected CancellationTokenSource StoppingCts;
 
     public PlatformHostedService(IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
     {
@@ -29,19 +31,29 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
-            await AsyncStartProcessLock.WaitAsync(cancellationToken);
+            AsyncStartProcessLock.Wait(cancellationToken);
 
-            if (ProcessStarted) return;
+            if (ProcessStarted) return Task.CompletedTask;
 
-            await StartProcess(cancellationToken);
+            // Create linked token to allow cancelling executing task from provided token
+            StoppingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+            // Store the task we're executing
+            ExecuteTask = StartProcess(cancellationToken);
 
             ProcessStarted = true;
 
             Logger.LogInformation($"Process of {GetType().Name} Started");
+
+            // If the task is completed then return it, this will bubble cancellation and failure to the caller
+            if (ExecuteTask.IsCompleted) return ExecuteTask;
+
+            // Otherwise it's running
+            return Task.CompletedTask;
         }
         finally
         {
@@ -51,11 +63,17 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        // Stop called without start
+        if (ExecuteTask == null) return;
+
         try
         {
             await AsyncStopProcessLock.WaitAsync(cancellationToken);
 
             if (!ProcessStarted || ProcessStopped) return;
+
+            // Signal cancellation to the executing method
+            StoppingCts!.Cancel();
 
             await StopProcess(cancellationToken);
 

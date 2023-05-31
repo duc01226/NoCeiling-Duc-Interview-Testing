@@ -18,21 +18,31 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
 
     public override IUnitOfWork CreateNewUow()
     {
-        // Doing create scope because IUnitOfWork resolve with DbContext, and DbContext lifetime is usually scoped to support resolve db context
-        // to use it directly in application layer in some project or cases without using repository.
-        // But we still want to support Uow create new like transient, each uow associated with new db context
-        // So that we can begin/destroy uow separately
+        try
+        {
+            CreateNewUowLock.WaitAsync();
 
-        var newScope = ServiceProvider.CreateScope();
+            // Doing create scope because IUnitOfWork resolve with DbContext, and DbContext lifetime is usually scoped to support resolve db context
+            // to use it directly in application layer in some project or cases without using repository.
+            // But we still want to support Uow create new like transient, each uow associated with new db context
+            // So that we can begin/destroy uow separately
 
-        var uow = new PlatformAggregatedPersistenceUnitOfWork(
-                newScope.ServiceProvider.GetServices<IUnitOfWork>()
-                    .Select(p => p.With(_ => _.CreatedByUnitOfWorkManager = this)).ToList(),
-                associatedServiceScope: newScope)
-            .With(_ => _.CreatedByUnitOfWorkManager = this);
+            var newScope = ServiceProvider.CreateScope();
 
-        FreeCreatedUnitOfWorks.Add(uow.Id, uow);
+            var uow = new PlatformAggregatedPersistenceUnitOfWork(
+                    newScope.ServiceProvider.GetServices<IUnitOfWork>()
+                        .Select(p => p.With(_ => _.CreatedByUnitOfWorkManager = this))
+                        .ToList(),
+                    associatedServiceScope: newScope)
+                .With(_ => _.CreatedByUnitOfWorkManager = this);
 
-        return uow;
+            FreeCreatedUnitOfWorks.Add(uow);
+
+            return uow;
+        }
+        finally
+        {
+            CreateNewUowLock.Release();
+        }
     }
 }

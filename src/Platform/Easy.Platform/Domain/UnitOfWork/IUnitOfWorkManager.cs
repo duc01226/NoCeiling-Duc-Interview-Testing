@@ -86,8 +86,10 @@ public interface IUnitOfWorkManager : IDisposable
 
 public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
 {
+    protected readonly SemaphoreSlim CreateNewUowLock = new(1, 1);
     protected readonly List<IUnitOfWork> CurrentUnitOfWorks = new();
-    protected readonly Dictionary<string, IUnitOfWork> FreeCreatedUnitOfWorks = new();
+    protected readonly List<IUnitOfWork> FreeCreatedUnitOfWorks = new();
+    protected readonly SemaphoreSlim RemoveAllInactiveUowLock = new(1, 1);
 
     private IUnitOfWork globalUow;
 
@@ -164,7 +166,8 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
 
     public TUnitOfWork CurrentActiveUowOfType<TUnitOfWork>() where TUnitOfWork : class, IUnitOfWork
     {
-        return CurrentUow().UowOfType<TUnitOfWork>()
+        return CurrentUow()
+            .UowOfType<TUnitOfWork>()
             .Ensure(
                 must: currentUow => currentUow != null,
                 $"There's no current any uow of type {typeof(TUnitOfWork).FullName} has been begun.")
@@ -185,13 +188,13 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
     {
         RemoveAllInactiveUow();
 
-        return LastOrDefaultMatchedUowOfId(CurrentUnitOfWorks, uowId) ?? LastOrDefaultMatchedUowOfId(FreeCreatedUnitOfWorks.Values.ToList(), uowId);
+        return LastOrDefaultMatchedUowOfId(CurrentUnitOfWorks, uowId) ?? LastOrDefaultMatchedUowOfId(FreeCreatedUnitOfWorks, uowId);
 
         static IUnitOfWork LastOrDefaultMatchedUowOfId(List<IUnitOfWork> unitOfWorks, string uowId)
         {
             for (var i = unitOfWorks.Count - 1; i >= 0; i--)
             {
-                var matchedUow = unitOfWorks[i].UowOfId(uowId);
+                var matchedUow = unitOfWorks.ElementAtOrDefault(i)?.UowOfId(uowId);
 
                 if (matchedUow != null) return matchedUow;
             }
@@ -219,18 +222,30 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
             CurrentUnitOfWorks.ForEach(currentUnitOfWork => currentUnitOfWork.Dispose());
             CurrentUnitOfWorks.Clear();
 
-            FreeCreatedUnitOfWorks.ForEach(currentUnitOfWork => currentUnitOfWork.Value.Dispose());
+            FreeCreatedUnitOfWorks.ForEach(currentUnitOfWork => currentUnitOfWork.Dispose());
             FreeCreatedUnitOfWorks.Clear();
 
             globalUow?.Dispose();
+
+            CreateNewUowLock.Dispose();
+            RemoveAllInactiveUowLock.Dispose();
         }
     }
 
     protected List<IUnitOfWork> RemoveAllInactiveUow()
     {
-        CurrentUnitOfWorks.RemoveWhere(p => !p.IsActive(), out _);
+        try
+        {
+            RemoveAllInactiveUowLock.Wait();
 
-        return CurrentUnitOfWorks;
+            CurrentUnitOfWorks.RemoveWhere(p => !p.IsActive(), out _);
+
+            return CurrentUnitOfWorks;
+        }
+        finally
+        {
+            RemoveAllInactiveUowLock.Release();
+        }
     }
 }
 

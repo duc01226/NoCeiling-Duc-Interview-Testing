@@ -163,8 +163,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         return Util.Pager.ExecutePagingAsync(
                 (skipCount, pageSize) => entities.Skip(skipCount)
                     .Take(pageSize)
-                    .Select(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken))
-                    .WhenAll(),
+                    .SelectAsync(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken)),
                 maxItemCount: entities.Count,
                 IPlatformDbContext.DefaultPageSize)
             .Then(result => result.SelectMany(p => p).ToList());
@@ -190,8 +189,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         return Util.Pager.ExecutePagingAsync(
                 (skipCount, pageSize) => entities.Skip(skipCount)
                     .Take(pageSize)
-                    .Select(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken))
-                    .WhenAll(),
+                    .SelectAsync(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken)),
                 maxItemCount: entities.Count,
                 IPlatformDbContext.DefaultPageSize)
             .Then(result => result.SelectMany(p => p).ToList());
@@ -304,14 +302,13 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         return Util.Pager.ExecutePagingAsync(
                 (skipCount, pageSize) => entities.Skip(skipCount)
                     .Take(pageSize)
-                    .Select(
+                    .SelectAsync(
                         entity => CreateOrUpdateAsync<TEntity, TPrimaryKey>(
                             entity,
                             customCheckExistingPredicateBuilder?.Invoke(entity),
                             dismissSendEvent,
                             sendEntityEventConfigure,
-                            cancellationToken))
-                    .WhenAll(),
+                            cancellationToken)),
                 maxItemCount: entities.Count,
                 IPlatformDbContext.DefaultPageSize)
             .Then(result => result.SelectMany(p => p).ToList());

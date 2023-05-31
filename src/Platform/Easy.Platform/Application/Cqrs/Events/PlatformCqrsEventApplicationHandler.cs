@@ -62,9 +62,9 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     public virtual bool AutoDeleteProcessedInboxEventMessage => true;
 
     /// <summary>
-    /// Default return True. When True, Support for store cqrs event handler as inbox if inbox bus message is enabled in persistence module
+    /// Default return False. When True, Support for store cqrs event handler as inbox if inbox bus message is enabled in persistence module
     /// </summary>
-    public virtual bool EnableInboxEventBusMessage => true;
+    public virtual bool EnableInboxEventBusMessage => false;
 
     public bool IsCurrentInstanceCalledFromInboxBusMessageConsumer { get; set; }
 
