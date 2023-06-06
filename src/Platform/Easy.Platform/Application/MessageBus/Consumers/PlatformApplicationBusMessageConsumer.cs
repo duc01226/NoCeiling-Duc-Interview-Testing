@@ -1,6 +1,5 @@
 using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Common;
-using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +10,8 @@ namespace Easy.Platform.Application.MessageBus.Consumers;
 public interface IPlatformApplicationMessageBusConsumer : IPlatformMessageBusConsumer
 {
     public PlatformInboxBusMessage HandleDirectlyExistingInboxMessage { get; set; }
+
+    public bool AutoDeleteProcessedInboxEventMessage { get; set; }
 
     public bool IsInstanceExecutingFromInboxHelper { get; set; }
 
@@ -44,54 +45,38 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
     public virtual bool AutoBeginUow => true;
 
     public PlatformInboxBusMessage HandleDirectlyExistingInboxMessage { get; set; }
+    public bool AutoDeleteProcessedInboxEventMessage { get; set; }
     public bool IsInstanceExecutingFromInboxHelper { get; set; }
     public bool AllowProcessInboxMessageInBackgroundThread { get; set; }
 
-    public override async Task HandleAsync(TMessage message, string routingKey)
+    protected override async Task ExecuteHandleLogicAsync(TMessage message, string routingKey)
     {
-        if (!HandleWhen(message, routingKey)) return;
-
-        try
+        if (InboxBusMessageRepo != null && !IsInstanceExecutingFromInboxHelper)
         {
-            if (RetryOnFailedTimes > 0)
-                // Retry RetryOnFailedTimes to help resilient consumer. Sometime parallel, create/update concurrency could lead to error
-                await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(() => DoHandleAsync(message, routingKey), retryCount: RetryOnFailedTimes);
-            else
-                await DoHandleAsync(message, routingKey);
+            await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
+                ServiceProvider,
+                consumer: this,
+                inboxBusMessageRepository: InboxBusMessageRepo,
+                inboxConfig: InboxConfig,
+                message: message,
+                routingKey: routingKey,
+                loggerFactory: CreateGlobalLogger,
+                retryProcessFailedMessageInSecondsUnit: InboxConfig.RetryProcessFailedMessageInSecondsUnit,
+                allowProcessInBackgroundThread: AllowProcessInboxMessageInBackgroundThread,
+                handleExistingInboxMessage: HandleDirectlyExistingInboxMessage,
+                autoDeleteProcessedMessage: AutoDeleteProcessedInboxEventMessage,
+                handleInUow: null);
         }
-        catch (Exception e)
+        else
         {
-            IPlatformMessageBusConsumer.LogError(Logger, GetType(), message, routingKey, e);
-            throw;
-        }
-
-        async Task DoHandleAsync(TMessage message, string routingKey)
-        {
-            if (InboxBusMessageRepo != null && !IsInstanceExecutingFromInboxHelper)
-            {
-                await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
-                    ServiceProvider,
-                    consumer: this,
-                    InboxBusMessageRepo,
-                    message,
-                    routingKey,
-                    CreateGlobalLogger,
-                    InboxConfig.RetryProcessFailedMessageInSecondsUnit,
-                    allowProcessInBackgroundThread: AllowProcessInboxMessageInBackgroundThread,
-                    HandleDirectlyExistingInboxMessage,
-                    handleInUow: null);
-            }
-            else
-            {
-                if (AutoBeginUow)
-                    using (var uow = UowManager.Begin())
-                    {
-                        await HandleLogicAsync(message, routingKey);
-                        await uow.CompleteAsync();
-                    }
-                else
+            if (AutoBeginUow)
+                using (var uow = UowManager.Begin())
+                {
                     await HandleLogicAsync(message, routingKey);
-            }
+                    await uow.CompleteAsync();
+                }
+            else
+                await HandleLogicAsync(message, routingKey);
         }
     }
 

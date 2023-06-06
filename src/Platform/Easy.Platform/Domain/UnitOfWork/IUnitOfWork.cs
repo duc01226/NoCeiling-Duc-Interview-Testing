@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
+using Easy.Platform.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Domain.UnitOfWork;
@@ -128,12 +129,15 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
 
     public virtual async Task CompleteAsync(CancellationToken cancellationToken = default)
     {
-        if (Completed)
-            return;
+        if (Completed) return;
+
+        // Store stack trace before save changes so that if something went wrong in save into db, stack trace could
+        // be tracked. Because call to db if failed lose stack trace
+        var fullStackTrace = Environment.StackTrace;
 
         try
         {
-            await InnerUnitOfWorks.Where(p => p.IsActive()).Select(p => p.CompleteAsync(cancellationToken)).WhenAll();
+            await InnerUnitOfWorks.Where(p => p.IsActive()).ParallelAsync(p => p.CompleteAsync(cancellationToken));
 
             await SaveChangesAsync(cancellationToken);
 
@@ -141,10 +145,24 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
 
             await InvokeOnCompletedActions();
         }
-        catch (Exception e)
+        catch (PlatformDomainRowVersionConflictException ex)
         {
-            await InvokeOnFailedActions(new UnitOfWorkFailedArgs(e));
-            throw;
+            PlatformGlobal.LoggerFactory.CreateLogger(GetType())
+                .LogWarning(
+                    ex,
+                    $"{GetType().Name} complete failed because of version conflict. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]");
+
+            throw new Exception(
+                $"{GetType().Name} complete uow failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
+                ex);
+        }
+        catch (Exception ex)
+        {
+            await InvokeOnFailedActions(new UnitOfWorkFailedArgs(ex));
+
+            throw new Exception(
+                $"{GetType().Name} complete uow failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
+                ex);
         }
     }
 

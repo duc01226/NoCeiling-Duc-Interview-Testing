@@ -26,9 +26,9 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         LoggerFactory = loggerFactory;
     }
 
-    public virtual int RetryOnFailedTimes => 10;
+    public virtual int RetryOnFailedTimes => 2;
 
-    public virtual double RetryOnFailedDelaySeconds => 0.5;
+    public virtual double RetryOnFailedDelaySeconds => 1;
 
     public bool ForceCurrentInstanceHandleInCurrentThread { get; set; }
 
@@ -137,7 +137,8 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         CreateLogger(loggerFactory)
             .LogError(
                 exception,
-                "[PlatformCqrsEventHandler] Handle event failed. [[EventType:{EventType}]]; [[HandlerType:{HandlerType}]]. [[EventContent:{EventContent}]].",
+                "[PlatformCqrsEventHandler] Handle event failed. [[Message:{Message}]] [[EventType:{EventType}]]; [[HandlerType:{HandlerType}]]. [[EventContent:{EventContent}]].",
+                exception.Message,
                 notification.GetType().Name,
                 GetType().Name,
                 notification.ToJson());

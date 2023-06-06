@@ -16,19 +16,19 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
 {
     public static readonly ActivitySource ActivitySource = new(nameof(PlatformRabbitMqMessageBusProducer));
     public static readonly TextMapPropagator TracingActivityPropagator = Propagators.DefaultTextMapPropagator;
+    protected readonly PlatformProducerRabbitMqChannelPool ChannelPool;
 
     protected readonly IPlatformRabbitMqExchangeProvider ExchangeProvider;
     protected readonly ILogger Logger;
-    protected readonly PlatformRabbitMqChannelPool MqChannelPool;
     protected readonly PlatformRabbitMqOptions Options;
 
     public PlatformRabbitMqMessageBusProducer(
         IPlatformRabbitMqExchangeProvider exchangeProvider,
         PlatformRabbitMqOptions options,
         ILoggerFactory loggerFactory,
-        PlatformRabbitMqChannelPool mqChannelPool)
+        PlatformProducerRabbitMqChannelPool channelPool)
     {
-        MqChannelPool = mqChannelPool;
+        ChannelPool = channelPool;
         ExchangeProvider = exchangeProvider;
         Options = options;
         Logger = loggerFactory.CreateLogger(typeof(IPlatformMessageBusProducer));
@@ -70,7 +70,7 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
 
             try
             {
-                var channel = MqChannelPool.Get();
+                var channel = ChannelPool.GetCachedChannelPerThread();
 
                 var publishRequestProps = channel.CreateBasicProperties();
 
@@ -81,8 +81,6 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
                     routingKey,
                     publishRequestProps,
                     body: Encoding.UTF8.GetBytes(message));
-
-                channel.Close();
             }
             catch (AlreadyClosedException alreadyClosedException)
             {

@@ -35,6 +35,8 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
         Cqrs = cqrs;
     }
 
+    public virtual int FailedRetryCount => 0;
+
     public virtual async Task<TResult> Handle(TCommand request, CancellationToken cancellationToken)
     {
         using (var activity = IPlatformCqrsCommandApplicationHandler.ActivitySource.StartActivity($"{nameof(IPlatformCqrsCommandApplicationHandler)}.{nameof(Handle)}"))
@@ -74,6 +76,10 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
 
     protected virtual async Task<TResult> ExecuteHandleAsync(TCommand request, CancellationToken cancellationToken)
     {
+        if (FailedRetryCount > 0)
+            return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                () => ExecuteHandleAsync(UnitOfWorkManager.Begin(), request, cancellationToken),
+                retryCount: FailedRetryCount);
         return await ExecuteHandleAsync(UnitOfWorkManager.Begin(), request, cancellationToken);
     }
 

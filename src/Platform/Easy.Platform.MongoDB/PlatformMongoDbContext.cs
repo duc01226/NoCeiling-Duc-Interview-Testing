@@ -88,7 +88,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         catch (Exception ex)
         {
             throw new Exception(
-                $"{GetType().Name} Initialize failed. [[Exception:{ex}]]. [[FullStackTrace: {ex.StackTrace}{Environment.NewLine}FromFullStackTrace:{fullStackTrace}]]");
+                $"{GetType().Name} Initialize failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
+                ex);
         }
 
         async Task InsertDbInitializedApplicationDataMigrationHistory()
@@ -435,7 +436,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     {
         if (!recreate && IsEnsureIndexesMigrationExecuted()) return;
 
-        Logger.LogInformation($"[{GetType().Name}] EnsureIndexesAsync started.");
+        Logger.LogInformation($"[{GetType().Name}] EnsureIndexesAsync STARTED.");
 
         await EnsureMigrationHistoryCollectionIndexesAsync(recreate);
         await EnsureApplicationDataMigrationHistoryCollectionIndexesAsync(recreate);
@@ -447,7 +448,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             await MigrationHistoryCollection.InsertOneAsync(
                 new PlatformMongoMigrationHistory(EnsureIndexesMigrationName));
 
-        Logger.LogInformation($"[{GetType().Name}] EnsureIndexesAsync finished.");
+        Logger.LogInformation($"[{GetType().Name}] EnsureIndexesAsync FINISHED.");
     }
 
     public string GenerateId()
@@ -472,13 +473,13 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                     if (migrationExecutor.OnlyForDbInitBeforeDate == null ||
                         dbInitializedDate < migrationExecutor.OnlyForDbInitBeforeDate)
                     {
-                        Logger.LogInformation($"Migration {migrationExecutor.Name} started.");
+                        Logger.LogInformation($"Migration {migrationExecutor.Name} STARTED.");
 
                         await migrationExecutor.Execute((TDbContext)this);
                         await MigrationHistoryCollection.InsertOneAsync(new PlatformMongoMigrationHistory(migrationExecutor.Name));
                         await SaveChangesAsync();
 
-                        Logger.LogInformation($"Migration {migrationExecutor.Name} finished.");
+                        Logger.LogInformation($"Migration {migrationExecutor.Name} FINISHED.");
                     }
                 });
     }

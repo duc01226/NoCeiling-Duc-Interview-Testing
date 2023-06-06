@@ -30,9 +30,10 @@ public abstract class PlatformRabbitMqMessageBusModule : PlatformMessageBusModul
     {
         base.InternalRegister(serviceCollection);
 
-        // PlatformRabbitMqChannelPool and PlatformRabbitMqChannelPoolPolicy hold rabbitmq connection which should be singleton
-        serviceCollection.Register<PlatformRabbitMqChannelPoolPolicy>(ServiceLifeTime.Singleton);
-        serviceCollection.Register<PlatformRabbitMqChannelPool>(ServiceLifeTime.Singleton);
+        // PlatformRabbitMqChannelPool hold rabbitmq connection which should be singleton
+        serviceCollection.Register<PlatformProducerRabbitMqChannelPool>(ServiceLifeTime.Singleton);
+        serviceCollection.Register<PlatformConsumerRabbitMqChannelPool>(ServiceLifeTime.Singleton);
+        serviceCollection.Register<PlatformRabbitMqChannelPoolPolicy>();
 
         serviceCollection.Register<IPlatformRabbitMqExchangeProvider, PlatformRabbitMqExchangeProvider>();
         serviceCollection.Register(RabbitMqOptionsFactory);
@@ -48,7 +49,9 @@ public abstract class PlatformRabbitMqMessageBusModule : PlatformMessageBusModul
     {
         await base.InternalInit(serviceScope);
 
-        await ServiceProvider.GetRequiredService<PlatformRabbitMqProcessInitializerService>().StartProcess();
+        Util.TaskRunner.QueueActionInBackground(
+            () => ServiceProvider.GetRequiredService<PlatformRabbitMqProcessInitializerService>().StartProcess(CancellationToken.None),
+            () => Logger);
     }
 
     protected abstract PlatformRabbitMqOptions RabbitMqOptionsFactory(IServiceProvider serviceProvider);
@@ -57,11 +60,17 @@ public abstract class PlatformRabbitMqMessageBusModule : PlatformMessageBusModul
     {
         serviceCollection.RemoveIfExist(PlatformConsumeInboxBusMessageHostedService.MatchImplementation);
         serviceCollection.RegisterHostedService<PlatformRabbitMqConsumeInboxBusMessageHostedService>();
+        serviceCollection.Register(
+            typeof(PlatformConsumeInboxBusMessageHostedService),
+            sp => sp.GetRequiredService<PlatformRabbitMqConsumeInboxBusMessageHostedService>());
     }
 
     protected virtual void RegisterRabbitMqSendOutboxEventBusMessageHostedService(IServiceCollection serviceCollection)
     {
         serviceCollection.RemoveIfExist(PlatformSendOutboxBusMessageHostedService.MatchImplementation);
         serviceCollection.RegisterHostedService<PlatformRabbitMqSendOutboxBusMessageHostedService>();
+        serviceCollection.Register(
+            typeof(PlatformSendOutboxBusMessageHostedService),
+            sp => sp.GetRequiredService<PlatformRabbitMqSendOutboxBusMessageHostedService>());
     }
 }

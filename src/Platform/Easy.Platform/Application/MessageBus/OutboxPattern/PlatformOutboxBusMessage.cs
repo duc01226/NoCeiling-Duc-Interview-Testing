@@ -32,7 +32,7 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
 
     public Guid? ConcurrencyUpdateToken { get; set; }
 
-    public static Expression<Func<PlatformOutboxBusMessage, bool>> ToHandleOutboxEventBusMessagesExpr(
+    public static Expression<Func<PlatformOutboxBusMessage, bool>> CanHandleMessagesExpr(
         double messageProcessingMaximumTimeInSeconds)
     {
         return p => p.SendStatus == SendStatuses.New ||
@@ -42,7 +42,7 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
                      p.LastSendDate <= Clock.UtcNow.AddSeconds(-messageProcessingMaximumTimeInSeconds));
     }
 
-    public static Expression<Func<PlatformOutboxBusMessage, bool>> ToCleanInboxEventBusMessagesExpr(
+    public static Expression<Func<PlatformOutboxBusMessage, bool>> ToCleanExpiredMessagesByTimeExpr(
         double deleteProcessedMessageInSeconds,
         double deleteExpiredFailedMessageInSeconds)
     {
@@ -79,7 +79,7 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
 
     public static string GetMessageTypeFullName(Type messageType)
     {
-        return messageType.AssemblyQualifiedName.TakeTop(MessageTypeFullNameMaxLength);
+        return messageType.AssemblyQualifiedName?.TakeTop(MessageTypeFullNameMaxLength);
     }
 
     public static string BuildId(string trackId)

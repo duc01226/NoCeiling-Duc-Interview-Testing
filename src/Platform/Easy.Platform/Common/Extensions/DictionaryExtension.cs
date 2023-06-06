@@ -51,9 +51,9 @@ public static class DictionaryExtension
     /// </summary>
     /// <param name="dictionary">The input dictionary.</param>
     /// <returns>A dictionary with string-ified keys.</returns>
-    public static Dictionary<string, object?> ToStringObjectDictionary(this IDictionary dictionary)
+    public static Dictionary<string, object> ToStringObjectDictionary(this IDictionary dictionary)
     {
-        var result = new Dictionary<string, object?>(dictionary.Count);
+        var result = new Dictionary<string, object>(dictionary.Count);
 
         foreach (var key in dictionary.Keys)
             if (key is not null)

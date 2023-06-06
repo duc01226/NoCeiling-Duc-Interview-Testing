@@ -197,9 +197,18 @@ public static class WebElementExtension
         /// <summary>
         /// Get any thing from an element and return default value if the element get staled
         /// </summary>
-        public T Get<T>(Func<IWebElement, T> getFn)
+        public T? Get<T>(Func<IWebElement, T> getFn, T? defaultValue = default)
         {
-            return Util.TaskRunner.CatchException<StaleElementReferenceException, T>(func: () => getFn(element));
+            try
+            {
+                return getFn(element);
+            }
+            catch (StaleElementReferenceException)
+            {
+                if (defaultValue != null) return defaultValue;
+
+                return default;
+            }
         }
 
         public StaleWebElementWrapper Execute(Action<IWebElement> getFn)

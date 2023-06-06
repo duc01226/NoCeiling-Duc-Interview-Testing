@@ -1,8 +1,10 @@
+using Easy.Platform.Common;
 using Easy.Platform.Domain.Exceptions;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.EfCore.Domain.UnitOfWork;
 
@@ -38,7 +40,7 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
 
         try
         {
-            await InnerUnitOfWorks.Where(p => p.IsActive()).Select(p => p.CompleteAsync(cancellationToken)).WhenAll();
+            await InnerUnitOfWorks.Where(p => p.IsActive()).ParallelAsync(p => p.CompleteAsync(cancellationToken));
 
             await SaveChangesAsync(cancellationToken);
 
@@ -48,14 +50,22 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
         }
         catch (DbUpdateConcurrencyException ex)
         {
+            PlatformGlobal.LoggerFactory.CreateLogger(GetType())
+                .LogWarning(
+                    ex,
+                    $"{GetType().Name} complete failed because of version conflict. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]");
+
             throw new PlatformDomainRowVersionConflictException(
-                $"{GetType().Name} complete uow failed because of {nameof(DbUpdateConcurrencyException)}. [[Exception:{ex}]]. [[FullStackTrace:{ex.StackTrace}{Environment.NewLine}FromFullStackTrace:{fullStackTrace}]]");
+                $"{GetType().Name} complete uow failed because of {nameof(DbUpdateConcurrencyException)}. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
+                ex);
         }
         catch (Exception ex)
         {
             await InvokeOnFailedActions(new UnitOfWorkFailedArgs(ex));
+
             throw new Exception(
-                $"{GetType().Name} complete uow failed. [[Exception:{ex}]]. [[FullStackTrace:{ex.StackTrace}{Environment.NewLine}FromFullStackTrace:{fullStackTrace}]]");
+                $"{GetType().Name} complete uow failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
+                ex);
         }
     }
 

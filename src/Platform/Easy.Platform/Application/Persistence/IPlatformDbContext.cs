@@ -108,7 +108,7 @@ public interface IPlatformDbContext : IDisposable
     public async Task ExecuteDataMigrationExecutor<TDbContext>(PlatformDataMigrationExecutor<TDbContext> migrationExecution, TDbContext dbContext)
         where TDbContext : class, IPlatformDbContext
     {
-        dbContext.Logger.LogInformation($"Migration {migrationExecution.Name} started.");
+        dbContext.Logger.LogInformation($"Migration {migrationExecution.Name} STARTED.");
 
         await migrationExecution.Execute(dbContext);
 
@@ -116,7 +116,7 @@ public interface IPlatformDbContext : IDisposable
 
         await dbContext.SaveChangesAsync();
 
-        dbContext.Logger.LogInformation($"Migration {migrationExecution.Name} finished.");
+        dbContext.Logger.LogInformation($"Migration {migrationExecution.Name} FINISHED.");
     }
 
     public static async Task<TResult> ExecuteWithBadQueryWarningHandling<TResult, TSource>(

@@ -328,7 +328,7 @@ public interface IPage : IUiComponent
                 errorMsg: errors => AssertHelper.Failed(
                     generalMsg: "Has errors displayed on Page",
                     expected: "No errors displayed on Page",
-                    actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)!))
+                    actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)))
             .Of(page);
     }
 
@@ -343,7 +343,7 @@ public interface IPage : IUiComponent
                 errorMsg: errors => AssertHelper.Failed(
                     generalMsg: "Has no errors displayed on Page",
                     expected: "Has some errors displayed on Page",
-                    actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)!))
+                    actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)))
             .Of(page);
     }
 
@@ -359,7 +359,7 @@ public interface IPage : IUiComponent
                 errorMsg: errors => AssertHelper.Failed(
                     generalMsg: "Has no errors displayed on Page",
                     expected: $"Must has error \"{errorMsg}\" displayed on Page",
-                    actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)!))
+                    actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)))
             .Of(page);
     }
 
@@ -376,7 +376,7 @@ public interface IPage : IUiComponent
                 errorMsg: errors => AssertHelper.Failed(
                     generalMsg: $"Has no errors or has other errors than [{errorMsg}] displayed on Page",
                     expected: $"Must has only error \"{errorMsg}\" displayed on Page",
-                    actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)!))
+                    actual: errors.Select(selector: p => p.Text).JoinToString(Environment.NewLine)))
             .Of(page);
     }
 
@@ -479,6 +479,9 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
     where TPage : Page<TPage, TSettings>, IPage<TPage, TSettings>
     where TSettings : AutomationTestSettings
 {
+    public const int DefaultWaitRetryRefreshPageRetryCount = 5;
+    public const int DefaultWaitRetryRefreshPageDelaySeconds = 2;
+
     private WebDriverWait? webDriverWait;
 
     public Page(IWebDriver webDriver, TSettings settings) : base(webDriver, directReferenceRootElement: null)
@@ -673,6 +676,46 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
                 waitForMsg);
     }
 
+    public TPage RetryReloadPageUntilSuccess(Action action, int retryCount = DefaultWaitRetryRefreshPageRetryCount)
+    {
+        Util.TaskRunner.WaitRetryThrowFinalException(
+            () =>
+            {
+                try
+                {
+                    action();
+                }
+                catch (Exception)
+                {
+                    WebDriver.ReloadCurrentPage();
+                    throw;
+                }
+            },
+            retryCount: retryCount,
+            sleepDurationProvider: _ => DefaultWaitRetryRefreshPageDelaySeconds.Seconds());
+
+        return this.As<TPage>();
+    }
+
+    public TResult RetryReloadPageUntilSuccess<TResult>(Func<TResult> action, int retryCount = DefaultWaitRetryRefreshPageRetryCount)
+    {
+        return Util.TaskRunner.WaitRetryThrowFinalException(
+            () =>
+            {
+                try
+                {
+                    return action();
+                }
+                catch (Exception)
+                {
+                    WebDriver.ReloadCurrentPage();
+                    throw;
+                }
+            },
+            retryCount: retryCount,
+            sleepDurationProvider: _ => DefaultWaitRetryRefreshPageDelaySeconds.Seconds());
+    }
+
     protected virtual WebDriverWait CreateDefaultWebDriverWait(IWebDriver webDriver)
     {
         return new WebDriverWait(webDriver, DefaultMaxWaitSeconds.Seconds())
@@ -717,7 +760,7 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
     {
         return Util.TaskRunner.WaitUntilGetSuccess(
             this.As<TPage>(),
-            getResult: p => getResult(this.As<TPage>()),
+            getResult: _ => getResult(this.As<TPage>()),
             continueWaitOnlyWhen,
             maxWaitSeconds ?? DefaultMaxWaitSeconds,
             waitForMsg)!;
@@ -756,6 +799,11 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
     protected GeneralUiComponent CreateGeneralComponent(Func<IWebElement> directReferenceRootElement)
     {
         return new GeneralUiComponent(WebDriver, directReferenceRootElement: directReferenceRootElement, parent: this);
+    }
+
+    protected GeneralUiComponent CreateGeneralComponent(IWebElement directReferenceRootElement)
+    {
+        return new GeneralUiComponent(WebDriver, directReferenceRootElement: () => directReferenceRootElement, parent: this);
     }
 }
 

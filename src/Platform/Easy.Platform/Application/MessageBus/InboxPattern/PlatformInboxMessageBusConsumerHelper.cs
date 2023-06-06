@@ -23,20 +23,21 @@ public static class PlatformInboxMessageBusConsumerHelper
         IServiceProvider serviceProvider,
         IPlatformApplicationMessageBusConsumer<TMessage> consumer,
         IPlatformInboxBusMessageRepository inboxBusMessageRepository,
+        PlatformInboxConfig inboxConfig,
         TMessage message,
         string routingKey,
         Func<ILogger> loggerFactory,
         double retryProcessFailedMessageInSecondsUnit,
         bool allowProcessInBackgroundThread,
-        PlatformInboxBusMessage handleDirectlyExistingInboxMessage,
+        PlatformInboxBusMessage handleExistingInboxMessage,
         IUnitOfWork handleInUow,
         bool autoDeleteProcessedMessage = false,
         CancellationToken cancellationToken = default) where TMessage : class, new()
     {
-        if (handleDirectlyExistingInboxMessage != null && handleDirectlyExistingInboxMessage.ConsumeStatus != PlatformInboxBusMessage.ConsumeStatuses.Processed)
+        if (handleExistingInboxMessage != null && handleExistingInboxMessage.ConsumeStatus != PlatformInboxBusMessage.ConsumeStatuses.Processed)
         {
             await ExecuteDirectlyConsumerWithExistingInboxMessage(
-                handleDirectlyExistingInboxMessage,
+                handleExistingInboxMessage,
                 consumer,
                 serviceProvider,
                 message,
@@ -46,7 +47,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 autoDeleteProcessedMessage,
                 cancellationToken);
         }
-        else if (handleDirectlyExistingInboxMessage == null)
+        else if (handleExistingInboxMessage == null)
         {
             var trackId = message.As<IPlatformTrackableBusMessage>()?.TrackingId;
 
@@ -69,7 +70,8 @@ public static class PlatformInboxMessageBusConsumerHelper
 
             var toProcessInboxMessage = existedInboxMessage ?? newInboxMessage;
 
-            if (toProcessInboxMessage.ConsumeStatus != PlatformInboxBusMessage.ConsumeStatuses.Processed)
+            if (existedInboxMessage == null ||
+                PlatformInboxBusMessage.CanHandleMessagesExpr(inboxConfig.MessageProcessingMaxiSeconds).Compile()(existedInboxMessage))
             {
                 if (handleInUow != null)
                 {
@@ -91,7 +93,7 @@ public static class PlatformInboxMessageBusConsumerHelper
 
                     if (allowProcessInBackgroundThread || toProcessInboxMessage == existedInboxMessage)
                         Util.TaskRunner.QueueActionInBackground(
-                            async () => await ExecuteConsumerForNewInboxMessage(
+                            () => ExecuteConsumerForNewInboxMessage(
                                 consumer.GetType(),
                                 message,
                                 toProcessInboxMessage,
@@ -127,6 +129,7 @@ public static class PlatformInboxMessageBusConsumerHelper
             message,
             newInboxMessage,
             routingKey,
+            autoDeleteProcessedMessage,
             loggerFactory);
 
         static async Task DoExecuteConsumerForNewInboxMessage(
@@ -134,6 +137,7 @@ public static class PlatformInboxMessageBusConsumerHelper
             TMessage message,
             PlatformInboxBusMessage newInboxMessage,
             string routingKey,
+            bool autoDeleteProcessedMessage,
             Func<ILogger> loggerFactory,
             IServiceProvider serviceProvider)
         {
@@ -142,6 +146,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 await serviceProvider.GetService(consumerType)
                     .Cast<IPlatformApplicationMessageBusConsumer<TMessage>>()
                     .With(_ => _.HandleDirectlyExistingInboxMessage = newInboxMessage)
+                    .With(_ => _.AutoDeleteProcessedInboxEventMessage = autoDeleteProcessedMessage)
                     .HandleAsync(message, routingKey);
             }
             catch (Exception e)
@@ -171,7 +176,9 @@ public static class PlatformInboxMessageBusConsumerHelper
         {
             await consumer
                 .With(_ => _.IsInstanceExecutingFromInboxHelper = true)
+                .With(_ => _.AutoDeleteProcessedInboxEventMessage = autoDeleteProcessedMessage)
                 .HandleAsync(message, routingKey);
+
             try
             {
                 if (autoDeleteProcessedMessage)
@@ -199,7 +206,8 @@ public static class PlatformInboxMessageBusConsumerHelper
             loggerFactory()
                 .LogError(
                     ex,
-                    "ExecuteConsumerForExistingInboxMessage failed. [MessageType: {MessageType}]; [ConsumerType: {ConsumerType}]; [RoutingKey: {RoutingKey}]; [MessageContent: {MessageContent}];",
+                    "ExecuteConsumerForExistingInboxMessage failed. [[Error:{Error}]]; [MessageType: {MessageType}]; [ConsumerType: {ConsumerType}]; [RoutingKey: {RoutingKey}]; [MessageContent: {MessageContent}];",
+                    ex.Message,
                     message.GetType().GetNameOrGenericTypeName(),
                     consumer.GetType().GetNameOrGenericTypeName(),
                     routingKey,
@@ -253,7 +261,8 @@ public static class PlatformInboxMessageBusConsumerHelper
             loggerFactory()
                 .LogError(
                     ex,
-                    "CreateNewInboxMessageAsync failed. [RoutingKey:{RoutingKey}], [Type:{MessageType}]. NewInboxMessage: {NewInboxMessage}.",
+                    "CreateNewInboxMessageAsync failed. [[Error:{Error}]], [RoutingKey:{RoutingKey}], [Type:{MessageType}]. NewInboxMessage: {NewInboxMessage}.",
+                    ex.Message,
                     routingKey,
                     message.GetType().GetNameOrGenericTypeName(),
                     newInboxMessage.ToJson());
@@ -325,6 +334,9 @@ public static class PlatformInboxMessageBusConsumerHelper
                     await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                         async () =>
                         {
+                            // Get again to update to prevent concurrency error ensure that update messaged failed should not be failed
+                            existingInboxMessage = await inboxBusMessageRepo.GetByIdAsync(existingInboxMessage.Id);
+
                             existingInboxMessage.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Failed;
                             existingInboxMessage.LastConsumeDate = DateTime.UtcNow;
                             existingInboxMessage.LastConsumeError = PlatformJsonSerializer.Serialize(new { exception.Message, exception.StackTrace });
@@ -344,7 +356,8 @@ public static class PlatformInboxMessageBusConsumerHelper
             loggerFactory()
                 .LogError(
                     ex,
-                    "UpdateExistingInboxFailedMessageAsync failed. [InboxMessage:{Message}].",
+                    "UpdateExistingInboxFailedMessageAsync failed. [[Error:{Error}]]. [InboxMessage:{Message}].",
+                    ex.Message,
                     existingInboxMessage.ToJson());
         }
     }

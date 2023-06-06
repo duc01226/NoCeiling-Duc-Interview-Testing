@@ -120,6 +120,7 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
     where TComponent : UiComponent<TComponent>
 {
     public const double DefaultMinimumDelayWaitSeconds = 0.5;
+    public const int DefaultGetElementRetry = 2;
 
     public UiComponent(IWebDriver webDriver, Func<IWebElement>? directReferenceRootElement, IUiComponent? parent = null)
     {
@@ -147,33 +148,62 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
     /// <summary>
     /// Get Component RootElement. Retry in case of the element get "stale element reference" exception.
     /// </summary>
-    public IWebElement? RootElement =>
-        Util.TaskRunner.WaitRetryThrowFinalException<IWebElement?, StaleElementReferenceException>(
-            executeFunc: () => DirectReferenceRootElement?.Invoke() ?? IUiComponent.FindRootElementBySelector(component: this));
+    public IWebElement? RootElement
+    {
+        get
+        {
+            try
+            {
+                // Retry to enhance testing resilient, prevent sometime got errors like StaleElementReferenceException event after get element sucess
+                return Util.TaskRunner.WaitRetryThrowFinalException<IWebElement?, StaleElementReferenceException>(
+                    executeFunc: () => DirectReferenceRootElement?.Invoke() ?? IUiComponent.FindRootElementBySelector(component: this),
+                    retryCount: DefaultGetElementRetry);
+            }
+            catch (StaleElementReferenceException)
+            {
+                return null;
+            }
+        }
+    }
 
+    // Retry to enhance testing resilient, prevent sometime got errors like StaleElementReferenceException event after get element sucess
     public IWebElement? TryRootElement =>
-        Util.TaskRunner.TryWaitUntilGetValidResult(
-            this,
-            p => RootElement,
-            elementResult => elementResult != null,
-            maxWaitSeconds: 5,
-            waitForMsg: $"'{FullPathRootElementSelector}' to be available");
+        Util.TaskRunner.WaitRetryThrowFinalException(
+            () =>
+            {
+                if (RootElement == null) throw new Exception($"'WaitFor {FullPathRootElementSelector}' to be available");
+                return RootElement;
+            },
+            retryCount: DefaultGetElementRetry);
 
-    public virtual string Text => RootElement?.Text ?? "";
+    // Retry to enhance testing resilient, prevent sometime got errors like StaleElementReferenceException event after get element sucess
+    public virtual string Text =>
+        Util.TaskRunner.WaitRetryThrowFinalException(
+            executeFunc: () => RootElement?.Text ?? "",
+            retryCount: DefaultGetElementRetry);
 
+    // Retry to enhance testing resilient, prevent sometime got errors like StaleElementReferenceException event after get element sucess
     public virtual string GetAttribute(string attributeName)
     {
-        return RootElement?.GetAttribute(attributeName) ?? "";
+        return Util.TaskRunner.WaitRetryThrowFinalException(
+            executeFunc: () => RootElement?.GetAttribute(attributeName) ?? "",
+            retryCount: DefaultGetElementRetry);
     }
 
+    // Retry to enhance testing resilient, prevent sometime got errors like StaleElementReferenceException event after get element sucess
     public bool IsClickable()
     {
-        return RootElement?.IsClickable() == true;
+        return Util.TaskRunner.WaitRetryThrowFinalException(
+            executeFunc: () => RootElement?.IsClickable() == true,
+            retryCount: DefaultGetElementRetry);
     }
 
+    // Retry to enhance testing resilient, prevent sometime got errors like StaleElementReferenceException event after get element sucess
     public bool IsDisplayed()
     {
-        return RootElement?.Displayed == true;
+        return Util.TaskRunner.WaitRetryThrowFinalException(
+            executeFunc: () => RootElement?.Displayed == true,
+            retryCount: DefaultGetElementRetry);
     }
 
     public TComponent WaitUntilClickable(double maxWaitSeconds, string? waitForMsg = null)
@@ -236,48 +266,78 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
 
     public TComponent Click(string? childElementSelector = null)
     {
-        FindChildOrRootElement(childElementSelector)!.Click();
-        HumanDelay();
+        // Retry to enhance testing resilient, prevent sometime got errors like StaleElementReferenceException event after get element sucess
+        return Util.TaskRunner.WaitRetryThrowFinalException(
+            executeFunc: () =>
+            {
+                FindChildOrRootElement(childElementSelector)!.Click();
+                HumanDelay();
 
-        return (TComponent)this;
+                return (TComponent)this;
+            },
+            retryCount: DefaultGetElementRetry);
     }
 
     public TComponent SendKeys(string text, string? childElementSelector = null)
     {
-        var element = FindChildOrRootElement(childElementSelector);
+        // Retry to enhance testing resilient, prevent sometime got errors like StaleElementReferenceException event after get element sucess
+        return Util.TaskRunner.WaitRetryThrowFinalException(
+            executeFunc: () =>
+            {
+                var element = FindChildOrRootElement(childElementSelector);
 
-        element!.SendKeys(text);
-        HumanDelay();
+                element!.SendKeys(text);
+                HumanDelay();
 
-        return (TComponent)this;
+                return (TComponent)this;
+            },
+            retryCount: DefaultGetElementRetry);
     }
 
     public TComponent SendKeysAndFocusOut(string text, string? childElementSelector = null)
     {
-        var element = FindChildOrRootElement(childElementSelector);
+        // Retry to enhance testing resilient, prevent sometime got errors like StaleElementReferenceException event after get element sucess
+        return Util.TaskRunner.WaitRetryThrowFinalException(
+            executeFunc: () =>
+            {
+                var element = FindChildOrRootElement(childElementSelector);
 
-        element!.SendKeys(text);
-        element.FocusOut(WebDriver);
-        HumanDelay();
+                element!.SendKeys(text);
+                element.FocusOut(WebDriver);
+                HumanDelay();
 
-        return (TComponent)this;
+                return (TComponent)this;
+            },
+            retryCount: DefaultGetElementRetry);
     }
 
     public TComponent FocusOut(string? childElementSelector = null)
     {
-        FindChildOrRootElement(childElementSelector)!.FocusOut(WebDriver);
-        HumanDelay();
+        // Retry to enhance testing resilient, prevent sometime got errors like StaleElementReferenceException event after get element sucess
+        return Util.TaskRunner.WaitRetryThrowFinalException(
+            executeFunc: () =>
+            {
+                FindChildOrRootElement(childElementSelector)!.FocusOut(WebDriver);
+                HumanDelay();
 
-        return (TComponent)this;
+                return (TComponent)this;
+            },
+            retryCount: DefaultGetElementRetry);
     }
 
     public TComponent Submit(string? childElementSelector = null)
     {
-        var element = FindChildOrRootElement(childElementSelector);
-        element!.Submit();
-        HumanDelay();
+        // Retry to enhance testing resilient, prevent sometime got errors like StaleElementReferenceException event after get element sucess
+        return Util.TaskRunner.WaitRetryThrowFinalException(
+            executeFunc: () =>
+            {
+                var element = FindChildOrRootElement(childElementSelector);
+                element!.Submit();
+                HumanDelay();
 
-        return (TComponent)this;
+                return (TComponent)this;
+            },
+            retryCount: DefaultGetElementRetry);
     }
 
     public string? FullPathRootElementSelector => IUiComponent.GetFullPathInPageElementSelector(component: this, Parent);
@@ -294,7 +354,10 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
 
     public bool IsSelected()
     {
-        return RootElement?.IsSelected() == true;
+        // Retry to enhance testing resilient, prevent sometime got errors like StaleElementReferenceException event after get element sucess
+        return Util.TaskRunner.WaitRetryThrowFinalException(
+            executeFunc: () => RootElement?.IsSelected() == true,
+            retryCount: DefaultGetElementRetry);
     }
 
     public TComponent ReplaceTextValue(string text, string? childElementSelector = null)
@@ -329,7 +392,7 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
 
         if (element != null)
         {
-            element.Value()?.ForEach(p => element.SendKeys(Keys.Backspace));
+            element.Value()?.ForEach(_ => element.SendKeys(Keys.Backspace));
 
             if (!element.Value().IsNullOrEmpty())
                 element.Clear();

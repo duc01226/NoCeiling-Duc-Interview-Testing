@@ -1,3 +1,4 @@
+using Easy.Platform.Infrastructures.MessageBus;
 using RabbitMQ.Client;
 
 namespace Easy.Platform.RabbitMQ;
@@ -19,9 +20,7 @@ public class PlatformRabbitMqOptions
     /// <summary>
     /// Used to set RetryCount policy when tried to create rabbit mq channel <see cref="IModel" />
     /// </summary>
-    public int InitRabbitMqChannelRetryCount { get; set; } = 10;
-
-    public int RunConsumerRetryCount { get; set; } = 5;
+    public int InitRabbitMqChannelRetryCount { get; set; } = 30;
 
     /// <summary>
     /// Config the prefectCount. "defines the max number of unacknowledged deliveries that are permitted on a channel" to limit messages to prevent rabbit mq down
@@ -35,19 +34,24 @@ public class PlatformRabbitMqOptions
     public int NetworkRecoveryIntervalSeconds { get; set; } = 5;
 
     /// <summary>
-    /// Used to set <see cref="ConnectionFactory.RequestedConnectionTimeout" />
+    /// Used to set <see cref="ConnectionFactory.RequestedConnectionTimeout" /> and <see cref="ConnectionFactory.ContinuationTimeout" />
     /// </summary>
-    public int RequestedConnectionTimeoutSeconds { get; set; } = 60;
+    public int RequestedConnectionTimeoutSeconds { get; set; } = 300;
+
+    /// <summary>
+    /// Used to set <see cref="ConnectionFactory.SocketReadTimeout" /> and <see cref="ConnectionFactory.SocketWriteTimeout" />
+    /// </summary>
+    public int SocketTimeoutSeconds { get; set; } = 120;
 
     /// <summary>
     /// Config the time to true to log consumer process time
     /// </summary>
-    public bool IsLogConsumerProcessTime { get; set; } = true;
+    public bool EnableLogConsumerProcessTime { get; set; } = false;
 
     /// <summary>
-    /// Config the time in milliseconds to log warning if the process consumer time is over LogConsumerProcessWarningTimeMilliseconds.
+    /// Config the time in milliseconds to log warning if the process consumer time is over LogSlowProcessingConsumerWarningMilliseconds.
     /// </summary>
-    public long LogErrorSlowProcessWarningTimeMilliseconds { get; set; } = 5000;
+    public long LogSlowProcessingConsumerWarningMilliseconds { get; set; } = PlatformMessageBusConsumer.DefaultProcessWarningTimeMilliseconds;
 
     public double RequeueDelayTimeInSeconds { get; set; } = 60;
 
@@ -64,13 +68,13 @@ public class PlatformRabbitMqOptions
     public int QueueMessagesTimeToLive { get; set; } = 7 * 24 * 3600 * 1000;
 
     /// <summary>
-    /// Queues will expire after a period of time only when they are not used (e.g. do not have consumers). This feature can be used together with the auto-delete queue property. <br/>
+    /// Queues will expire after a period of time only when they are not used (e.g. do not have consumers). This feature can be used together with the auto-delete queue property. <br />
     /// Unit is milliseconds
     /// </summary>
     public int QueueUnusedExpireTime { get; set; } = 3 * 24 * 3600 * 1000;
 
     /// <summary>
-    /// References: https://www.rabbitmq.com/lazy-queues.html. <br/>
+    /// References: https://www.rabbitmq.com/lazy-queues.html. <br />
     /// For best practice, prevent queue too long in memory will store messages in the storage
     /// </summary>
     public int QueueMaxNumberMessagesInMemory { get; set; } = 100;

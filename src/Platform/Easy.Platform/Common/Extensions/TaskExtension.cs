@@ -225,12 +225,9 @@ public static class TaskExtension
     /// which returns an instance that has a GetResult() method. When used on a faulted Task, GetResult() will propagate the original exception (this is how “await task;” gets its behavior). <br />
     /// You can thus use “task.GetAwaiter().GetResult()” if you want to directly invoke this propagation logic.
     /// </summary>
-    public static void WaitResult(this Task task, bool? continueOnCapturedContext = null)
+    public static void WaitResult(this Task task)
     {
-        if (continueOnCapturedContext != null)
-            task.ConfigureAwait(continueOnCapturedContext!.Value).GetAwaiter().GetResult();
-        else
-            task.ConfigureAwait(false).GetAwaiter().GetResult();
+        task.GetAwaiter().GetResult();
     }
 
     /// <summary>
@@ -241,10 +238,8 @@ public static class TaskExtension
     /// which returns an instance that has a GetResult() method. When used on a faulted Task, GetResult() will propagate the original exception (this is how “await task;” gets its behavior). <br />
     /// You can thus use “task.GetAwaiter().GetResult()” if you want to directly invoke this propagation logic.
     /// </summary>
-    public static T GetResult<T>(this Task<T> task, bool? continueOnCapturedContext = null)
+    public static T GetResult<T>(this Task<T> task)
     {
-        if (continueOnCapturedContext != null)
-            return task.ConfigureAwait(continueOnCapturedContext!.Value).GetAwaiter().GetResult();
         return task.GetAwaiter().GetResult();
     }
 

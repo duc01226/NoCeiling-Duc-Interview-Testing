@@ -5,6 +5,8 @@ namespace Easy.Platform.Common.Hosting;
 
 public abstract class PlatformIntervalProcessHostedService : PlatformHostedService
 {
+    protected readonly SemaphoreSlim IntervalProcessLock = new SemaphoreSlim(1, 1);
+
     public PlatformIntervalProcessHostedService(
         IServiceProvider serviceProvider,
         ILoggerFactory loggerFactory) : base(serviceProvider, loggerFactory)
@@ -15,8 +17,24 @@ public abstract class PlatformIntervalProcessHostedService : PlatformHostedServi
     {
         while (!ProcessStopped && !StoppingCts.IsCancellationRequested)
         {
-            await IntervalProcessAsync(cancellationToken);
+            await TriggerIntervalProcessAsync(cancellationToken);
             await Task.Delay(ProcessTriggerIntervalTime(), cancellationToken);
+        }
+    }
+
+    public async Task TriggerIntervalProcessAsync(CancellationToken cancellationToken)
+    {
+        if (IntervalProcessLock.CurrentCount == 0) return;
+
+        try
+        {
+            await IntervalProcessLock.WaitAsync(cancellationToken);
+
+            await IntervalProcessAsync(cancellationToken);
+        }
+        finally
+        {
+            IntervalProcessLock.Release();
         }
     }
 

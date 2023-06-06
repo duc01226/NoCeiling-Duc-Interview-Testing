@@ -80,7 +80,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         catch (Exception ex)
         {
             throw new Exception(
-                $"{GetType().Name} Initialize failed. [[Exception:{ex}]]. [[FullStackTrace: {ex.StackTrace}{Environment.NewLine}FromFullStackTrace:{fullStackTrace}]]");
+                $"{GetType().Name} Initialize failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
+                ex);
         }
 
         async Task InsertDbInitializedApplicationDataMigrationHistory()

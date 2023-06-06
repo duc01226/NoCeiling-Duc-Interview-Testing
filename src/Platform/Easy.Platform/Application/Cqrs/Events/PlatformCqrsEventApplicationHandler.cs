@@ -62,7 +62,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     public virtual bool AutoDeleteProcessedInboxEventMessage => true;
 
     /// <summary>
-    /// Default return False. When True, Support for store cqrs event handler as inbox if inbox bus message is enabled in persistence module
+    /// Default return True. When True, Support for store cqrs event handler as inbox if inbox bus message is enabled in persistence module
     /// </summary>
     public virtual bool EnableInboxEventBusMessage => false;
 
@@ -198,17 +198,19 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             {
                 var consumerInstance = ServiceProvider.GetRequiredService<PlatformCqrsEventInboxBusMessageConsumer>();
                 var applicationSettingContext = ServiceProvider.GetRequiredService<IPlatformApplicationSettingContext>();
+                var inboxConfig = ServiceProvider.GetRequiredService<PlatformInboxConfig>();
 
                 await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
                     serviceProvider: ServiceProvider,
                     consumer: consumerInstance,
                     inboxBusMessageRepository: ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>(),
+                    inboxConfig: inboxConfig,
                     message: CqrsEventInboxBusMessage(@event, eventHandlerType: GetType(), applicationSettingContext, currentBusMessageIdentity),
                     routingKey: PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(typeof(TEvent), applicationSettingContext.ApplicationName),
                     loggerFactory: CreateGlobalLogger,
                     retryProcessFailedMessageInSecondsUnit: PlatformInboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit,
                     allowProcessInBackgroundThread: AllowHandleInBackgroundThread(@event),
-                    handleDirectlyExistingInboxMessage: null,
+                    handleExistingInboxMessage: null,
                     handleInUow: eventSourceUow,
                     autoDeleteProcessedMessage: AutoDeleteProcessedInboxEventMessage,
                     cancellationToken: cancellationToken);
@@ -222,17 +224,19 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                         IPlatformApplicationSettingContext applicationSettingContext) =>
                     {
                         var consumerInstance = serviceProvider.GetRequiredService<PlatformCqrsEventInboxBusMessageConsumer>();
+                        var inboxConfig = serviceProvider.GetRequiredService<PlatformInboxConfig>();
 
                         await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
                             serviceProvider: serviceProvider,
                             consumer: consumerInstance,
                             inboxBusMessageRepository: inboxMessageRepository,
+                            inboxConfig: inboxConfig,
                             message: CqrsEventInboxBusMessage(@event, eventHandlerType: GetType(), applicationSettingContext, currentBusMessageIdentity),
                             routingKey: PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(typeof(TEvent), applicationSettingContext.ApplicationName),
                             loggerFactory: CreateGlobalLogger,
                             retryProcessFailedMessageInSecondsUnit: PlatformInboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit,
                             allowProcessInBackgroundThread: AllowHandleInBackgroundThread(@event),
-                            handleDirectlyExistingInboxMessage: null,
+                            handleExistingInboxMessage: null,
                             handleInUow: null,
                             autoDeleteProcessedMessage: AutoDeleteProcessedInboxEventMessage,
                             cancellationToken: cancellationToken);

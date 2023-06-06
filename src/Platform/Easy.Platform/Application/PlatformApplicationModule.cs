@@ -144,11 +144,11 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
 
         static async Task ExecuteDataSeederWithLog(IPlatformApplicationDataSeeder dataSeeder, ILogger logger)
         {
-            logger.LogInformation($"[SeedData] {dataSeeder.GetType().Name} started.");
+            logger.LogInformation($"[SeedData] {dataSeeder.GetType().Name} STARTED.");
 
             await dataSeeder.SeedData();
 
-            logger.LogInformation($"[SeedData] {dataSeeder.GetType().Name} finished.");
+            logger.LogInformation($"[SeedData] {dataSeeder.GetType().Name} FINISHED.");
         }
     }
 
@@ -268,19 +268,6 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
 
         if (AutoRegisterDefaultCaching)
             RegisterRuntimeModuleDependencies<PlatformCachingModule>(serviceCollection);
-
-        serviceCollection.Register(
-            serviceType: typeof(PlatformInboxConfig),
-            InboxConfigProvider,
-            ServiceLifeTime.Transient,
-            replaceIfExist: true,
-            DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
-        serviceCollection.Register(
-            serviceType: typeof(PlatformOutboxConfig),
-            OutboxConfigProvider,
-            ServiceLifeTime.Transient,
-            replaceIfExist: true,
-            DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
     }
 
     protected override async Task InternalInit(IServiceScope serviceScope)
@@ -364,13 +351,23 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             serviceCollection.RegisterHostedService<PlatformInboxBusMessageCleanerHostedService>();
         if (serviceCollection.NotExist(PlatformConsumeInboxBusMessageHostedService.MatchImplementation))
             serviceCollection.RegisterHostedService<PlatformConsumeInboxBusMessageHostedService>();
-        serviceCollection.RegisterIfServiceNotExist<PlatformInboxConfig, PlatformInboxConfig>();
+        serviceCollection.Register(
+            serviceType: typeof(PlatformInboxConfig),
+            InboxConfigProvider,
+            ServiceLifeTime.Transient,
+            replaceIfExist: true,
+            DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
 
         if (serviceCollection.NotExist(PlatformOutboxBusMessageCleanerHostedService.MatchImplementation))
             serviceCollection.RegisterHostedService<PlatformOutboxBusMessageCleanerHostedService>();
         if (serviceCollection.NotExist(PlatformSendOutboxBusMessageHostedService.MatchImplementation))
             serviceCollection.RegisterHostedService<PlatformSendOutboxBusMessageHostedService>();
-        serviceCollection.RegisterIfServiceNotExist<PlatformOutboxConfig, PlatformOutboxConfig>();
+        serviceCollection.Register(
+            serviceType: typeof(PlatformOutboxConfig),
+            OutboxConfigProvider,
+            ServiceLifeTime.Transient,
+            replaceIfExist: true,
+            DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
     }
 }
 

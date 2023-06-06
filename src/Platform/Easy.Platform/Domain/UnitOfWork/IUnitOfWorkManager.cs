@@ -219,10 +219,10 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
         if (disposing)
         {
             // free managed resources
-            CurrentUnitOfWorks.ForEach(currentUnitOfWork => currentUnitOfWork.Dispose());
+            CurrentUnitOfWorks.ForEach(currentUnitOfWork => currentUnitOfWork?.Dispose());
             CurrentUnitOfWorks.Clear();
 
-            FreeCreatedUnitOfWorks.ForEach(currentUnitOfWork => currentUnitOfWork.Dispose());
+            FreeCreatedUnitOfWorks.ForEach(currentUnitOfWork => currentUnitOfWork?.Dispose());
             FreeCreatedUnitOfWorks.Clear();
 
             globalUow?.Dispose();

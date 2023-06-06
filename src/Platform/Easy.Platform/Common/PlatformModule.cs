@@ -43,13 +43,13 @@ public interface IPlatformModule
 
     public Action<TracerProviderBuilder> AdditionalTracingConfigure { get; }
 
-    public static void WaitAllModulesInitiated(Type moduleType)
+    public static void WaitAllModulesInitiated(Type moduleType, ILogger logger = null, string logSuffix = null)
     {
         if (PlatformGlobal.RootServiceProvider.GetServices(moduleType).Select(p => p.As<IPlatformModule>()).All(p => p.Initiated)) return;
 
-        var logger = PlatformGlobal.CreateDefaultLogger();
+        var useLogger = logger ?? PlatformGlobal.CreateDefaultLogger();
 
-        logger.LogInformation("[Platform] Start WaitAllModulesInitiated of type {ModuleType} started", moduleType.Name);
+        useLogger.LogInformation("[Platform] Start WaitAllModulesInitiated of type {ModuleType} {LogSuffix} STARTED", moduleType.Name, logSuffix);
 
         Util.TaskRunner.WaitUntil(
             () =>
@@ -62,7 +62,7 @@ public interface IPlatformModule
             waitForMsg: $"Wait for all modules of type {moduleType.Name} get initiated",
             waitIntervalSeconds: 5);
 
-        logger.LogInformation("[Platform] WaitAllModulesInitiated of type {ModuleType} finished", moduleType.Name);
+        useLogger.LogInformation("[Platform] WaitAllModulesInitiated of type {ModuleType} {LogSuffix} FINISHED", moduleType.Name, logSuffix);
     }
 
     public List<IPlatformModule> AllDependencyModules(IServiceCollection useServiceCollection = null);
@@ -342,7 +342,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
         await AllDependencyModules()
             .GroupBy(p => p.ExecuteInitPriority)
             .OrderByDescending(p => p.Key)
-            .ForEachAsync(p => p.Select(module => module.Init()).WhenAll());
+            .ForEachAsync(p => p.ParallelAsync(module => module.Init()));
     }
 
     protected virtual void RegisterHelpers(IServiceCollection serviceCollection)

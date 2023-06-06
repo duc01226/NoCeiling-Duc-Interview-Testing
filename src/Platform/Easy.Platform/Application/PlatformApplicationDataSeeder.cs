@@ -54,9 +54,9 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
         PlatformGlobal.Configuration.GetValue<int?>(SeedingMinimumDummyItemsCountConfigurationKey) ??
         DefaultSeedingMinimumDummyItemsCount;
 
-    public static int DefaultActiveDelaySeedingInBackgroundBySeconds => 30;
+    public static int DefaultActiveDelaySeedingInBackgroundBySeconds => 5;
     public static int DefaultDelayRetryCheckSeedDataBySeconds => 5;
-    public static int DefaultMaxWaitSeedDataBySyncMessagesBySeconds => DefaultDelayRetryCheckSeedDataBySeconds * 60;
+    public static int DefaultMaxWaitSeedDataBySyncMessagesBySeconds => 300;
 
     /// <summary>
     /// Default is true. Override this if you want to start uow yourself or not want to

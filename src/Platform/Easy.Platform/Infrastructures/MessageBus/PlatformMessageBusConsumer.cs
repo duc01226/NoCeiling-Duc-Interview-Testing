@@ -80,7 +80,7 @@ public interface IPlatformMessageBusConsumer<in TMessage> : IPlatformMessageBusC
 
 public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
 {
-    public const long DefaultProcessWarningTimeMilliseconds = 5000;
+    public const long DefaultProcessWarningTimeMilliseconds = 10000;
 
     public abstract Task HandleAsync(object message, string routingKey);
 
@@ -195,9 +195,9 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
         Logger = CreateLogger(loggerFactory);
     }
 
-    public virtual int RetryOnFailedTimes => 10;
+    public virtual int RetryOnFailedTimes => 3;
 
-    public virtual double RetryOnFailedDelaySeconds => 0.5;
+    public virtual double RetryOnFailedDelaySeconds => 1;
 
     public override Task HandleAsync(object message, string routingKey)
     {
@@ -218,11 +218,11 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
             if (RetryOnFailedTimes > 0)
                 // Retry RetryOnFailedTimes to help resilient consumer. Sometime parallel, create/update concurrency could lead to error
                 await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                    () => HandleLogicAsync(message, routingKey),
+                    () => ExecuteHandleLogicAsync(message, routingKey),
                     retryCount: RetryOnFailedTimes,
                     sleepDurationProvider: retryAttempt => RetryOnFailedDelaySeconds.Seconds());
             else
-                await HandleLogicAsync(message, routingKey);
+                await ExecuteHandleLogicAsync(message, routingKey);
         }
         catch (Exception e)
         {
@@ -232,6 +232,11 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
     }
 
     public abstract Task HandleLogicAsync(TMessage message, string routingKey);
+
+    protected virtual Task ExecuteHandleLogicAsync(TMessage message, string routingKey)
+    {
+        return HandleLogicAsync(message, routingKey);
+    }
 
     public virtual bool HandleWhen(TMessage message, string routingKey)
     {

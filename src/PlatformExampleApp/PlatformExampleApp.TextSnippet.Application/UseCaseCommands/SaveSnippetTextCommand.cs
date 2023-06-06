@@ -191,6 +191,9 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
                 });
      */
 
+    // DEMO USE FailedRetryCount, FOR EXAMPLE Use retry to fix sometime get concurrency exception
+    //public override int FailedRetryCount => 2;
+
     /// <summary>
     /// DEMO ADDITIONAL VALIDATE REQUEST ASYNC IF NEEDED, OVERRIDE THE FUNCTION ValidateRequestAsync
     /// </summary>

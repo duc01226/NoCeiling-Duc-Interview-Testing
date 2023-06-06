@@ -74,7 +74,8 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
         {
             Logger.LogError(
                 ex,
-                "SendOutboxEventBusMessages failed. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly_FullName}]",
+                "SendOutboxEventBusMessages failed. [[Error:{Error}]]. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly_FullName}]",
+                ex.Message,
                 applicationSettingContext.ApplicationName,
                 applicationSettingContext.ApplicationAssembly.FullName);
         }
@@ -89,7 +90,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
             var toHandleMessages = await PopToHandleOutboxEventBusMessages(cancellationToken);
 
             await toHandleMessages
-                .Select(
+                .ParallelAsync(
                     async toHandleOutboxMessage =>
                     {
                         using (var scope = ServiceProvider.CreateScope())
@@ -106,15 +107,15 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
                             {
                                 Logger.LogError(
                                     e,
-                                    "[PlatformSendOutboxEventBusMessageHostedService] Failed to produce outbox message. " +
+                                    "[PlatformSendOutboxEventBusMessageHostedService] Failed to produce outbox message. [[Error:{Error}]]" +
                                     "Id:{OutboxMessageId} failed. " +
                                     "Message Content:{OutboxMessage}",
+                                    e.Message,
                                     toHandleOutboxMessage.Id,
                                     toHandleOutboxMessage.ToJson());
                             }
                         }
-                    })
-                .WhenAll();
+                    });
         } while (await IsAnyMessagesToHandleAsync());
     }
 
@@ -124,7 +125,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
             (IPlatformOutboxBusMessageRepository outboxEventBusMessageRepo) =>
             {
                 return outboxEventBusMessageRepo!.AnyAsync(
-                    PlatformOutboxBusMessage.ToHandleOutboxEventBusMessagesExpr(MessageProcessingMaximumTimeInSeconds()));
+                    PlatformOutboxBusMessage.CanHandleMessagesExpr(MessageProcessingMaximumTimeInSeconds()));
             });
     }
 
@@ -180,7 +181,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
                     {
                         var toHandleMessages = await outboxEventBusMessageRepo.GetAllAsync(
                             queryBuilder: query => query
-                                .Where(PlatformOutboxBusMessage.ToHandleOutboxEventBusMessagesExpr(MessageProcessingMaximumTimeInSeconds()))
+                                .Where(PlatformOutboxBusMessage.CanHandleMessagesExpr(MessageProcessingMaximumTimeInSeconds()))
                                 .OrderBy(p => p.LastSendDate)
                                 .Take(NumberOfProcessSendOutboxMessagesBatch()),
                             cancellationToken);
@@ -224,10 +225,10 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
         return OutboxConfig.ProcessSendMessageRetryCount;
     }
 
-    /// <inheritdoc cref="PlatformOutboxConfig.MessageProcessingMaximumTimeInSeconds" />
+    /// <inheritdoc cref="PlatformOutboxConfig.MessageProcessingMaxSeconds" />
     protected virtual double MessageProcessingMaximumTimeInSeconds()
     {
-        return OutboxConfig.MessageProcessingMaximumTimeInSeconds;
+        return OutboxConfig.MessageProcessingMaxSeconds;
     }
 
     protected bool HasOutboxEventBusMessageRepositoryRegistered()

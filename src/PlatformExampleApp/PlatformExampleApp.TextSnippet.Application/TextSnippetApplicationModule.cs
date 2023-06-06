@@ -1,5 +1,7 @@
 using Easy.Platform.Application;
 using Easy.Platform.Application.Context;
+using Easy.Platform.Application.MessageBus.InboxPattern;
+using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Microsoft.Extensions.Configuration;
 using PlatformExampleApp.TextSnippet.Domain;
 
@@ -54,4 +56,16 @@ public class TextSnippetApplicationModule : PlatformApplicationModule
     //            /* Your custom converters if existed*/
     //        });
     //}
+
+    // Demo override to config inbox/outbox config
+    protected override PlatformInboxConfig InboxConfigProvider(IServiceProvider serviceProvider)
+    {
+        return base.InboxConfigProvider(serviceProvider).With(_ => _.MaxStoreProcessedMessageCount = 100);
+    }
+
+    // Demo override to config inbox/outbox config
+    protected override PlatformOutboxConfig OutboxConfigProvider(IServiceProvider serviceProvider)
+    {
+        return base.OutboxConfigProvider(serviceProvider).With(_ => _.MaxStoreProcessedMessageCount = 100);
+    }
 }

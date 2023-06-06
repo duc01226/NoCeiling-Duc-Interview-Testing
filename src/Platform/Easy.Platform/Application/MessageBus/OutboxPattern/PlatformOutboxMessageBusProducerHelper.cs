@@ -77,7 +77,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         }
     }
 
-    public static async Task SendOutboxMessageAsync<TMessage>(
+    public async Task SendOutboxMessageAsync<TMessage>(
         TMessage message,
         string routingKey,
         double retryProcessFailedMessageInSecondsUnit,
@@ -89,24 +89,18 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         IPlatformMessageBusProducer messageBusProducer,
         IUnitOfWorkManager unitOfWorkManager) where TMessage : class, new()
     {
-        if (handleExistingOutboxMessage != null)
-        {
-            if (handleExistingOutboxMessage.SendStatus is
-                PlatformOutboxBusMessage.SendStatuses.New
-                or PlatformOutboxBusMessage.SendStatuses.Failed
-                or PlatformOutboxBusMessage.SendStatuses.Processing)
-                await SendExistingOutboxMessageAsync(
-                    handleExistingOutboxMessage,
-                    message,
-                    routingKey,
-                    retryProcessFailedMessageInSecondsUnit,
-                    cancellationToken,
-                    logger,
-                    messageBusProducer,
-                    outboxBusMessageRepository);
-        }
-        else
-        {
+        if (handleExistingOutboxMessage != null &&
+            PlatformOutboxBusMessage.CanHandleMessagesExpr(outboxConfig.MessageProcessingMaxSeconds).Compile()(handleExistingOutboxMessage))
+            await SendExistingOutboxMessageAsync(
+                handleExistingOutboxMessage,
+                message,
+                routingKey,
+                retryProcessFailedMessageInSecondsUnit,
+                cancellationToken,
+                logger,
+                messageBusProducer,
+                outboxBusMessageRepository);
+        else if (handleExistingOutboxMessage == null)
             await SaveAndTrySendNewOutboxMessageAsync(
                 message,
                 routingKey,
@@ -116,7 +110,6 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 logger,
                 unitOfWorkManager,
                 outboxBusMessageRepository);
-        }
     }
 
     public static async Task SendExistingOutboxMessageAsync<TMessage>(
@@ -147,7 +140,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "SendExistingOutboxMessageAsync failed.");
+            logger.LogError(exception, "SendExistingOutboxMessageAsync failed. [[Error:{Error}]]", exception.Message);
 
             await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
                 UpdateExistingOutboxMessageFailedInNewUowAsync,
@@ -257,7 +250,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             retryCount: DefaultResilientRetiredCount);
     }
 
-    protected static async Task SaveAndTrySendNewOutboxMessageAsync<TMessage>(
+    protected async Task SaveAndTrySendNewOutboxMessageAsync<TMessage>(
         TMessage message,
         string routingKey,
         double retryProcessFailedMessageInSecondsUnit,
@@ -270,58 +263,64 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
     {
         var messageTrackId = message.As<IPlatformTrackableBusMessage>()?.TrackingId;
 
-        var isMessageExisting = await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-            () => outboxBusMessageRepository.AnyAsync(p => p.Id == PlatformOutboxBusMessage.BuildId(messageTrackId), cancellationToken),
-            sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
-            retryCount: DefaultResilientRetiredCount);
-        if (isMessageExisting) return;
+        var existedOutboxMessage = messageTrackId != null
+            ? await outboxBusMessageRepository.FirstOrDefaultAsync(
+                p => p.Id == PlatformOutboxBusMessage.BuildId(messageTrackId),
+                cancellationToken)
+            : null;
 
-        var newProcessingOutboxMessage = PlatformOutboxBusMessage.Create(
-            message,
-            messageTrackId,
-            routingKey,
-            PlatformOutboxBusMessage.SendStatuses.Processing);
+        var newOutboxMessage = existedOutboxMessage == null
+            ? await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                () => outboxBusMessageRepository.CreateAsync(
+                    PlatformOutboxBusMessage.Create(
+                        message,
+                        messageTrackId,
+                        routingKey,
+                        PlatformOutboxBusMessage.SendStatuses.Processing),
+                    dismissSendEvent: true,
+                    sendEntityEventConfigure: null,
+                    cancellationToken),
+                sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
+                retryCount: DefaultResilientRetiredCount)
+            : null;
 
-        var createdProcessingOutboxMessage = await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-            () => outboxBusMessageRepository.CreateAsync(
-                newProcessingOutboxMessage,
-                dismissSendEvent: true,
-                sendEntityEventConfigure: null,
-                cancellationToken),
-            sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
-            retryCount: DefaultResilientRetiredCount);
+        var toProcessInboxMessage = existedOutboxMessage ?? newOutboxMessage;
 
-        var currentActiveUow = unitOfWorkManager.TryGetCurrentOrCreatedActiveUow(sourceOutboxUowId);
-        // WHY: Do not need to wait for uow completed if the uow for db do not handle actually transaction.
-        // Can execute it immediately without waiting for uow to complete
-        if (currentActiveUow == null)
-            Util.TaskRunner.QueueActionInBackground(
-                async () => await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
-                    SendExistingOutboxMessageAsync<TMessage>,
-                    createdProcessingOutboxMessage,
-                    message,
-                    routingKey,
-                    retryProcessFailedMessageInSecondsUnit,
-                    cancellationToken,
-                    logger),
-                loggerFactory: CreateLogger,
-                cancellationToken: cancellationToken);
-        else
-            currentActiveUow.OnCompletedActions.Add(
-                async () =>
-                {
-                    // Try to process sending newProcessingOutboxMessage first time immediately after task completed
-                    // WHY: we can wait for the background process handle the message but try to do it
-                    // immediately if possible is better instead of waiting for the background process
-                    await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
-                        SendExistingOutboxMessageInNewUowAsync<TMessage>,
-                        createdProcessingOutboxMessage,
+        if (existedOutboxMessage == null ||
+            PlatformOutboxBusMessage.CanHandleMessagesExpr(outboxConfig.MessageProcessingMaxSeconds).Compile()(existedOutboxMessage))
+        {
+            var currentActiveUow = unitOfWorkManager.TryGetCurrentOrCreatedActiveUow(sourceOutboxUowId);
+            // WHY: Do not need to wait for uow completed if the uow for db do not handle actually transaction.
+            // Can execute it immediately without waiting for uow to complete
+            if (currentActiveUow == null)
+                Util.TaskRunner.QueueActionInBackground(
+                    async () => await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
+                        SendExistingOutboxMessageAsync<TMessage>,
+                        toProcessInboxMessage,
                         message,
                         routingKey,
                         retryProcessFailedMessageInSecondsUnit,
                         cancellationToken,
-                        logger);
-                });
+                        logger),
+                    loggerFactory: CreateLogger,
+                    cancellationToken: cancellationToken);
+            else
+                currentActiveUow.OnCompletedActions.Add(
+                    async () =>
+                    {
+                        // Try to process sending newProcessingOutboxMessage first time immediately after task completed
+                        // WHY: we can wait for the background process handle the message but try to do it
+                        // immediately if possible is better instead of waiting for the background process
+                        await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
+                            SendExistingOutboxMessageInNewUowAsync<TMessage>,
+                            toProcessInboxMessage,
+                            message,
+                            routingKey,
+                            retryProcessFailedMessageInSecondsUnit,
+                            cancellationToken,
+                            logger);
+                    });
+        }
     }
 
     private static ILogger CreateLogger()
@@ -333,8 +332,9 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
     {
         logger.LogError(
             exception,
-            $"Error Send message [RoutingKey:{{ExistingOutboxMessage_RoutingKey}}], [Type:{{ExistingOutboxMessage_MessageTypeFullName}}].{Environment.NewLine}" +
+            $"Error Send message [Type:{{ExistingOutboxMessage_MessageTypeFullName}}]; [[Error:{{Error}}]].{Environment.NewLine}" +
             $"Message Info: ${{ExistingOutboxMessage_JsonMessage}}.{Environment.NewLine}",
+            exception.Message,
             existingOutboxMessage.RoutingKey,
             existingOutboxMessage.MessageTypeFullName,
             existingOutboxMessage.JsonMessage);

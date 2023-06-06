@@ -69,8 +69,9 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
         CreateLogger(loggerFactory)
             .LogError(
                 exception,
-                "[PlatformCqrsEventBusMessageProducer] Failed to send {MessageName}. MessageContent: {MessageContent}.",
+                "[PlatformCqrsEventBusMessageProducer] Failed to send {MessageName}. [[Error:{Error}]]. MessageContent: {MessageContent}.",
                 typeof(TMessage).FullName,
+                exception.Message,
                 exception.As<PlatformMessageBusException<TMessage>>()?.EventBusMessage.ToJson());
     }
 

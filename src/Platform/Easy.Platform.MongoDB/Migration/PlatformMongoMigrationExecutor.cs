@@ -20,7 +20,7 @@ public abstract class PlatformMongoMigrationExecutor<TDbContext>
     /// if you run a fresh new system with no db, db is init created after 2000/12/31, the migration will be not executed.
     /// This will help to prevent run not necessary data migration for a new system fresh db
     /// </summary>
-    public virtual DateTime? OnlyForDbInitBeforeDate { get; }
+    public virtual DateTime? OnlyForDbInitBeforeDate { get; } = null;
 
     public abstract Task Execute(TDbContext dbContext);
 

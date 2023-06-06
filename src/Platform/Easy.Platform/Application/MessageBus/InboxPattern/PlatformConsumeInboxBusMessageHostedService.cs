@@ -93,10 +93,21 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         {
             var toHandleMessages = await PopToHandleInboxEventBusMessages(cancellationToken);
 
-            // Group by TrackId to handling multiple consumer with same message parallel
+            // Group by ConsumerBy to handling multiple different consumers parallel
             await toHandleMessages
-                .GroupBy(p => p.GetTrackId())
-                .ForEachAsync(consumerMessages => consumerMessages.Select(HandleInboxMessageAsync).WhenAll());
+                .GroupBy(p => p.ConsumerBy)
+                .ParallelAsync(
+                    async consumerMessages =>
+                    {
+                        // Message in the same consumer queue but created on the same seconds usually from different data/users and not dependent,
+                        // so that we could process it in parallel
+                        await consumerMessages
+                            .GroupBy(p => p.CreatedDate.AddMilliseconds(-p.CreatedDate.Millisecond))
+                            .ForEachAsync(groupSameTimeSeconds => groupSameTimeSeconds.Select(HandleInboxMessageAsync).WhenAll());
+                    });
+
+            // Random wait to decrease the chance that multiple deploy instance could process same messages at the same time
+            await Task.Delay(Util.RandomGenerator.Next(0, 10000).Milliseconds(), cancellationToken);
         } while (await IsAnyMessagesToHandleAsync());
 
         async Task HandleInboxMessageAsync(PlatformInboxBusMessage toHandleInboxMessage)
@@ -128,7 +139,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
             (IPlatformInboxBusMessageRepository inboxEventBusMessageRepo) =>
             {
                 return inboxEventBusMessageRepo!.AnyAsync(
-                    PlatformInboxBusMessage.ToHandleInboxEventBusMessagesExpr(MessageProcessingMaximumTimeInSeconds()));
+                    PlatformInboxBusMessage.CanHandleMessagesExpr(MessageProcessingMaximumTimeInSeconds()));
             });
     }
 
@@ -154,7 +165,8 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                     consumer.CustomJsonSerializerOptions()),
                 ex => Logger.LogError(
                     ex,
-                    $"RabbitMQ parsing message to {consumerMessageType.Name} error for the routing key {toHandleInboxMessage.RoutingKey}.{Environment.NewLine} Body: {{InboxMessage}}",
+                    $"RabbitMQ parsing message to {consumerMessageType.Name}. [[Error:{{Error}}]].{Environment.NewLine} Body: {{InboxMessage}}",
+                    ex.Message,
                     toHandleInboxMessage.JsonMessage));
 
             if (busMessage != null)
@@ -162,7 +174,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                     consumer,
                     busMessage,
                     toHandleInboxMessage.RoutingKey,
-                    IsLogConsumerProcessTime(),
+                    EnableLogConsumerProcessTime(),
                     LogErrorSlowProcessWarningTimeMilliseconds(),
                     InvokeConsumerLogger);
         }
@@ -190,10 +202,12 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                     {
                         var toHandleMessages = await inboxEventBusMessageRepo.GetAllAsync(
                             queryBuilder: query => query
-                                .Where(PlatformInboxBusMessage.ToHandleInboxEventBusMessagesExpr(MessageProcessingMaximumTimeInSeconds()))
+                                .Where(PlatformInboxBusMessage.CanHandleMessagesExpr(MessageProcessingMaximumTimeInSeconds()))
                                 .OrderBy(p => p.LastConsumeDate)
                                 .Take(NumberOfProcessMessagesBatch()),
                             cancellationToken);
+
+                        if (toHandleMessages.IsEmpty()) return toHandleMessages;
 
                         toHandleMessages.ForEach(
                             p =>
@@ -237,16 +251,16 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         return inboxConfig.ProcessConsumeMessageRetryCount;
     }
 
-    /// <inheritdoc cref="PlatformInboxConfig.MessageProcessingMaximumTimeInSeconds" />
+    /// <inheritdoc cref="PlatformInboxConfig.MessageProcessingMaxiSeconds" />
     protected virtual double MessageProcessingMaximumTimeInSeconds()
     {
-        return inboxConfig.MessageProcessingMaximumTimeInSeconds;
+        return inboxConfig.MessageProcessingMaxiSeconds;
     }
 
-    /// <inheritdoc cref="PlatformInboxConfig.IsLogConsumerProcessTime" />
-    protected virtual bool IsLogConsumerProcessTime()
+    /// <inheritdoc cref="PlatformInboxConfig.EnableLogConsumerProcessTime" />
+    protected virtual bool EnableLogConsumerProcessTime()
     {
-        return inboxConfig.IsLogConsumerProcessTime;
+        return inboxConfig.EnableLogConsumerProcessTime;
     }
 
     /// <inheritdoc cref="PlatformInboxConfig.LogErrorSlowProcessWarningTimeMilliseconds" />

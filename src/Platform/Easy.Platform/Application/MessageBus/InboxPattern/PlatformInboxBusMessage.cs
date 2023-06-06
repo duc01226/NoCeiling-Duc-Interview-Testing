@@ -41,7 +41,7 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
 
     public Guid? ConcurrencyUpdateToken { get; set; }
 
-    public static Expression<Func<PlatformInboxBusMessage, bool>> ToHandleInboxEventBusMessagesExpr(
+    public static Expression<Func<PlatformInboxBusMessage, bool>> CanHandleMessagesExpr(
         double messageProcessingMaximumTimeInSeconds)
     {
         return p => p.ConsumeStatus == ConsumeStatuses.New ||
@@ -51,7 +51,7 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
                      p.LastConsumeDate <= Clock.UtcNow.AddSeconds(-messageProcessingMaximumTimeInSeconds));
     }
 
-    public static Expression<Func<PlatformInboxBusMessage, bool>> ToCleanInboxEventBusMessagesExpr(
+    public static Expression<Func<PlatformInboxBusMessage, bool>> ToCleanExpiredMessagesByTimeExpr(
         double deleteProcessedMessageInSeconds,
         double deleteExpiredFailedMessageInSeconds)
     {
@@ -63,7 +63,7 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
 
     public static string BuildId(string trackId, Type consumerType)
     {
-        return $"{trackId ?? Guid.NewGuid().ToString()}{BuildIdSeparator}{consumerType.Name}";
+        return $"{trackId ?? Guid.NewGuid().ToString()}{BuildIdSeparator}{consumerType.Name}".TakeTop(IdMaxLength);
     }
 
     public static DateTime CalculateNextRetryProcessAfter(
@@ -87,9 +87,9 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
 
         var result = new PlatformInboxBusMessage
         {
-            Id = BuildId(trackId, consumerType).TakeTop(IdMaxLength),
+            Id = BuildId(trackId, consumerType),
             JsonMessage = message.ToFormattedJson(),
-            MessageTypeFullName = message.GetType().FullName.TakeTop(MessageTypeFullNameMaxLength),
+            MessageTypeFullName = message.GetType().FullName?.TakeTop(MessageTypeFullNameMaxLength),
             ProduceFrom = produceFrom,
             RoutingKey = routingKey.TakeTop(RoutingKeyMaxLength),
             LastConsumeDate = nowDate,

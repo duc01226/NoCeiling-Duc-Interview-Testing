@@ -1,5 +1,4 @@
-using System.Reflection;
-using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.ObjectPool;
 using RabbitMQ.Client;
 
@@ -10,21 +9,21 @@ namespace Easy.Platform.RabbitMQ;
 /// We want to use pool when object is expensive to allocate/initialize
 /// References: https://docs.microsoft.com/en-us/aspnet/core/performance/objectpool?view=aspnetcore-5.0
 /// </summary>
-public class PlatformRabbitMqChannelPool : DefaultObjectPool<IModel>, IDisposable
+public class PlatformRabbitMqChannelPool : IDisposable
 {
-    private readonly PlatformRabbitMqChannelPoolPolicy channelPoolPolicy;
+    protected readonly ConcurrentDictionary<int, IModel> CachedChannelPerThreadDict = new();
+    protected readonly PlatformRabbitMqChannelPoolPolicy ChannelPoolPolicy;
+    protected readonly ConcurrentDictionary<int, IModel> CreatedChannelDict = new();
 
-    public PlatformRabbitMqChannelPool(PlatformRabbitMqChannelPoolPolicy channelPoolPolicy) : base(
-        channelPoolPolicy,
-        maximumRetained: 1)
+    protected readonly SemaphoreSlim InitInternalObjectPoolLock = new(1, 1);
+    protected DefaultObjectPool<IModel> InternalObjectPool;
+
+    public PlatformRabbitMqChannelPool(PlatformRabbitMqChannelPoolPolicy channelPoolPolicy)
     {
-        this.channelPoolPolicy = channelPoolPolicy;
+        ChannelPoolPolicy = channelPoolPolicy;
     }
 
-    /// <summary>
-    /// GlobalChannel should be used for consumer only
-    /// </summary>
-    public IModel GlobalChannel { get; protected set; }
+    public int MaximumRetained { get; set; } = Environment.ProcessorCount * 2;
 
     public void Dispose()
     {
@@ -32,135 +31,61 @@ public class PlatformRabbitMqChannelPool : DefaultObjectPool<IModel>, IDisposabl
         GC.SuppressFinalize(this);
     }
 
-    public override IModel Get()
+    public IModel Get()
     {
-        var channelFromPool = base.Get();
+        InitInternalObjectPool();
 
-        if (channelFromPool.IsOpen == false || channelFromPool.IsClosed)
-            return channelPoolPolicy.Create();
+        var channel = InternalObjectPool!.Get();
 
-        return channelFromPool;
+        CreatedChannelDict.TryAdd(channel.ChannelNumber, channel);
+
+        return channel;
     }
 
-    public IModel InitGlobalChannel()
+    public IModel GetCachedChannelPerThread()
     {
-        ResetGlobalChannel();
-        return GlobalChannel ??= channelPoolPolicy.Create();
+        return CachedChannelPerThreadDict.GetOrAdd(Environment.CurrentManagedThreadId, threadId => Get());
     }
 
-    public void ResetGlobalChannel()
+    private void InitInternalObjectPool()
     {
-        if (GlobalChannel?.IsOpen == true) GlobalChannel.Close();
-        GlobalChannel?.Dispose();
-        GlobalChannel = null;
+        if (InternalObjectPool == null)
+            InitInternalObjectPoolLock.ExecuteLockAction(() => InternalObjectPool ??= new DefaultObjectPool<IModel>(ChannelPoolPolicy, MaximumRetained));
+    }
+
+    public void Return(IModel obj)
+    {
+        InternalObjectPool.Return(obj);
+    }
+
+    public void TryInitFirstChannel()
+    {
+        var tryGetChannelTestSuccess = Get();
+
+        Return(tryGetChannelTestSuccess);
+    }
+
+    public void GetChannelDoActionAndReturn(Action<IModel> action)
+    {
+        var channel = Get();
+
+        try
+        {
+            action(channel);
+        }
+        finally
+        {
+            Return(channel);
+        }
     }
 
     protected virtual void Dispose(bool disposing)
     {
-        GlobalChannel?.Dispose();
-    }
-}
-
-public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>
-{
-    private readonly IConnectionFactory connectionFactory;
-
-    private Lazy<IConnection> connectionInitializer;
-    private readonly ILogger<PlatformRabbitMqChannelPoolPolicy> logger;
-    private readonly PlatformRabbitMqOptions options;
-
-    public PlatformRabbitMqChannelPoolPolicy(
-        PlatformRabbitMqOptions options,
-        ILogger<PlatformRabbitMqChannelPoolPolicy> logger)
-    {
-        this.options = options;
-        this.logger = logger;
-
-        connectionFactory = InitializeFactory();
-        connectionInitializer = new Lazy<IConnection>(CreateConnection);
-    }
-
-    public IModel Create()
-    {
-        try
+        if (disposing)
         {
-            return connectionInitializer.Value.CreateModel();
+            CachedChannelPerThreadDict.ForEach(p => p.Value.Dispose());
+            CreatedChannelDict.ForEach(p => p.Value.Dispose());
+            ChannelPoolPolicy?.Dispose();
         }
-        catch (Exception)
-        {
-            ReInitNewConnectionInitializer();
-            throw;
-        }
-    }
-
-    public bool Return(IModel obj)
-    {
-        return obj is { IsClosed: false, IsOpen: true };
-    }
-
-    /// <summary>
-    /// Connection hang up during broker node restarted
-    /// in this case, try to close old and create new connection
-    /// </summary>
-    private void ReInitNewConnectionInitializer()
-    {
-        try
-        {
-            connectionInitializer.Value.Close();
-            connectionInitializer.Value.Dispose();
-        }
-        catch (Exception releaseEx)
-        {
-            logger.LogDebug(releaseEx, "Release rabbit-mq old connection failed.");
-        }
-        finally
-        {
-            connectionInitializer = new Lazy<IConnection>(CreateConnection);
-        }
-    }
-
-    private IConnectionFactory InitializeFactory()
-    {
-        var connectionFactoryResult = new ConnectionFactory
-        {
-            AutomaticRecoveryEnabled = true, //https://www.rabbitmq.com/dotnet-api-guide.html#recovery
-            NetworkRecoveryInterval = TimeSpan.FromSeconds(options.NetworkRecoveryIntervalSeconds),
-            UserName = options.Username,
-            Password = options.Password,
-            VirtualHost = options.VirtualHost,
-            Port = options.Port,
-            DispatchConsumersAsync = true,
-            RequestedConnectionTimeout = TimeSpan.FromSeconds(options.RequestedConnectionTimeoutSeconds),
-            ClientProvidedName = options.ClientProvidedName ?? Assembly.GetEntryAssembly()?.FullName
-        };
-
-        return connectionFactoryResult;
-    }
-
-    private IConnection CreateConnection()
-    {
-        // Store stack trace before call CreateConnection to keep the original stack trace to log
-        // after CreateConnection will lose full stack trace (may because it connect async to other external service)
-        var fullStackTrace = Environment.StackTrace;
-
-        return Util.TaskRunner.WaitRetryThrowFinalException(
-            () =>
-            {
-                try
-                {
-                    var hostNames = options.HostNames.Split(',')
-                        .Where(hostName => hostName.IsNotNullOrEmpty())
-                        .ToArray();
-
-                    return connectionFactory.CreateConnection(hostNames);
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception(
-                        $"{GetType().Name} CreateConnection failed. [[Exception:{ex}]]. [[FullStackTrace: {ex.StackTrace}{Environment.NewLine}FromFullStackTrace:{fullStackTrace}]]");
-                }
-            },
-            retryAttempt => 1.Seconds(),
-            retryCount: 10);
     }
 }

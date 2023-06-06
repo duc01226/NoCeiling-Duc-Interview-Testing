@@ -22,7 +22,8 @@ public static partial class Util
             TimeSpan delayTime,
             CancellationToken cancellationToken = default)
         {
-            await Task.Delay(delayTime, cancellationToken);
+            if (delayTime > TimeSpan.Zero)
+                await Task.Delay(delayTime, cancellationToken);
             await action(cancellationToken);
         }
 
@@ -34,7 +35,8 @@ public static partial class Util
             TimeSpan delayTime,
             CancellationToken cancellationToken = default)
         {
-            await Task.Delay(delayTime, cancellationToken);
+            if (delayTime > TimeSpan.Zero)
+                await Task.Delay(delayTime, cancellationToken);
             return await action(cancellationToken);
         }
 
@@ -46,60 +48,9 @@ public static partial class Util
             TimeSpan delayTime,
             CancellationToken cancellationToken = default)
         {
-            await Task.Delay(delayTime, cancellationToken);
+            if (delayTime > TimeSpan.Zero)
+                await Task.Delay(delayTime, cancellationToken);
             action();
-        }
-
-        public static void QueueActionInBackground(
-            Func<CancellationToken, Task> action,
-            Func<ILogger> loggerFactory,
-            int delayTimeSeconds = 0,
-            CancellationToken cancellationToken = default)
-        {
-            // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
-            var fullStackTrace = Environment.StackTrace;
-
-            Task.Run(
-                async () =>
-                {
-                    PlatformGlobalLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
-
-                    try
-                    {
-                        await QueueDelayAsyncAction(action, TimeSpan.FromSeconds(delayTimeSeconds), cancellationToken);
-                    }
-                    catch (Exception ex)
-                    {
-                        loggerFactory().LogError(ex, "Run in background thread failed.");
-                    }
-                },
-                cancellationToken);
-        }
-
-        public static void QueueActionInBackground<TResult>(
-            Func<CancellationToken, Task<TResult>> action,
-            Func<ILogger> loggerFactory,
-            int delayTimeSeconds = 0,
-            CancellationToken cancellationToken = default)
-        {
-            // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
-            var fullStackTrace = Environment.StackTrace;
-
-            Task.Run(
-                async () =>
-                {
-                    PlatformGlobalLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
-
-                    try
-                    {
-                        await QueueDelayAsyncAction(action, TimeSpan.FromSeconds(delayTimeSeconds), cancellationToken);
-                    }
-                    catch (Exception ex)
-                    {
-                        loggerFactory().LogError(ex, "Run in background thread failed.");
-                    }
-                },
-                cancellationToken);
         }
 
         public static void QueueActionInBackground(
@@ -108,7 +59,24 @@ public static partial class Util
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default)
         {
-            QueueActionInBackground(_ => action(), loggerFactory, delayTimeSeconds, cancellationToken);
+            // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
+            var fullStackTrace = Environment.StackTrace;
+
+            Task.Run(
+                async () =>
+                {
+                    PlatformGlobalLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
+
+                    try
+                    {
+                        await QueueDelayAsyncAction(_ => action(), delayTimeSeconds.Seconds(), cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        loggerFactory().LogError(ex, "Run in background thread failed.");
+                    }
+                },
+                cancellationToken);
         }
 
         public static void QueueActionInBackground<TResult>(
@@ -117,7 +85,24 @@ public static partial class Util
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default)
         {
-            QueueActionInBackground(_ => action(), loggerFactory, delayTimeSeconds, cancellationToken);
+            // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
+            var fullStackTrace = Environment.StackTrace;
+
+            Task.Run(
+                async () =>
+                {
+                    PlatformGlobalLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
+
+                    try
+                    {
+                        await QueueDelayAsyncAction(_ => action(), delayTimeSeconds.Seconds(), cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        loggerFactory().LogError(ex, "Run in background thread failed.");
+                    }
+                },
+                cancellationToken);
         }
 
         public static void QueueActionInBackground(
@@ -136,7 +121,7 @@ public static partial class Util
 
                     try
                     {
-                        await QueueDelayAction(action, TimeSpan.FromSeconds(delayTimeSeconds), cancellationToken);
+                        await QueueDelayAction(action, delayTimeSeconds.Seconds(), cancellationToken);
                     }
                     catch (Exception ex)
                     {
@@ -151,14 +136,19 @@ public static partial class Util
             Func<CancellationToken, Task> action,
             int intervalTimeInSeconds,
             int? maximumIntervalExecutionCount = null,
-            bool executeOnceImmediately = false,
+            bool executeOnceImmediately = true,
             CancellationToken cancellationToken = default)
         {
-            if (executeOnceImmediately) await action(cancellationToken);
+            var executionCount = 0;
+
+            if (executeOnceImmediately)
+            {
+                await action(cancellationToken);
+                executionCount += 1;
+            }
 
             if (maximumIntervalExecutionCount <= 0) return;
 
-            var executionCount = 0;
             while (executionCount < maximumIntervalExecutionCount)
             {
                 await Task.Delay(TimeSpan.FromSeconds(intervalTimeInSeconds), cancellationToken);
@@ -172,7 +162,7 @@ public static partial class Util
             int intervalTimeInSeconds,
             Func<ILogger> loggerFactory,
             int? maximumIntervalExecutionCount = null,
-            bool executeOnceImmediately = false,
+            bool executeOnceImmediately = true,
             CancellationToken cancellationToken = default)
         {
             // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
@@ -391,22 +381,22 @@ public static partial class Util
 
         public static Task WhenAll(params Task[] tasks)
         {
-            return tasks.ForEachAsync(p => p);
+            return Task.WhenAll(tasks);
         }
 
         public static Task WhenAll(IEnumerable<Task> tasks)
         {
-            return tasks.ForEachAsync(p => p);
+            return Task.WhenAll(tasks);
         }
 
         public static Task<List<T>> WhenAll<T>(IEnumerable<Task<T>> tasks)
         {
-            return tasks.SelectAsync(p => p);
+            return Task.WhenAll(tasks).Then(_ => _.ToList());
         }
 
         public static Task<List<T>> WhenAll<T>(params Task<T>[] tasks)
         {
-            return tasks.SelectAsync(p => p);
+            return Task.WhenAll(tasks).Then(_ => _.ToList());
         }
 
         public static async Task<ValueTuple<T1, T2>> WhenAll<T1, T2>(Task<T1> task1, Task<T2> task2)
@@ -812,7 +802,7 @@ public static partial class Util
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {
-            return WaitUntil(target, condition, continueWaitOnlyWhen.ToFunc(), maxWaitSeconds, waitForMsg);
+            return WaitUntil(target, condition, continueWaitOnlyWhen?.ToFunc(), maxWaitSeconds, waitForMsg);
         }
 
         public static TResult WaitUntilGetValidResult<T, TResult, TAny>(
@@ -862,8 +852,56 @@ public static partial class Util
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {
-            return WaitUntilGetValidResult(target, getResult, condition, continueWaitOnlyWhen.ToFunc(), maxWaitSeconds, waitForMsg);
+            return WaitUntilGetValidResult(target, getResult, condition, continueWaitOnlyWhen?.ToFunc(), maxWaitSeconds, waitForMsg);
         }
+
+        public static void WaitUntilSuccess<T>(
+            T target,
+            Action<T> action,
+            double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
+            string waitForMsg = null)
+        {
+            WaitUntilSuccess<T, object>(target, action, continueWaitOnlyWhen: null, maxWaitSeconds, waitForMsg);
+        }
+
+        public static void WaitUntilSuccess<T, TAny>(
+            T target,
+            Action<T> action,
+            Func<T, TAny> continueWaitOnlyWhen = null,
+            double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
+            string waitForMsg = null)
+        {
+            var startWaitTime = DateTime.UtcNow;
+            var maxWaitMilliseconds = maxWaitSeconds * 1000;
+
+            try
+            {
+                while (true)
+                {
+                    continueWaitOnlyWhen?.Invoke(target);
+
+                    try
+                    {
+                        action(target);
+                    }
+                    catch (Exception e)
+                    {
+                        if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
+                            Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
+                        else
+                            throw new TimeoutException(
+                                $"WaitUntilGetSuccess is timed out (Max: {maxWaitSeconds} seconds)." +
+                                $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}" +
+                                $"{Environment.NewLine}Error: {e.Message}");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                throw new Exception($"{(waitForMsg != null ? $"WaitFor: '{waitForMsg}'" : "Wait")} failed." + $"{Environment.NewLine}Error: {e.Message}");
+            }
+        }
+
 
         public static TResult WaitUntilGetSuccess<T, TResult>(
             T target,
@@ -921,7 +959,7 @@ public static partial class Util
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             string waitForMsg = null)
         {
-            return WaitUntilGetSuccess(target, getResult, continueWaitOnlyWhen.ToFunc(), maxWaitSeconds, waitForMsg);
+            return WaitUntilGetSuccess(target, getResult, continueWaitOnlyWhen?.ToFunc(), maxWaitSeconds, waitForMsg);
         }
 
         public static T WaitUntilToDo<T>(
@@ -1065,17 +1103,17 @@ public static partial class Util
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
             var result = await action();
+            Thread.Sleep((int)(waitIntervalSeconds * 1000));
 
             while (!await until())
             {
-                if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
-                    Thread.Sleep((int)(waitIntervalSeconds * 1000));
-                else
+                if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds >= maxWaitMilliseconds)
                     throw new TimeoutException(
                         $"DoUntil is timed out (Max: {maxWaitSeconds} seconds)." +
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
 
                 result = await action();
+                Thread.Sleep((int)(waitIntervalSeconds * 1000));
             }
 
             return result;

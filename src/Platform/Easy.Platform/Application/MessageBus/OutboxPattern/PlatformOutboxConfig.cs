@@ -19,20 +19,25 @@ public class PlatformOutboxConfig
     public double DeleteProcessedMessageInSeconds { get; set; } = TimeSpan.FromDays(2).TotalSeconds;
 
     /// <summary>
+    /// To config max store processed message count. Will delete old messages of maximum messages happened
+    /// </summary>
+    public int MaxStoreProcessedMessageCount { get; set; } = 100;
+
+    /// <summary>
     /// To config how long a message can live in the database in seconds. Default is two week (14 days);
     /// </summary>
     public double DeleteExpiredFailedMessageInSeconds { get; set; } = TimeSpan.FromDays(14).TotalSeconds;
 
     /// <summary>
-    /// Default number messages is deleted in every process. Default is 10;
+    /// Default number messages is deleted in every process. Default is 100;
     /// </summary>
-    public int NumberOfDeleteMessagesBatch { get; set; } = 10;
+    public int NumberOfDeleteMessagesBatch { get; set; } = 100;
 
     public double MessageCleanerTriggerIntervalInMinutes { get; set; } = 1;
 
     public int ProcessClearMessageRetryCount { get; set; } = 5;
 
-    public int NumberOfProcessSendOutboxMessagesBatch { get; set; } = Environment.ProcessorCount;
+    public int NumberOfProcessSendOutboxMessagesBatch { get; set; } = 100;
 
     public int ProcessSendMessageRetryCount { get; set; } = 10;
 
@@ -41,5 +46,5 @@ public class PlatformOutboxConfig
     /// This to handle that if message for some reason has been set as Processing but failed to process and has not been set
     /// back to failed.
     /// </summary>
-    public int MessageProcessingMaximumTimeInSeconds { get; set; } = 300;
+    public int MessageProcessingMaxSeconds { get; set; } = 1800;
 }

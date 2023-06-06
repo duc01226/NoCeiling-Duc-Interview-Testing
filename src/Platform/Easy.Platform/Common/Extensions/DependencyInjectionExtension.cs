@@ -466,12 +466,13 @@ public static class DependencyInjectionExtension
         bool replaceIfExist = true,
         CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
-        return services.Register(
-            typeof(IHostedService),
-            hostedServiceType,
-            ServiceLifeTime.Singleton,
-            replaceIfExist,
-            replaceStrategy);
+        return services
+            .Register(
+                typeof(IHostedService),
+                hostedServiceType,
+                ServiceLifeTime.Singleton,
+                replaceIfExist,
+                replaceStrategy);
     }
 
     public static IServiceCollection RegisterHostedService<THostedService>(
@@ -479,10 +480,25 @@ public static class DependencyInjectionExtension
         bool replaceIfExist = true,
         CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth) where THostedService : class, IHostedService
     {
-        return services.RegisterHostedService(
-            typeof(THostedService),
-            replaceIfExist,
-            replaceStrategy);
+        services.Register<THostedService>(ServiceLifeTime.Singleton, replaceIfExist: replaceIfExist, replaceStrategy: replaceStrategy);
+        services.RegisterHostedService(sp => sp.GetRequiredService<THostedService>(), replaceIfExist: replaceIfExist, replaceStrategy: replaceStrategy);
+
+        return services;
+    }
+
+    public static IServiceCollection RegisterHostedService<THostedService>(
+        this IServiceCollection services,
+        Func<IServiceProvider, THostedService> implementationFactory,
+        bool replaceIfExist = true,
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth) where THostedService : class, IHostedService
+    {
+        return services
+            .Register(
+                typeof(IHostedService),
+                implementationFactory,
+                ServiceLifeTime.Singleton,
+                replaceIfExist,
+                replaceStrategy);
     }
 
     public static IServiceCollection ReplaceTransient(

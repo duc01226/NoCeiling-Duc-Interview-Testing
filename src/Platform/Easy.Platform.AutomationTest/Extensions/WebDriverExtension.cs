@@ -271,4 +271,10 @@ public static class WebDriverExtension
         webDriver.SwitchTo().Window(webDriver.WindowHandles[tabIndex]);
         return webDriver;
     }
+
+    public static IWebDriver ReloadCurrentPage(this IWebDriver webDriver)
+    {
+        webDriver.Navigate().Refresh();
+        return webDriver;
+    }
 }

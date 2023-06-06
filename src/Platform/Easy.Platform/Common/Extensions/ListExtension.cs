@@ -181,6 +181,17 @@ public static class ListExtension
         for (var i = 0; i < itemsList.Count; i++) await action(itemsList[i], i);
     }
 
+    public static async Task ParallelAsync<T>(this IEnumerable<T> items, Func<T, int, Task> action)
+    {
+        var itemsList = items.As<IList<T>>() ?? items.ToList();
+
+        var taskActionList = new List<Task>();
+
+        for (var i = 0; i < itemsList.Count; i++) taskActionList.Add(action(itemsList[i], i));
+
+        await Task.WhenAll(taskActionList);
+    }
+
     /// <inheritdoc cref="ForEachAsync{T}(IEnumerable{T},Func{T,int,Task})" />
     public static async Task ForEachAsync<T, TActionResult>(this IEnumerable<T> items, Func<T, int, Task<TActionResult>> action)
     {
@@ -227,10 +238,10 @@ public static class ListExtension
         return items.ForEachAsync((item, index) => action(item));
     }
 
-    /// <inheritdoc cref="ForEachAsync{T}(IEnumerable{T},Func{T,int,Task})" />
-    public static Task ForEachAsync<T>(this IList<T> items, Func<T, Task> action)
+    /// <inheritdoc cref="ParallelAsync{T}(IEnumerable{T},Func{T,int,Task})" />
+    public static Task ParallelAsync<T>(this IEnumerable<T> items, Func<T, Task> action)
     {
-        return items.ForEachAsync((item, index) => action(item));
+        return items.ParallelAsync((item, index) => action(item));
     }
 
     /// <inheritdoc cref="ForEachAsync{T}(IEnumerable{T},Func{T,int,Task})" />

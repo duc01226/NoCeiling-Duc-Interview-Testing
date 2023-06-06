@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace Easy.Platform.RabbitMQ.Inbox;
 
 /// <summary>
-/// <inheritdoc cref="PlatformConsumeInboxBusMessageHostedService" />
+///     <inheritdoc cref="PlatformConsumeInboxBusMessageHostedService" />
 /// </summary>
 public class PlatformRabbitMqConsumeInboxBusMessageHostedService : PlatformConsumeInboxBusMessageHostedService
 {
@@ -28,13 +28,13 @@ public class PlatformRabbitMqConsumeInboxBusMessageHostedService : PlatformConsu
         this.options = options;
     }
 
-    protected override bool IsLogConsumerProcessTime()
+    protected override bool EnableLogConsumerProcessTime()
     {
-        return options.IsLogConsumerProcessTime;
+        return options.EnableLogConsumerProcessTime;
     }
 
     protected override double LogErrorSlowProcessWarningTimeMilliseconds()
     {
-        return options.LogErrorSlowProcessWarningTimeMilliseconds;
+        return options.LogSlowProcessingConsumerWarningMilliseconds;
     }
 }

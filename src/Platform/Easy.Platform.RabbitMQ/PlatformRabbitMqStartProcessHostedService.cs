@@ -27,6 +27,6 @@ public class PlatformRabbitMqStartProcessHostedService : PlatformHostedService
 
     protected override async Task StopProcess(CancellationToken cancellationToken)
     {
-        await rabbitMqProcessInitializerService.StopProcess(cancellationToken);
+        await rabbitMqProcessInitializerService.StopProcess();
     }
 }

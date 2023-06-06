@@ -64,7 +64,8 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
         {
             Logger.LogError(
                 ex,
-                $"CleanOutboxEventBusMessage failed. [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]");
+                $"CleanOutboxEventBusMessage failed. [[Error:{{Error}}]] [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]",
+                ex.Message);
         }
 
         isProcessing = false;
@@ -105,10 +106,50 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
 
     protected async Task CleanOutboxEventBusMessage(CancellationToken cancellationToken)
     {
+        var totalProcessedMessages = await ServiceProvider.ExecuteScopedAsync(
+            p => p.ServiceProvider.GetRequiredService<IPlatformOutboxBusMessageRepository>()
+                .CountAsync(p => p.SendStatus == PlatformOutboxBusMessage.SendStatuses.Processed, cancellationToken));
+
+        if (totalProcessedMessages > OutboxConfig.MaxStoreProcessedMessageCount)
+            await ProcessCleanMessageByMaxStoreProcessedMessageCount(cancellationToken, totalProcessedMessages);
+        else
+            await ProcessCleanMessageByExpiredTime(cancellationToken);
+    }
+
+    private async Task ProcessCleanMessageByMaxStoreProcessedMessageCount(CancellationToken cancellationToken, int totalProcessedMessages)
+    {
+        await ServiceProvider.ExecuteInjectScopedScrollingPagingAsync<PlatformOutboxBusMessage>(
+            async (IPlatformOutboxBusMessageRepository outboxEventBusMessageRepo) =>
+            {
+                var toDeleteMessages = await outboxEventBusMessageRepo.GetAllAsync(
+                    queryBuilder: query => query
+                        .Where(p => p.SendStatus == PlatformOutboxBusMessage.SendStatuses.Processed)
+                        .OrderByDescending(p => p.LastSendDate)
+                        .Skip(OutboxConfig.MaxStoreProcessedMessageCount)
+                        .Take(NumberOfDeleteMessagesBatch()),
+                    cancellationToken);
+
+                if (toDeleteMessages.Count > 0)
+                    await outboxEventBusMessageRepo.DeleteManyAsync(
+                        toDeleteMessages,
+                        dismissSendEvent: true,
+                        sendEntityEventConfigure: null,
+                        cancellationToken);
+
+                return toDeleteMessages;
+            });
+
+        Logger.LogInformation(
+            message:
+            $"CleanOutboxEventBusMessage success. Number of deleted messages: {totalProcessedMessages - OutboxConfig.MaxStoreProcessedMessageCount}");
+    }
+
+    private async Task ProcessCleanMessageByExpiredTime(CancellationToken cancellationToken)
+    {
         var toCleanMessageCount = await ServiceProvider.ExecuteScoped(
             scope => scope.ServiceProvider.GetRequiredService<IPlatformOutboxBusMessageRepository>()
                 .CountAsync(
-                    PlatformOutboxBusMessage.ToCleanInboxEventBusMessagesExpr(DeleteProcessedMessageInSeconds(), DeleteExpiredFailedMessageInSeconds()),
+                    PlatformOutboxBusMessage.ToCleanExpiredMessagesByTimeExpr(DeleteProcessedMessageInSeconds(), DeleteExpiredFailedMessageInSeconds()),
                     cancellationToken));
 
         if (toCleanMessageCount > 0)
@@ -121,7 +162,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
                         var expiredMessages = await outboxEventBusMessageRepo.GetAllAsync(
                             queryBuilder: query => query
                                 .Where(
-                                    PlatformOutboxBusMessage.ToCleanInboxEventBusMessagesExpr(
+                                    PlatformOutboxBusMessage.ToCleanExpiredMessagesByTimeExpr(
                                         DeleteProcessedMessageInSeconds(),
                                         DeleteExpiredFailedMessageInSeconds()))
                                 .OrderBy(p => p.LastSendDate)
