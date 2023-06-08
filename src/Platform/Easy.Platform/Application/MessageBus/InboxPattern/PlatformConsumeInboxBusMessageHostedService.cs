@@ -103,7 +103,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                         // so that we could process it in parallel
                         await consumerMessages
                             .GroupBy(p => p.CreatedDate.AddMilliseconds(-p.CreatedDate.Millisecond))
-                            .ForEachAsync(groupSameTimeSeconds => groupSameTimeSeconds.Select(HandleInboxMessageAsync).WhenAll());
+                            .ForEachAsync(groupSameTimeSeconds => groupSameTimeSeconds.ParallelAsync(HandleInboxMessageAsync));
                     });
 
             // Random wait to decrease the chance that multiple deploy instance could process same messages at the same time

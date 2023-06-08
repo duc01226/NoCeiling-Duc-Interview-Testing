@@ -38,8 +38,7 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>, ID
 
             // Config the prefectCount. "defines the max number of unacknowledged deliveries that are permitted on a channel" to limit messages to prevent rabbit mq down
             // Reference: https://www.rabbitmq.com/tutorials/tutorial-two-dotnet.html. Filter: BasicQos
-            // QueuePrefetchCount : Default 1 to apply "Fair Dispatch"
-            channel.BasicQos(prefetchSize: 0, (ushort)(options.QueuePrefetchCount / NumberOfParallelConsumersPerQueue.Value), false);
+            channel.BasicQos(prefetchSize: 0, options.QueuePrefetchCount, false);
 
             return channel;
         }

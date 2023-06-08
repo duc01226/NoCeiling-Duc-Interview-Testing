@@ -24,6 +24,7 @@ public class PlatformRecurringJobAttribute : Attribute
     /// <summary>
     /// Initializes a new instance of the <see cref="PlatformRecurringJobAttribute"/> class.
     /// Specify cronExpression for recurring job interval <br/>
+    /// timeZoneOffset: Timezone offset hours from UTC. Example: +7 mean +7 hours from utc (Bangkok) <br/>
     /// Cron expression references: https://en.wikipedia.org/wiki/Cron
     /// <br/>
     /// Format: [minute(0-59)] [hour(0-23)] [day of month (1-31)] [month (1-12)] [dat of week (0-6 = Sunday to Saturday)]
@@ -44,6 +45,18 @@ public class PlatformRecurringJobAttribute : Attribute
         CronExpression = cronExpression;
     }
 
+    /// <inheritdoc cref="PlatformRecurringJobAttribute"/>
+    public PlatformRecurringJobAttribute(string cronExpression, double timeZoneOffset) : this(cronExpression)
+    {
+        TimeZoneOffset = timeZoneOffset;
+    }
+
+    /// <inheritdoc cref="PlatformRecurringJobAttribute"/>
+    public PlatformRecurringJobAttribute(string cronExpression, string timeZoneId) : this(cronExpression)
+    {
+        TimeZoneOffset = Util.TimeZoneParser.TryGetTimeZoneById(timeZoneId)?.BaseUtcOffset.TotalHours;
+    }
+
     /// <summary>
     /// Add or update a recurring job. Use <see cref="Util.CronBuilder"/> for common cron// </summary>
     /// Set the cronExpression to be used if TJobExecutor don't have <see cref="PlatformRecurringJobAttribute"/>
@@ -62,20 +75,21 @@ public class PlatformRecurringJobAttribute : Attribute
     /// Run daily at midnight 0h: 0 0 * * *
     public string CronExpression { get; }
 
-    public static string GetCronExpressionInfo<TJobExecutor>() where TJobExecutor : IPlatformBackgroundJobExecutor
+    /// <summary>
+    /// TimeZoneOffset hours from UTC. Example: +7 mean +7 hours from UTC.
+    /// </summary>
+    public double? TimeZoneOffset { get; set; }
+
+    public static PlatformRecurringJobAttribute GetRecurringJobAttributeInfo<TJobExecutor>() where TJobExecutor : IPlatformBackgroundJobExecutor
     {
-        return GetCronExpressionInfo(typeof(TJobExecutor));
+        return GetRecurringJobAttributeInfo(typeof(TJobExecutor));
     }
 
-    /// <summary>
-    /// <inheritdoc cref="GetCronExpressionInfo{TJobExecutor}"/>
-    /// </summary>
-    public static string GetCronExpressionInfo(Type jobExecutorType)
+    public static PlatformRecurringJobAttribute GetRecurringJobAttributeInfo(Type jobExecutorType)
     {
-        var recurringJobAttribute = jobExecutorType
+        return jobExecutorType
             .GetCustomAttributes(typeof(PlatformRecurringJobAttribute), true)
             .Select(p => (PlatformRecurringJobAttribute)p)
-            .FirstOrDefault();
-        return recurringJobAttribute?.CronExpression;
+            .LastOrDefault();
     }
 }

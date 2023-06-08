@@ -25,8 +25,9 @@ public class PlatformRabbitMqOptions
     /// <summary>
     /// Config the prefectCount. "defines the max number of unacknowledged deliveries that are permitted on a channel" to limit messages to prevent rabbit mq down
     /// Reference: https://www.rabbitmq.com/tutorials/tutorial-two-dotnet.html. Filter: BasicQos
+    /// QueuePrefetchCount : https://www.cloudamqp.com/blog/part1-rabbitmq-best-practice.html#how-to-set-correct-prefetch-value
     /// </summary>
-    public ushort QueuePrefetchCount { get; set; } = 100;
+    public ushort QueuePrefetchCount { get; set; } = 10;
 
     /// <summary>
     /// Used to set <see cref="ConnectionFactory.NetworkRecoveryInterval" />

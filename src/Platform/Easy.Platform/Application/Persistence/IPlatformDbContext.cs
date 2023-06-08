@@ -47,47 +47,32 @@ public interface IPlatformDbContext : IDisposable
                             var migrationExecutionType = migrationExecution.GetType();
                             var migrationExecutionName = migrationExecution.GetType();
 
+                            Logger.LogInformation($"Wait To Execute DataMigration {migrationExecutionName} in background thread");
+
                             Util.TaskRunner.QueueActionInBackground(
                                 async () =>
                                 {
-                                    Logger.LogInformation($"Wait To Execute DataMigration {migrationExecutionName} in background thread");
-
                                     var currentDbContextPersistenceModule = PlatformGlobal.RootServiceProvider
                                         .GetRequiredService(
                                             GetType().Assembly.GetTypes().First(p => p.IsAssignableTo(typeof(PlatformPersistenceModule<TDbContext>))))
                                         .As<PlatformPersistenceModule<TDbContext>>();
 
-                                    await currentDbContextPersistenceModule.BackgroundThreadDataMigrationLock.WaitAsync();
+                                    try
+                                    {
+                                        await currentDbContextPersistenceModule.BackgroundThreadDataMigrationLock.WaitAsync();
 
-                                    await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                                        () => PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
-                                            async (IServiceProvider sp) =>
-                                            {
-                                                try
-                                                {
-                                                    await ExecuteDataMigrationExecutor(
-                                                        sp.GetRequiredService(migrationExecutionType).As<PlatformDataMigrationExecutor<TDbContext>>(),
-                                                        sp.GetRequiredService<TDbContext>());
-                                                }
-                                                finally
-                                                {
-                                                    currentDbContextPersistenceModule.BackgroundThreadDataMigrationLock.Release();
-                                                }
-                                            }),
-                                        retryCount: DefaultRunDataMigrationInBackgroundRetryCount,
-                                        sleepDurationProvider: retryAttempt => 10.Seconds(),
-                                        onRetry: (ex, timeSpan, currentRetry, ctx) =>
-                                        {
-                                            Logger.LogWarning(
-                                                ex,
-                                                $"Retry Execute DataMigration {migrationExecutionType.Name} {currentRetry} time(s).");
-                                        });
+                                        await ExecuteDataMigrationExecutorInNewScope<TDbContext>(migrationExecutionName, migrationExecutionType);
+                                    }
+                                    finally
+                                    {
+                                        currentDbContextPersistenceModule.BackgroundThreadDataMigrationLock.Release();
+                                    }
                                 },
                                 () => PlatformGlobal.LoggerFactory.CreateLogger(GetType()));
                         }
                         else
                         {
-                            await ExecuteDataMigrationExecutor(migrationExecution, this.As<TDbContext>());
+                            await ExecuteDataMigrationExecutor(migrationExecution);
                         }
 
                         migrationExecution.Dispose();
@@ -105,18 +90,44 @@ public interface IPlatformDbContext : IDisposable
                 });
     }
 
-    public async Task ExecuteDataMigrationExecutor<TDbContext>(PlatformDataMigrationExecutor<TDbContext> migrationExecution, TDbContext dbContext)
+    public static async Task ExecuteDataMigrationExecutorInNewScope<TDbContext>(Type migrationExecutionName, Type migrationExecutionType)
+        where TDbContext : class, IPlatformDbContext<TDbContext>
+    {
+        await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
+            async (IServiceProvider sp) =>
+            {
+                var dbContext = sp.GetRequiredService(typeof(TDbContext)).As<TDbContext>();
+
+                await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                    () => PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
+                        async (IServiceProvider sp) =>
+                        {
+                            await dbContext.ExecuteDataMigrationExecutor(
+                                PlatformDataMigrationExecutor<TDbContext>.CreateNewInstance(sp, migrationExecutionType));
+                        }),
+                    retryCount: DefaultRunDataMigrationInBackgroundRetryCount,
+                    sleepDurationProvider: retryAttempt => 10.Seconds(),
+                    onRetry: (ex, timeSpan, currentRetry, ctx) =>
+                    {
+                        dbContext.Logger.LogWarning(
+                            ex,
+                            $"Retry Execute DataMigration {migrationExecutionType.Name} {currentRetry} time(s).");
+                    });
+            });
+    }
+
+    public async Task ExecuteDataMigrationExecutor<TDbContext>(PlatformDataMigrationExecutor<TDbContext> migrationExecution)
         where TDbContext : class, IPlatformDbContext
     {
-        dbContext.Logger.LogInformation($"Migration {migrationExecution.Name} STARTED.");
+        Logger.LogInformation($"Migration {migrationExecution.Name} STARTED.");
 
-        await migrationExecution.Execute(dbContext);
+        await migrationExecution.Execute(this.As<TDbContext>());
 
         await InsertOneDataMigrationHistoryAsync(new PlatformDataMigrationHistory(migrationExecution.Name));
 
-        await dbContext.SaveChangesAsync();
+        await this.As<TDbContext>().SaveChangesAsync();
 
-        dbContext.Logger.LogInformation($"Migration {migrationExecution.Name} FINISHED.");
+        this.As<TDbContext>().Logger.LogInformation($"Migration {migrationExecution.Name} FINISHED.");
     }
 
     public static async Task<TResult> ExecuteWithBadQueryWarningHandling<TResult, TSource>(

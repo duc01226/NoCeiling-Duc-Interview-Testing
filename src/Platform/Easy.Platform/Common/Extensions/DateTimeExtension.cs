@@ -1,4 +1,4 @@
-using TimeZoneConverter;
+using Easy.Platform.Common.Utils;
 
 namespace Easy.Platform.Common.Extensions;
 
@@ -65,22 +65,46 @@ public static class DateTimeExtension
         return TimeZoneInfo.ConvertTimeFromUtc(dateTime.ToUniversalTime(), timeZoneInfo);
     }
 
-    public static DateTime ConvertToTimeZone(this DateTime dateTime, string ianaTimeZone)
+    public static DateTime ConvertToTimeZone(this DateTime dateTime, string timeZoneId)
     {
-        if (ianaTimeZone is null || !TZConvert.TryGetTimeZoneInfo(ianaTimeZone, out var timeZoneInfo))
-            return dateTime;
+        var timeZoneInfo = Util.TimeZoneParser.TryGetTimeZoneById(timeZoneId);
 
-        return dateTime.ConvertToTimeZone(timeZoneInfo);
+        return timeZoneInfo != null ? dateTime.ConvertToTimeZone(timeZoneInfo) : dateTime;
     }
 
-    public static DateTimeOffset ConvertToDateTimeOffset(this DateTime dateTime, string ianaTimeZone)
+    public static DateTimeOffset ConvertToDateTimeOffset(this DateTime dateTime, string timeZoneId)
     {
-        return new DateTimeOffset(dateTime.ConvertToTimeZone(ianaTimeZone));
+        return new DateTimeOffset(dateTime.ConvertToTimeZone(timeZoneId));
     }
 
     public static DateOnly ToDateOnly(this DateTime dateTime)
     {
         return DateOnly.FromDateTime(dateTime);
+    }
+
+    public static DateTime SpecifyKind(this DateTime dateTime, DateTimeKind kind)
+    {
+        return DateTime.SpecifyKind(dateTime, kind);
+    }
+
+    public static TimeOnly TimeOnly(this DateTime dateTime)
+    {
+        return System.TimeOnly.FromDateTime(dateTime);
+    }
+
+    public static DateTime SetTime(this DateTime dateTime, TimeOnly time)
+    {
+        return dateTime
+            .Date
+            .AddHours(time.Hour)
+            .AddMinutes(time.Minute)
+            .AddSeconds(time.Second)
+            .AddMicroseconds(time.Microsecond);
+    }
+
+    public static DateTime SetTime(this DateTime dateTime, TimeOnly? time)
+    {
+        return time.HasValue ? dateTime.SetTime(time.Value) : dateTime;
     }
 
     public enum MonToSunDayOfWeeks

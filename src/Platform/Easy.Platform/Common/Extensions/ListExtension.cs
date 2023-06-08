@@ -140,6 +140,11 @@ public static class ListExtension
         return items.Intersect(containAllItems).Count() >= containAllItems.Count;
     }
 
+    public static bool ContainsAny<T>(this IList<T> items, IList<T> containAllItems)
+    {
+        return items.Intersect(containAllItems).Any();
+    }
+
     public static bool ItemsMatch<T, T1>(this IList<T> items, IList<T1> matchedWithItems, Func<T, T1, bool> mustMatch)
     {
         if (items.Count != matchedWithItems.Count) return false;
@@ -187,9 +192,24 @@ public static class ListExtension
 
         var taskActionList = new List<Task>();
 
-        for (var i = 0; i < itemsList.Count; i++) taskActionList.Add(action(itemsList[i], i));
+        for (var i = 0; i < itemsList.Count; i++)
+            taskActionList.Add(action(itemsList[i], i));
 
         await Task.WhenAll(taskActionList);
+    }
+
+    public static async Task<List<TResult>> ParallelAsync<T, TResult>(
+        this IEnumerable<T> items,
+        Func<T, int, Task<TResult>> action)
+    {
+        var itemsList = items.As<IList<T>>() ?? items.ToList();
+
+        var taskActionList = new List<Task<TResult>>();
+
+        for (var i = 0; i < itemsList.Count; i++)
+            taskActionList.Add(action(itemsList[i], i));
+
+        return await Task.WhenAll(taskActionList).Then(_ => _.ToList());
     }
 
     /// <inheritdoc cref="ForEachAsync{T}(IEnumerable{T},Func{T,int,Task})" />
@@ -240,6 +260,12 @@ public static class ListExtension
 
     /// <inheritdoc cref="ParallelAsync{T}(IEnumerable{T},Func{T,int,Task})" />
     public static Task ParallelAsync<T>(this IEnumerable<T> items, Func<T, Task> action)
+    {
+        return items.ParallelAsync((item, index) => action(item));
+    }
+
+    /// <inheritdoc cref="ParallelAsync{T,TResult}(IEnumerable{T},Func{T,int,Task{TResult})" />
+    public static Task<List<TResult>> ParallelAsync<T, TResult>(this IEnumerable<T> items, Func<T, Task<TResult>> action)
     {
         return items.ParallelAsync((item, index) => action(item));
     }

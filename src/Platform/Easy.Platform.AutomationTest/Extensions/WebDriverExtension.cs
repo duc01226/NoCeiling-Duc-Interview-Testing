@@ -7,6 +7,9 @@ namespace Easy.Platform.AutomationTest.Extensions;
 
 public static class WebDriverExtension
 {
+    public const int DefaultWaitRetryRefreshPageRetryCount = 5;
+    public const int DefaultWaitRetryRefreshPageDelaySeconds = 2;
+
     public static TPage NavigatePage<TPage, TSettings>(
         this IWebDriver webDriver,
         TSettings settings,
@@ -276,5 +279,24 @@ public static class WebDriverExtension
     {
         webDriver.Navigate().Refresh();
         return webDriver;
+    }
+
+    public static void RetryReloadPageUntilSuccess(this IWebDriver webDriver, Action action, int retryCount = DefaultWaitRetryRefreshPageRetryCount)
+    {
+        Util.TaskRunner.WaitRetryThrowFinalException(
+            () =>
+            {
+                try
+                {
+                    action();
+                }
+                catch (Exception)
+                {
+                    webDriver.ReloadCurrentPage();
+                    throw;
+                }
+            },
+            retryCount: retryCount,
+            sleepDurationProvider: _ => DefaultWaitRetryRefreshPageDelaySeconds.Seconds());
     }
 }

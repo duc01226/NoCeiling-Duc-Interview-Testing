@@ -70,7 +70,7 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
 
             try
             {
-                var channel = ChannelPool.GetCachedChannelPerThread();
+                var channel = ChannelPool.Get();
 
                 var publishRequestProps = channel.CreateBasicProperties();
 
@@ -81,6 +81,8 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
                     routingKey,
                     publishRequestProps,
                     body: Encoding.UTF8.GetBytes(message));
+
+                ChannelPool.Return(channel);
             }
             catch (AlreadyClosedException alreadyClosedException)
             {

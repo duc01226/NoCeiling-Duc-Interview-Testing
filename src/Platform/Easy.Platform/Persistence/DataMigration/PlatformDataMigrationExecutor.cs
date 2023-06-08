@@ -96,10 +96,15 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
     {
         var results = scanAssembly.GetTypes()
             .Where(p => p.IsAssignableTo(typeof(PlatformDataMigrationExecutor<TDbContext>)) && !p.IsAbstract)
-            .Select(p => ActivatorUtilities.CreateInstance(serviceProvider, p).As<PlatformDataMigrationExecutor<TDbContext>>())
+            .Select(migrationType => CreateNewInstance(serviceProvider, migrationType))
             .ToList();
 
         return results;
+    }
+
+    public static PlatformDataMigrationExecutor<TDbContext> CreateNewInstance(IServiceProvider serviceProvider, Type migrationType)
+    {
+        return ActivatorUtilities.CreateInstance(serviceProvider, migrationType).As<PlatformDataMigrationExecutor<TDbContext>>();
     }
 
     public static void EnsureAllDataMigrationExecutorsHasUniqueName(

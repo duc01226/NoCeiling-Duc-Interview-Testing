@@ -532,7 +532,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
 
         Logger.LogInformation(
             message:
-            $"Queue {queueName} has been declared and bound to Exchange {exchange} with routing key {consumerBindingRoutingKey} and {consumerBindingRoutingKey}.{PlatformRabbitMqConstants.FanoutBindingChar}");
+            $"Queue {queueName} has been declared. Exchange:{exchange}. RoutingKey:{consumerBindingRoutingKey}");
     }
 
     private void DeclareExchangesForRoutingKeys(List<string> routingKeys)

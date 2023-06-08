@@ -206,7 +206,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
             if (Initiated)
                 return;
 
-            Logger.LogInformation("[PlatformModule] {Module} start initiating", GetType().Name);
+            Logger.LogInformation("[PlatformModule] {Module} Init STARTED", GetType().Name);
 
             // Because PlatformModule is singleton => ServiceProvider of it is the root ServiceProvider
             PlatformGlobal.SetRootServiceProvider(ServiceProvider);
@@ -220,7 +220,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
             Initiated = true;
 
-            Logger.LogInformation("[PlatformModule] {Module} initiated", GetType().Name);
+            Logger.LogInformation("[PlatformModule] {Module} Init FINISHED", GetType().Name);
         }
         finally
         {

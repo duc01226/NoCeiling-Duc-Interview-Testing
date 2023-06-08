@@ -704,7 +704,16 @@ public static partial class Util
             double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
-            WaitUntilToDo(condition, () => { }, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
+            var startWaitTime = DateTime.UtcNow;
+            var maxWaitMilliseconds = maxWaitSeconds * 1000;
+
+            while (!condition())
+                if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
+                    Thread.Sleep((int)(waitIntervalSeconds * 1000));
+                else
+                    throw new TimeoutException(
+                        $"WaitUntil is timed out (Max: {maxWaitSeconds} seconds)." +
+                        $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
         }
 
         public static void TryWaitUntil(
@@ -1011,7 +1020,18 @@ public static partial class Util
             double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
-            WaitUntilToDo(condition, action.ToFunc(), maxWaitSeconds, waitIntervalSeconds, waitForMsg);
+            var startWaitTime = DateTime.UtcNow;
+            var maxWaitMilliseconds = maxWaitSeconds * 1000;
+
+            while (!condition())
+                if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
+                    Thread.Sleep((int)(waitIntervalSeconds * 1000));
+                else
+                    throw new TimeoutException(
+                        $"WaitUntil is timed out (Max: {maxWaitSeconds} seconds)." +
+                        $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+
+            action();
         }
 
         public static TTarget WaitUntilHasMatchedCase<TSource, TTarget>(
@@ -1052,7 +1072,22 @@ public static partial class Util
             double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
-            WaitRetryDoUntil(action.ToFunc(), until, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
+            var startWaitTime = DateTime.UtcNow;
+            var maxWaitMilliseconds = maxWaitSeconds * 1000;
+
+            action();
+
+            while (!until())
+            {
+                if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
+                    Thread.Sleep((int)(waitIntervalSeconds * 1000));
+                else
+                    throw new TimeoutException(
+                        $"WaitRetryDoUntil is timed out (Max: {maxWaitSeconds} seconds)." +
+                        $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+
+                action();
+            }
         }
 
         public static T WaitRetryDoUntil<T>(
@@ -1082,14 +1117,29 @@ public static partial class Util
             return result;
         }
 
-        public static Task WaitRetryDoUntilAsync(
+        public static async Task WaitRetryDoUntilAsync(
             Func<Task> action,
             Func<Task<bool>> until,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
-            return WaitRetryDoUntilAsync(action.ToAsyncFunc(), until, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
+            var startWaitTime = DateTime.UtcNow;
+            var maxWaitMilliseconds = maxWaitSeconds * 1000;
+
+            await action();
+            Thread.Sleep((int)(waitIntervalSeconds * 1000));
+
+            while (!await until())
+            {
+                if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds >= maxWaitMilliseconds)
+                    throw new TimeoutException(
+                        $"DoUntil is timed out (Max: {maxWaitSeconds} seconds)." +
+                        $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+
+                await action();
+                Thread.Sleep((int)(waitIntervalSeconds * 1000));
+            }
         }
 
         public static async Task<T> WaitRetryDoUntilAsync<T>(

@@ -11,7 +11,6 @@ namespace Easy.Platform.RabbitMQ;
 /// </summary>
 public class PlatformRabbitMqChannelPool : IDisposable
 {
-    protected readonly ConcurrentDictionary<int, IModel> CachedChannelPerThreadDict = new();
     protected readonly PlatformRabbitMqChannelPoolPolicy ChannelPoolPolicy;
     protected readonly ConcurrentDictionary<int, IModel> CreatedChannelDict = new();
 
@@ -40,11 +39,6 @@ public class PlatformRabbitMqChannelPool : IDisposable
         CreatedChannelDict.TryAdd(channel.ChannelNumber, channel);
 
         return channel;
-    }
-
-    public IModel GetCachedChannelPerThread()
-    {
-        return CachedChannelPerThreadDict.GetOrAdd(Environment.CurrentManagedThreadId, threadId => Get());
     }
 
     private void InitInternalObjectPool()
@@ -83,7 +77,6 @@ public class PlatformRabbitMqChannelPool : IDisposable
     {
         if (disposing)
         {
-            CachedChannelPerThreadDict.ForEach(p => p.Value.Dispose());
             CreatedChannelDict.ForEach(p => p.Value.Dispose());
             ChannelPoolPolicy?.Dispose();
         }

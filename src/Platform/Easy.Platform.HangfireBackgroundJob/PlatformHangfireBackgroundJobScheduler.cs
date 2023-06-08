@@ -184,7 +184,16 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
 
         // Upsert all new recurring jobs
         newAllRecurringJobs.ForEach(
-            recurringBackgroundJobExecutor => UpsertRecurringJob(recurringBackgroundJobExecutor.GetType()));
+            recurringBackgroundJobExecutor =>
+            {
+                var backgroundJobTimeZoneOffset = PlatformRecurringJobAttribute.GetRecurringJobAttributeInfo(recurringBackgroundJobExecutor.GetType()).TimeZoneOffset;
+
+                var backgroundJobTimeZoneInfo = backgroundJobTimeZoneOffset != null
+                    ? TimeZoneInfo.GetSystemTimeZones().MinBy(p => Math.Abs(p.BaseUtcOffset.TotalHours - backgroundJobTimeZoneOffset.Value))
+                    : null;
+
+                UpsertRecurringJob(recurringBackgroundJobExecutor.GetType(), timeZone: backgroundJobTimeZoneInfo);
+            });
     }
 
     public void ExecuteBackgroundJob<TJobExecutor>() where TJobExecutor : IPlatformBackgroundJobExecutor
@@ -216,11 +225,12 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
     {
         EnsureJobExecutorTypeValid(jobExecutorType);
 
-        var cronExpressionValue = PlatformRecurringJobAttribute.GetCronExpressionInfo(jobExecutorType) ??
-                                  cronExpression?.Invoke();
+        var cronExpressionValue = cronExpression?.Invoke() ?? PlatformRecurringJobAttribute.GetRecurringJobAttributeInfo(jobExecutorType)?.CronExpression;
+
         if (cronExpressionValue == null)
             throw new Exception(
                 "Either recurring job must have cron expression from PlatformRecurringJobAttribute or cronExpression param must be not null");
+
         return cronExpressionValue;
     }
 

@@ -34,11 +34,11 @@ public class PlatformHangfireBackgroundJobProcessingService : IPlatformBackgroun
 
     public async Task Start(CancellationToken cancellationToken = default)
     {
-        Logger.LogInformation($"{GetType().Name} starting");
+        Logger.LogInformation($"{GetType().Name} STARTED");
 
         currentBackgroundJobServer ??= new BackgroundJobServer(options);
 
-        Logger.LogInformation($"{GetType().Name} started");
+        Logger.LogInformation($"{GetType().Name} FINISHED");
     }
 
     public async Task Stop(CancellationToken cancellationToken = default)

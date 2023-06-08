@@ -207,16 +207,6 @@ public static class TaskExtension
         return (value, value1, await getWith2(value, value1));
     }
 
-    public static Task<List<T>> WhenAll<T>(this IEnumerable<Task<T>> tasks)
-    {
-        return Util.TaskRunner.WhenAll(tasks);
-    }
-
-    public static Task WhenAll(this IEnumerable<Task> tasks)
-    {
-        return Util.TaskRunner.WhenAll(tasks);
-    }
-
     /// <summary>
     /// Use WaitResult to help if exception to see the stack trace. <br />
     /// Task.Wait() will lead to stack trace lost. <br />

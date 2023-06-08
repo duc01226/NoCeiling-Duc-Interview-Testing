@@ -3,6 +3,7 @@ using Easy.Platform.Application.MessageBus.Producers;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Timing;
 using Easy.Platform.Domain.UnitOfWork;
+using Easy.Platform.Infrastructures.BackgroundJob;
 using Microsoft.Extensions.Logging;
 using PlatformExampleApp.Shared.Application.MessageBus.FreeFormatMessages;
 using PlatformExampleApp.TextSnippet.Application.UseCaseCommands;
@@ -11,7 +12,7 @@ using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
 namespace PlatformExampleApp.TextSnippet.Application.BackgroundJob;
 
-//[PlatformRecurringJob("* * * * *")]
+[PlatformRecurringJob("0 0 * * *", timeZoneOffset: -7)]
 public sealed class TestRecurringBackgroundJobExecutor : PlatformApplicationBackgroundJobExecutor
 {
     private readonly IPlatformApplicationBusMessageProducer busMessageProducer;
