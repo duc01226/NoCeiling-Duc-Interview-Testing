@@ -32,16 +32,6 @@ public class PlatformInboxConfig
 
     public int ProcessClearMessageRetryCount { get; set; } = 5;
 
-    /// <summary>
-    /// Config the time to true to log consumer process time
-    /// </summary>
-    public bool EnableLogConsumerProcessTime { get; set; } = true;
-
-    /// <summary>
-    /// Config the time in milliseconds to log warning if the process consumer time is over LogConsumerProcessWarningTimeMilliseconds.
-    /// </summary>
-    public long LogErrorSlowProcessWarningTimeMilliseconds { get; set; } = 5000;
-
     public int NumberOfProcessConsumeInboxMessagesBatch { get; set; } = 100;
 
     public int ProcessConsumeMessageRetryCount { get; set; } = 10;
@@ -51,5 +41,5 @@ public class PlatformInboxConfig
     /// This to handle that if message for some reason has been set as Processing but failed to process and has not been set
     /// back to failed.
     /// </summary>
-    public double MessageProcessingMaxiSeconds { get; set; } = 3600;
+    public double MessageProcessingMaxSeconds { get; set; } = 3600;
 }

@@ -1,6 +1,7 @@
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Common.Validations.Exceptions;
+using Easy.Platform.Common.Validations.Extensions;
 using FluentValidation.Results;
 
 namespace Easy.Platform.Common.Validations;
@@ -307,6 +308,13 @@ public class PlatformValidationResult<TValue> : ValidationResult
         return And(() => Validate(value: Value, () => must(Value), errors));
     }
 
+    public async Task<PlatformValidationResult<TValue>> AndAsync(
+        Func<TValue, Task<bool>> must,
+        params PlatformValidationError[] errors)
+    {
+        return await AndAsync(_ => _.ValidateAsync(must, errors));
+    }
+
     public PlatformValidationResult<TValue> And(
         Func<bool> must,
         params PlatformValidationError[] errors)
@@ -364,6 +372,13 @@ public class PlatformValidationResult<TValue> : ValidationResult
         params PlatformValidationError[] errors)
     {
         return And(() => ValidateNot(value: Value, () => mustNot(Value), errors));
+    }
+
+    public async Task<PlatformValidationResult<TValue>> AndNotAsync(
+        Func<TValue, Task<bool>> mustNot,
+        params PlatformValidationError[] errors)
+    {
+        return await AndAsync(_ => _.ValidateNotAsync(mustNot, errors));
     }
 
     public PlatformValidationResult<TValue> Or(Func<PlatformValidationResult<TValue>> nextValidation)

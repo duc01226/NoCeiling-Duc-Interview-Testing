@@ -39,6 +39,8 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
 
             if (ProcessStarted) return Task.CompletedTask;
 
+            Logger.LogInformation($"HostedService {GetType().Name} Start STARTED");
+
             // Create linked token to allow cancelling executing task from provided token
             StoppingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
@@ -47,7 +49,7 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
 
             ProcessStarted = true;
 
-            Logger.LogInformation($"Process of {GetType().Name} Started");
+            Logger.LogInformation($"HostedService {GetType().Name} Start FINISHED");
 
             // If the task is completed then return it, this will bubble cancellation and failure to the caller
             if (ExecuteTask.IsCompleted) return ExecuteTask;
@@ -102,8 +104,8 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
         AsyncStopProcessLock?.Dispose();
     }
 
-    public static ILogger CreateLogger(ILoggerFactory loggerFactory)
+    public ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
-        return loggerFactory.CreateLogger(typeof(PlatformHostedService));
+        return loggerFactory.CreateLogger(GetType());
     }
 }

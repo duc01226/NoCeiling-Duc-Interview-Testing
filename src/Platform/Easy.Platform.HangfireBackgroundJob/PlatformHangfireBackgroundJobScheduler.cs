@@ -28,7 +28,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
     public string Schedule<TJobExecutor>(DateTimeOffset enqueueAt)
         where TJobExecutor : IPlatformBackgroundJobExecutor
     {
-        return BackgroundJob.Schedule(() => ExecuteBackgroundJob<TJobExecutor>(), enqueueAt);
+        return BackgroundJob.Schedule(() => ExecuteBackgroundJob(typeof(TJobExecutor), null), enqueueAt);
     }
 
     public string Schedule<TJobExecutor, TJobExecutorParam>(
@@ -51,7 +51,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
 
     public string Schedule<TJobExecutor>(TimeSpan? delay = null) where TJobExecutor : IPlatformBackgroundJobExecutor
     {
-        return BackgroundJob.Schedule(() => ExecuteBackgroundJob<TJobExecutor>(), delay ?? TimeSpan.Zero);
+        return BackgroundJob.Schedule(() => ExecuteBackgroundJob(typeof(TJobExecutor), null), delay ?? TimeSpan.Zero);
     }
 
     public string Schedule<TJobExecutor, TJobExecutorParam>(
@@ -73,7 +73,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
 
         RecurringJob.AddOrUpdate(
             BuildAutoRecurringJobIdByType<TJobExecutor>(),
-            () => ExecuteBackgroundJob<TJobExecutor>(),
+            () => ExecuteBackgroundJob(typeof(TJobExecutor), null),
             cronExpressionValue,
             timeZone ?? Clock.CurrentTimeZone);
     }

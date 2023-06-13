@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Common.Utils;
@@ -9,6 +10,9 @@ namespace Easy.Platform.Common.Extensions;
 
 public static class DependencyInjectionExtension
 {
+    private static readonly Dictionary<string, Func<IServiceProvider, object>> RegisteredHostedServiceImplementTypeToImplementFactoryDict = new();
+    private static readonly ConcurrentDictionary<string, object> RegisterHostedServiceLockDict = new();
+
     public static string[] DefaultIgnoreRegisterLibraryInterfacesNameSpacePrefixes { get; set; } = { "System", "Microsoft" };
 
     /// <summary>
@@ -463,42 +467,79 @@ public static class DependencyInjectionExtension
     public static IServiceCollection RegisterHostedService(
         this IServiceCollection services,
         Type hostedServiceType,
-        bool replaceIfExist = true,
-        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
+        Type replaceForHostedServiceType = null)
     {
-        return services
-            .Register(
-                typeof(IHostedService),
-                hostedServiceType,
-                ServiceLifeTime.Singleton,
-                replaceIfExist,
-                replaceStrategy);
-    }
+        services.Register(hostedServiceType, ServiceLifeTime.Singleton, replaceIfExist: true, replaceStrategy: CheckRegisteredStrategy.ByBoth);
 
-    public static IServiceCollection RegisterHostedService<THostedService>(
-        this IServiceCollection services,
-        bool replaceIfExist = true,
-        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth) where THostedService : class, IHostedService
-    {
-        services.Register<THostedService>(ServiceLifeTime.Singleton, replaceIfExist: replaceIfExist, replaceStrategy: replaceStrategy);
-        services.RegisterHostedService(sp => sp.GetRequiredService<THostedService>(), replaceIfExist: replaceIfExist, replaceStrategy: replaceStrategy);
+        RegisterHostedServiceLockDict.TryAdd(hostedServiceType.FullName!, new object());
+
+        lock (RegisterHostedServiceLockDict[hostedServiceType.FullName!])
+        {
+            if (!RegisteredHostedServiceImplementTypeToImplementFactoryDict.ContainsKey(hostedServiceType.FullName!))
+            {
+                RegisteredHostedServiceImplementTypeToImplementFactoryDict.Add(hostedServiceType.FullName!, sp => sp.GetRequiredService(hostedServiceType));
+
+                services
+                    .Register(
+                        typeof(IHostedService),
+                        RegisteredHostedServiceImplementTypeToImplementFactoryDict[hostedServiceType.FullName!],
+                        ServiceLifeTime.Singleton,
+                        replaceIfExist: true,
+                        replaceStrategy: CheckRegisteredStrategy.ByBoth);
+            }
+        }
+
+        if (replaceForHostedServiceType != null)
+        {
+            services.RemoveWhere(
+                p => p.ImplementationType == replaceForHostedServiceType ||
+                     p.ImplementationInstance?.GetType() == replaceForHostedServiceType ||
+                     p.ImplementationFactory == RegisteredHostedServiceImplementTypeToImplementFactoryDict[hostedServiceType.FullName!]);
+
+            services.Register(
+                replaceForHostedServiceType,
+                RegisteredHostedServiceImplementTypeToImplementFactoryDict[hostedServiceType.FullName!],
+                ServiceLifeTime.Singleton,
+                replaceIfExist: true,
+                replaceStrategy: CheckRegisteredStrategy.ByBoth);
+        }
 
         return services;
     }
 
     public static IServiceCollection RegisterHostedService<THostedService>(
         this IServiceCollection services,
-        Func<IServiceProvider, THostedService> implementationFactory,
-        bool replaceIfExist = true,
-        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth) where THostedService : class, IHostedService
+        Type replaceForHostedServiceType = null) where THostedService : class, IHostedService
     {
-        return services
-            .Register(
-                typeof(IHostedService),
-                implementationFactory,
-                ServiceLifeTime.Singleton,
-                replaceIfExist,
-                replaceStrategy);
+        return RegisterHostedService(services, typeof(THostedService), replaceForHostedServiceType);
+    }
+
+    public static IServiceCollection RegisterHostedServicesFromType<TConventionHostedService>(
+        this IServiceCollection services,
+        Assembly assembly) where TConventionHostedService : class, IHostedService
+    {
+        return RegisterHostedServicesFromType(services, assembly, typeof(TConventionHostedService));
+    }
+
+    public static IServiceCollection RegisterHostedServicesFromType(
+        this IServiceCollection services,
+        Assembly assembly,
+        Type conventionalType)
+    {
+        assembly.GetTypes()
+            .Where(
+                implementationType => implementationType.IsClass &&
+                                      !implementationType.IsAbstract &&
+                                      !implementationType.IsGenericType &&
+                                      implementationType.IsAssignableTo(typeof(IHostedService)) &&
+                                      implementationType.IsAssignableTo(conventionalType))
+            .ForEach(
+                implementHostedServiceType =>
+                {
+                    RegisterHostedService(services, implementHostedServiceType);
+                });
+
+        return services;
     }
 
     public static IServiceCollection ReplaceTransient(

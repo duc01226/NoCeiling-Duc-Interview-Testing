@@ -14,6 +14,14 @@ public static class PlatformAsyncValidateExtension
         return must(value).Then(mustValue => PlatformValidationResult<TValue>.Validate(value, mustValue, errorMsgs));
     }
 
+    public static Task<PlatformValidationResult<TValue>> ValidateNotAsync<TValue>(
+        this TValue value,
+        Func<TValue, Task<bool>> mustNot,
+        params PlatformValidationError[] errorMsgs)
+    {
+        return mustNot(value).Then(mustNotValue => PlatformValidationResult<TValue>.Validate(value, must: !mustNotValue, errorMsgs));
+    }
+
     public static Task<PlatformValidationResult<TValue>> ValidateAsync<TValue>(
         this TValue value,
         Func<TValue, Task<bool>> must,
@@ -96,6 +104,38 @@ public static class PlatformAsyncValidateExtension
         return sourceValidation.Then(p => p.AndAsync(nextValidation));
     }
 
+    public static Task<PlatformValidationResult<TValue>> AndAsync<TValue>(
+        this Task<PlatformValidationResult<TValue>> sourceValidationTask,
+        Func<TValue, bool> must,
+        params PlatformValidationError[] errors)
+    {
+        return sourceValidationTask.Then(p => p.And(must, errors));
+    }
+
+    public static Task<PlatformValidationResult<TValue>> AndNotAsync<TValue>(
+        this Task<PlatformValidationResult<TValue>> sourceValidationTask,
+        Func<TValue, bool> mustNot,
+        params PlatformValidationError[] errors)
+    {
+        return sourceValidationTask.Then(p => p.AndNot(mustNot, errors));
+    }
+
+    public static Task<PlatformValidationResult<TValue>> AndAsync<TValue>(
+        this Task<PlatformValidationResult<TValue>> sourceValidationTask,
+        Func<TValue, Task<bool>> must,
+        params PlatformValidationError[] errors)
+    {
+        return sourceValidationTask.Then(p => p.AndAsync(must, errors));
+    }
+
+    public static Task<PlatformValidationResult<TValue>> AndNotAsync<TValue>(
+        this Task<PlatformValidationResult<TValue>> sourceValidationTask,
+        Func<TValue, Task<bool>> mustNot,
+        params PlatformValidationError[] errors)
+    {
+        return sourceValidationTask.Then(p => p.AndNotAsync(mustNot, errors));
+    }
+
     public static Task<T> EnsureValidAsync<T>(
         this Task<PlatformValidationResult<T>> sourceValidationTask)
     {
@@ -134,6 +174,40 @@ public static class PlatformAsyncValidateExtension
     {
         return valueTask.Then(value => value.Validate(must, errorMsg));
     }
+
+
+    public static Task<PlatformValidationResult<TValue>> ThenValidateAsync<TValue>(
+        this Task<TValue> valueTask,
+        Task<bool> must,
+        params PlatformValidationError[] errors)
+    {
+        return valueTask.Then(value => value.ValidateAsync(must, errors));
+    }
+
+    public static Task<PlatformValidationResult<TValue>> ThenValidateAsync<TValue>(
+        this Task<TValue> valueTask,
+        Func<Task<bool>> must,
+        params PlatformValidationError[] errors)
+    {
+        return valueTask.Then(value => value.ValidateAsync(must, errors));
+    }
+
+    public static Task<PlatformValidationResult<TValue>> ThenValidateAsync<TValue>(
+        this Task<TValue> valueTask,
+        Func<TValue, Task<bool>> must,
+        params PlatformValidationError[] errors)
+    {
+        return valueTask.Then(value => value.ValidateAsync(must, errors));
+    }
+
+    public static Task<PlatformValidationResult<TValue>> ThenValidateAsync<TValue>(
+        this Task<TValue> valueTask,
+        Func<TValue, Task<bool>> must,
+        Func<TValue, PlatformValidationError> errorMsg)
+    {
+        return valueTask.Then(value => value.ValidateAsync(must, errorMsg));
+    }
+
 
     public static Task<PlatformValidationResult<List<T>?>> ThenValidateFoundAllAsync<T>(
         this Task<List<T>> objectsTask,

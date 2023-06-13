@@ -40,7 +40,7 @@ internal sealed class SaveSnippetTextCommandEventBusMessageConsumer : PlatformCq
             () => throw new Exception("Random Test Retry Consumer Throw Exception"));
 
         // Sleep to demo warning slow consumer
-        Thread.Sleep(((SlowProcessWarningTimeMilliseconds() ?? DefaultProcessWarningTimeMilliseconds) + 1000).Seconds());
+        Thread.Sleep(((SlowProcessWarningTimeMilliseconds() ?? PlatformMessageBusConfig.DefaultProcessWarningTimeMilliseconds) + 1000).Seconds());
 
         Logger.LogInformation($"{GetType().FullName} has handled message. Message Detail: {{BusMessage}}", message.ToFormattedJson());
 

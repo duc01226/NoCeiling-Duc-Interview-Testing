@@ -344,10 +344,8 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             typeof(IPlatformApplicationMessageBusConsumer<>),
             Assembly);
 
-        if (serviceCollection.NotExist(PlatformInboxBusMessageCleanerHostedService.MatchImplementation))
-            serviceCollection.RegisterHostedService<PlatformInboxBusMessageCleanerHostedService>();
-        if (serviceCollection.NotExist(PlatformConsumeInboxBusMessageHostedService.MatchImplementation))
-            serviceCollection.RegisterHostedService<PlatformConsumeInboxBusMessageHostedService>();
+        serviceCollection.RegisterHostedService<PlatformInboxBusMessageCleanerHostedService>();
+        serviceCollection.RegisterHostedService<PlatformConsumeInboxBusMessageHostedService>();
         serviceCollection.Register(
             serviceType: typeof(PlatformInboxConfig),
             InboxConfigProvider,
@@ -355,10 +353,8 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             replaceIfExist: true,
             DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
 
-        if (serviceCollection.NotExist(PlatformOutboxBusMessageCleanerHostedService.MatchImplementation))
-            serviceCollection.RegisterHostedService<PlatformOutboxBusMessageCleanerHostedService>();
-        if (serviceCollection.NotExist(PlatformSendOutboxBusMessageHostedService.MatchImplementation))
-            serviceCollection.RegisterHostedService<PlatformSendOutboxBusMessageHostedService>();
+        serviceCollection.RegisterHostedService<PlatformOutboxBusMessageCleanerHostedService>();
+        serviceCollection.RegisterHostedService<PlatformSendOutboxBusMessageHostedService>();
         serviceCollection.Register(
             serviceType: typeof(PlatformOutboxConfig),
             OutboxConfigProvider,

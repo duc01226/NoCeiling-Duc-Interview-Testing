@@ -171,7 +171,7 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent
         return DomainEvents
             .Where(p => p.Key == ISupportDomainEventsEntity.DomainEvent.GetDefaultDomainEventName<ISupportDomainEventsEntity.PropertyValueUpdatedDomainEvent>())
             .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<ISupportDomainEventsEntity.PropertyValueUpdatedDomainEvent<TValue>>(p.Value))
-            .FirstOrDefault(p => p.PropertyName == property.GetPropertyName());
+            .FirstOrDefault(p => p != null && p.PropertyName == property.GetPropertyName());
     }
 
     public PlatformCqrsEntityEvent<TEntity> Clone()

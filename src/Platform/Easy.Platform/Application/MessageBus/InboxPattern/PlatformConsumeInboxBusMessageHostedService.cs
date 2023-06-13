@@ -24,16 +24,19 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
     private readonly PlatformInboxConfig inboxConfig;
 
     private bool isProcessing;
+    private readonly PlatformMessageBusConfig messageBusConfig;
 
     public PlatformConsumeInboxBusMessageHostedService(
         IServiceProvider serviceProvider,
         ILoggerFactory loggerFactory,
         IPlatformApplicationSettingContext applicationSettingContext,
         IPlatformMessageBusScanner messageBusScanner,
-        PlatformInboxConfig inboxConfig) : base(serviceProvider, loggerFactory)
+        PlatformInboxConfig inboxConfig,
+        PlatformMessageBusConfig messageBusConfig) : base(serviceProvider, loggerFactory)
     {
         this.applicationSettingContext = applicationSettingContext;
         this.inboxConfig = inboxConfig;
+        this.messageBusConfig = messageBusConfig;
         ConsumerByNameToTypeDic = messageBusScanner
             .ScanAllDefinedConsumerTypes()
             .ToDictionary(PlatformInboxBusMessage.GetConsumerByValue);
@@ -43,17 +46,6 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
     protected Dictionary<string, Type> ConsumerByNameToTypeDic { get; }
 
     protected ILogger InvokeConsumerLogger { get; }
-
-    public static bool MatchImplementation(ServiceDescriptor serviceDescriptor)
-    {
-        return MatchImplementation(serviceDescriptor.ImplementationType) ||
-               MatchImplementation(serviceDescriptor.ImplementationInstance?.GetType());
-    }
-
-    public static bool MatchImplementation(Type implementationType)
-    {
-        return implementationType?.IsAssignableTo(typeof(PlatformConsumeInboxBusMessageHostedService)) == true;
-    }
 
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
@@ -68,7 +60,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
             await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                 () => ConsumeInboxEventBusMessages(cancellationToken),
                 retryAttempt => 10.Seconds(),
-                retryCount: ProcessConsumeMessageRetryCount(),
+                retryCount: inboxConfig.ProcessConsumeMessageRetryCount,
                 onRetry: (ex, timeSpan, currentRetry, ctx) =>
                 {
                     if (currentRetry >= MinimumRetryConsumeInboxMessageTimesToWarning)
@@ -139,7 +131,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
             (IPlatformInboxBusMessageRepository inboxEventBusMessageRepo) =>
             {
                 return inboxEventBusMessageRepo!.AnyAsync(
-                    PlatformInboxBusMessage.CanHandleMessagesExpr(MessageProcessingMaximumTimeInSeconds()));
+                    PlatformInboxBusMessage.CanHandleMessagesExpr(inboxConfig.MessageProcessingMaxSeconds));
             });
     }
 
@@ -174,8 +166,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                     consumer,
                     busMessage,
                     toHandleInboxMessage.RoutingKey,
-                    EnableLogConsumerProcessTime(),
-                    LogErrorSlowProcessWarningTimeMilliseconds(),
+                    messageBusConfig,
                     InvokeConsumerLogger);
         }
         else
@@ -185,7 +176,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                 toHandleInboxMessage.Id,
                 new Exception(
                     $"[{GetType().Name}] Error resolve consumer type {toHandleInboxMessage.ConsumerBy}. InboxId:{toHandleInboxMessage.Id} "),
-                RetryProcessFailedMessageDelayTimeInSecondsUnit(),
+                inboxConfig.RetryProcessFailedMessageInSecondsUnit,
                 cancellationToken);
         }
     }
@@ -202,9 +193,9 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                     {
                         var toHandleMessages = await inboxEventBusMessageRepo.GetAllAsync(
                             queryBuilder: query => query
-                                .Where(PlatformInboxBusMessage.CanHandleMessagesExpr(MessageProcessingMaximumTimeInSeconds()))
+                                .Where(PlatformInboxBusMessage.CanHandleMessagesExpr(inboxConfig.MessageProcessingMaxSeconds))
                                 .OrderBy(p => p.LastConsumeDate)
-                                .Take(NumberOfProcessMessagesBatch()),
+                                .Take(inboxConfig.NumberOfProcessConsumeInboxMessagesBatch),
                             cancellationToken);
 
                         if (toHandleMessages.IsEmpty()) return toHandleMessages;
@@ -238,41 +229,6 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
             // get row version conflict is expected, so just retry again to get unprocessed inbox messages
             return await PopToHandleInboxEventBusMessages(cancellationToken);
         }
-    }
-
-    /// <inheritdoc cref="PlatformInboxConfig.NumberOfProcessConsumeInboxMessagesBatch" />
-    protected virtual int NumberOfProcessMessagesBatch()
-    {
-        return inboxConfig.NumberOfProcessConsumeInboxMessagesBatch;
-    }
-
-    protected virtual int ProcessConsumeMessageRetryCount()
-    {
-        return inboxConfig.ProcessConsumeMessageRetryCount;
-    }
-
-    /// <inheritdoc cref="PlatformInboxConfig.MessageProcessingMaxiSeconds" />
-    protected virtual double MessageProcessingMaximumTimeInSeconds()
-    {
-        return inboxConfig.MessageProcessingMaxiSeconds;
-    }
-
-    /// <inheritdoc cref="PlatformInboxConfig.EnableLogConsumerProcessTime" />
-    protected virtual bool EnableLogConsumerProcessTime()
-    {
-        return inboxConfig.EnableLogConsumerProcessTime;
-    }
-
-    /// <inheritdoc cref="PlatformInboxConfig.LogErrorSlowProcessWarningTimeMilliseconds" />
-    protected virtual double LogErrorSlowProcessWarningTimeMilliseconds()
-    {
-        return inboxConfig.LogErrorSlowProcessWarningTimeMilliseconds;
-    }
-
-    /// <inheritdoc cref="PlatformInboxConfig.RetryProcessFailedMessageInSecondsUnit" />
-    protected virtual double RetryProcessFailedMessageDelayTimeInSecondsUnit()
-    {
-        return inboxConfig.RetryProcessFailedMessageInSecondsUnit;
     }
 
     protected bool HasInboxEventBusMessageRepositoryRegistered()

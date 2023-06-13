@@ -27,17 +27,6 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
         InboxConfig = inboxConfig;
     }
 
-    public static bool MatchImplementation(ServiceDescriptor serviceDescriptor)
-    {
-        return MatchImplementation(serviceDescriptor.ImplementationType) ||
-               MatchImplementation(serviceDescriptor.ImplementationInstance?.GetType());
-    }
-
-    public static bool MatchImplementation(Type implementationType)
-    {
-        return implementationType?.IsAssignableTo(typeof(PlatformInboxBusMessageCleanerHostedService)) == true;
-    }
-
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
         if (!HasInboxEventBusMessageRepositoryRegistered() || isProcessing) return;

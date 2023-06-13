@@ -1,9 +1,5 @@
-using Easy.Platform.Application.MessageBus.InboxPattern;
-using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Infrastructures.MessageBus;
-using Easy.Platform.RabbitMQ.Inbox;
-using Easy.Platform.RabbitMQ.Outbox;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -40,9 +36,6 @@ public abstract class PlatformRabbitMqMessageBusModule : PlatformMessageBusModul
         serviceCollection.Register<IPlatformMessageBusProducer, PlatformRabbitMqMessageBusProducer>();
         serviceCollection.Register<PlatformRabbitMqProcessInitializerService>(ServiceLifeTime.Singleton);
         serviceCollection.RegisterHostedService<PlatformRabbitMqStartProcessHostedService>();
-
-        RegisterRabbitMqConsumeInboxEventBusMessageHostedService(serviceCollection);
-        RegisterRabbitMqSendOutboxEventBusMessageHostedService(serviceCollection);
     }
 
     protected override async Task InternalInit(IServiceScope serviceScope)
@@ -55,22 +48,4 @@ public abstract class PlatformRabbitMqMessageBusModule : PlatformMessageBusModul
     }
 
     protected abstract PlatformRabbitMqOptions RabbitMqOptionsFactory(IServiceProvider serviceProvider);
-
-    protected virtual void RegisterRabbitMqConsumeInboxEventBusMessageHostedService(IServiceCollection serviceCollection)
-    {
-        serviceCollection.RemoveIfExist(PlatformConsumeInboxBusMessageHostedService.MatchImplementation);
-        serviceCollection.RegisterHostedService<PlatformRabbitMqConsumeInboxBusMessageHostedService>();
-        serviceCollection.Register(
-            typeof(PlatformConsumeInboxBusMessageHostedService),
-            sp => sp.GetRequiredService<PlatformRabbitMqConsumeInboxBusMessageHostedService>());
-    }
-
-    protected virtual void RegisterRabbitMqSendOutboxEventBusMessageHostedService(IServiceCollection serviceCollection)
-    {
-        serviceCollection.RemoveIfExist(PlatformSendOutboxBusMessageHostedService.MatchImplementation);
-        serviceCollection.RegisterHostedService<PlatformRabbitMqSendOutboxBusMessageHostedService>();
-        serviceCollection.Register(
-            typeof(PlatformSendOutboxBusMessageHostedService),
-            sp => sp.GetRequiredService<PlatformRabbitMqSendOutboxBusMessageHostedService>());
-    }
 }

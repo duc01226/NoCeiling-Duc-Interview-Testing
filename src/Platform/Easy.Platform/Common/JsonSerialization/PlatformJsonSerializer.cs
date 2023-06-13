@@ -162,7 +162,7 @@ public static class PlatformJsonSerializer
         return JsonSerializer.Deserialize(utf8Json, returnType, customSerializerOptions ?? CurrentOptions.Value);
     }
 
-    public static T TryDeserializeOrDefault<T>(string jsonValue)
+    public static T TryDeserializeOrDefault<T>(string jsonValue, T defaultValue = default)
     {
         try
         {
@@ -170,7 +170,7 @@ public static class PlatformJsonSerializer
         }
         catch
         {
-            return default;
+            return defaultValue;
         }
     }
 

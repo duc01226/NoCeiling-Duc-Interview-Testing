@@ -71,7 +71,7 @@ public static class PlatformInboxMessageBusConsumerHelper
             var toProcessInboxMessage = existedInboxMessage ?? newInboxMessage;
 
             if (existedInboxMessage == null ||
-                PlatformInboxBusMessage.CanHandleMessagesExpr(inboxConfig.MessageProcessingMaxiSeconds).Compile()(existedInboxMessage))
+                PlatformInboxBusMessage.CanHandleMessagesExpr(inboxConfig.MessageProcessingMaxSeconds).Compile()(existedInboxMessage))
             {
                 if (handleInUow != null)
                 {

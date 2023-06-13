@@ -24,6 +24,11 @@ public static class ListExtension
         return items.ToList();
     }
 
+    public static List<T> RemoveWhere<T>(this IList<T> items, Func<T, bool> predicate)
+    {
+        return RemoveWhere(items, predicate, out var _);
+    }
+
     /// <summary>
     /// Remove item in this and return removed items
     /// </summary>

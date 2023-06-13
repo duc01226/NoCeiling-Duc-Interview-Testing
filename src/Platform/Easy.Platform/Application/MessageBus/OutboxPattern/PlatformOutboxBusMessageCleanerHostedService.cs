@@ -28,17 +28,6 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
         OutboxConfig = outboxConfig;
     }
 
-    public static bool MatchImplementation(ServiceDescriptor serviceDescriptor)
-    {
-        return MatchImplementation(serviceDescriptor.ImplementationType) ||
-               MatchImplementation(serviceDescriptor.ImplementationInstance?.GetType());
-    }
-
-    public static bool MatchImplementation(Type implementationType)
-    {
-        return implementationType?.IsAssignableTo(typeof(PlatformOutboxBusMessageCleanerHostedService)) == true;
-    }
-
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
         if (!HasOutboxEventBusMessageRepositoryRegistered() || isProcessing) return;

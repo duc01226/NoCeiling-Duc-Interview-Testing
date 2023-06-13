@@ -57,7 +57,7 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
         {
             if (SlowProcessWarningTimeMilliseconds() > 0)
             {
-                Logger.LogInformation($"[PlatformApplicationBackgroundJobExecutor] Started invoking background job. {GetType().FullName}");
+                Logger.LogInformation($"BackgroundJobExecutor invoking background job {GetType().FullName} STARTED");
 
                 Util.TaskRunner
                     .ProfileExecutionAsync(
@@ -65,13 +65,13 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
                         afterExecution: elapsedMilliseconds =>
                         {
                             var logMessage =
-                                $"ElapsedMilliseconds:{elapsedMilliseconds}. Job:{GetType().FullName}";
+                                $"ElapsedMilliseconds:{elapsedMilliseconds}.";
 
                             if (elapsedMilliseconds >= SlowProcessWarningTimeMilliseconds())
                                 Logger.LogWarning(
-                                    $"[PlatformApplicationBackgroundJobExecutor] SlowProcessWarningTimeMilliseconds:{SlowProcessWarningTimeMilliseconds()}. {logMessage}");
+                                    $"BackgroundJobExecutor invoking background job {GetType().FullName} FINISHED. SlowProcessWarningTimeMilliseconds:{SlowProcessWarningTimeMilliseconds()}. {logMessage}");
                             else
-                                Logger.LogInformation($"[PlatformApplicationBackgroundJobExecutor] Finished invoking background job. {logMessage}");
+                                Logger.LogInformation($"BackgroundJobExecutor invoking background job {GetType().FullName} FINISHED. {logMessage}");
                         })
                     .WaitResult();
             }

@@ -1,4 +1,3 @@
-using Easy.Platform.Infrastructures.MessageBus;
 using RabbitMQ.Client;
 
 namespace Easy.Platform.RabbitMQ;
@@ -43,16 +42,6 @@ public class PlatformRabbitMqOptions
     /// Used to set <see cref="ConnectionFactory.SocketReadTimeout" /> and <see cref="ConnectionFactory.SocketWriteTimeout" />
     /// </summary>
     public int SocketTimeoutSeconds { get; set; } = 120;
-
-    /// <summary>
-    /// Config the time to true to log consumer process time
-    /// </summary>
-    public bool EnableLogConsumerProcessTime { get; set; } = false;
-
-    /// <summary>
-    /// Config the time in milliseconds to log warning if the process consumer time is over LogSlowProcessingConsumerWarningMilliseconds.
-    /// </summary>
-    public long LogSlowProcessingConsumerWarningMilliseconds { get; set; } = PlatformMessageBusConsumer.DefaultProcessWarningTimeMilliseconds;
 
     public double RequeueDelayTimeInSeconds { get; set; } = 60;
 

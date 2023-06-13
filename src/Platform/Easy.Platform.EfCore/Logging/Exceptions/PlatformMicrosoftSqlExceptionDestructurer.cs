@@ -5,7 +5,7 @@ using Serilog.Exceptions.Destructurers;
 namespace Easy.Platform.EfCore.Logging.Exceptions;
 
 /// <summary>
-/// A destructurer for <see cref="SqlException"/>.
+/// A destructurer for <see cref="SqlException" />.
 /// </summary>
 /// <seealso cref="ExceptionDestructurer" />
 public class PlatformMicrosoftSqlExceptionDestructurer : ExceptionDestructurer

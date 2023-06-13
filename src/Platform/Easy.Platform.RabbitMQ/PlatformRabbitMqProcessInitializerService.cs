@@ -35,6 +35,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
 
     private CancellationToken currentStartProcessCancellationToken;
     private readonly IPlatformRabbitMqExchangeProvider exchangeProvider;
+    private readonly PlatformMessageBusConfig messageBusConfig;
     private readonly IPlatformMessageBusScanner messageBusScanner;
     private readonly PlatformRabbitMqOptions options;
     private bool processStarted;
@@ -54,7 +55,8 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         IPlatformMessageBusScanner messageBusScanner,
         PlatformConsumerRabbitMqChannelPool channelPool,
         PlatformRabbitMqOptions options,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        PlatformMessageBusConfig messageBusConfig)
     {
         this.applicationSettingContext = applicationSettingContext;
         this.exchangeProvider = exchangeProvider;
@@ -62,6 +64,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         this.channelPool = channelPool;
         this.options = options;
         this.serviceProvider = serviceProvider;
+        this.messageBusConfig = messageBusConfig;
         Logger = PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformRabbitMqProcessInitializerService));
         InvokeConsumerLogger = PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformMessageBusConsumer));
     }
@@ -403,8 +406,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                 consumer,
                 busMessage,
                 args.RoutingKey,
-                options.EnableLogConsumerProcessTime,
-                options.LogSlowProcessingConsumerWarningMilliseconds,
+                messageBusConfig,
                 InvokeConsumerLogger);
         }
     }

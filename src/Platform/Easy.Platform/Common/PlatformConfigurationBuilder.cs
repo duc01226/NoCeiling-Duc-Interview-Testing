@@ -13,10 +13,31 @@ public static class PlatformConfigurationBuilder
     /// </summary>
     public static IConfigurationBuilder GetConfigurationBuilder(
         string appSettingsJsonFileName = "appsettings.json",
-        string fallbackAspCoreEnv = PlatformEnvironment.DefaultAspCoreDevelopmentEnvironmentValue)
+        string fallbackAspCoreEnv = PlatformEnvironment.DefaultAspCoreDevelopmentEnvironmentValue,
+        bool consoleServicesAppMode = false)
     {
-        return new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory())
+        return ConfigConfigurationBuilder(
+            new ConfigurationBuilder(),
+            appSettingsJsonFileName,
+            fallbackAspCoreEnv,
+            consoleServicesAppMode);
+    }
+
+    public static IConfigurationBuilder ConfigConfigurationBuilder(
+        IConfigurationBuilder configurationBuilder,
+        string appSettingsJsonFileName = "appsettings.json",
+        string fallbackAspCoreEnv = PlatformEnvironment.DefaultAspCoreDevelopmentEnvironmentValue,
+        bool consoleServicesAppMode = false)
+    {
+        // Mode use OS service
+        var pathToExe = Environment.ProcessPath;
+        var pathToContentRoot = pathToExe != null ? Path.GetDirectoryName(pathToExe) : null;
+
+        return configurationBuilder
+            .SetBasePath(
+                consoleServicesAppMode && pathToContentRoot != null
+                    ? pathToContentRoot!
+                    : Directory.GetCurrentDirectory())
             .AddJsonFile(appSettingsJsonFileName, optional: false, reloadOnChange: false)
             .Pipe(
                 builder =>

@@ -80,15 +80,13 @@ public interface IPlatformMessageBusConsumer<in TMessage> : IPlatformMessageBusC
 
 public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
 {
-    public const long DefaultProcessWarningTimeMilliseconds = 10000;
-
     public abstract Task HandleAsync(object message, string routingKey);
 
     public abstract Task HandleLogicAsync(object message, string routingKey);
 
     public virtual long? SlowProcessWarningTimeMilliseconds()
     {
-        return DefaultProcessWarningTimeMilliseconds;
+        return PlatformMessageBusConfig.DefaultProcessWarningTimeMilliseconds;
     }
 
     public virtual bool DisableSlowProcessWarning()
@@ -131,8 +129,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
         IPlatformMessageBusConsumer consumer,
         object busMessage,
         string routingKey,
-        bool isLogConsumerProcessTime,
-        double slowProcessWarningTimeMilliseconds = DefaultProcessWarningTimeMilliseconds,
+        IPlatformMessageBusConfig messageBusConfig,
         ILogger? logger = null)
     {
         logger?.LogInformation(
@@ -141,7 +138,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
             routingKey,
             busMessage.As<IPlatformTrackableBusMessage>()?.TrackingId ?? "n/a");
 
-        if (isLogConsumerProcessTime && !consumer.DisableSlowProcessWarning())
+        if (messageBusConfig.EnableLogConsumerProcessTime && !consumer.DisableSlowProcessWarning())
             await Util.TaskRunner.ProfileExecutionAsync(
                 asyncTask: () => DoInvokeConsumer(consumer, busMessage, routingKey),
                 afterExecution: elapsedMilliseconds =>
@@ -150,7 +147,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
                         $"ElapsedMilliseconds:{elapsedMilliseconds}. Consumer:{consumer.GetType().FullName}. RoutingKey:{routingKey}. TrackingId:{busMessage.As<IPlatformTrackableBusMessage>()?.TrackingId ?? "n/a"}.";
 
                     var toCheckSlowProcessWarningTimeMilliseconds = consumer.SlowProcessWarningTimeMilliseconds() ??
-                                                                    slowProcessWarningTimeMilliseconds;
+                                                                    messageBusConfig.LogSlowProcessWarningTimeMilliseconds;
                     if (elapsedMilliseconds >= toCheckSlowProcessWarningTimeMilliseconds)
                         logger?.LogWarning(
                             $"[MessageBus] SlowProcessWarningTimeMilliseconds:{toCheckSlowProcessWarningTimeMilliseconds}. {logMessage}. MessageContent: {{BusMessage}}",
