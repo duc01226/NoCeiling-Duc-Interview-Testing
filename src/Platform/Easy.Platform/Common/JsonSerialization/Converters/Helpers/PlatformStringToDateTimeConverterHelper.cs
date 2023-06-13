@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 
@@ -14,11 +15,19 @@ public static class PlatformStringToDateTimeConverterHelper
 
         try
         {
-            return DateTime.Parse(dateTimeStr, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.None);
+            // Try Deserialize like normal standard for normal standard datetime format string
+            return JsonSerializer.Deserialize<DateTime>(dateTimeStr);
         }
         catch (Exception)
         {
-            return DateTime.ParseExact(dateTimeStr, SupportDateOnlyFormats, CultureInfo.InvariantCulture);
+            try
+            {
+                return DateTime.Parse(dateTimeStr, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.None);
+            }
+            catch (Exception)
+            {
+                return DateTime.ParseExact(dateTimeStr, SupportDateOnlyFormats, CultureInfo.InvariantCulture);
+            }
         }
     }
 }

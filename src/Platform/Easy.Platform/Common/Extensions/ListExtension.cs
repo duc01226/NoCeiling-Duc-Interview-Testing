@@ -353,12 +353,26 @@ public static class ListExtension
         return itemsTask.Then(items => items.Select(selector).ToList());
     }
 
+    public static Task<List<TActionResult>> ThenSelectAsync<T, TActionResult>(
+        this Task<List<T>> itemsTask,
+        Func<T, int, Task<TActionResult>> selector)
+    {
+        return itemsTask.Then(items => items.SelectAsync(selector));
+    }
+
     /// <inheritdoc cref="ThenSelect{T,TResult}(Task{IEnumerable{T}},Func{T,int,Task{TResult}})" />
     public static Task<List<TActionResult>> ThenSelect<T, TActionResult>(
         this Task<List<T>> itemsTask,
         Func<T, TActionResult> selector)
     {
         return itemsTask.ThenSelect((item, index) => selector(item));
+    }
+
+    public static Task<List<TActionResult>> ThenSelectAsync<T, TActionResult>(
+        this Task<List<T>> itemsTask,
+        Func<T, Task<TActionResult>> selector)
+    {
+        return itemsTask.ThenSelectAsync((item, index) => selector(item));
     }
 
     public static List<T1> Map<T, T1>(this IList<T> items, Func<T, T1> mapFunc)
