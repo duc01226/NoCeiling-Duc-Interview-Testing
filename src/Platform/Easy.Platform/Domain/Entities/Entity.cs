@@ -120,7 +120,7 @@ public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity,
     }
 
 
-    public TPrimaryKey Id { get; set; }
+    public virtual TPrimaryKey Id { get; set; }
 
     public virtual PlatformCheckUniqueValidator<TEntity> CheckUniqueValidator()
     {

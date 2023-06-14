@@ -16,13 +16,13 @@ public static class PlatformStringToDateTimeConverterHelper
         try
         {
             // Try Deserialize like normal standard for normal standard datetime format string
-            return JsonSerializer.Deserialize<DateTime>(dateTimeStr);
+            return dateTimeStr.StartsWith('"') ? JsonSerializer.Deserialize<DateTime>(dateTimeStr) : JsonSerializer.Deserialize<DateTime>($"\"{dateTimeStr}\"");
         }
         catch (Exception)
         {
             try
             {
-                return DateTime.Parse(dateTimeStr, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.None);
+                return DateTime.Parse(dateTimeStr!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.None);
             }
             catch (Exception)
             {
