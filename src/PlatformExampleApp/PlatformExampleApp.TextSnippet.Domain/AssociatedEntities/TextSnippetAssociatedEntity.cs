@@ -28,9 +28,9 @@ public class TextSnippetAssociatedEntity : TextSnippetEntity
         return this;
     }
 
-    public TextSnippetAssociatedEntity WithCreatedByUser(ITextSnippetRepository<UserEntity> userRepo)
+    public async Task<TextSnippetAssociatedEntity> WithCreatedByUser(ITextSnippetRepository<UserEntity> userRepo)
     {
         return WithCreatedByUser(
-            CreatedByUserId.HasValue ? userRepo.GetByIdAsync(CreatedByUserId.Value).GetResult() : null);
+            CreatedByUserId.HasValue ? await userRepo.GetByIdAsync(CreatedByUserId.Value) : null);
     }
 }

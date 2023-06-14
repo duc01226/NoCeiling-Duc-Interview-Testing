@@ -5,17 +5,17 @@ using Easy.Platform.Common.Extensions;
 namespace Easy.Platform.Domain.Entities;
 
 /// <summary>
-/// Use this property on Entity and on Property you want to check to auto add <see cref="ISupportDomainEventsEntity.PropertyValueUpdatedDomainEvent" /> on update property one the entity.
-/// Property with JsonIgnoreAttribute or IgnoreAddPropertyValueUpdatedDomainEventAttribute will be ignored
+/// Use this property on Entity and on Property you want to check to auto add <see cref="ISupportDomainEventsEntity.FieldUpdatedDomainEvent" /> on update property one the entity.
+/// Property with JsonIgnoreAttribute or IgnoreAddFieldUpdatedEventAttribute will be ignored
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Property)]
-public class TrackValueUpdatedDomainEventAttribute : Attribute
+public class TrackFieldUpdatedDomainEventAttribute : Attribute
 {
 }
 
-public static class AutoAddPropertyValueUpdatedDomainEventEntityExtensions
+public static class AutoAddFieldUpdatedEventEntityExtensions
 {
-    public static TEntity AutoAddPropertyValueUpdatedDomainEvent<TEntity>(this TEntity entity, TEntity existingOriginalEntity) where TEntity : class, IEntity, new()
+    public static TEntity AutoAddFieldUpdatedEvent<TEntity>(this TEntity entity, TEntity existingOriginalEntity) where TEntity : class, IEntity, new()
     {
         if (entity.HasTrackValueUpdatedDomainEventAttribute())
             typeof(TEntity)
@@ -23,13 +23,13 @@ public static class AutoAddPropertyValueUpdatedDomainEventEntityExtensions
                 .Where(p => p.Name != nameof(IRowVersionEntity.ConcurrencyUpdateToken) && p.Name != nameof(IDateAuditedEntity.LastUpdatedDate))
                 .Where(
                     propertyInfo => propertyInfo.GetCustomAttribute<JsonIgnoreAttribute>() == null &&
-                                    propertyInfo.GetCustomAttribute<TrackValueUpdatedDomainEventAttribute>() != null)
+                                    propertyInfo.GetCustomAttribute<TrackFieldUpdatedDomainEventAttribute>() != null)
                 .Where(propertyInfo => propertyInfo.GetValue(entity).IsValuesDifferent(propertyInfo.GetValue(existingOriginalEntity)))
                 .ForEach(
                     propertyInfo =>
                     {
                         entity.As<ISupportDomainEventsEntity<TEntity>>()
-                            .AddPropertyValueUpdatedDomainEvent(
+                            .AddFieldUpdatedEvent(
                                 propertyInfo,
                                 originalValue: propertyInfo.GetValue(existingOriginalEntity),
                                 newValue: propertyInfo.GetValue(entity));
@@ -41,6 +41,6 @@ public static class AutoAddPropertyValueUpdatedDomainEventEntityExtensions
     public static bool HasTrackValueUpdatedDomainEventAttribute<TEntity>(this TEntity entity) where TEntity : class, IEntity, new()
     {
         return entity is ISupportDomainEventsEntity<TEntity> &&
-               typeof(TEntity).GetCustomAttribute(typeof(TrackValueUpdatedDomainEventAttribute), true) != null;
+               typeof(TEntity).GetCustomAttribute(typeof(TrackFieldUpdatedDomainEventAttribute), true) != null;
     }
 }

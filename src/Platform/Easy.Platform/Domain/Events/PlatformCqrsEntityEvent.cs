@@ -92,7 +92,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         if (!dismissSendEvent)
-            entity.AutoAddPropertyValueUpdatedDomainEvent(existingEntity);
+            entity.AutoAddFieldUpdatedEvent(existingEntity);
 
         var result = await updateEntityAction(entity)
             .ThenActionAsync(
@@ -157,21 +157,32 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent
     /// </summary>
     public List<KeyValuePair<string, string>> DomainEvents { get; set; } = new();
 
-    public List<TEvent> FindDomainEvents<TEvent>() where TEvent : ISupportDomainEventsEntity.DomainEvent
+    public List<TEvent> FindEvents<TEvent>() where TEvent : ISupportDomainEventsEntity.DomainEvent
     {
         return DomainEvents
-            .Where(p => p.Key == ISupportDomainEventsEntity.DomainEvent.GetDefaultDomainEventName<TEvent>())
+            .Where(p => p.Key == ISupportDomainEventsEntity.DomainEvent.GetDefaultEventName<TEvent>())
             .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<TEvent>(p.Value))
             .ToList();
     }
 
-    public ISupportDomainEventsEntity.PropertyValueUpdatedDomainEvent<TValue> FindPropertyValueUpdatedDomainEvent<TValue>(
-        Expression<Func<TEntity, TValue>> property)
+    public ISupportDomainEventsEntity.FieldUpdatedDomainEvent<TValue> FindFieldUpdatedEvent<TValue>(
+        Expression<Func<TEntity, TValue>> field)
     {
         return DomainEvents
-            .Where(p => p.Key == ISupportDomainEventsEntity.DomainEvent.GetDefaultDomainEventName<ISupportDomainEventsEntity.PropertyValueUpdatedDomainEvent>())
-            .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<ISupportDomainEventsEntity.PropertyValueUpdatedDomainEvent<TValue>>(p.Value))
-            .FirstOrDefault(p => p != null && p.PropertyName == property.GetPropertyName());
+            .Where(p => p.Key == ISupportDomainEventsEntity.DomainEvent.GetDefaultEventName<ISupportDomainEventsEntity.FieldUpdatedDomainEvent>())
+            .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<ISupportDomainEventsEntity.FieldUpdatedDomainEvent<TValue>>(p.Value))
+            .FirstOrDefault(p => p != null && p.FieldName == field.GetPropertyName());
+    }
+
+    public bool HasAnyFieldUpdated(
+        params Expression<Func<TEntity, object>>[] fields)
+    {
+        var fieldNames = fields.Select(p => p.GetPropertyName()).ToHashSet();
+
+        return DomainEvents
+            .Where(p => p.Key == ISupportDomainEventsEntity.DomainEvent.GetDefaultEventName<ISupportDomainEventsEntity.FieldUpdatedDomainEvent>())
+            .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<ISupportDomainEventsEntity.FieldUpdatedDomainEvent<object>>(p.Value))
+            .Any(p => p != null && fieldNames.Contains(p.FieldName));
     }
 
     public PlatformCqrsEntityEvent<TEntity> Clone()

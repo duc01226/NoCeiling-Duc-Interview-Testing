@@ -6,9 +6,9 @@ using PlatformExampleApp.TextSnippet.Domain.Entities;
 
 namespace PlatformExampleApp.TextSnippet.Application.UseCaseEvents;
 
-internal sealed class DemoUsingPropertyValueUpdatedDomainEventOnSnippetTextEntityEventHandler : PlatformCqrsEntityEventApplicationHandler<TextSnippetEntity>
+internal sealed class DemoUsingFieldUpdatedDomainEventOnSnippetTextEntityEventHandler : PlatformCqrsEntityEventApplicationHandler<TextSnippetEntity>
 {
-    public DemoUsingPropertyValueUpdatedDomainEventOnSnippetTextEntityEventHandler(
+    public DemoUsingFieldUpdatedDomainEventOnSnippetTextEntityEventHandler(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider) : base(
@@ -31,13 +31,13 @@ internal sealed class DemoUsingPropertyValueUpdatedDomainEventOnSnippetTextEntit
         await Task.Delay(5.Seconds(), cancellationToken);
 
         // DEMO USING PROPERTY CHANGED DOMAIN EVENT
-        var snippetTextPropUpdatedEvent = @event.FindPropertyValueUpdatedDomainEvent(p => p.SnippetText);
+        var snippetTextPropUpdatedEvent = @event.FindFieldUpdatedEvent(p => p.SnippetText);
         if (snippetTextPropUpdatedEvent != null)
             CreateGlobalLogger()
                 .LogInformation(
                     $"TextSnippetEntity Id:'{@event.EntityData.Id}' SnippetText updated. Prev: {snippetTextPropUpdatedEvent.OriginalValue}. New: {snippetTextPropUpdatedEvent.NewValue}");
 
-        var fullTextPropUpdatedEvent = @event.FindPropertyValueUpdatedDomainEvent(p => p.FullText);
+        var fullTextPropUpdatedEvent = @event.FindFieldUpdatedEvent(p => p.FullText);
         if (fullTextPropUpdatedEvent != null)
             CreateGlobalLogger()
                 .LogInformation(

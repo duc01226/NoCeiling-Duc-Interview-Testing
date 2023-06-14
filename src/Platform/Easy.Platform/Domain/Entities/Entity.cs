@@ -41,39 +41,39 @@ public interface ISupportDomainEventsEntity
 
     public abstract class DomainEvent
     {
-        public static string GetDefaultDomainEventName<TEvent>() where TEvent : DomainEvent
+        public static string GetDefaultEventName<TEvent>() where TEvent : DomainEvent
         {
             return typeof(TEvent).Name;
         }
     }
 
-    public class PropertyValueUpdatedDomainEvent : DomainEvent
+    public class FieldUpdatedDomainEvent : DomainEvent
     {
-        public string PropertyName { get; set; }
+        public string FieldName { get; set; }
         public object OriginalValue { get; set; }
         public object NewValue { get; set; }
 
-        public static PropertyValueUpdatedDomainEvent Create(string propertyName, object originalValue, object newValue)
+        public static FieldUpdatedDomainEvent Create(string propertyName, object originalValue, object newValue)
         {
-            return new PropertyValueUpdatedDomainEvent
+            return new FieldUpdatedDomainEvent
             {
-                PropertyName = propertyName,
+                FieldName = propertyName,
                 OriginalValue = originalValue,
                 NewValue = newValue
             };
         }
     }
 
-    public class PropertyValueUpdatedDomainEvent<TValue> : PropertyValueUpdatedDomainEvent
+    public class FieldUpdatedDomainEvent<TValue> : FieldUpdatedDomainEvent
     {
         public new TValue OriginalValue { get; set; }
         public new TValue NewValue { get; set; }
 
-        public static PropertyValueUpdatedDomainEvent<TValue> Create(string propertyName, TValue originalValue, TValue newValue)
+        public static FieldUpdatedDomainEvent<TValue> Create(string propertyName, TValue originalValue, TValue newValue)
         {
-            return new PropertyValueUpdatedDomainEvent<TValue>
+            return new FieldUpdatedDomainEvent<TValue>
             {
-                PropertyName = propertyName,
+                FieldName = propertyName,
                 OriginalValue = originalValue,
                 NewValue = newValue
             };
@@ -115,7 +115,7 @@ public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity,
     public TEntity AddDomainEvent<TEvent>(TEvent eventActionPayload, string customDomainEventName = null)
         where TEvent : DomainEvent
     {
-        DomainEvents.Add(new KeyValuePair<string, DomainEvent>(customDomainEventName ?? DomainEvent.GetDefaultDomainEventName<TEvent>(), eventActionPayload));
+        DomainEvents.Add(new KeyValuePair<string, DomainEvent>(customDomainEventName ?? DomainEvent.GetDefaultEventName<TEvent>(), eventActionPayload));
         return (TEntity)this;
     }
 
@@ -139,14 +139,14 @@ public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity,
         return Validate();
     }
 
-    public TEntity AddPropertyValueUpdatedDomainEvent<TValue>(string propertyName, TValue originalValue, TValue newValue)
+    public TEntity AddFieldUpdatedEvent<TValue>(string propertyName, TValue originalValue, TValue newValue)
     {
-        return this.As<TEntity>().AddPropertyValueUpdatedDomainEvent<TEntity, TValue>(propertyName, originalValue, newValue);
+        return this.As<TEntity>().AddFieldUpdatedEvent<TEntity, TValue>(propertyName, originalValue, newValue);
     }
 
-    public TEntity AddPropertyValueUpdatedDomainEvent<TValue>(Expression<Func<TEntity, TValue>> property, TValue originalValue, TValue newValue)
+    public TEntity AddFieldUpdatedEvent<TValue>(Expression<Func<TEntity, TValue>> property, TValue originalValue, TValue newValue)
     {
-        return this.As<TEntity>().AddPropertyValueUpdatedDomainEvent<TEntity, TValue>(property, originalValue, newValue);
+        return this.As<TEntity>().AddFieldUpdatedEvent<TEntity, TValue>(property, originalValue, newValue);
     }
 
     public List<TEvent> FindDomainEvents<TEvent>()
@@ -155,9 +155,9 @@ public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity,
         return this.As<TEntity>().FindDomainEvents<TEntity, TEvent>();
     }
 
-    public List<PropertyValueUpdatedDomainEvent<TValue>> FindPropertyValueUpdatedDomainEvents<TValue>(string propertyName)
+    public List<FieldUpdatedDomainEvent<TValue>> FindFieldUpdatedDomainEvents<TValue>(string propertyName)
     {
-        return this.As<TEntity>().FindPropertyValueUpdatedDomainEvents<TEntity, TValue>(propertyName);
+        return this.As<TEntity>().FindFieldUpdatedDomainEvents<TEntity, TValue>(propertyName);
     }
 
     public virtual TEntity Clone()

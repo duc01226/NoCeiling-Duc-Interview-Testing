@@ -31,7 +31,7 @@ internal sealed class DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEv
         await Task.Delay(5.Seconds(), cancellationToken);
 
         var encryptSnippetTextEvent = @event
-            .FindDomainEvents<TextSnippetEntity.EncryptSnippetTextDomainEvent>()
+            .FindEvents<TextSnippetEntity.EncryptSnippetTextDomainEvent>()
             .FirstOrDefault();
 
         if (encryptSnippetTextEvent != null &&

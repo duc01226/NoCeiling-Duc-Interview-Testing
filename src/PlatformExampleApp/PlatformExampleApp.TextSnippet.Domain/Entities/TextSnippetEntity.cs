@@ -10,17 +10,17 @@ using static Easy.Platform.Domain.Entities.ISupportDomainEventsEntity;
 
 namespace PlatformExampleApp.TextSnippet.Domain.Entities;
 
-// DEMO USING AutoAddPropertyValueUpdatedDomainEvent to track entity property updated
-[TrackValueUpdatedDomainEvent]
+// DEMO USING AutoAddFieldUpdatedEvent to track entity property updated
+[TrackFieldUpdatedDomainEvent]
 public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid?>, IRowVersionEntity
 {
     public const int FullTextMaxLength = 4000;
     public const int SnippetTextMaxLength = 100;
 
-    [TrackValueUpdatedDomainEvent]
+    [TrackFieldUpdatedDomainEvent]
     public string SnippetText { get; set; }
 
-    [TrackValueUpdatedDomainEvent]
+    [TrackFieldUpdatedDomainEvent]
     public string FullText { get; set; }
 
     public TimeOnly TimeOnly { get; set; } = TimeOnly.MaxValue;

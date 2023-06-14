@@ -26,7 +26,6 @@ public abstract class PlatformHangfireBackgroundJobModule : PlatformBackgroundJo
         serviceCollection.AddHangfire(GlobalConfigurationConfigure);
 
         serviceCollection.RegisterAllForImplementation<PlatformHangfireBackgroundJobScheduler>(
-            ServiceLifeTime.Transient,
             replaceStrategy: DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
 
         serviceCollection.Register<IPlatformBackgroundJobProcessingService>(
@@ -50,13 +49,11 @@ public abstract class PlatformHangfireBackgroundJobModule : PlatformBackgroundJo
         await StartBackgroundJobProcessing(serviceScope);
     }
 
-    // By default We only want one worker run at a time to prevent stacking multiple background job
-    // running at the same time could cause performance issues
     protected virtual BackgroundJobServerOptions BackgroundJobServerOptionsConfigure(
         IServiceProvider provider,
         BackgroundJobServerOptions options)
     {
-        options.WorkerCount = 1;
+        options.WorkerCount = Math.Min(Environment.ProcessorCount * 5, 10);
 
         return options;
     }

@@ -9,7 +9,7 @@ namespace Easy.Platform.Domain.Entities;
 public static class PlatformEntityExtensions
 {
     /// <summary>
-    /// Update all properties value from current entity to target entity even if it's setter protected or private and trigger <see cref="ISupportDomainEventsEntity.PropertyValueUpdatedDomainEvent" /> <br />
+    /// Update all properties value from current entity to target entity even if it's setter protected or private and trigger <see cref="ISupportDomainEventsEntity.FieldUpdatedDomainEvent" /> <br />
     /// ignorePropPredicate: (sourceEntity, propInfo) => bool
     /// </summary>
     public static TEntity SetAllPropertiesIncludeValueUpdatedEvent<TEntity, TPrimaryKey>(
