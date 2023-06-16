@@ -1,5 +1,7 @@
 import * as moment from 'moment';
 
+import { WEEKDAY, WORKING_TIME_DAY_DISPLAY } from '../common-values/weekdays.const';
+
 export function date_setHours(date: Date, hours: number): Date {
     return new Date(new Date(date).setHours(hours));
 }
@@ -246,6 +248,10 @@ export function date_addWeeks(currentDate: Date, numberOfWeeks: number): Date {
     return moment(currentDate).add(numberOfWeeks, 'week').toDate();
 }
 
+export function date_isDateExist(dateList: Date[], dateToFind: Date): boolean {
+    return dateList.some(date => date_compareOnlyDay(dateToFind, date) === 0);
+}
+
 export function date_getNextWeekday(
     date: Date,
     dayToFind: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thusday' | 'Friday' | 'Sartuday' | 'Sunday'
@@ -254,4 +260,23 @@ export function date_getNextWeekday(
     const dayIndex = days.findIndex(v => v === dayToFind);
     const dateCopy = new Date(date.getTime());
     return new Date(dateCopy.setDate(dateCopy.getDate() + ((7 - dateCopy.getDay() + dayIndex) % 7 || 7)));
+}
+
+export function date_getDayName(date: Date, shortName?: boolean): string {
+    if (!date) return '';
+
+    const weekDays: string[] = [];
+    Object.keys(WEEKDAY).forEach(key => {
+        weekDays.push(shortName ? WORKING_TIME_DAY_DISPLAY[key] : key);
+    });
+    return weekDays[date.getDay()];
+}
+
+export function date_getHourAndMinute(date: Date): string {
+    if (!date) return '';
+
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+
+    return `${hours < 10 ? '0' + hours : hours}:${minutes < 10 ? '0' + minutes : minutes}`;
 }

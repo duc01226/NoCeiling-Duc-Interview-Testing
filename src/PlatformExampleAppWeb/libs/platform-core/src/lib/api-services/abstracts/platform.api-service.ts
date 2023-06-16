@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse, HttpParams, HttpStatusCode } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams, HttpStatusCode } from '@angular/common/http';
 import { Injectable, Optional } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
@@ -18,6 +18,8 @@ const UNAUTHORIZATION_STATUSES: HttpStatusCode[] = [HttpStatusCode.Unauthorized,
 
 @Injectable()
 export abstract class PlatformApiService extends PlatformHttpService {
+    public static DefaultHeaders: HttpHeaders = new HttpHeaders({ 'Content-Type': 'application/json; charset=utf-8' });
+
     public constructor(
         http: HttpClient,
         @Optional() moduleConfig: PlatformCoreModuleConfig,
@@ -62,6 +64,20 @@ export abstract class PlatformApiService extends PlatformHttpService {
 
         return super
             .httpPost<T>(this.apiUrl + path, this.preprocessData(body), configuredOptions ?? options)
+            .pipe(catchError(err => this.catchHttpError<T>(err)));
+    }
+
+    protected postFileMultiPartForm<T>(
+        path: string,
+        body: unknown,
+        configureOptions?: (option: HttpClientOptions) => HttpClientOptions | void | undefined
+    ): Observable<T> {
+        const options = this.getHttpOptions();
+        const configuredOptions =
+            configureOptions != null ? <HttpClientOptions | undefined>configureOptions(options) : options;
+
+        return super
+            .httpPostFileMultiPartForm<T>(this.apiUrl + path, <object>body, configuredOptions ?? options)
             .pipe(catchError(err => this.catchHttpError<T>(err)));
     }
 
@@ -213,6 +229,16 @@ export abstract class PlatformApiService extends PlatformHttpService {
             }
         }
         return returnParam;
+    }
+
+    protected setDefaultOptions(options?: HttpClientOptions): HttpClientOptions {
+        options = options ? options : {};
+        if (!options.headers) {
+            const httpHeaders = PlatformApiService.DefaultHeaders;
+            options.headers = httpHeaders;
+        }
+
+        return options;
     }
 }
 

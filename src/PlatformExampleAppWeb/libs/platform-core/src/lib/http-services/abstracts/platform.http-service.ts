@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-types */
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Optional } from '@angular/core';
 import { Observable, OperatorFunction } from 'rxjs';
 import { timeout } from 'rxjs/operators';
 
+import { FormHelpers } from '../../helpers';
 import { PlatformCoreModuleConfig } from '../../platform-core.config';
 import { clone, immutableUpdate, keys, toPlainObj } from '../../utils';
 import { HttpClientOptions } from './platform.http-client-options';
@@ -18,8 +20,8 @@ export abstract class PlatformHttpService {
     protected get defaultOptions(): HttpClientOptions {
         return {
             headers: {
-                Accept: 'application/json',
-                'Content-type': 'application/json'
+                Accept: 'application/json, text/plain, */*',
+                'Content-Type': 'application/json'
             }
         };
     }
@@ -36,6 +38,25 @@ export abstract class PlatformHttpService {
         const finalBody = this.buildHttpBody(body, this.getFinalOptions(options));
         return this.http
             .post(url, finalBody, this.getFinalOptions(options))
+            .pipe(<OperatorFunction<Object, TResult>>timeout(this.requestTimeoutInMs));
+    }
+
+    protected httpPostFileMultiPartForm<TResult>(
+        url: string,
+        body: object,
+        options?: HttpClientOptions | (() => HttpClientOptions)
+    ) {
+        const finalBody = FormHelpers.convertModelToFormData(body);
+        const finalOptions = immutableUpdate(this.getFinalOptions(options), {
+            headers: {
+                enctype: 'multipart/form-data'
+            }
+        });
+        // The headers ContentType should be undefined, in order to add the correct boundaries
+        delete (<any>finalOptions.headers)['Content-Type'];
+
+        return this.http
+            .post(url, finalBody, finalOptions)
             .pipe(<OperatorFunction<Object, TResult>>timeout(this.requestTimeoutInMs));
     }
 
@@ -80,8 +101,9 @@ export abstract class PlatformHttpService {
         return formData.toString();
     }
 
-    private getFinalOptions(options?: HttpClientOptions | (() => HttpClientOptions)): HttpClientOptions {
+    protected getFinalOptions(options?: HttpClientOptions | (() => HttpClientOptions)): HttpClientOptions {
         const finalOptions = options == undefined ? {} : typeof options == 'function' ? options() : options;
+
         return immutableUpdate(
             clone(this.defaultOptions),
             this.appendAdditionalHttpOptions(finalOptions) ?? finalOptions

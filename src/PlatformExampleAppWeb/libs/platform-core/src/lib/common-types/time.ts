@@ -31,6 +31,15 @@ export class Time implements ITime {
             : new Time(time.hour, time.minute, time.second);
     }
 
+    public static compareTime(from: Time, to: Time): boolean {
+        if (!from || !to) return false;
+
+        const fromDate = new Date(from.hour, from.minute, from.second);
+        const toDate = new Date(to.hour, to.minute, to.second);
+
+        return fromDate < toDate;
+    }
+
     public hour: number = 0;
     public minute: number = 0;
     public second: number = 0;
@@ -98,5 +107,14 @@ export class Time implements ITime {
 
     public toJSON(): string {
         return this.toString();
+    }
+
+    public static setTimeIntoDate(date?: Date, time?: Time): Date | undefined {
+        if (!date || !time) return;
+
+        const newDate = new Date(date);
+        newDate.setHours(time.hour, time.minute, time.second);
+
+        return newDate;
     }
 }

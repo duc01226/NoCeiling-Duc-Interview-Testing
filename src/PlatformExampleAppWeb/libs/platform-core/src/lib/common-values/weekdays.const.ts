@@ -8,3 +8,13 @@ export const WEEKDAY: Record<string, number> = {
     Friday: 5,
     Saturday: 6
 };
+
+export const WORKING_TIME_DAY_DISPLAY: Record<string, string> = {
+    Monday: 'Mon',
+    Tuesday: 'Tue',
+    Wednesday: 'Wed',
+    Thursday: 'Thu',
+    Friday: 'Fri',
+    Saturday: 'Sat',
+    Sunday: 'Sun'
+};

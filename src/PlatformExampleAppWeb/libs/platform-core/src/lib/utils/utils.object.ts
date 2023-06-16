@@ -3,7 +3,9 @@
 import {
     clone as lodashClone,
     cloneDeep as lodashCloneDeep,
+    filter,
     keys as lodashKeys,
+    union,
     values as lodashValues
 } from 'lodash-es';
 import { PartialDeep } from 'type-fest';
@@ -203,6 +205,13 @@ export function isDifferent<T extends any>(value1: T, value2: T, shallowCheckFir
         });
     }
     return JSON.stringify(value1) != JSON.stringify(value2);
+}
+
+export function changedKeys(value1: any, value2: any) {
+    const keys = union(lodashKeys(value1), lodashKeys(value2));
+    return filter(keys, function (key: string) {
+        return isDifferent(value1[key], value2[key]);
+    });
 }
 
 export function boxingFn<T>(fn?: (...args: any[]) => T, ...fnArgs: any[]) {
