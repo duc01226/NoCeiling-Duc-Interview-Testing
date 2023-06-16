@@ -403,21 +403,21 @@ csharp_style_unused_value_expression_statement_preference = discard_variable:err
 csharp_style_unused_value_assignment_preference = discard_variable:none
 
 dotnet_diagnostic.IDE0003.severity = suggestion
-dotnet_diagnostic.IDE0005.severity = suggestion
+dotnet_diagnostic.IDE0005.severity = error
 dotnet_diagnostic.IDE0010.severity = none
 dotnet_diagnostic.IDE0011.severity = none
 dotnet_diagnostic.IDE0039.severity = suggestion
-dotnet_diagnostic.IDE0040.severity = suggestion
+dotnet_diagnostic.IDE0040.severity = error
 dotnet_diagnostic.IDE0044.severity = suggestion
 dotnet_diagnostic.IDE0050.severity = suggestion
-dotnet_diagnostic.IDE0051.severity = suggestion
+dotnet_diagnostic.IDE0051.severity = error
 dotnet_diagnostic.IDE0053.severity = none
 dotnet_diagnostic.IDE0056.severity = suggestion
 dotnet_diagnostic.IDE0057.severity = none
-dotnet_diagnostic.IDE0059.severity = suggestion
-dotnet_diagnostic.IDE0060.severity = suggestion
+dotnet_diagnostic.IDE0059.severity = error
+dotnet_diagnostic.IDE0060.severity = warning
 dotnet_diagnostic.IDE0061.severity = none
-dotnet_diagnostic.IDE0072.severity = suggestion
+dotnet_diagnostic.IDE0072.severity = warning
 dotnet_diagnostic.IDE0090.severity = none
 dotnet_diagnostic.IDE0037.severity = suggestion
 dotnet_diagnostic.IDE0106.severity = suggestion
@@ -427,7 +427,7 @@ dotnet_diagnostic.IDE0058.severity = none
 dotnet_diagnostic.IDE0078.severity = none
 dotnet_diagnostic.IDE0063.severity = none
 dotnet_diagnostic.IDE0022.severity = suggestion
-dotnet_diagnostic.IDE0052.severity = suggestion
+dotnet_diagnostic.IDE0052.severity = error
 dotnet_diagnostic.IDE0240.severity = none
 dotnet_diagnostic.IDE0074.severity = suggestion
 # IDE0200: Remove unnecessary lambda expression
@@ -471,7 +471,7 @@ dotnet_diagnostic.CA2253.severity = error
 dotnet_diagnostic.CA1041.severity = suggestion
 dotnet_diagnostic.CA1309.severity = none
 dotnet_diagnostic.CA2208.severity = suggestion
-dotnet_diagnostic.CA1711.severity = suggestion
+dotnet_diagnostic.CA1711.severity = none
 dotnet_diagnostic.CA1727.severity = error
 dotnet_diagnostic.CA1000.severity = none
 dotnet_diagnostic.CA1806.severity = none
@@ -590,7 +590,7 @@ dotnet_diagnostic.S3963.severity = suggestion
 dotnet_diagnostic.S3218.severity = suggestion
 
 # S4035: Classes implementing "IEquatable<T>" should be sealed
-dotnet_diagnostic.S4035.severity = suggestion
+dotnet_diagnostic.S4035.severity = none
 
 # S3241: Methods should not return values that are never used
 dotnet_diagnostic.S3241.severity = none
@@ -632,22 +632,22 @@ dotnet_diagnostic.S3928.severity = suggestion
 dotnet_diagnostic.S1643.severity = none
 
 # S3260: Non-derived "private" classes and records should be "sealed"
-dotnet_diagnostic.S3260.severity = none
+dotnet_diagnostic.S3260.severity = error
 
 # S1123: "Obsolete" attributes should include explanations
 dotnet_diagnostic.S1123.severity = suggestion
 
 # S1172: Unused method parameters should be removed
-dotnet_diagnostic.S1172.severity = suggestion
+dotnet_diagnostic.S1172.severity = warning
 
 # S3267: Loops should be simplified with "LINQ" expressions
-dotnet_diagnostic.S3267.severity = suggestion
+dotnet_diagnostic.S3267.severity = none
 
 # S3604: Member initializer values should not be redundant
 dotnet_diagnostic.S3604.severity = none
 
 # S1481: Unused local variables should be removed
-dotnet_diagnostic.S1481.severity = suggestion
+dotnet_diagnostic.S1481.severity = error
 
 # S3220: Method calls should not resolve ambiguously to overloads with "params"
 dotnet_diagnostic.S3220.severity = suggestion
@@ -699,6 +699,9 @@ dotnet_diagnostic.S2094.severity = none
 
 # S1133: Remove deprecated code some day
 dotnet_diagnostic.S1133.severity = warning
+
+# S1144: Remove unused internal class
+dotnet_diagnostic.S1144.severity = none
 
 # S3878: Remove array creation and simply pass element for params parameter
 dotnet_diagnostic.S3878.severity = suggestion

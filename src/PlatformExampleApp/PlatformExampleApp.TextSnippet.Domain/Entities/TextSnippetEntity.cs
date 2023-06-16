@@ -6,7 +6,6 @@ using Easy.Platform.Domain.Exceptions.Extensions;
 using FluentValidation;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
 using PlatformExampleApp.TextSnippet.Domain.ValueObjects;
-using static Easy.Platform.Domain.Entities.ISupportDomainEventsEntity;
 
 namespace PlatformExampleApp.TextSnippet.Domain.Entities;
 
@@ -108,7 +107,7 @@ public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid
             "SnippetText is duplicated");
     }
 
-    public class EncryptSnippetTextDomainEvent : DomainEvent
+    public class EncryptSnippetTextDomainEvent : ISupportDomainEventsEntity.DomainEvent
     {
         public string OriginalSnippetText { get; set; }
 

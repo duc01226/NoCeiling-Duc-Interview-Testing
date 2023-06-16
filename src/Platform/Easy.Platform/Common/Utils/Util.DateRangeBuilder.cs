@@ -20,7 +20,14 @@ public static partial class Util
             return Enumerable.Range(0, endDate.Date.Subtract(startDate.Date).Days + 1)
                 .Select(offset => startDate.AddDays(offset))
                 .WhereIf(ignoreDayOfWeeks != null, date => !ignoreDayOfWeeks.Contains(date.DayOfWeek))
-                .ToList();
+                .ToList()
+                .PipeIf(
+                    p => p.Any(),
+                    p =>
+                    {
+                        p[p.Count - 1] = p[p.Count - 1].SetTime(endDate.TimeOnly());
+                        return p;
+                    });
         }
     }
 }

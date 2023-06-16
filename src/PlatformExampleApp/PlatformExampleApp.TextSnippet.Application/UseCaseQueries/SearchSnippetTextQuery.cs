@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Cqrs.Queries;
@@ -33,8 +32,11 @@ internal sealed class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicati
 {
     // This is just a demo that helper is used by Application Commands/Queries
     // ReSharper disable once NotAccessedField.Local
-    [SuppressMessage("Critical Code Smell", "S4487:Unread \"private\" fields should be removed", Justification = "<Pending>")]
+#pragma warning disable IDE0052
+#pragma warning disable S4487 // Unread "private" fields should be removed
     private readonly ExampleHelper exampleHelper;
+#pragma warning restore S4487 // Unread "private" fields should be removed
+#pragma warning restore IDE0052
 
     private readonly IPlatformFullTextSearchPersistenceService fullTextSearchPersistenceService;
 
@@ -67,9 +69,9 @@ internal sealed class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicati
         //    cancellationToken);
 
         // NOT RELATED TO MAIN LOGIC. TEST GET DYNAMIC DATA LAZY_LOADING STILL WORKS
-        var testDynamicDataHasPropIsEntityHavingLazyLoading = await repository.FirstOrDefaultAsync(
-            queryBuilder: query => query.AsEnumerable().Select(p => new { entity = p }),
-            cancellationToken: cancellationToken);
+        //var testDynamicDataHasPropIsEntityHavingLazyLoading = await repository.FirstOrDefaultAsync(
+        //    queryBuilder: query => query.AsEnumerable().Select(p => new { entity = p }),
+        //    cancellationToken: cancellationToken);
 
         // STEP 1: Build Queries
         var fullItemsQueryBuilder = repository.GetQueryBuilder(

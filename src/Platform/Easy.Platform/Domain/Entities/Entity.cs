@@ -3,7 +3,6 @@ using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Validations;
 using Easy.Platform.Common.Validations.Validators;
-using static Easy.Platform.Domain.Entities.ISupportDomainEventsEntity;
 
 namespace Easy.Platform.Domain.Entities;
 
@@ -100,9 +99,9 @@ public interface IValidatableEntity<TEntity, TPrimaryKey> : IValidatableEntity<T
 public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity, TPrimaryKey>, ISupportDomainEventsEntity<TEntity>
     where TEntity : Entity<TEntity, TPrimaryKey>, new()
 {
-    protected readonly List<KeyValuePair<string, DomainEvent>> DomainEvents = new();
+    protected readonly List<KeyValuePair<string, ISupportDomainEventsEntity.DomainEvent>> DomainEvents = new();
 
-    public List<KeyValuePair<string, DomainEvent>> GetDomainEvents()
+    public List<KeyValuePair<string, ISupportDomainEventsEntity.DomainEvent>> GetDomainEvents()
     {
         return DomainEvents;
     }
@@ -113,9 +112,12 @@ public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity,
     }
 
     public TEntity AddDomainEvent<TEvent>(TEvent eventActionPayload, string customDomainEventName = null)
-        where TEvent : DomainEvent
+        where TEvent : ISupportDomainEventsEntity.DomainEvent
     {
-        DomainEvents.Add(new KeyValuePair<string, DomainEvent>(customDomainEventName ?? DomainEvent.GetDefaultEventName<TEvent>(), eventActionPayload));
+        DomainEvents.Add(
+            new KeyValuePair<string, ISupportDomainEventsEntity.DomainEvent>(
+                customDomainEventName ?? ISupportDomainEventsEntity.DomainEvent.GetDefaultEventName<TEvent>(),
+                eventActionPayload));
         return (TEntity)this;
     }
 
@@ -150,12 +152,12 @@ public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity,
     }
 
     public List<TEvent> FindDomainEvents<TEvent>()
-        where TEvent : DomainEvent
+        where TEvent : ISupportDomainEventsEntity.DomainEvent
     {
         return this.As<TEntity>().FindDomainEvents<TEntity, TEvent>();
     }
 
-    public List<FieldUpdatedDomainEvent<TValue>> FindFieldUpdatedDomainEvents<TValue>(string propertyName)
+    public List<ISupportDomainEventsEntity.FieldUpdatedDomainEvent<TValue>> FindFieldUpdatedDomainEvents<TValue>(string propertyName)
     {
         return this.As<TEntity>().FindFieldUpdatedDomainEvents<TEntity, TValue>(propertyName);
     }

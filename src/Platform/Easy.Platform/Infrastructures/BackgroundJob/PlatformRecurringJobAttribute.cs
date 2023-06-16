@@ -78,7 +78,7 @@ public class PlatformRecurringJobAttribute : Attribute
     /// <summary>
     /// TimeZoneOffset hours from UTC. Example: +7 mean +7 hours from UTC.
     /// </summary>
-    public double? TimeZoneOffset { get; set; }
+    public double? TimeZoneOffset { get; set; } = TimeZoneInfo.Local.BaseUtcOffset.TotalHours;
 
     public static PlatformRecurringJobAttribute GetRecurringJobAttributeInfo<TJobExecutor>() where TJobExecutor : IPlatformBackgroundJobExecutor
     {

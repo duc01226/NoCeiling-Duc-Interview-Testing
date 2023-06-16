@@ -22,11 +22,13 @@ public static class PlatformStringToDateTimeConverterHelper
         {
             try
             {
-                return DateTime.Parse(dateTimeStr!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.None);
+                return DateTime.Parse(dateTimeStr!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.None)
+                    .PipeIf(p => p.Kind == DateTimeKind.Unspecified, p => p.SpecifyKind(DateTimeKind.Utc));
             }
             catch (Exception)
             {
-                return DateTime.ParseExact(dateTimeStr, SupportDateOnlyFormats, CultureInfo.InvariantCulture);
+                return DateTime.ParseExact(dateTimeStr, SupportDateOnlyFormats, CultureInfo.InvariantCulture)
+                    .PipeIf(p => p.Kind == DateTimeKind.Unspecified, p => p.SpecifyKind(DateTimeKind.Utc));
             }
         }
     }

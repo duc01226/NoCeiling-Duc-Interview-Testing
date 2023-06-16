@@ -33,9 +33,24 @@ public static class DateTimeExtension
             dateTime.Kind);
     }
 
+    public static DateTime StartOfDate(this DateTime dateTime)
+    {
+        return dateTime.Date;
+    }
+
     public static DateTime EndOfDate(this DateTime dateTime)
     {
-        return dateTime.Date.AddDays(1).AddSeconds(-1);
+        return dateTime.Date.AddDays(1).AddTicks(-1);
+    }
+
+    public static DateTime WithTimeZone(this DateTime dateTime, string timeZoneId)
+    {
+        var unspecifiedDateTime = dateTime.SpecifyKind(DateTimeKind.Unspecified);
+        var timeZoneInfo = Util.TimeZoneParser.TryGetTimeZoneById(timeZoneId);
+
+        var utcDateTime = TimeZoneInfo.ConvertTimeToUtc(unspecifiedDateTime, timeZoneInfo);
+
+        return TimeZoneInfo.ConvertTime(utcDateTime, timeZoneInfo);
     }
 
     public static DateTime ToDateOfMonToSunWeek(this DateTime currentDate, MonToSunDayOfWeeks monToSunDayOfWeek)
@@ -50,9 +65,9 @@ public static class DateTimeExtension
         return currentDate.DayOfWeek.Parse<MonToSunDayOfWeeks>();
     }
 
-    public static DateTime ConvertToTimeZone(this DateTime dateTime, int timeZoneOffset)
+    public static DateTime ConvertToTimeZone(this DateTime dateTime, int timeZoneOffsetMinutes)
     {
-        var hours = -timeZoneOffset / 60;
+        var hours = -timeZoneOffsetMinutes / 60;
 
         return dateTime.ToUniversalTime().AddHours(hours);
     }
@@ -82,9 +97,34 @@ public static class DateTimeExtension
         return DateOnly.FromDateTime(dateTime);
     }
 
+    public static DateTime ToUtc(this DateTime dateTime)
+    {
+        return dateTime.ToUniversalTime();
+    }
+
+    public static DateTime? ToUtc(this DateTime? dateTime)
+    {
+        return dateTime?.ToUniversalTime();
+    }
+
+    public static DateTimeOffset ToUtc(this DateTimeOffset dateTime)
+    {
+        return dateTime.ToUniversalTime();
+    }
+
+    public static DateTimeOffset? ToUtc(this DateTimeOffset? dateTime)
+    {
+        return dateTime?.ToUniversalTime();
+    }
+
     public static DateTime SpecifyKind(this DateTime dateTime, DateTimeKind kind)
     {
         return DateTime.SpecifyKind(dateTime, kind);
+    }
+
+    public static DateTime? SpecifyKind(this DateTime? dateTime, DateTimeKind kind)
+    {
+        return dateTime != null ? DateTime.SpecifyKind(dateTime.Value, kind) : dateTime;
     }
 
     public static TimeOnly TimeOnly(this DateTime dateTime)

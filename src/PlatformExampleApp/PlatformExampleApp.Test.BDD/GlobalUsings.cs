@@ -4,6 +4,7 @@ global using System.Threading;
 global using System.Threading.Tasks;
 global using System.Linq;
 global using Easy.Platform.Common;
+global using Easy.Platform.Common.Timing;
 global using Easy.Platform.Common.Utils;
 global using Easy.Platform.Common.Extensions;
 global using Easy.Platform.Common.Validations;

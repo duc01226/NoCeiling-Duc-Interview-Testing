@@ -53,6 +53,8 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
 
     protected IPlatformApplicationUserContextAccessor UserContextAccessor { get; }
 
+    protected IPlatformApplicationUserContext CurrentUser => UserContextAccessor.Current;
+
     protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
 
     protected abstract TMessage BuildMessage(TEvent @event);

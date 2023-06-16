@@ -26,9 +26,9 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         LoggerFactory = loggerFactory;
     }
 
-    public virtual int RetryOnFailedTimes => 2;
+    public virtual int RetryOnFailedTimes => 5;
 
-    public virtual double RetryOnFailedDelaySeconds => 1;
+    public virtual double RetryOnFailedDelaySeconds => 0.5;
 
     public bool ForceCurrentInstanceHandleInCurrentThread { get; set; }
 

@@ -113,14 +113,10 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
     public static Type GetConsumerMessageType(IPlatformMessageBusConsumer consumer)
     {
         var consumerGenericType = consumer
-            .GetType()
-            .GetInterfaces()
-            .FirstOrDefault(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IPlatformMessageBusConsumer<>));
-
-        // WHY: To ensure that the consumer implements the correct interface IPlatformEventBusConsumer<> OR IPlatformEventBusCustomMessageConsumer<>.
-        // The IPlatformEventBusConsumer (non-generic version) is used for Interface Marker only.
-        if (consumerGenericType == null)
-            throw new Exception("Must be implementation of IPlatformMessageBusConsumer<>");
+                                      .GetType()
+                                      .GetInterfaces()
+                                      .FirstOrDefault(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IPlatformMessageBusConsumer<>)) ??
+                                  throw new Exception("Must be implementation of IPlatformMessageBusConsumer<>");
 
         return IPlatformMessageBusConsumer.GetConsumerMessageType(consumerGenericType);
     }
@@ -192,9 +188,9 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
         Logger = CreateLogger(loggerFactory);
     }
 
-    public virtual int RetryOnFailedTimes => 3;
+    public virtual int RetryOnFailedTimes => 5;
 
-    public virtual double RetryOnFailedDelaySeconds => 1;
+    public virtual double RetryOnFailedDelaySeconds => 0.5;
 
     public override Task HandleAsync(object message, string routingKey)
     {

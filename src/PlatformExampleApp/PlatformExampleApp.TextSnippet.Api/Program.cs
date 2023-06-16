@@ -13,6 +13,9 @@ using Serilog;
 // CA1852 Type 'Program' can be sealed because it has no subtypes in its containing assembly and is not externally visible
 #pragma warning disable CA1852
 
+// DEMO CHANGE DEFAULT USING LOCAL CLOCK PROVIDER. The kind, new Datetime, Default TimeZone will use LocalTimeZone.
+// Clock.UseLocalProvider();
+
 var configuration = PlatformConfigurationBuilder.GetConfigurationBuilder().Build();
 
 Log.Logger = new LoggerConfiguration()
