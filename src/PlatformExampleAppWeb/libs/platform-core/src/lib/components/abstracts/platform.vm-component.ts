@@ -27,10 +27,18 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
     public vmChangeEvent = new EventEmitter<TViewModel>();
 
     public override ngOnInit(): void {
+        this.initVm();
+    }
+
+    public initVm(forceReinit: boolean = false) {
+        if (forceReinit) this.cancelStoredSubscription('initVm');
+
         const initialVmOrVm$ = this.onInitVm();
-        if (this.vm == undefined && initialVmOrVm$ != undefined) {
+
+        if ((this.vm == undefined || forceReinit) && initialVmOrVm$ != undefined) {
             if (initialVmOrVm$ instanceof Observable) {
-                this.storeAnonymousSubscription(
+                this.storeSubscription(
+                    'initVm',
                     initialVmOrVm$.subscribe(initialOrPartialVm => {
                         if (this._vm == undefined) {
                             this._vm = <TViewModel>initialOrPartialVm;
@@ -50,7 +58,8 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
     }
 
     public reload() {
-        this.ngOnInit();
+        this.initVm(true);
+        this.clearErrorMsg();
     }
 
     protected abstract onInitVm: () => TViewModel | undefined | Observable<TViewModel | PartialDeep<TViewModel>>;

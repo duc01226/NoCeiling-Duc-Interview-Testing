@@ -89,8 +89,14 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
         }
     }
 
-    protected initForm() {
-        if (this.formConfig && this.form) return;
+    public override reload() {
+        this.initVm(true);
+        this.initForm(true);
+        this.clearErrorMsg();
+    }
+
+    protected initForm(forceReinit: boolean = false) {
+        if (this.formConfig && this.form && !forceReinit) return;
 
         const initialFormConfig = this.initialFormConfig();
         if (initialFormConfig == undefined)
@@ -98,6 +104,12 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 
         this.formConfig = initialFormConfig;
         this.form = this.buildForm(this.formConfig);
+
+        if (forceReinit) {
+            keys(this.form.controls).forEach(formControlKey => {
+                this.cancelStoredSubscription(buildControlValueChangesSubscriptionKey(formControlKey));
+            });
+        }
 
         /***
          ThrottleTime explain: Delay to enhance performance when user typing fast do not need to emit
@@ -114,7 +126,8 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 
         */
         keys(this.form.controls).forEach(formControlKey => {
-            this.storeAnonymousSubscription(
+            this.storeSubscription(
+                buildControlValueChangesSubscriptionKey(formControlKey),
                 (<FormControl>(<any>this.form.controls)[formControlKey]).valueChanges
                     .pipe(throttleTime(300, asyncScheduler, { leading: true, trailing: true }))
                     .subscribe(value => {
@@ -130,6 +143,10 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
         if (this.isViewMode) this.form.disable();
 
         if (this.formConfig.afterInit) this.formConfig.afterInit();
+
+        function buildControlValueChangesSubscriptionKey(formControlKey: string): string {
+            return `initForm_${formControlKey}_valueChanges`;
+        }
     }
 
     protected override internalSetVm = (v: TViewModel, shallowCheckDiff: boolean = true): void => {

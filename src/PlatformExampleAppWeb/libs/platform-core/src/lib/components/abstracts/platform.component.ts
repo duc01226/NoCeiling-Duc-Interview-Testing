@@ -326,6 +326,10 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         this.detectChanges();
     };
 
+    protected clearErrorMsg = () => {
+        this.errorMsgMap$.next({});
+    };
+
     protected setLoading = (value: boolean | null, requestKey: string = requestStateDefaultKey) => {
         this.loadingMap$.next(
             clone(this.loadingMap$.value, _ => {
