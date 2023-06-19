@@ -1,5 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { AfterViewInit, ChangeDetectorRef, Directive, inject, OnDestroy, OnInit } from '@angular/core';
+import {
+    AfterViewInit,
+    ChangeDetectorRef,
+    Directive,
+    inject,
+    OnChanges,
+    OnDestroy,
+    OnInit,
+    SimpleChanges
+} from '@angular/core';
 import { tapResponse } from '@ngrx/component-store';
 import { ToastrService } from 'ngx-toastr';
 import {
@@ -14,8 +23,11 @@ import {
 import { filter, finalize, map, takeUntil, tap, throttleTime } from 'rxjs/operators';
 
 import { PlatformApiServiceErrorResponse } from '../../api-services';
+import { LifeCycleHelper } from '../../helpers';
+import { onCancel } from '../../rxjs';
 import { PlatformTranslateService } from '../../translations';
-import { clone, keys, task_delay } from '../../utils';
+import { clone, keys, list_remove, task_delay } from '../../utils';
+import { ComponentSimpleChanges } from '../simple-changes';
 
 export const enum LoadingState {
     Error = 'Error',
@@ -27,7 +39,7 @@ export const enum LoadingState {
 const requestStateDefaultKey = 'Default';
 
 @Directive()
-export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDestroy {
+export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges {
     public toast: ToastrService = inject(ToastrService);
     public changeDetector: ChangeDetectorRef = inject(ChangeDetectorRef);
     public translateSrv: PlatformTranslateService = inject(PlatformTranslateService);
@@ -41,33 +53,33 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     public destroyed$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
     // General loadingState when not specific requestKey, requestKey = requestStateDefaultKey;
     public loadingState$: BehaviorSubject<LoadingState> = new BehaviorSubject<LoadingState>(LoadingState.Pending);
-    public errorMsgMap$: BehaviorSubject<Dictionary<string | null>> = new BehaviorSubject<Dictionary<string | null>>(
-        {}
-    );
+    public errorMsgMap$: BehaviorSubject<Dictionary<string | undefined | null>> = new BehaviorSubject({});
     public loadingMap$: BehaviorSubject<Dictionary<boolean | null>> = new BehaviorSubject<Dictionary<boolean | null>>(
         {}
     );
 
-    private storedSubscriptionsMap: Map<string, Subscription> = new Map();
-    private storedAnonymousSubscriptions: Subscription[] = [];
-    private cachedErrorMsg$: Dictionary<Observable<string | null>> = {};
-    private cachedLoading$: Dictionary<Observable<boolean | null>> = {};
-    private allErrorMsgs!: Observable<string | null>;
+    protected storedSubscriptionsMap: Map<string, Subscription> = new Map();
+    protected storedAnonymousSubscriptions: Subscription[] = [];
+    protected cachedErrorMsg$: Dictionary<Observable<string | null | undefined>> = {};
+    protected cachedLoading$: Dictionary<Observable<boolean | null>> = {};
+    protected allErrorMsgs!: Observable<string | null>;
 
-    private detectChangesThrottleSource = new Subject<DetectChangesParams>();
-    private detectChangesThrottle$ = this.detectChangesThrottleSource.pipe(
+    protected detectChangesThrottleSource = new Subject<DetectChangesParams>();
+    protected detectChangesThrottle$ = this.detectChangesThrottleSource.pipe(
         throttleTime(300, asyncScheduler, { leading: true, trailing: true }),
         tap(params => {
             this.doDetectChanges(params);
         })
     );
-    private doDetectChanges(params: DetectChangesParams) {
+
+    protected doDetectChanges(params: DetectChangesParams) {
         if (this.canDetectChanges) {
             this.changeDetector.detectChanges();
             if (params.checkParentForHostBinding) this.changeDetector.markForCheck();
             if (params.onDone != undefined) params.onDone();
         }
     }
+
     public detectChanges(delayTime?: number, onDone?: () => unknown, checkParentForHostBinding: boolean = false): void {
         this.cancelStoredSubscription('detectChangesDelaySubs');
 
@@ -99,6 +111,16 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         this.initiated$.next(true);
     }
 
+    public ngOnChanges(changes: SimpleChanges): void {
+        if (this.isInputChanged(changes) && this.initiated$.value) {
+            this.ngOnInputChanged(changes);
+        }
+    }
+
+    public ngOnInputChanged(changes: ComponentSimpleChanges<object>): void {
+        // Default empty here. Override to implement logic
+    }
+
     public ngAfterViewInit(): void {
         this.viewInitiated$.next(true);
     }
@@ -108,6 +130,15 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
 
         this.destroyAllSubjects();
         this.cancelAllStoredSubscriptions();
+    }
+
+    private loadingRequestsCountMap: Dictionary<number> = {};
+    public loadingRequestsCount() {
+        let result = 0;
+        Object.keys(this.loadingRequestsCountMap).forEach(key => {
+            result += this.loadingRequestsCountMap[key];
+        });
+        return result;
     }
 
     /**
@@ -126,31 +157,39 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     ): (source: Observable<T>) => Observable<T> {
         const setLoadingState = () => {
             this.loadingState$.next(LoadingState.Loading);
+
             this.setLoading(true, requestKey);
             this.setErrorMsg(null, requestKey);
         };
 
         return (source: Observable<T>) => {
-            if (options?.deferSetLoading != true) setLoadingState();
-
             return defer(() => {
-                if (options?.deferSetLoading == true) setLoadingState();
+                setLoadingState();
 
                 return source.pipe(
+                    onCancel(() => this.setLoading(false, requestKey)),
                     tap({
                         next: value => {
-                            if (this.loadingState$.value != LoadingState.Error)
-                                this.loadingState$.next(LoadingState.Success);
-                            this.setLoading(false, requestKey);
+                            // Timeout to queue this update state success/failed after tapResponse
+                            setTimeout(() => {
+                                if (this.loadingState$.value != LoadingState.Error && this.loadingRequestsCount() <= 1)
+                                    this.loadingState$.next(LoadingState.Success);
 
-                            if (options?.onSuccess != null) options.onSuccess(value);
+                                if (options?.onSuccess != null) options.onSuccess(value);
+
+                                this.setLoading(false, requestKey);
+                            });
                         },
                         error: (err: PlatformApiServiceErrorResponse | Error) => {
-                            this.loadingState$.next(LoadingState.Error);
-                            this.setLoading(false, requestKey);
-                            this.setErrorMsg(err, requestKey);
+                            // Timeout to queue this update state success/failed after tapResponse
+                            setTimeout(() => {
+                                this.setErrorMsg(err, requestKey);
+                                this.loadingState$.next(LoadingState.Error);
 
-                            if (options?.onError != null) options.onError(err);
+                                if (options?.onError != null) options.onError(err);
+
+                                this.setLoading(false, requestKey);
+                            });
                         }
                     })
                 );
@@ -158,15 +197,20 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         };
     }
 
-    public getErrorMsg$(errorKey: string = requestStateDefaultKey): Observable<string | null> {
-        if (this.cachedErrorMsg$[errorKey] == null) {
-            this.cachedErrorMsg$[errorKey] = this.errorMsgMap$.pipe(map(_ => _[errorKey]));
+    public getErrorMsg$(requestKey: string = requestStateDefaultKey): Observable<string | null | undefined> {
+        if (this.cachedErrorMsg$[requestKey] == null) {
+            this.cachedErrorMsg$[requestKey] = this.errorMsgMap$.pipe(map(_ => this.getErrorMsg(requestKey)));
         }
-        return this.cachedErrorMsg$[errorKey];
+        return this.cachedErrorMsg$[requestKey];
     }
 
-    public getErrorMsg(errorKey: string = requestStateDefaultKey): string | null {
-        return this.errorMsgMap$.getValue()[errorKey];
+    public getErrorMsg(requestKey: string = requestStateDefaultKey): string | undefined | null {
+        if (this.errorMsgMap$.getValue()[requestKey] == null && requestKey == requestStateDefaultKey)
+            return Object.keys(this.errorMsgMap$.getValue())
+                .map(key => this.errorMsgMap$.getValue()[key])
+                .find(errorMsg => errorMsg != null);
+
+        return this.errorMsgMap$.getValue()[requestKey];
     }
 
     public getAllErrorMsgs$(): Observable<string | null> {
@@ -185,14 +229,14 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         return this.allErrorMsgs;
     }
 
-    public getLoading$(errorKey: string = requestStateDefaultKey): Observable<boolean | null> {
-        if (this.cachedLoading$[errorKey] == null) {
-            this.cachedLoading$[errorKey] = this.loadingMap$.pipe(map(_ => _[errorKey]));
+    public isLoading$(requestKey: string = requestStateDefaultKey): Observable<boolean | null> {
+        if (this.cachedLoading$[requestKey] == null) {
+            this.cachedLoading$[requestKey] = this.loadingMap$.pipe(map(_ => this.isLoading(requestKey)));
         }
-        return this.cachedLoading$[errorKey];
+        return this.cachedLoading$[requestKey];
     }
 
-    public getLoading(errorKey: string = requestStateDefaultKey): boolean | null {
+    public isLoading(errorKey: string = requestStateDefaultKey): boolean | null {
         return this.loadingMap$.getValue()[errorKey];
     }
 
@@ -206,7 +250,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     }
 
     /**
-     * Creates an effect.
+     * Creates an effect. Ex: this.effect()
      *
      * This effect is subscribed to throughout the lifecycle of the Component.
      * @param generator A function that takes an origin Observable input and
@@ -214,7 +258,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
      *     subscribed to for the life of the component.
      * @return A function that, when called, will trigger the origin Observable.
      */
-    protected effect<TOrigin, TReturn>(
+    public effect<TOrigin, TReturn>(
         generator: (origin: TOrigin | Observable<TOrigin | null> | null) => Observable<TReturn>
     ) {
         let previousEffectSub: Subscription = new Subscription();
@@ -222,7 +266,11 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         return (observableOrValue: TOrigin | Observable<TOrigin> | null = null) => {
             previousEffectSub.unsubscribe();
 
+            // ThrottleTime explain: Delay to enhance performance
+            // { leading: true, trailing: true } <=> emit the first item to ensure not delay, but also ignore the sub-sequence,
+            // and still emit the latest item to ensure data is latest
             const newEffectSub: Subscription = generator(observableOrValue)
+                .pipe(throttleTime(300, asyncScheduler, { leading: true, trailing: true }))
                 .pipe(
                     this.untilDestroyed(),
                     finalize(() => {
@@ -249,6 +297,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     }
 
     protected storeAnonymousSubscription(subscription: Subscription): void {
+        list_remove(this.storedAnonymousSubscriptions, p => p.closed);
         this.storedAnonymousSubscriptions.push(subscription);
     }
 
@@ -283,6 +332,12 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                 _[requestKey] = value;
             })
         );
+
+        if (this.loadingRequestsCountMap[requestKey] == undefined) this.loadingRequestsCountMap[requestKey] = 0;
+        if (value == true) this.loadingRequestsCountMap[requestKey] += 1;
+        if (value == false && this.loadingRequestsCountMap[requestKey] > 0)
+            this.loadingRequestsCountMap[requestKey] -= 1;
+
         this.detectChanges();
     };
 
@@ -302,6 +357,10 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         return (index, item) => (<any>item)[itemPropKey];
     }
 
+    protected isInputChanged(changes: SimpleChanges): boolean {
+        return LifeCycleHelper.isInputChanged(changes);
+    }
+
     private cancelAllStoredAnonymousSubscriptions() {
         this.storedAnonymousSubscriptions.forEach(sub => sub.unsubscribe());
         this.storedAnonymousSubscriptions = [];
@@ -316,7 +375,6 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
 }
 
 export interface PlatformObserverLoadingStateOptions<T> {
-    deferSetLoading?: boolean;
     onSuccess?: (value: T) => any;
     onError?: (err: PlatformApiServiceErrorResponse | Error) => any;
 }

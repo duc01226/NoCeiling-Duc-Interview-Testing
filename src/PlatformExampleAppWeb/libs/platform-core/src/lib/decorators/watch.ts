@@ -16,7 +16,7 @@ export type WatchCallBackFunction<T, TTargetObj> = (value: T, change: SimpleChan
  * public pagedResult?: PlatformPagedResultDto<LeaveType>;
  *
  * // Full syntax execute a NORMAL FUNCTION
- * @Watch<PlatformPagedQueryDto, LeaveTypesState>((value, change, targetObj) => {
+ * @Watch<LeaveTypesState, PlatformPagedQueryDto>((value, change, targetObj) => {
  *   targetObj.updatePageInfo();
  * })
  * public pagedQuery: PlatformPagedQueryDto = new PlatformPagedQueryDto();
@@ -28,18 +28,22 @@ export type WatchCallBackFunction<T, TTargetObj> = (value: T, change: SimpleChan
  *   this.updatePageInfo();
  * }
  */
-export function Watch<TProp = object, TTargetObj extends object = object>(
-    callbackFnOrName: WatchCallBackFunction<TProp, TTargetObj> | string
+export function Watch<TTargetObj extends object = object, TProp = object>(
+    callbackFnOrName: WatchCallBackFunction<TProp, TTargetObj> | keyof TTargetObj,
+    onlyWhen?: (obj: TTargetObj) => boolean
 ) {
-    return (target: TTargetObj, key: PropertyKey) => {
+    return (target: TTargetObj, key: keyof TTargetObj) => {
         EnsureNotExistingSetterForKey(target, key);
 
         const privatePropKey = `_${key.toString()}`;
 
         Object.defineProperty(target, key, {
-            set: function (value: object) {
+            set: function (value: TProp) {
                 const oldValue = this[privatePropKey];
                 this[privatePropKey] = value;
+
+                if (onlyWhen != null && !onlyWhen(target)) return;
+
                 const simpleChange: SimpleChange<TProp> = {
                     previousValue: oldValue,
                     currentValue: this[privatePropKey]
@@ -52,7 +56,7 @@ export function Watch<TProp = object, TTargetObj extends object = object>(
                     }
 
                     callBackMethod.call(this, this[privatePropKey], simpleChange, this);
-                } else {
+                } else if (typeof callbackFnOrName == 'function') {
                     callbackFnOrName(this[privatePropKey], simpleChange, this);
                 }
             },

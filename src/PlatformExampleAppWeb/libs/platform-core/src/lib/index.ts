@@ -15,6 +15,7 @@ export * from './pipes';
 export * from './platform-core.config';
 export * from './platform-core.module';
 export * from './platform-domain.module';
+export * from './rxjs';
 export * from './translations';
 export * from './ui-services';
 export * from './utils';

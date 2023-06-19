@@ -49,6 +49,10 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
         }
     }
 
+    public reload() {
+        this.ngOnInit();
+    }
+
     protected abstract onInitVm: () => TViewModel | undefined | Observable<TViewModel | PartialDeep<TViewModel>>;
 
     protected updateVm(

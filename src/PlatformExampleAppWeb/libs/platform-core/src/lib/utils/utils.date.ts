@@ -252,10 +252,9 @@ export function date_isDateExist(dateList: Date[], dateToFind: Date): boolean {
     return dateList.some(date => date_compareOnlyDay(dateToFind, date) === 0);
 }
 
-export function date_getNextWeekday(
-    date: Date,
-    dayToFind: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thusday' | 'Friday' | 'Sartuday' | 'Sunday'
-): Date {
+export type WeekDays = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thusday' | 'Friday' | 'Sartuday' | 'Sunday';
+
+export function date_getNextWeekday(date: Date, dayToFind: WeekDays): Date {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thusday', 'Friday', 'Sartuday'];
     const dayIndex = days.findIndex(v => v === dayToFind);
     const dateCopy = new Date(date.getTime());

@@ -56,14 +56,17 @@ export class PlatformVm implements IPlatformVm {
         error: string | null | PlatformApiServiceErrorResponse | Error,
         requestKey: string = requestStateDefaultKey
     ) {
+        const errorMsg =
+            typeof error == 'string' || error == null
+                ? <string | undefined>error
+                : PlatformApiServiceErrorResponse.getDefaultFormattedMessage(error);
+
         this.errorMsgMap = immutableUpdate(this.errorMsgMap, _ => {
-            _[requestKey] =
-                typeof error == 'string' || error == null
-                    ? <string | undefined>error
-                    : PlatformApiServiceErrorResponse.getDefaultFormattedMessage(error);
+            _[requestKey] = errorMsg;
         });
 
         this.allErrorMsgs = this.getAllErrorMsgs();
+        this.error = errorMsg;
     }
 
     public setLoading(value: boolean | undefined, requestKey: string = requestStateDefaultKey) {
@@ -72,11 +75,17 @@ export class PlatformVm implements IPlatformVm {
         });
     }
 
-    public getErrorMsg(requestKey: string = requestStateDefaultKey): string | undefined {
+    public getErrorMsg(requestKey: string = requestStateDefaultKey): string | null | undefined {
+        if (this.errorMsgMap[requestKey] == null && requestKey == requestStateDefaultKey) return this.error;
+
         return this.errorMsgMap[requestKey];
     }
 
-    public getLoading(requestKey: string = requestStateDefaultKey): boolean | undefined {
+    public isLoading(requestKey: string = requestStateDefaultKey): boolean | undefined {
         return this.loadingMap[requestKey];
+    }
+
+    public isAnyLoadingRequest(): boolean | undefined {
+        return keys(this.loadingMap).find(requestKey => this.loadingMap[requestKey]) != undefined;
     }
 }

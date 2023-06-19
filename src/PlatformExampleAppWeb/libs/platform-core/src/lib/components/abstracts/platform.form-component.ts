@@ -10,24 +10,24 @@ import { immutableUpdate, isDifferent, keys, task_delay, toPlainObj } from '../.
 import { IPlatformVm, PlatformFormMode } from '../../view-models';
 import { PlatformVmComponent } from './platform.vm-component';
 
-export interface IPlatformFormComponent {
+export interface IPlatformFormComponent<TViewModel extends IPlatformVm> {
     isFormValid(): boolean;
 
-    isAllChildFormsValid(forms: QueryList<IPlatformFormComponent>[]): boolean;
+    isAllChildFormsValid(forms: QueryList<IPlatformFormComponent<IPlatformVm>>[]): boolean;
 
     validateForm(): boolean;
 
-    validateAllChildForms(forms: QueryList<IPlatformFormComponent>[]): boolean;
+    validateAllChildForms(forms: QueryList<IPlatformFormComponent<IPlatformVm>>[]): boolean;
 
-    formControls(key: string): FormControl;
+    formControls(key: keyof TViewModel): FormControl;
 
-    formControlsError(controlKey: string, errorKey: string): IPlatformFormValidationError | null;
+    formControlsError(controlKey: keyof TViewModel, errorKey: string): IPlatformFormValidationError | null;
 }
 
 @Directive()
 export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     extends PlatformVmComponent<TViewModel>
-    implements IPlatformFormComponent, OnInit
+    implements IPlatformFormComponent<TViewModel>, OnInit
 {
     public constructor() {
         super();
@@ -100,26 +100,27 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
         this.form = this.buildForm(this.formConfig);
 
         /***
-     ThrottleTime explain: Delay to enhance performance when user typing fast do not need to emit
-     { leading: true, trailing: true } <=> emit the first item to ensure ui is not delay, but also ignore the sub-sequence,
-     and still emit the latest item to ensure data is latest
+         ThrottleTime explain: Delay to enhance performance when user typing fast do not need to emit
+        { leading: true, trailing: true } <=> emit the first item to ensure ui is not delay, but also ignore the sub-sequence,
+        and still emit the latest item to ensure data is latest
 
-     source_1:          --0--1-----2--3----4--5-6---7------------8-------9---------
-     throttle interval: --[~~~~~~~~~~~I~~~~~~~~~~~I~~~~~~~~~~~I~~~~~~~~~~~I~~~~~~~~
-     output:            --0-----------3-----------6-----------7-----------9--------
+        source_1:          --0--1-----2--3----4--5-6---7------------8-------9---------
+        throttle interval: --[~~~~~~~~~~~I~~~~~~~~~~~I~~~~~~~~~~~I~~~~~~~~~~~I~~~~~~~~
+        output:            --0-----------3-----------6-----------7-----------9--------
 
-     source_2:          --0--------1------------------2--------------3---4---------
-     throttle interval: --[~~~~~~~~~~~I~~~~~~~~~~~]---[~~~~~~~~~~~]--[~~~~~~~~~~~I~
-     output_2:          --0-----------1---------------2--------------3-----------4-
+        source_2:          --0--------1------------------2--------------3---4---------
+        throttle interval: --[~~~~~~~~~~~I~~~~~~~~~~~]---[~~~~~~~~~~~]--[~~~~~~~~~~~I~
+        output_2:          --0-----------1---------------2--------------3-----------4-
 
-     */
+        */
         keys(this.form.controls).forEach(formControlKey => {
             this.storeAnonymousSubscription(
                 (<FormControl>(<any>this.form.controls)[formControlKey]).valueChanges
                     .pipe(throttleTime(300, asyncScheduler, { leading: true, trailing: true }))
                     .subscribe(value => {
                         this.updateVmOnFormValuesChange(<Partial<TViewModel>>{ [formControlKey]: value });
-                        this.processGroupValidation(formControlKey);
+                        this.processGroupValidation(<keyof TViewModel>formControlKey);
+                        this.processDependentValidations(<keyof TViewModel>formControlKey);
                     })
             );
         });
@@ -152,7 +153,9 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
         );
     }
 
-    public isAllChildFormsValid(forms: (QueryList<IPlatformFormComponent> | IPlatformFormComponent)[]): boolean {
+    public isAllChildFormsValid(
+        forms: (QueryList<IPlatformFormComponent<IPlatformVm>> | IPlatformFormComponent<IPlatformVm>)[]
+    ): boolean {
         const invalidChildFormsGroup = forms.find(childFormOrFormsGroup =>
             childFormOrFormsGroup instanceof QueryList
                 ? childFormOrFormsGroup.find(formComponent => !formComponent.isFormValid()) != undefined
@@ -164,12 +167,14 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 
     public validateForm(): boolean {
         return (
-            FormHelpers.validateForm(this.form) &&
+            FormHelpers.isFormValid(this.form) &&
             (this.formConfig.childForms == undefined || this.validateAllChildForms(this.formConfig.childForms()))
         );
     }
 
-    public validateAllChildForms(forms: (QueryList<IPlatformFormComponent> | IPlatformFormComponent)[]): boolean {
+    public validateAllChildForms(
+        forms: (QueryList<IPlatformFormComponent<IPlatformVm>> | IPlatformFormComponent<IPlatformVm>)[]
+    ): boolean {
         const invalidChildFormsGroup = forms.find(childFormOrFormsGroup =>
             childFormOrFormsGroup instanceof QueryList
                 ? childFormOrFormsGroup.find(formComponent => !formComponent.validateForm()) != undefined
@@ -206,7 +211,10 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 
                 this.form.patchValue(<any>{ [formKey]: vmFormKeyValue }, { emitEvent: false });
 
-                if (!this.isViewMode && runFormValidation) this.processGroupValidation(formKey);
+                if (!this.isViewMode && runFormValidation) {
+                    this.processGroupValidation(formKey);
+                    this.processDependentValidations(formKey);
+                }
             }
         });
     }
@@ -233,12 +241,12 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
         return toPlainObj(vmFormValues);
     }
 
-    public formControls(key: string): FormControl {
-        return <FormControl>this.form.get(key);
+    public formControls(key: keyof TViewModel): FormControl {
+        return <FormControl>this.form.get(<string>key);
     }
 
     public formControlsError(
-        controlKey: string,
+        controlKey: keyof TViewModel,
         errorKey: string,
         onlyWhenTouchedOrDirty: boolean = false
     ): IPlatformFormValidationError | null {
@@ -246,7 +254,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
         return this.formControls(controlKey)?.errors?.[errorKey];
     }
 
-    public processGroupValidation(formControlKey: keyof TViewModel | string | number | symbol) {
+    public processGroupValidation(formControlKey: keyof TViewModel) {
         if (this.formConfig.groupValidations == null) return;
 
         this.cancelStoredSubscription(`processGroupValidation_${formControlKey.toString()}`);
@@ -257,12 +265,37 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
                 if (this.formConfig.groupValidations == null) return;
 
                 this.formConfig.groupValidations.forEach(groupValidators => {
-                    if (groupValidators.includes(<keyof TViewModel>formControlKey))
+                    if (groupValidators.includes(formControlKey))
                         groupValidators.forEach(groupValidatorControlKey => {
-                            this.formControls(groupValidatorControlKey.toString()).updateValueAndValidity({
+                            this.formControls(groupValidatorControlKey).updateValueAndValidity({
                                 emitEvent: false,
                                 onlySelf: true
                             });
+                        });
+                });
+            }, 300)
+        );
+    }
+
+    public processDependentValidations(formControlKey: keyof TViewModel) {
+        if (this.formConfig.dependentValidations == null) return;
+
+        this.cancelStoredSubscription(`processDependentValidations_${formControlKey.toString()}`);
+
+        this.storeSubscription(
+            `processDependentValidations_${formControlKey.toString()}`,
+            task_delay(() => {
+                if (this.formConfig.dependentValidations == undefined) return;
+
+                const dependentValidationsConfig = this.formConfig.dependentValidations;
+
+                Object.keys(dependentValidationsConfig).forEach(dependentValidationControlKey => {
+                    const dependedOnOtherControlKeys = (<any>dependentValidationsConfig)[dependentValidationControlKey];
+
+                    if (dependedOnOtherControlKeys.includes(formControlKey))
+                        this.formControls(<keyof TViewModel>dependentValidationControlKey).updateValueAndValidity({
+                            emitEvent: false,
+                            onlySelf: true
                         });
                 });
             }, 300)
@@ -334,8 +367,9 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 export type PlatformFormConfig<TFormModel> = {
     controls: PlatformPartialFormGroupControlsConfig<TFormModel>;
     groupValidations?: (keyof TFormModel)[][];
+    dependentValidations?: Partial<Record<keyof TFormModel, (keyof TFormModel)[]>>;
     afterInit?: () => void;
-    childForms?: () => (QueryList<IPlatformFormComponent> | IPlatformFormComponent)[];
+    childForms?: () => (QueryList<IPlatformFormComponent<IPlatformVm>> | IPlatformFormComponent<IPlatformVm>)[];
 };
 
 export type PlatformPartialFormGroupControlsConfig<TFormModel> = {

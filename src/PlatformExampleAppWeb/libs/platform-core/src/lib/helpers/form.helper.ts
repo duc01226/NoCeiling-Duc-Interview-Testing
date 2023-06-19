@@ -2,7 +2,7 @@
 import { AbstractControl, FormArray, FormGroup } from '@angular/forms';
 
 export class FormHelpers {
-    public static validateForm(form: FormGroup): boolean {
+    public static isFormValid(form: FormGroup): boolean {
         if (!form.controls) {
             return form.valid;
         }
@@ -15,7 +15,7 @@ export class FormHelpers {
             }
 
             if (control instanceof FormArray)
-                control.controls.some((form: AbstractControl) => !FormHelpers.validateForm(form as FormGroup));
+                control.controls.some((form: AbstractControl) => !FormHelpers.isFormValid(form as FormGroup));
         });
 
         return form.valid;

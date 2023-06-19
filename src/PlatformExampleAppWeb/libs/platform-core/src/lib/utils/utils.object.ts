@@ -14,12 +14,20 @@ import { Time } from '../common-types';
 import { any } from './_common-functions';
 import { list_distinct } from './utils.list';
 
-export function keys<T extends object>(source: T, ignorePrivate: boolean = true): (keyof T & string)[] {
+export function keys<T extends object>(
+    source: T,
+    ignorePrivate: boolean = true,
+    excludeKeys?: (keyof T)[]
+): (keyof T & string)[] {
     if (typeof source != 'object' || source == null) return [];
 
     const objectOwnProps: (keyof T & string)[] = [];
     for (const key in source) {
-        if (typeof (<any>source)[key] != 'function' && (ignorePrivate == false || !key.startsWith('_'))) {
+        if (
+            typeof (<any>source)[key] != 'function' &&
+            (ignorePrivate == false || !key.startsWith('_')) &&
+            (excludeKeys == null || !excludeKeys.includes(key))
+        ) {
             if (key.startsWith('_')) {
                 const publicKey = <keyof T & string>key.substring(1);
                 if (!ignorePrivate) objectOwnProps.push(key);
@@ -42,7 +50,8 @@ export function keys<T extends object>(source: T, ignorePrivate: boolean = true)
         if (sourceCurrentAncestorPrototype != Object.prototype) {
             result = result.concat(
                 Object.keys(Object.getOwnPropertyDescriptors(sourceCurrentAncestorPrototype)).filter(
-                    key => typeof source[key] != 'function'
+                    key =>
+                        (excludeKeys == null || !excludeKeys.includes(<keyof T>key)) && typeof source[key] != 'function'
                 )
             );
 
@@ -71,7 +80,7 @@ export function dictionaryMapTo<TSource, TTarget>(
 /**
  * Convert an instance object of a class to a pure object. All getter/setter become a normal property
  */
-export function toPlainObj<T>(source: T, ignorePrivate: boolean = true): any {
+export function toPlainObj<T>(source: T, ignorePrivate: boolean = true, onlyKeysExistInPartialObject?: object): any {
     if (source == undefined) return undefined;
     if (typeof source != 'object') return source;
     if (source instanceof Array) {
@@ -80,7 +89,12 @@ export function toPlainObj<T>(source: T, ignorePrivate: boolean = true): any {
     if (source instanceof Date || source instanceof Time) return source;
     const objResult: Dictionary<any> = {};
     keys(source, ignorePrivate).forEach(key => {
-        objResult[key] = toPlainObj((<any>source)[key], ignorePrivate);
+        if (onlyKeysExistInPartialObject == undefined || (<any>onlyKeysExistInPartialObject)[key] !== undefined)
+            objResult[key] = toPlainObj(
+                (<any>source)[key],
+                ignorePrivate,
+                onlyKeysExistInPartialObject == undefined ? undefined : (<any>onlyKeysExistInPartialObject)[key]
+            );
     });
     return objResult;
 }
@@ -104,13 +118,14 @@ export function immutableUpdate<TObject extends object>(
     partialStateOrUpdaterFn:
         | PartialDeep<TObject>
         | Partial<TObject>
-        | ((state: TObject) => void | PartialDeep<TObject> | Partial<TObject>)
+        | ((state: TObject) => void | PartialDeep<TObject> | Partial<TObject>),
+    checkDiff: false | true | 'deepCheck' = true
 ): TObject {
     const clonedObj = clone(targetObj);
-    let stateChanged = false;
+    let stateChanged: boolean | undefined;
 
     if (typeof partialStateOrUpdaterFn == 'object') {
-        stateChanged = assignDeep(clonedObj, <object>partialStateOrUpdaterFn, 'deepCheck');
+        stateChanged = assignDeep(clonedObj, <object>partialStateOrUpdaterFn, checkDiff);
     }
 
     if (typeof partialStateOrUpdaterFn == 'function') {
@@ -120,15 +135,15 @@ export function immutableUpdate<TObject extends object>(
 
         if (updatedStateResult != undefined) {
             // Case the partialStateOrUpdaterFn return partial updated props object
-            stateChanged = assignDeep(clonedObj, <object>updatedStateResult, 'deepCheck');
+            stateChanged = assignDeep(clonedObj, <object>updatedStateResult, checkDiff);
         } else {
             // Case the partialStateOrUpdaterFn edit the object state directly.
             // Then the clonnedDeepState is actual an updated result, use it to update the clonedState
-            stateChanged = assignDeep(clonedObj, <object>clonnedDeepState, 'deepCheck');
+            stateChanged = assignDeep(clonedObj, <object>clonnedDeepState, checkDiff);
         }
     }
 
-    return stateChanged ? clonedObj : targetObj;
+    return stateChanged != false ? clonedObj : targetObj;
 }
 
 export function cloneWithNewValues<T extends object>(value: T, newValues: T | Partial<T>): T {
@@ -245,7 +260,7 @@ export function assignDeep<T extends object>(
     target: T,
     source: T,
     checkDiff: false | true | 'deepCheck' = false
-): boolean {
+): boolean | undefined {
     return assignOrSetDeep(target, source, false, false, checkDiff);
 }
 
@@ -253,7 +268,7 @@ export function setDeep<T extends object>(
     target: T,
     source: T,
     checkDiff: false | true | 'deepCheck' = false
-): boolean {
+): boolean | undefined {
     return assignOrSetDeep(target, source, false, true, checkDiff);
 }
 
@@ -305,19 +320,20 @@ function assignOrSetDeep<T extends object>(
     cloneSource: boolean = false,
     makeTargetValuesSameSourceValues: boolean = false,
     checkDiff: false | true | 'deepCheck' = false
-): boolean {
-    let hasDataChanged = false;
+): boolean | undefined {
+    let hasDataChanged: boolean | undefined = undefined;
 
     if (target instanceof Array && source instanceof Array) {
         return assignOrSetDeepArray(target, source, cloneSource, makeTargetValuesSameSourceValues, checkDiff);
     } else {
+        if (checkDiff != false) hasDataChanged = false;
         if (makeTargetValuesSameSourceValues) removeTargetKeysNotInSource(target, source);
 
         // create plainObjTarget to checkDiff, not use the target directly because when target is updated
         // other prop may be updated to via setter of the object, then the check diff will not be correct
         // clone toPlainObj to keep original target value
         const cloneOrPlainObjTarget =
-            checkDiff === true ? clone(target) : checkDiff == 'deepCheck' ? toPlainObj(target) : null;
+            checkDiff === true ? clone(target) : checkDiff == 'deepCheck' ? toPlainObj(target, true, source) : null;
 
         keys(source).forEach(key => {
             const targetKeyPropertyDescriptor = getPropertyDescriptor(target, key);
@@ -334,7 +350,7 @@ function assignOrSetDeep<T extends object>(
                 return;
 
             setNewValueToTargetKeyProp(key);
-            if (hasDataChanged == false) hasDataChanged = isDifferent(cloneOrPlainObjTarget[key], (<any>source)[key]);
+            hasDataChanged = true;
         });
     }
 
