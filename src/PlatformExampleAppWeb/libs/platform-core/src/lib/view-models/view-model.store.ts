@@ -12,13 +12,12 @@ import {
     Subscription,
     switchMap,
     takeUntil,
-    tap,
     throttleTime
 } from 'rxjs';
 import { PartialDeep } from 'type-fest';
 
 import { PlatformApiServiceErrorResponse } from '../api-services';
-import { onCancel } from '../rxjs';
+import { onCancel, tapOnce } from '../rxjs';
 import { immutableUpdate, list_remove } from '../utils';
 import { PlatformVm } from './generic.view-model';
 
@@ -45,25 +44,25 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
     private _vm$?: Observable<TViewModel>;
     public get vm$(): Observable<TViewModel> {
         if (this._vm$ == undefined) {
-            this._vm$ = this.select(s => s).pipe(
-                tap(s => {
-                    if (!this.onInitVmTriggered) {
-                        this.onInitVmTriggered = true;
-
-                        // Process trigger call onInitVm
-                        const onInitVmObservableOrVoid = this.onInitVm();
-                        if (onInitVmObservableOrVoid instanceof Observable) {
-                            this.storeAnonymousSubscription(onInitVmObservableOrVoid.subscribe());
-                        }
-                    }
-                })
-            );
+            this._vm$ = this.select(s => s).pipe(tapOnce({ next: s => this.triggerOnInitVm() }));
         }
 
         return this._vm$;
     }
 
     public abstract onInitVm: () => Observable<unknown> | void;
+
+    public triggerOnInitVm() {
+        if (!this.onInitVmTriggered) {
+            this.onInitVmTriggered = true;
+
+            // Process trigger call onInitVm
+            const onInitVmObservableOrVoid = this.onInitVm();
+            if (onInitVmObservableOrVoid instanceof Observable) {
+                this.storeAnonymousSubscription(onInitVmObservableOrVoid.subscribe());
+            }
+        }
+    }
 
     public ngOnDestroy(): void {
         this.innerStore.ngOnDestroy();
@@ -116,16 +115,29 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
             | ((state: TViewModel) => void | PartialDeep<TViewModel> | Partial<TViewModel>)
     ): void {
         this.innerStore.setState(state => {
-            return immutableUpdate(state, partialStateOrUpdaterFn);
+            try {
+                return immutableUpdate(state, partialStateOrUpdaterFn);
+            } catch (error) {
+                return immutableUpdate(state, this.buildSetErrorPartialState(<Error>error));
+            }
         });
     }
 
-    public readonly updateApiErrorState = (errorResponse: PlatformApiServiceErrorResponse | Error) => {
-        this.updateState(<PartialDeep<TViewModel>>{
+    public readonly setErrorState = (errorResponse: PlatformApiServiceErrorResponse | Error) => {
+        this.updateState(this.buildSetErrorPartialState(errorResponse));
+    };
+
+    public buildSetErrorPartialState(
+        errorResponse: PlatformApiServiceErrorResponse | Error
+    ):
+        | PartialDeep<TViewModel>
+        | Partial<TViewModel>
+        | ((state: TViewModel) => void | PartialDeep<TViewModel> | Partial<TViewModel>) {
+        return <PartialDeep<TViewModel>>{
             status: 'Error',
             error: PlatformApiServiceErrorResponse.getDefaultFormattedMessage(errorResponse)
-        });
-    };
+        };
+    }
 
     public get currentState(): TViewModel {
         // force use protected function to return current state
@@ -166,7 +178,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
 
                 return source.pipe(
                     onCancel(() => this.setLoading(false, requestKey)),
-                    tap({
+                    tapOnce({
                         next: () => {
                             // Timeout to queue this update state success/failed after tapResponse
                             setTimeout(() => {
@@ -180,7 +192,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                             // Timeout to queue this update state success/failed after tapResponse
                             setTimeout(() => {
                                 this.setErrorMsg(err, requestKey);
-                                this.updateApiErrorState(err);
+                                this.setErrorState(err);
 
                                 this.setLoading(false, requestKey);
                             });
@@ -232,11 +244,13 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
     ): Observable<Result> {
         const selectConfig = config ?? this.defaultSelectConfig;
 
+        let selectResult$ = this.innerStore
+            .select(projector, selectConfig)
+            .pipe(tapOnce({ next: () => this.triggerOnInitVm() }));
+
         // ThrottleTime explain: Delay to enhance performance
         // { leading: true, trailing: true } <=> emit the first item to ensure not delay, but also ignore the sub-sequence,
         // and still emit the latest item to ensure data is latest
-        let selectResult$ = this.innerStore.select(projector, selectConfig);
-
         if (selectConfig.throttleTimeDuration != undefined && selectConfig.throttleTimeDuration > 0)
             selectResult$ = selectResult$.pipe(
                 throttleTime(selectConfig.throttleTimeDuration ?? 0, asyncScheduler, { leading: true, trailing: true })
@@ -291,7 +305,6 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         errorFn?: (error: E) => void,
         completeFn?: () => void
     ): (source: Observable<T>) => Observable<T> {
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         return tapResponse(nextFn, errorFn ?? (() => {}), completeFn);
     }
 

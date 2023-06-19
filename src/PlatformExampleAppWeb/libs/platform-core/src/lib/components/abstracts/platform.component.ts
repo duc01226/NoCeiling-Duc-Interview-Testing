@@ -24,7 +24,7 @@ import { filter, finalize, map, takeUntil, tap, throttleTime } from 'rxjs/operat
 
 import { PlatformApiServiceErrorResponse } from '../../api-services';
 import { LifeCycleHelper } from '../../helpers';
-import { onCancel } from '../../rxjs';
+import { onCancel, tapOnce } from '../../rxjs';
 import { PlatformTranslateService } from '../../translations';
 import { clone, keys, list_remove, task_delay } from '../../utils';
 import { ComponentSimpleChanges } from '../simple-changes';
@@ -168,7 +168,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
 
                 return source.pipe(
                     onCancel(() => this.setLoading(false, requestKey)),
-                    tap({
+                    tapOnce({
                         next: value => {
                             // Timeout to queue this update state success/failed after tapResponse
                             setTimeout(() => {

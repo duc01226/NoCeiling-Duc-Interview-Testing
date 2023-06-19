@@ -29,15 +29,19 @@ export class PlatformPagedQueryDto extends PlatformQueryDto implements IPlatform
     }
 
     public skipCount: number = 0;
-    public maxResultCount: number = 0;
+    public maxResultCount: number = -1;
 
     public withPageIndex(pageIndex: number): PlatformPagedQueryDto {
+        const newSkipCount = pageIndex * this.maxResultCount;
+
+        if (this.skipCount == newSkipCount) return this;
         return clone(this, _ => {
-            _.skipCount = pageIndex * this.maxResultCount;
+            _.skipCount = newSkipCount;
         });
     }
 
     public withSort(orderDirection: OrderDirection, orderBy: string): PlatformPagedQueryDto {
+        if (this.orderBy == orderBy && this.orderDirection == orderDirection) return this;
         return clone(this, _ => {
             _.orderBy = orderBy;
             _.orderDirection = orderDirection;

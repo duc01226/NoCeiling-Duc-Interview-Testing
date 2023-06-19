@@ -248,10 +248,7 @@ export function list_rightMerge<T>(
         const innerJoinItem = currentCollectionDic[compareSelector(result[i]).toString()];
         if (innerJoinItem != undefined && typeof innerJoinItem == 'object') {
             result[i] = ObjectUtil.clone(result[i], newResultItemValue => {
-                return ObjectUtil.extend(
-                    <any>newResultItemValue,
-                    <any>currentCollectionDic[compareSelector(result[i]).toString()]
-                );
+                return ObjectUtil.extend(<any>newResultItemValue, <any>innerJoinItem);
             });
         }
     }
@@ -269,4 +266,28 @@ export function list_total<T>(collection: T[], valueSelector: (item: T) => numbe
 
 export function list_range(start: number, endInclude: number): number[] {
     return lodashRange(start, endInclude + 1);
+}
+
+/**
+ * Find items which is not belong in both two lists
+ */
+export function list_findDistinctItems<T>(list1: T[], list2: T[], keySelector: (item: T) => any): T[] {
+    const set1 = new Set(list1.map(keySelector));
+    const set2 = new Set(list2.map(keySelector));
+
+    const distinctItems: T[] = [];
+
+    for (const item of list1) {
+        if (!set2.has(keySelector(item))) {
+            distinctItems.push(item);
+        }
+    }
+
+    for (const item of list2) {
+        if (!set1.has(keySelector(item))) {
+            distinctItems.push(item);
+        }
+    }
+
+    return distinctItems;
 }

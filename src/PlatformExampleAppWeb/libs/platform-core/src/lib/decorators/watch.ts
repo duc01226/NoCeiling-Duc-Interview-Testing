@@ -30,7 +30,8 @@ export type WatchCallBackFunction<T, TTargetObj> = (value: T, change: SimpleChan
  */
 export function Watch<TTargetObj extends object = object, TProp = object>(
     callbackFnOrName: WatchCallBackFunction<TProp, TTargetObj> | keyof TTargetObj,
-    onlyWhen?: (obj: TTargetObj) => boolean
+    onlyWhen?: (obj: TTargetObj) => boolean,
+    afterCallback?: (target: TTargetObj) => void
 ) {
     return (target: TTargetObj, key: keyof TTargetObj) => {
         EnsureNotExistingSetterForKey(target, key);
@@ -42,7 +43,7 @@ export function Watch<TTargetObj extends object = object, TProp = object>(
                 const oldValue = this[privatePropKey];
                 this[privatePropKey] = value;
 
-                if (onlyWhen != null && !onlyWhen(target)) return;
+                if (onlyWhen != null && !onlyWhen(this)) return;
 
                 const simpleChange: SimpleChange<TProp> = {
                     previousValue: oldValue,
@@ -59,6 +60,8 @@ export function Watch<TTargetObj extends object = object, TProp = object>(
                 } else if (typeof callbackFnOrName == 'function') {
                     callbackFnOrName(this[privatePropKey], simpleChange, this);
                 }
+
+                if (afterCallback != null) afterCallback(this);
             },
             get: function () {
                 return this[privatePropKey];

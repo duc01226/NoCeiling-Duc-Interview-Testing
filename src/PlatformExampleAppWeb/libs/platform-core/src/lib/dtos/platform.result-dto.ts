@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-empty-interface */
 import { IPlatformDataModel } from '../domain/data-model/platform.data-model';
+import { immutableUpdate } from '../utils';
 
 export interface IPlatformResultDto {}
 
@@ -34,4 +36,10 @@ export class PlatformPagedResultDto<TItem extends IPlatformDataModel>
     public skipCount?: number;
     public totalPages?: number;
     public pageIndex?: number;
+
+    public withItems<TNewItem extends IPlatformDataModel>(items: TNewItem[]): PlatformPagedResultDto<TNewItem> {
+        return immutableUpdate(new PlatformPagedResultDto<TNewItem>(<IPlatformPagedResultDto<TNewItem>>(<any>this)), {
+            items: items
+        });
+    }
 }
