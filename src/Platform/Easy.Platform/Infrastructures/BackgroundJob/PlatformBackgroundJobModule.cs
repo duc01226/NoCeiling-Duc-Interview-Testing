@@ -60,6 +60,8 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
                 async () =>
                 {
                     await backgroundJobProcessingService.Start();
+
+                    Util.TaskRunner.QueueActionInBackground(ExecuteOnStartUpRecurringBackgroundJobImmediately, () => Logger);
                 },
                 sleepDurationProvider: retryAttempt => 10.Seconds(),
                 retryCount: DefaultStartBackgroundJobProcessingRetryCount,
@@ -74,6 +76,20 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
                                 currentRetry,
                                 DefaultStartBackgroundJobProcessingRetryCount);
                 });
+    }
+
+    public async Task ExecuteOnStartUpRecurringBackgroundJobImmediately()
+    {
+        await ServiceProvider.ExecuteInjectScopedAsync(
+            (IPlatformBackgroundJobScheduler backgroundJobScheduler, IServiceProvider serviceProvider) =>
+            {
+                var allExecuteOnStartUpCurrentRecurringJobExecutors = serviceProvider
+                    .GetServices<IPlatformBackgroundJobExecutor>()
+                    .Where(p => PlatformRecurringJobAttribute.GetRecurringJobAttributeInfo(p.GetType()) is { ExecuteOnStartUp: true })
+                    .ToList();
+
+                allExecuteOnStartUpCurrentRecurringJobExecutors.ForEach(p => backgroundJobScheduler.ExecuteBackgroundJob(p));
+            });
     }
 
     public async Task ReplaceAllLatestRecurringBackgroundJobs(IServiceScope serviceScope)

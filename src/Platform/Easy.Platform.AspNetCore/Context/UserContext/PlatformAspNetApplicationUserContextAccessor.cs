@@ -23,9 +23,11 @@ public class PlatformAspNetApplicationUserContextAccessor : PlatformDefaultAppli
     {
         var httpContextAccessor = serviceProvider.GetService<IHttpContextAccessor>();
         var claimTypeMapper = serviceProvider.GetService<IPlatformApplicationUserContextKeyToClaimTypeMapper>();
+
         if (httpContextAccessor == null || claimTypeMapper == null)
             throw new Exception(
                 "[Developer] Missing registered IHttpContextAccessor or IPlatformApplicationUserContextKeyToClaimTypeMapper");
+
         return new PlatformAspNetApplicationUserContext(httpContextAccessor, claimTypeMapper);
     }
 }

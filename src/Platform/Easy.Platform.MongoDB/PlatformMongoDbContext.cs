@@ -12,6 +12,7 @@ using Easy.Platform.MongoDB.Extensions;
 using Easy.Platform.MongoDB.Migration;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -227,8 +228,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 return entity;
             },
             dismissSendEvent,
-            hasSupportOutboxEvent: HasSupportOutboxEvent(),
             sendEntityEventConfigure: sendEntityEventConfigure,
+            requestContext: () => PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.GetAllKeyValues(),
             cancellationToken);
     }
 
@@ -396,8 +397,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         new ReplaceOptions { IsUpsert = false },
                         cancellationToken),
                 dismissSendEvent,
-                hasSupportOutboxEvent: HasSupportOutboxEvent(),
                 sendEntityEventConfigure: sendEntityEventConfigure,
+                requestContext: () => PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.GetAllKeyValues(),
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -421,8 +422,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         new ReplaceOptions { IsUpsert = false },
                         cancellationToken),
                 dismissSendEvent,
-                hasSupportOutboxEvent: HasSupportOutboxEvent(),
                 sendEntityEventConfigure: sendEntityEventConfigure,
+                requestContext: () => PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.GetAllKeyValues(),
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -649,8 +650,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 toBeCreatedEntity,
                 entity => GetTable<TEntity>().InsertOneAsync(entity, null, cancellationToken).Then(() => entity),
                 dismissSendEvent,
-                hasSupportOutboxEvent: HasSupportOutboxEvent(),
                 sendEntityEventConfigure: sendEntityEventConfigure,
+                requestContext: () => PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.GetAllKeyValues(),
                 cancellationToken);
         else
             await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
@@ -664,8 +665,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         cancellationToken)
                     .Then(() => entity),
                 dismissSendEvent,
-                hasSupportOutboxEvent: HasSupportOutboxEvent(),
                 sendEntityEventConfigure: sendEntityEventConfigure,
+                requestContext: () => PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.GetAllKeyValues(),
                 cancellationToken);
 
         return toBeCreatedEntity;

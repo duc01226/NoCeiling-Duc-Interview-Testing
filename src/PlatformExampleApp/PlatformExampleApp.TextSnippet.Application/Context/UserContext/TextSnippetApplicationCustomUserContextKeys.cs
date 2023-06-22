@@ -10,7 +10,7 @@ public static class TextSnippetApplicationCustomUserContextKeys
 {
     public const string Organizations = "TextSnippet-Organizations";
 
-    public static List<string> GetOrganization(this IPlatformApplicationUserContext context)
+    public static List<string> GetOrganization(this IDictionary<string, object> context)
     {
         return context.GetValue<List<string>>(Organizations);
     }

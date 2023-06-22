@@ -196,4 +196,8 @@ public interface IPlatformBackgroundJobScheduler
     /// </summary>
     public void ExecuteBackgroundJobWithParam<TJobExecutor>(object jobExecutorParam)
         where TJobExecutor : IPlatformBackgroundJobExecutor;
+
+    public void ExecuteBackgroundJob<TJobExecutor>(TJobExecutor jobExecutor) where TJobExecutor : IPlatformBackgroundJobExecutor;
+
+    public void ExecuteBackgroundJob<TJobExecutor, TParam>(TJobExecutor jobExecutor, TParam jobExecutorParam) where TJobExecutor : IPlatformBackgroundJobExecutor<TParam>;
 }

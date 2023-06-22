@@ -1,5 +1,8 @@
+using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Common;
+using Easy.Platform.Common.Cqrs.Events;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,9 +43,20 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
         InboxBusMessageRepo = serviceProvider.GetService<IPlatformInboxBusMessageRepository>();
         InboxConfig = serviceProvider.GetRequiredService<PlatformInboxConfig>();
         ServiceProvider = serviceProvider;
+
+        IsInjectingUserContextAccessor = GetType().IsUsingGivenTypeViaConstructor<IPlatformApplicationUserContextAccessor>();
+        if (IsInjectingUserContextAccessor)
+            CreateLogger(loggerFactory)
+                .LogError(
+                    "{EventHandlerType} is injecting and using {IPlatformApplicationUserContextAccessor}, which will make the event handler could not run in background thread. " +
+                    "The event sender must wait the handler to be finished. Should use the {RequestContext} info in the event instead.",
+                    GetType().Name,
+                    nameof(IPlatformApplicationUserContextAccessor),
+                    nameof(PlatformCqrsEvent.RequestContext));
     }
 
     public virtual bool AutoBeginUow => true;
+    public bool IsInjectingUserContextAccessor { get; set; }
 
     public PlatformInboxBusMessage HandleDirectlyExistingInboxMessage { get; set; }
     public bool AutoDeleteProcessedInboxEventMessage { get; set; }

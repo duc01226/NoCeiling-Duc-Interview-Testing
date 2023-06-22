@@ -27,7 +27,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
     public string Schedule<TJobExecutor>(DateTimeOffset enqueueAt)
         where TJobExecutor : IPlatformBackgroundJobExecutor
     {
-        return BackgroundJob.Schedule(() => ExecuteBackgroundJob(typeof(TJobExecutor), null), enqueueAt);
+        return BackgroundJob.Schedule(() => ExecuteBackgroundJobByType(typeof(TJobExecutor), null), enqueueAt);
     }
 
     public string Schedule<TJobExecutor, TJobExecutorParam>(
@@ -37,7 +37,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
         where TJobExecutorParam : class
     {
         return BackgroundJob.Schedule(
-            () => ExecuteBackgroundJob(
+            () => ExecuteBackgroundJobByType(
                 typeof(TJobExecutor),
                 jobExecutorParam != null ? jobExecutorParam.ToJson(true) : null),
             enqueueAt);
@@ -50,7 +50,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
 
     public string Schedule<TJobExecutor>(TimeSpan? delay = null) where TJobExecutor : IPlatformBackgroundJobExecutor
     {
-        return BackgroundJob.Schedule(() => ExecuteBackgroundJob(typeof(TJobExecutor), null), delay ?? TimeSpan.Zero);
+        return BackgroundJob.Schedule(() => ExecuteBackgroundJobByType(typeof(TJobExecutor), null), delay ?? TimeSpan.Zero);
     }
 
     public string Schedule<TJobExecutor, TJobExecutorParam>(
@@ -59,7 +59,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
         where TJobExecutor : IPlatformBackgroundJobExecutor<TJobExecutorParam> where TJobExecutorParam : class
     {
         return BackgroundJob.Schedule(
-            () => ExecuteBackgroundJob(
+            () => ExecuteBackgroundJobByType(
                 typeof(TJobExecutor),
                 jobExecutorParam != null ? jobExecutorParam.ToJson(true) : null),
             delay ?? TimeSpan.Zero);
@@ -72,7 +72,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
 
         RecurringJob.AddOrUpdate(
             BuildAutoRecurringJobIdByType<TJobExecutor>(),
-            () => ExecuteBackgroundJob(typeof(TJobExecutor), null),
+            () => ExecuteBackgroundJobByType(typeof(TJobExecutor), null),
             cronExpressionValue,
             timeZone ?? TimeZoneInfo.Local);
     }
@@ -85,7 +85,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
 
         RecurringJob.AddOrUpdate(
             BuildAutoRecurringJobIdByType<TJobExecutor>(),
-            () => ExecuteBackgroundJob(typeof(TJobExecutor), jobExecutorParamJson),
+            () => ExecuteBackgroundJobByType(typeof(TJobExecutor), jobExecutorParamJson),
             cronExpressionValue,
             timeZone ?? TimeZoneInfo.Local);
     }
@@ -99,7 +99,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
 
         RecurringJob.AddOrUpdate(
             BuildAutoRecurringJobIdByType(jobExecutorType),
-            () => ExecuteBackgroundJob(jobExecutorType, null),
+            () => ExecuteBackgroundJobByType(jobExecutorType, null),
             cronExpressionValue,
             timeZone ?? TimeZoneInfo.Local);
     }
@@ -111,7 +111,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
 
         RecurringJob.AddOrUpdate(
             BuildAutoRecurringJobIdByType(jobExecutorType),
-            () => ExecuteBackgroundJob(jobExecutorType, jobExecutorParamJson),
+            () => ExecuteBackgroundJobByType(jobExecutorType, jobExecutorParamJson),
             cronExpressionValue,
             timeZone ?? TimeZoneInfo.Local);
     }
@@ -126,7 +126,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
 
         RecurringJob.AddOrUpdate(
             recurringJobId.TakeTop(DefaultMaxLengthJobId),
-            () => ExecuteBackgroundJob(jobExecutorType, null),
+            () => ExecuteBackgroundJobByType(jobExecutorType, null),
             cronExpressionValue,
             timeZone ?? TimeZoneInfo.Local);
     }
@@ -138,7 +138,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
 
         RecurringJob.AddOrUpdate(
             recurringJobId.TakeTop(DefaultMaxLengthJobId),
-            () => ExecuteBackgroundJob(jobExecutorType, jobExecutorParamJson),
+            () => ExecuteBackgroundJobByType(jobExecutorType, jobExecutorParamJson),
             cronExpressionValue,
             timeZone ?? TimeZoneInfo.Local);
     }
@@ -197,13 +197,13 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
 
     public void ExecuteBackgroundJob<TJobExecutor>() where TJobExecutor : IPlatformBackgroundJobExecutor
     {
-        ExecuteBackgroundJob(typeof(TJobExecutor), null);
+        ExecuteBackgroundJobByType(typeof(TJobExecutor), null);
     }
 
     public void ExecuteBackgroundJobWithParam<TJobExecutor>(object jobExecutorParam)
         where TJobExecutor : IPlatformBackgroundJobExecutor
     {
-        ExecuteBackgroundJob(
+        ExecuteBackgroundJobByType(
             typeof(TJobExecutor),
             jobExecutorParam?.ToJson(true));
     }
@@ -220,7 +220,17 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
         return $"{AutoRecurringJobIdByTypeSuffix}.{jobExecutorType.Name}".TakeTop(DefaultMaxLengthJobId);
     }
 
-    protected string EnsureValidToUpsertRecurringJob(Type jobExecutorType, Func<string> cronExpression)
+    public void ExecuteBackgroundJob<TJobExecutor>(TJobExecutor jobExecutor) where TJobExecutor : IPlatformBackgroundJobExecutor
+    {
+        ExecuteBackgroundJobByInstance(jobExecutor, null);
+    }
+
+    public void ExecuteBackgroundJob<TJobExecutor, TParam>(TJobExecutor jobExecutor, TParam jobExecutorParam) where TJobExecutor : IPlatformBackgroundJobExecutor<TParam>
+    {
+        ExecuteBackgroundJobByInstance(jobExecutor, jobExecutorParam?.ToJson(true));
+    }
+
+    public string EnsureValidToUpsertRecurringJob(Type jobExecutorType, Func<string> cronExpression)
     {
         EnsureJobExecutorTypeValid(jobExecutorType);
 
@@ -233,47 +243,50 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
         return cronExpressionValue;
     }
 
-    public void ExecuteBackgroundJob(Type jobExecutorType, string jobExecutorParamJson)
+    public void ExecuteBackgroundJobByType(Type jobExecutorType, string jobExecutorParamJson)
     {
         EnsureJobExecutorTypeValid(jobExecutorType);
 
         using (var scope = serviceProvider.CreateScope())
         {
             var jobExecutor = scope.ServiceProvider.GetService(jobExecutorType);
-            if (jobExecutor != null)
-            {
-                var withParamJobExecutorType = jobExecutor
-                    .GetType()
-                    .GetInterfaces()
-                    .FirstOrDefault(
-                        x => x.IsGenericType &&
-                             x.GetGenericTypeDefinition() == typeof(IPlatformBackgroundJobExecutor<>));
-
-                if (withParamJobExecutorType != null)
-                {
-                    // Parse job executor param to correct type
-                    var jobExecutorParamType = withParamJobExecutorType.GetGenericArguments()[0];
-                    var jobExecutorParam = jobExecutorParamJson != null
-                        ? PlatformJsonSerializer.Deserialize(jobExecutorParamJson, jobExecutorParamType)
-                        : null;
-
-                    // Execute job executor method
-                    var executeMethod = jobExecutorType.GetMethod(
-                        nameof(IPlatformBackgroundJobExecutor.Execute),
-                        Util.ListBuilder.NewArray(jobExecutorParamType));
-                    executeMethod!.Invoke(
-                        jobExecutor,
-                        Util.ListBuilder.NewArray(jobExecutorParam));
-                }
-                else
-                {
-                    ((IPlatformBackgroundJobExecutor)jobExecutor).Execute();
-                }
-            }
+            if (jobExecutor != null) ExecuteBackgroundJobByInstance(jobExecutor.Cast<IPlatformBackgroundJobExecutor>(), jobExecutorParamJson);
         }
     }
 
-    private void EnsureJobExecutorTypeValid(Type jobExecutorType)
+    public void ExecuteBackgroundJobByInstance(IPlatformBackgroundJobExecutor jobExecutor, string jobExecutorParamJson)
+    {
+        var withParamJobExecutorType = jobExecutor
+            .GetType()
+            .GetInterfaces()
+            .FirstOrDefault(
+                x => x.IsGenericType &&
+                     x.GetGenericTypeDefinition() == typeof(IPlatformBackgroundJobExecutor<>));
+
+        if (withParamJobExecutorType != null)
+        {
+            // Parse job executor param to correct type
+            var jobExecutorParamType = withParamJobExecutorType.GetGenericArguments()[0];
+            var jobExecutorParam = jobExecutorParamJson != null
+                ? PlatformJsonSerializer.Deserialize(jobExecutorParamJson, jobExecutorParamType)
+                : null;
+
+            // Execute job executor method
+            var executeMethod = jobExecutor.GetType()
+                .GetMethod(
+                    nameof(IPlatformBackgroundJobExecutor.Execute),
+                    Util.ListBuilder.NewArray(jobExecutorParamType));
+            executeMethod!.Invoke(
+                jobExecutor,
+                Util.ListBuilder.NewArray(jobExecutorParam));
+        }
+        else
+        {
+            jobExecutor.Execute();
+        }
+    }
+
+    public void EnsureJobExecutorTypeValid(Type jobExecutorType)
     {
         if (!jobExecutorType.IsAssignableTo(typeof(IPlatformBackgroundJobExecutor)))
             throw new Exception(

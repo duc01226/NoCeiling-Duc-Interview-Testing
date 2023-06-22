@@ -14,47 +14,47 @@ public static class PlatformApplicationCommonUserContextKeys
     public const string UserMiddleNameContextKey = "UserMiddleName";
     public const string UserLastNameContextKey = "UserLastName";
 
-    public static string RequestId(this IPlatformApplicationUserContext context)
+    public static string RequestId(this IDictionary<string, object> context)
     {
         return context.GetValue<string>(RequestIdContextKey);
     }
 
-    public static string UserId(this IPlatformApplicationUserContext context)
+    public static string UserId(this IDictionary<string, object> context)
     {
         return context.GetValue<string>(UserIdContextKey);
     }
 
-    public static T UserId<T>(this IPlatformApplicationUserContext context)
+    public static T UserId<T>(this IDictionary<string, object> context)
     {
         return (T)UserId(context, typeof(T));
     }
 
-    public static object UserId(this IPlatformApplicationUserContext context, Type userIdType)
+    public static object UserId(this IDictionary<string, object> context, Type userIdType)
     {
         return context.UserId().ParseToSerializableType(userIdType);
     }
 
-    public static string UserName(this IPlatformApplicationUserContext context)
+    public static string UserName(this IDictionary<string, object> context)
     {
         return context.GetValue<string>(UserNameContextKey);
     }
 
-    public static string Email(this IPlatformApplicationUserContext context)
+    public static string Email(this IDictionary<string, object> context)
     {
         return context.GetValue<string>(EmailContextKey);
     }
 
-    public static List<string> UserRoles(this IPlatformApplicationUserContext context)
+    public static List<string> UserRoles(this IDictionary<string, object> context)
     {
         return context.GetValue<List<string>>(UserRolesContextKey);
     }
 
-    public static string UserFullName(this IPlatformApplicationUserContext context)
+    public static string UserFullName(this IDictionary<string, object> context)
     {
         return context.GetValue<string>(UserFullNameContextKey) ?? context.UserCalculatedFullName();
     }
 
-    public static string UserCalculatedFullName(this IPlatformApplicationUserContext context)
+    public static string UserCalculatedFullName(this IDictionary<string, object> context)
     {
         var userFirstNamePart = ((context.UserFirstName() ?? string.Empty) + " ").Trim();
         var userMiddleNamePart = ((context.UserMiddleName() ?? string.Empty) + " ").Trim();
@@ -63,66 +63,66 @@ public static class PlatformApplicationCommonUserContextKeys
         return $"{userFirstNamePart} {userMiddleNamePart} {userLastNamePart}";
     }
 
-    public static string UserFirstName(this IPlatformApplicationUserContext context)
+    public static string UserFirstName(this IDictionary<string, object> context)
     {
         return context.GetValue<string>(UserFirstNameContextKey);
     }
 
-    public static string UserMiddleName(this IPlatformApplicationUserContext context)
+    public static string UserMiddleName(this IDictionary<string, object> context)
     {
         return context.GetValue<string>(UserMiddleNameContextKey);
     }
 
-    public static string UserLastName(this IPlatformApplicationUserContext context)
+    public static string UserLastName(this IDictionary<string, object> context)
     {
         return context.GetValue<string>(UserLastNameContextKey);
     }
 
-    public static void SetRequestId(this IPlatformApplicationUserContext context, string value)
+    public static void SetRequestId(this IDictionary<string, object> context, string value)
     {
         context.SetValue(value, RequestIdContextKey);
     }
 
-    public static void SetUserId(this IPlatformApplicationUserContext context, string value)
+    public static void SetUserId(this IDictionary<string, object> context, string value)
     {
         context?.SetValue(value, UserIdContextKey);
     }
 
-    public static IPlatformApplicationUserContext SetUserRoles(this IPlatformApplicationUserContext context, List<string> value)
+    public static TContext SetUserRoles<TContext>(this TContext context, List<string> value) where TContext : IDictionary<string, object>
     {
         context.SetValue(value, UserRolesContextKey);
 
         return context;
     }
 
-    public static IPlatformApplicationUserContext SetEmail(this IPlatformApplicationUserContext context, string value)
+    public static TContext SetEmail<TContext>(this TContext context, string value) where TContext : IDictionary<string, object>
     {
         context.SetValue(value, EmailContextKey);
 
         return context;
     }
 
-    public static void SetUserName(this IPlatformApplicationUserContext context, string value)
+    public static void SetUserName(this IDictionary<string, object> context, string value)
     {
         context.SetValue(value, UserNameContextKey);
     }
 
-    public static void SetUserFullName(this IPlatformApplicationUserContext context, string value)
+    public static void SetUserFullName(this IDictionary<string, object> context, string value)
     {
         context.SetValue(value, UserFullNameContextKey);
     }
 
-    public static void SetUserLastName(this IPlatformApplicationUserContext context, string value)
+    public static void SetUserLastName(this IDictionary<string, object> context, string value)
     {
         context.SetValue(value, UserLastNameContextKey);
     }
 
-    public static void SetUserMiddleName(this IPlatformApplicationUserContext context, string value)
+    public static void SetUserMiddleName(this IDictionary<string, object> context, string value)
     {
         context.SetValue(value, UserMiddleNameContextKey);
     }
 
-    public static void SetUserFirstName(this IPlatformApplicationUserContext context, string value)
+    public static void SetUserFirstName(this IDictionary<string, object> context, string value)
     {
         context.SetValue(value, UserFirstNameContextKey);
     }

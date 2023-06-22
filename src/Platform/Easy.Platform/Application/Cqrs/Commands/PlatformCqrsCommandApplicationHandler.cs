@@ -65,7 +65,8 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                 });
 
             await Cqrs.SendEvent(
-                new PlatformCqrsCommandEvent<TCommand>(request, PlatformCqrsCommandEventAction.Executed),
+                new PlatformCqrsCommandEvent<TCommand>(request, PlatformCqrsCommandEventAction.Executed).With(
+                    p => p.SetRequestContextValues(CurrentUser.GetAllKeyValues())),
                 cancellationToken);
 
             return result;

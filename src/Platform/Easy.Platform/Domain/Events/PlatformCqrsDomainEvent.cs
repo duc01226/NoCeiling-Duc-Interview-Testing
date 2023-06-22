@@ -11,5 +11,6 @@ public abstract class PlatformCqrsDomainEvent : PlatformCqrsEvent, IPlatformUowE
     public override string EventName => GetType().Name;
 
     public override string EventAction => null;
+
     public string SourceUowId { get; set; }
 }

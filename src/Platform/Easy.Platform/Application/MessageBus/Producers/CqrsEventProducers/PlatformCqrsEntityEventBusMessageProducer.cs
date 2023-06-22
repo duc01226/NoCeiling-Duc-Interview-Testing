@@ -29,6 +29,8 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
     {
     }
 
+    protected override bool AllowUsingUserContextAccessor => true;
+
     protected override TMessage BuildMessage(PlatformCqrsEntityEvent<TEntity> @event)
     {
         return PlatformCqrsEntityEventBusMessage<TEntity>.New<TMessage>(

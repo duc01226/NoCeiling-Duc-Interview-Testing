@@ -40,19 +40,20 @@ public class PlatformRecurringJobAttribute : Attribute
     /// Run daily at midnight 0h: 0 0 * * *
     /// </summary>
     /// <param name="cronExpression"><see cref="CronExpression"/></param>
-    public PlatformRecurringJobAttribute(string cronExpression)
+    public PlatformRecurringJobAttribute(string cronExpression, bool executeOnStartUp = false)
     {
         CronExpression = cronExpression;
+        ExecuteOnStartUp = executeOnStartUp;
     }
 
     /// <inheritdoc cref="PlatformRecurringJobAttribute"/>
-    public PlatformRecurringJobAttribute(string cronExpression, double timeZoneOffset) : this(cronExpression)
+    public PlatformRecurringJobAttribute(string cronExpression, double timeZoneOffset, bool executeOnStartUp = false) : this(cronExpression, executeOnStartUp)
     {
         TimeZoneOffset = timeZoneOffset;
     }
 
     /// <inheritdoc cref="PlatformRecurringJobAttribute"/>
-    public PlatformRecurringJobAttribute(string cronExpression, string timeZoneId) : this(cronExpression)
+    public PlatformRecurringJobAttribute(string cronExpression, string timeZoneId, bool executeOnStartUp = false) : this(cronExpression, executeOnStartUp)
     {
         TimeZoneOffset = Util.TimeZoneParser.TryGetTimeZoneById(timeZoneId)?.BaseUtcOffset.TotalHours;
     }
@@ -79,6 +80,8 @@ public class PlatformRecurringJobAttribute : Attribute
     /// TimeZoneOffset hours from UTC. Example: +7 mean +7 hours from UTC.
     /// </summary>
     public double? TimeZoneOffset { get; set; } = TimeZoneInfo.Local.BaseUtcOffset.TotalHours;
+
+    public bool ExecuteOnStartUp { get; set; }
 
     public static PlatformRecurringJobAttribute GetRecurringJobAttributeInfo<TJobExecutor>() where TJobExecutor : IPlatformBackgroundJobExecutor
     {

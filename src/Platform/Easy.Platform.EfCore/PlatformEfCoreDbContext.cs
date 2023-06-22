@@ -11,6 +11,7 @@ using Easy.Platform.EfCore.EntityConfiguration;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.EfCore;
@@ -206,8 +207,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 return entity;
             },
             dismissSendEvent,
-            hasSupportOutboxEvent: HasSupportOutboxEvent(),
             sendEntityEventConfigure: sendEntityEventConfigure,
+            requestContext: () => PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.GetAllKeyValues(),
             cancellationToken);
     }
 
@@ -258,8 +259,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             toBeCreatedEntity,
             entity => GetTable<TEntity>().AddAsync(toBeCreatedEntity, cancellationToken).AsTask().Then(p => toBeCreatedEntity),
             dismissSendEvent,
-            hasSupportOutboxEvent: HasSupportOutboxEvent(),
             sendEntityEventConfigure: sendEntityEventConfigure,
+            requestContext: () => PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.GetAllKeyValues(),
             cancellationToken);
 
         return result;
@@ -356,8 +357,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                     .PipeIf(entity is IRowVersionEntity, p => p.As<IRowVersionEntity>().With(_ => _.ConcurrencyUpdateToken = Guid.NewGuid()).As<TEntity>());
             },
             dismissSendEvent,
-            hasSupportOutboxEvent: HasSupportOutboxEvent(),
             sendEntityEventConfigure: sendEntityEventConfigure,
+            requestContext: () => PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.GetAllKeyValues(),
             cancellationToken);
 
         return result;

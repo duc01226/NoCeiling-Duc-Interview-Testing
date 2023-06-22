@@ -17,14 +17,15 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         IUnitOfWork mappedToDbContextUow,
         TEntity entity,
         PlatformCqrsEntityEventCrudAction crudAction,
-        bool hasSupportOutboxEvent,
         Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure,
+        Func<IDictionary<string, object>> requestContext,
         CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var entityEvent = new PlatformCqrsEntityEvent<TEntity>(entity, crudAction)
             .With(_ => sendEntityEventConfigure?.Invoke(_))
-            .With(_ => _.SourceUowId = mappedToDbContextUow.Id);
+            .With(_ => _.SourceUowId = mappedToDbContextUow.Id)
+            .WithIf(requestContext != null, _ => _.SetRequestContextValues(requestContext!()));
 
         await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs.SendEvent(entityEvent, cancellationToken);
     }
@@ -34,8 +35,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         TEntity entity,
         Func<TEntity, Task<TResult>> deleteEntityAction,
         bool dismissSendEvent,
-        bool hasSupportOutboxEvent,
         Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure,
+        Func<IDictionary<string, object>> requestContext,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var result = await deleteEntityAction(entity)
@@ -47,8 +48,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                             mappedToDbContextUow,
                             entity,
                             PlatformCqrsEntityEventCrudAction.Deleted,
-                            hasSupportOutboxEvent,
                             sendEntityEventConfigure: sendEntityEventConfigure,
+                            requestContext: requestContext,
                             cancellationToken);
                 });
 
@@ -60,8 +61,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         TEntity entity,
         Func<TEntity, Task<TResult>> createEntityAction,
         bool dismissSendEvent,
-        bool hasSupportOutboxEvent,
         Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure,
+        Func<IDictionary<string, object>> requestContext,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var result = await createEntityAction(entity)
@@ -73,8 +74,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                             mappedToDbContextUow,
                             entity,
                             PlatformCqrsEntityEventCrudAction.Created,
-                            hasSupportOutboxEvent,
                             sendEntityEventConfigure: sendEntityEventConfigure,
+                            requestContext: requestContext,
                             cancellationToken);
                 });
 
@@ -87,8 +88,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         TEntity existingEntity,
         Func<TEntity, Task<TResult>> updateEntityAction,
         bool dismissSendEvent,
-        bool hasSupportOutboxEvent,
         Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure,
+        Func<IDictionary<string, object>> requestContext,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         if (!dismissSendEvent)
@@ -103,8 +104,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                             unitOfWork,
                             entity,
                             PlatformCqrsEntityEventCrudAction.Updated,
-                            hasSupportOutboxEvent,
                             sendEntityEventConfigure: sendEntityEventConfigure,
+                            requestContext: requestContext,
                             cancellationToken);
                 });
 

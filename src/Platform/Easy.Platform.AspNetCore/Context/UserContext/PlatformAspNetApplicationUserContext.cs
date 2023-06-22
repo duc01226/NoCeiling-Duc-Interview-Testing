@@ -1,18 +1,21 @@
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Security.Claims;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.AspNetCore.Context.UserContext.UserContextKeyToClaimTypeMapper.Abstract;
-using Easy.Platform.Common.JsonSerialization;
+using Easy.Platform.Common.RequestContext;
 using Microsoft.AspNetCore.Http;
 
 namespace Easy.Platform.AspNetCore.Context.UserContext;
 
 public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserContext
 {
+    private bool cachedUserContextDataInitiated;
     private readonly IPlatformApplicationUserContextKeyToClaimTypeMapper claimTypeMapper;
     private readonly MethodInfo getValueByGenericTypeMethodInfo;
     private readonly IHttpContextAccessor httpContextAccessor;
+    private readonly object initCachedUserContextDataLock = new();
 
     public PlatformAspNetApplicationUserContext(
         IHttpContextAccessor httpContextAccessor,
@@ -22,42 +25,151 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
         this.claimTypeMapper = claimTypeMapper;
         getValueByGenericTypeMethodInfo =
             GetType().GetMethods().First(p => p.IsGenericMethod && p.Name == nameof(GetValue) && p.GetGenericArguments().Length == 1 && p.IsPublic);
+
+        InitCachedUserContextData();
     }
 
-    protected ConcurrentDictionary<string, object> ManuallySetValueItemsDic { get; } = new();
+    public ConcurrentDictionary<string, object> CachedUserContextData { get; } = new();
 
-    public T GetValue<T>(string contextKey = "")
+    public T GetValue<T>(string contextKey)
+    {
+        return GetValue<T>(contextKey, CurrentHttpContext());
+    }
+
+    public void SetValue(object value, string contextKey)
     {
         if (contextKey == null)
             throw new ArgumentNullException(nameof(contextKey));
 
-        if (TryGetFromManuallySetValueItemsDictionary(contextKey, out T item))
-            return item;
+        CachedUserContextData.Upsert(contextKey, value);
+    }
 
-        if (TryGetValueFromHttpContext(contextKey, out T foundValue))
+    public List<string> GetAllKeys()
+    {
+        return GetAllKeys(CurrentHttpContext());
+    }
+
+    public Dictionary<string, object> GetAllKeyValues()
+    {
+        InitCachedUserContextData();
+
+        return GetAllKeyValues(CurrentHttpContext());
+    }
+
+    public void Add(KeyValuePair<string, object> item)
+    {
+        SetValue(item.Value, item.Key);
+    }
+
+    public void Clear()
+    {
+        CurrentHttpContext()?.Items.Clear();
+        CachedUserContextData.Clear();
+    }
+
+    public bool Contains(KeyValuePair<string, object> item)
+    {
+        InitCachedUserContextData();
+        return CachedUserContextData.Contains(item);
+    }
+
+    public void CopyTo(KeyValuePair<string, object>[] array, int arrayIndex)
+    {
+        InitCachedUserContextData();
+        CachedUserContextData.ToList().CopyTo(array, arrayIndex);
+    }
+
+    public bool Remove(KeyValuePair<string, object> item)
+    {
+        InitCachedUserContextData();
+        return CachedUserContextData.Remove(item.Key, out _);
+    }
+
+    public int Count => CachedUserContextData.Count;
+    public bool IsReadOnly => false;
+
+    public object GetValue(Type valueType, string contextKey)
+    {
+        return getValueByGenericTypeMethodInfo
+            .MakeGenericMethod(valueType)
+            .Invoke(this, parameters: new object[] { contextKey });
+    }
+
+    public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
+    {
+        InitCachedUserContextData();
+        return CachedUserContextData.GetEnumerator();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        InitCachedUserContextData();
+        return GetEnumerator();
+    }
+
+    public void Add(string key, object value)
+    {
+        InitCachedUserContextData();
+        CachedUserContextData.Upsert(key, value);
+    }
+
+    public bool ContainsKey(string key)
+    {
+        InitCachedUserContextData();
+        return CachedUserContextData.ContainsKey(key);
+    }
+
+    public bool Remove(string key)
+    {
+        InitCachedUserContextData();
+        return CachedUserContextData.Remove(key, out _);
+    }
+
+    public bool TryGetValue(string key, out object value)
+    {
+        InitCachedUserContextData();
+        return CachedUserContextData.TryGetValue(key, out value);
+    }
+
+    public object this[string key]
+    {
+        get
         {
-            ManuallySetValueItemsDic.AddOrUpdate(contextKey, key => foundValue, (key, currentValue) => foundValue);
+            InitCachedUserContextData();
+            return CachedUserContextData[key];
+        }
+        set
+        {
+            InitCachedUserContextData();
+            CachedUserContextData[key] = value;
+        }
+    }
+
+    public ICollection<string> Keys => CachedUserContextData.Keys;
+    public ICollection<object> Values => CachedUserContextData.Values;
+
+    public T GetValue<T>(string contextKey, HttpContext useHttpContext)
+    {
+        if (contextKey == null)
+            throw new ArgumentNullException(nameof(contextKey));
+
+        if (PlatformRequestContextHelper.TryGetValue(CachedUserContextData, contextKey, out T item)) return item;
+
+        if (TryGetValueFromHttpContext(useHttpContext, contextKey, out T foundValue))
+        {
+            CachedUserContextData.Upsert(contextKey, foundValue);
+
             return foundValue;
         }
 
         return default;
     }
 
-    public void SetValue(object value, string contextKey = "")
+    public List<string> GetAllKeys(HttpContext useHttpContext)
     {
-        if (contextKey == null)
-            throw new ArgumentNullException(nameof(contextKey));
-
-        ManuallySetValueItemsDic.Upsert(contextKey, value);
-
-        CurrentHttpContext()?.Items.Upsert(contextKey, value);
-    }
-
-    public List<string> GetAllKeys()
-    {
-        var manuallySetValueItemsDicKeys = ManuallySetValueItemsDic.Select(p => p.Key);
-        var userClaimsTypeKeys = CurrentHttpContext()?.User.Claims.Select(p => p.Type) ?? new List<string>();
-        var requestHeadersKeys = CurrentHttpContext()?.Request.Headers.Select(p => p.Key) ?? new List<string>();
+        var manuallySetValueItemsDicKeys = CachedUserContextData.Select(p => p.Key);
+        var userClaimsTypeKeys = useHttpContext?.User.Claims.Select(p => p.Type) ?? new List<string>();
+        var requestHeadersKeys = useHttpContext?.Request.Headers.Select(p => p.Key) ?? new List<string>();
 
         return Util.ListBuilder.New(PlatformApplicationCommonUserContextKeys.RequestIdContextKey)
             .Concat(manuallySetValueItemsDicKeys)
@@ -67,22 +179,28 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
             .ToList();
     }
 
-    public Dictionary<string, object> GetAllKeyValues()
+    public Dictionary<string, object> GetAllKeyValues(HttpContext useHttpContext)
     {
-        return new Dictionary<string, object>(GetAllKeys().Select(key => new KeyValuePair<string, object>(key, GetValue<object>(key))));
+        return GetAllKeys(useHttpContext)
+            .Select(key => new KeyValuePair<string, object>(key, GetValue<object>(key, useHttpContext)))
+            .ToDictionary(p => p.Key, p => p.Value);
     }
 
-    public void Clear()
+    /// <summary>
+    /// GetAllKeyValues also from HttpContext and other source to auto save data into CachedUserContext
+    /// </summary>
+    protected void InitCachedUserContextData()
     {
-        CurrentHttpContext()?.Items.Clear();
-        ManuallySetValueItemsDic.Clear();
-    }
+        if (cachedUserContextDataInitiated || httpContextAccessor.HttpContext == null) return;
 
-    public object GetValue(Type valueType, string contextKey = "")
-    {
-        return getValueByGenericTypeMethodInfo
-            .MakeGenericMethod(valueType)
-            .Invoke(this, parameters: new object[] { contextKey });
+        lock (initCachedUserContextDataLock)
+        {
+            if (cachedUserContextDataInitiated || httpContextAccessor.HttpContext == null) return;
+
+            // GetAllKeyValues already auto cache item in http context into CachedUserContextData
+            GetAllKeyValues(httpContextAccessor.HttpContext);
+            cachedUserContextDataInitiated = true;
+        }
     }
 
     /// <summary>
@@ -94,48 +212,28 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
     /// More details at: https://github.com/aspnet/AspNetCore/blob/master/src/Http/Http/src/HttpContextAccessor.cs#L16.
     /// </summary>
     /// <returns>The current HttpContext with thread safe.</returns>
-    private HttpContext CurrentHttpContext()
+    public HttpContext CurrentHttpContext()
     {
-        return httpContextAccessor?.HttpContext;
+        InitCachedUserContextData();
+
+        return httpContextAccessor.HttpContext;
     }
 
-    private bool TryGetFromManuallySetValueItemsDictionary<T>(string contextKey, out T item)
+    private bool TryGetValueFromHttpContext<T>(HttpContext useHttpContext, string contextKey, out T foundValue)
     {
-        if (ManuallySetValueItemsDic.TryGetValue(contextKey, out var value) && value != null)
-        {
-            var originalValue = ManuallySetValueItemsDic[contextKey];
-
-            if (originalValue is string originalValueStr && typeof(T) != typeof(string))
-            {
-                var isParsedSuccess = TryGetParsedValuesFromStringValues(out item, Util.ListBuilder.New(originalValueStr));
-
-                return isParsedSuccess;
-            }
-
-            item = (T)ManuallySetValueItemsDic[contextKey];
-            return true;
-        }
-
-        item = default;
-
-        return false;
-    }
-
-    private bool TryGetValueFromHttpContext<T>(string contextKey, out T foundValue)
-    {
-        if (CurrentHttpContext() == null)
+        if (useHttpContext == null)
         {
             foundValue = default;
             return false;
         }
 
         if (contextKey == PlatformApplicationCommonUserContextKeys.RequestIdContextKey)
-            return TryGetRequestId(CurrentHttpContext(), out foundValue);
+            return TryGetRequestId(useHttpContext, out foundValue);
 
-        if (TryGetValueFromUserClaims(CurrentHttpContext().User, contextKey, out foundValue))
+        if (TryGetValueFromUserClaims(useHttpContext.User, contextKey, out foundValue))
             return true;
 
-        if (TryGetValueFromRequestHeaders(CurrentHttpContext().Request.Headers, contextKey, out foundValue))
+        if (TryGetValueFromRequestHeaders(useHttpContext.Request.Headers, contextKey, out foundValue))
             return true;
 
         return false;
@@ -148,18 +246,14 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
     {
         var contextKeyMappedToOneOfClaimTypes = claimTypeMapper.ToOneOfClaimTypes(contextKey);
 
-        var stringRequestHeaderValues = contextKeyMappedToOneOfClaimTypes
-                                            .Select(
-                                                contextKeyMappedToJwtClaimType =>
-                                                    requestHeaders.ContainsKey(contextKeyMappedToJwtClaimType)
-                                                        ? new List<string>(
-                                                            requestHeaders[contextKeyMappedToJwtClaimType])
-                                                        : new List<string>())
-                                            .FirstOrDefault(p => p.Any()) ??
-                                        new List<string>();
+        var stringRequestHeaderValues =
+            contextKeyMappedToOneOfClaimTypes
+                .Select(contextKeyMappedToJwtClaimType => requestHeaders.Where(p => p.Key == contextKeyMappedToJwtClaimType).SelectList(p => p.Value.ToString()))
+                .FirstOrDefault(p => p.Any()) ??
+            new List<string>();
 
         // Try Get Deserialized value from matchedClaimStringValues
-        return TryGetParsedValuesFromStringValues(out foundValue, stringRequestHeaderValues);
+        return PlatformRequestContextHelper.TryGetParsedValuesFromStringValues(out foundValue, stringRequestHeaderValues);
     }
 
     private bool TryGetRequestId<T>(HttpContext httpContext, out T foundValue)
@@ -193,123 +287,6 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
             new List<string>();
 
         // Try Get Deserialized value from matchedClaimStringValues
-        return TryGetParsedValuesFromStringValues(out foundValue, matchedClaimStringValues);
-    }
-
-    /// <summary>
-    /// Try Get Deserialized value from matchedClaimStringValues
-    /// </summary>
-    private bool TryGetParsedValuesFromStringValues<T>(out T foundValue, List<string> stringValues)
-    {
-        if (FindFirstValueListInterfaceType<T>() == null && !stringValues.Any())
-        {
-            foundValue = default;
-            return false;
-        }
-
-        if (typeof(T) == typeof(string) || typeof(T) == typeof(object))
-        {
-            if (!stringValues.Any())
-            {
-                foundValue = default;
-                return false;
-            }
-
-            foundValue = (T)(object)stringValues.LastOrDefault();
-            return true;
-        }
-
-        // If T is number type
-        if (typeof(T).IsAssignableTo(typeof(double)) ||
-            typeof(T) == typeof(int) ||
-            typeof(T) == typeof(float) ||
-            typeof(T) == typeof(double) ||
-            typeof(T) == typeof(long) ||
-            typeof(T) == typeof(short))
-        {
-            var parsedSuccess = double.TryParse(stringValues.LastOrDefault(), out var parsedValue);
-            if (parsedSuccess)
-            {
-                // WHY: Serialize then Deserialize to ensure could parse from double to int, long, float, etc.. any of number type T
-                foundValue = PlatformJsonSerializer.Deserialize<T>(parsedValue.ToJson());
-                return true;
-            }
-        }
-
-        if (typeof(T) == typeof(bool))
-        {
-            var parsedSuccess = bool.TryParse(stringValues.LastOrDefault(), out var parsedValue);
-            if (parsedSuccess)
-            {
-                foundValue = (T)(object)parsedValue;
-                return true;
-            }
-        }
-
-        // Handle case if type T is a list with many items and each stringValue is a json represent an item
-        var isTryGetListValueSuccess =
-            TryGetParsedListValueFromUserClaimStringValues(stringValues, out foundValue);
-        if (isTryGetListValueSuccess)
-            return true;
-
-        return PlatformJsonSerializer.TryDeserialize(
-            stringValues.LastOrDefault(),
-            out foundValue);
-    }
-
-    private bool TryGetParsedListValueFromUserClaimStringValues<T>(
-        List<string> matchedClaimStringValues,
-        out T foundValue)
-    {
-        var firstValueListInterface = FindFirstValueListInterfaceType<T>();
-
-        if (firstValueListInterface != null)
-        {
-            var listItemType = firstValueListInterface.GetGenericArguments()[0];
-
-            var isParsedAllItemSuccess = true;
-
-            var parsedItemList = matchedClaimStringValues
-                .Select(
-                    matchedClaimStringValue =>
-                    {
-                        if (listItemType == typeof(string))
-                            return matchedClaimStringValue;
-
-                        var parsedItemResult = PlatformJsonSerializer.TryDeserialize(
-                            matchedClaimStringValue,
-                            listItemType,
-                            out var itemDeserializedValue);
-
-                        if (parsedItemResult == false)
-                            isParsedAllItemSuccess = false;
-
-                        return itemDeserializedValue;
-                    })
-                .ToList();
-
-            if (isParsedAllItemSuccess)
-            {
-                // Serialize then Deserialize to type T so ensure parse matchedClaimStringValues to type T successfully
-                foundValue = PlatformJsonSerializer.Deserialize<T>(parsedItemList.ToJson());
-                return true;
-            }
-        }
-
-        foundValue = default;
-
-        return false;
-    }
-
-    private static Type FindFirstValueListInterfaceType<T>()
-    {
-        var firstValueListInterface = typeof(T)
-            .GetInterfaces()
-            .FirstOrDefault(
-                p =>
-                    p.IsGenericType &&
-                    (p.GetGenericTypeDefinition().IsAssignableTo(typeof(IEnumerable<>)) ||
-                     p.GetGenericTypeDefinition().IsAssignableTo(typeof(ICollection<>))));
-        return firstValueListInterface;
+        return PlatformRequestContextHelper.TryGetParsedValuesFromStringValues(out foundValue, matchedClaimStringValues);
     }
 }
