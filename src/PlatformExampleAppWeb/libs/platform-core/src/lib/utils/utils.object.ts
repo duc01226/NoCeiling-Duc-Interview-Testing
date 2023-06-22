@@ -119,13 +119,14 @@ export function immutableUpdate<TObject extends object>(
         | PartialDeep<TObject>
         | Partial<TObject>
         | ((state: TObject) => void | PartialDeep<TObject> | Partial<TObject>),
-    checkDiff: false | true | 'deepCheck' = true
+    checkDiff: false | true | 'deepCheck' = true,
+    maxDeepLevel?: number
 ): TObject {
     const clonedObj = clone(targetObj);
     let stateChanged: boolean | undefined;
 
     if (typeof partialStateOrUpdaterFn == 'object') {
-        stateChanged = assignDeep(clonedObj, <object>partialStateOrUpdaterFn, checkDiff);
+        stateChanged = assignDeep(clonedObj, <object>partialStateOrUpdaterFn, checkDiff, maxDeepLevel);
     }
 
     if (typeof partialStateOrUpdaterFn == 'function') {
@@ -135,11 +136,11 @@ export function immutableUpdate<TObject extends object>(
 
         if (updatedStateResult != undefined) {
             // Case the partialStateOrUpdaterFn return partial updated props object
-            stateChanged = assignDeep(clonedObj, <object>updatedStateResult, checkDiff);
+            stateChanged = assignDeep(clonedObj, <object>updatedStateResult, checkDiff, maxDeepLevel);
         } else {
             // Case the partialStateOrUpdaterFn edit the object state directly.
             // Then the clonnedDeepState is actual an updated result, use it to update the clonedState
-            stateChanged = assignDeep(clonedObj, <object>clonnedDeepState, checkDiff);
+            stateChanged = assignDeep(clonedObj, <object>clonnedDeepState, checkDiff, maxDeepLevel);
         }
     }
 
@@ -155,7 +156,7 @@ export function cloneWithNewValues<T extends object>(value: T, newValues: T | Pa
     return clonedValue;
 }
 
-export function cloneDeep<T extends any>(
+export function cloneDeep<T>(
     value: T,
     deepLevel?: number,
     updateClonedValueAction?: (clonedValue: T) => undefined | T | void
@@ -189,14 +190,14 @@ export function cloneDeep<T extends any>(
 }
 
 export function getDictionaryKeys<T extends string | number>(object?: Dictionary<any>): T[] {
-    return lodashKeys(object).map((key: any) => <T>(!isNaN(<any>key) ? parseInt(key) : key));
+    return lodashKeys(object).map((key: any) => <T>(!isNaN(key) ? parseInt(key) : key));
 }
 
 export function values<T>(object?: Dictionary<T> | ArrayLike<T> | undefined): T[] {
     return lodashValues(object);
 }
 
-export function isDifferent<T extends any>(value1: T, value2: T, shallowCheckFirstLevel: boolean = false) {
+export function isDifferent<T>(value1: T, value2: T, shallowCheckFirstLevel: boolean = false) {
     if (value1 == undefined && value2 == undefined) return false;
     if (value1 == undefined && value2 != undefined) return true;
     if (value1 != undefined && value2 == undefined) return true;
@@ -259,17 +260,19 @@ export function extend<T extends object>(target: T, ...sources: Partial<T>[]): T
 export function assignDeep<T extends object>(
     target: T,
     source: T,
-    checkDiff: false | true | 'deepCheck' = false
+    checkDiff: false | true | 'deepCheck' = false,
+    maxDeepLevel?: number
 ): boolean | undefined {
-    return assignOrSetDeep(target, source, false, false, checkDiff);
+    return assignOrSetDeep(target, source, false, false, checkDiff, maxDeepLevel);
 }
 
 export function setDeep<T extends object>(
     target: T,
     source: T,
-    checkDiff: false | true | 'deepCheck' = false
+    checkDiff: false | true | 'deepCheck' = false,
+    maxDeepLevel?: number
 ): boolean | undefined {
-    return assignOrSetDeep(target, source, false, true, checkDiff);
+    return assignOrSetDeep(target, source, false, true, checkDiff, maxDeepLevel);
 }
 
 export function getCurrentMissingItems<T>(prevValue: Dictionary<T>, currentValue: Dictionary<T>): T[] {
@@ -298,6 +301,20 @@ export function getPropertyDescriptor(obj: object, prop: string): PropertyDescri
     return Object.getOwnPropertyDescriptor(obj, prop) ?? getPropertyDescriptor(Object.getPrototypeOf(obj), prop);
 }
 
+export function cleanFalsyValueProps<T>(obj: T) {
+    if (obj != null && typeof obj == 'object') {
+        const objKeys = Object.keys(obj);
+        for (const key of objKeys) {
+            if (!(<any>obj)[key]) {
+                // eslint-disable-next-line no-param-reassign
+                delete (<any>obj)[key];
+            }
+        }
+    }
+
+    return obj;
+}
+
 export function removeNullProps<T>(obj: T): T {
     if (obj != null && typeof obj == 'object') {
         const objKeys = Object.keys(obj);
@@ -319,12 +336,23 @@ function assignOrSetDeep<T extends object>(
     source: T,
     cloneSource: boolean = false,
     makeTargetValuesSameSourceValues: boolean = false,
-    checkDiff: false | true | 'deepCheck' = false
+    checkDiff: false | true | 'deepCheck' = false,
+    maxDeepLevel?: number,
+    currentDeepLevel?: number
 ): boolean | undefined {
     let hasDataChanged: boolean | undefined = undefined;
+    currentDeepLevel ??= 1;
 
     if (target instanceof Array && source instanceof Array) {
-        return assignOrSetDeepArray(target, source, cloneSource, makeTargetValuesSameSourceValues, checkDiff);
+        return assignOrSetDeepArray(
+            target,
+            source,
+            cloneSource,
+            makeTargetValuesSameSourceValues,
+            checkDiff,
+            maxDeepLevel,
+            currentDeepLevel
+        );
     } else {
         if (checkDiff != false) hasDataChanged = false;
         if (makeTargetValuesSameSourceValues) removeTargetKeysNotInSource(target, source);
@@ -349,18 +377,21 @@ function assignOrSetDeep<T extends object>(
             )
                 return;
 
-            setNewValueToTargetKeyProp(key);
+            setNewValueToTargetKeyProp(key, <number>currentDeepLevel);
             hasDataChanged = true;
         });
     }
 
     return hasDataChanged;
 
-    function setNewValueToTargetKeyProp(key: keyof T & string) {
+    function setNewValueToTargetKeyProp(key: keyof T & string, currentDeepLevel: number) {
         let newValueToSetToTarget = cloneSource ? cloneDeep((<any>source)[key]) : (<any>source)[key];
 
         // if value is object and not special object like Date, Time, etc ... so we could set deep for the value
-        if (checkTwoValueShouldSetDirectlyAndNotSetDeep((<any>target)[key], (<any>source)[key]) == false) {
+        if (
+            checkTwoValueShouldSetDirectlyAndNotSetDeep((<any>target)[key], (<any>source)[key]) == false &&
+            (maxDeepLevel == undefined || currentDeepLevel + 1 <= maxDeepLevel)
+        ) {
             // If setter exist, we need to clone deep the target prop value and set deep it to create
             // a new value which has been set deep to trigger setter of the child props or array item
             // which then use it as a new value to set to the target
@@ -375,7 +406,9 @@ function assignOrSetDeep<T extends object>(
                     (<any>source)[key],
                     cloneSource,
                     makeTargetValuesSameSourceValues,
-                    checkDiff
+                    checkDiff,
+                    maxDeepLevel,
+                    currentDeepLevel + 1
                 );
             } else {
                 assignOrSetDeep(
@@ -383,7 +416,9 @@ function assignOrSetDeep<T extends object>(
                     (<any>source)[key],
                     cloneSource,
                     makeTargetValuesSameSourceValues,
-                    checkDiff
+                    checkDiff,
+                    maxDeepLevel,
+                    currentDeepLevel + 1
                 );
             }
         }
@@ -408,7 +443,9 @@ function assignOrSetDeep<T extends object>(
         sourceArray: any[],
         cloneSource: boolean = false,
         makeTargetValuesSameSourceValues: boolean = false,
-        checkDiff: false | true | 'deepCheck' = false
+        checkDiff: false | true | 'deepCheck' = false,
+        maxDeepLevel?: number,
+        currentDeepLevel: number = 1
     ): boolean {
         let hasDataChanged = false;
 
@@ -423,7 +460,10 @@ function assignOrSetDeep<T extends object>(
 
             if (hasDataChanged == false) hasDataChanged = isDifferent(targetArray[i], sourceArray[i]);
 
-            if (checkTwoValueShouldSetDirectlyAndNotSetDeep(targetArray[i], sourceArray[i])) {
+            if (
+                checkTwoValueShouldSetDirectlyAndNotSetDeep(targetArray[i], sourceArray[i]) ||
+                (maxDeepLevel != null && currentDeepLevel + 1 > maxDeepLevel)
+            ) {
                 targetArray[i] = cloneSource ? cloneDeep(sourceArray[i]) : sourceArray[i];
             } else {
                 targetArray[i] = clone(targetArray[i], clonedTargetArrayItem => {
@@ -432,7 +472,9 @@ function assignOrSetDeep<T extends object>(
                         sourceArray[i],
                         cloneSource,
                         makeTargetValuesSameSourceValues,
-                        checkDiff
+                        checkDiff,
+                        maxDeepLevel,
+                        currentDeepLevel + 1
                     );
                 });
             }

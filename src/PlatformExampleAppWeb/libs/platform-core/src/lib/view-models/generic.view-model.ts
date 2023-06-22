@@ -15,8 +15,8 @@ export class PlatformVm implements IPlatformVm {
     public status: StateStatus = 'Pending';
     public error: string | undefined | null = undefined;
 
-    public errorMsgMap: Dictionary<string | undefined> = {};
-    public loadingMap: Dictionary<boolean | undefined> = {};
+    public errorMsgMap: Dictionary<string | undefined | null> = {};
+    public loadingMap: Dictionary<boolean | undefined | null> = {};
     public allErrorMsgs?: string;
 
     constructor(data?: Partial<IPlatformVm>) {
@@ -81,7 +81,7 @@ export class PlatformVm implements IPlatformVm {
         return this.errorMsgMap[requestKey];
     }
 
-    public isLoading(requestKey: string = requestStateDefaultKey): boolean | undefined {
+    public isLoading(requestKey: string = requestStateDefaultKey): boolean | null | undefined {
         return this.loadingMap[requestKey];
     }
 

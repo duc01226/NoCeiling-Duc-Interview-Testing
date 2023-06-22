@@ -1,6 +1,6 @@
 import { Injectable, OnDestroy } from '@angular/core';
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ComponentStore, SelectConfig, tapResponse } from '@ngrx/component-store';
+import { ComponentStore, SelectConfig } from '@ngrx/component-store';
 import {
     asyncScheduler,
     defer,
@@ -12,6 +12,7 @@ import {
     Subscription,
     switchMap,
     takeUntil,
+    tap,
     throttleTime
 } from 'rxjs';
 import { PartialDeep } from 'type-fest';
@@ -33,7 +34,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
     private storedSubscriptionsMap: Map<string, Subscription> = new Map();
     private storedAnonymousSubscriptions: Subscription[] = [];
     private cachedErrorMsg$: Dictionary<Observable<string | undefined | null>> = {};
-    private cachedLoading$: Dictionary<Observable<boolean | undefined>> = {};
+    private cachedLoading$: Dictionary<Observable<boolean | undefined | null>> = {};
     private innerStore: ComponentStore<TViewModel>;
     private onInitVmTriggered: boolean = false;
 
@@ -112,13 +113,14 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         partialStateOrUpdaterFn:
             | PartialDeep<TViewModel>
             | Partial<TViewModel>
-            | ((state: TViewModel) => void | PartialDeep<TViewModel> | Partial<TViewModel>)
+            | ((state: TViewModel) => void | PartialDeep<TViewModel> | Partial<TViewModel>),
+        assignDeepLevel: number = 1
     ): void {
         this.innerStore.setState(state => {
             try {
-                return immutableUpdate(state, partialStateOrUpdaterFn);
+                return immutableUpdate(state, partialStateOrUpdaterFn, true, assignDeepLevel);
             } catch (error) {
-                return immutableUpdate(state, this.buildSetErrorPartialState(<Error>error));
+                return immutableUpdate(state, this.buildSetErrorPartialState(<Error>error), true, assignDeepLevel);
             }
         });
     }
@@ -179,23 +181,18 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                 return source.pipe(
                     onCancel(() => this.setLoading(false, requestKey)),
                     tapOnce({
-                        next: () => {
+                        next: result => {
                             // Timeout to queue this update state success/failed after tapResponse
                             setTimeout(() => {
-                                if (this.currentState.status != 'Error' && this.loadingRequestsCount() <= 1)
-                                    this.updateState(<Partial<TViewModel>>{ status: 'Success' });
-
                                 this.setLoading(false, requestKey);
+                                if (this.currentState.status != 'Error' && this.loadingRequestsCount() <= 0)
+                                    this.updateState(<Partial<TViewModel>>{ status: 'Success' });
                             });
                         },
                         error: (err: PlatformApiServiceErrorResponse | Error) => {
-                            // Timeout to queue this update state success/failed after tapResponse
-                            setTimeout(() => {
-                                this.setErrorMsg(err, requestKey);
-                                this.setErrorState(err);
-
-                                this.setLoading(false, requestKey);
-                            });
+                            this.setLoading(false, requestKey);
+                            this.setErrorMsg(err, requestKey);
+                            this.setErrorState(err);
                         }
                     })
                 );
@@ -212,7 +209,10 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                 ? <string | null>error
                 : PlatformApiServiceErrorResponse.getDefaultFormattedMessage(error);
 
-        this.updateState(<Partial<TViewModel>>{ errorMsgMap: { [requestKey]: errorMsg }, error: errorMsg });
+        this.updateState(<Partial<TViewModel>>{
+            errorMsgMap: immutableUpdate(this.currentState.errorMsgMap, { [requestKey]: errorMsg }),
+            error: errorMsg
+        });
     };
 
     public getErrorMsg$ = (requestKey: string = requestStateDefaultKey) => {
@@ -223,12 +223,17 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
     };
 
     public setLoading = (value: boolean | null, requestKey: string = PlatformVm.requestStateDefaultKey) => {
-        this.updateState(<Partial<TViewModel>>{ loadingMap: { [requestKey]: value } });
-
         if (this.loadingRequestsCountMap[requestKey] == undefined) this.loadingRequestsCountMap[requestKey] = 0;
+
         if (value == true) this.loadingRequestsCountMap[requestKey] += 1;
         if (value == false && this.loadingRequestsCountMap[requestKey] > 0)
             this.loadingRequestsCountMap[requestKey] -= 1;
+
+        this.updateState(<Partial<TViewModel>>{
+            loadingMap: immutableUpdate(this.currentState.loadingMap, {
+                [requestKey]: this.loadingRequestsCountMap[requestKey] > 0
+            })
+        });
     };
 
     public isLoading$ = (requestKey: string = requestStateDefaultKey) => {
@@ -305,7 +310,11 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         errorFn?: (error: E) => void,
         completeFn?: () => void
     ): (source: Observable<T>) => Observable<T> {
-        return tapResponse(nextFn, errorFn ?? (() => {}), completeFn);
+        return tap({
+            next: nextFn,
+            error: errorFn,
+            complete: completeFn
+        });
     }
 
     protected storeSubscription(key: string, subscription: Subscription): void {
@@ -317,7 +326,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         this.storedAnonymousSubscriptions.push(subscription);
     }
 
-    protected subscribe(observable: Observable<unknown>): Subscription {
+    protected subscribe<T>(observable: Observable<T>): Subscription {
         const subs = observable.subscribe();
 
         this.storeAnonymousSubscription(subs);

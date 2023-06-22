@@ -172,24 +172,19 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                         next: value => {
                             // Timeout to queue this update state success/failed after tapResponse
                             setTimeout(() => {
-                                if (this.loadingState$.value != LoadingState.Error && this.loadingRequestsCount() <= 1)
+                                this.setLoading(false, requestKey);
+                                if (this.loadingState$.value != LoadingState.Error && this.loadingRequestsCount() <= 0)
                                     this.loadingState$.next(LoadingState.Success);
 
                                 if (options?.onSuccess != null) options.onSuccess(value);
-
-                                this.setLoading(false, requestKey);
                             });
                         },
                         error: (err: PlatformApiServiceErrorResponse | Error) => {
-                            // Timeout to queue this update state success/failed after tapResponse
-                            setTimeout(() => {
-                                this.setErrorMsg(err, requestKey);
-                                this.loadingState$.next(LoadingState.Error);
+                            this.setLoading(false, requestKey);
+                            this.setErrorMsg(err, requestKey);
+                            this.loadingState$.next(LoadingState.Error);
 
-                                if (options?.onError != null) options.onError(err);
-
-                                this.setLoading(false, requestKey);
-                            });
+                            if (options?.onError != null) options.onError(err);
                         }
                     })
                 );
@@ -331,16 +326,17 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     };
 
     protected setLoading = (value: boolean | null, requestKey: string = requestStateDefaultKey) => {
-        this.loadingMap$.next(
-            clone(this.loadingMap$.value, _ => {
-                _[requestKey] = value;
-            })
-        );
-
         if (this.loadingRequestsCountMap[requestKey] == undefined) this.loadingRequestsCountMap[requestKey] = 0;
+
         if (value == true) this.loadingRequestsCountMap[requestKey] += 1;
         if (value == false && this.loadingRequestsCountMap[requestKey] > 0)
             this.loadingRequestsCountMap[requestKey] -= 1;
+
+        this.loadingMap$.next(
+            clone(this.loadingMap$.value, _ => {
+                _[requestKey] = this.loadingRequestsCountMap[requestKey] > 0;
+            })
+        );
 
         this.detectChanges();
     };

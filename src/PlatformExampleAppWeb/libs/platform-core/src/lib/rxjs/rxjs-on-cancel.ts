@@ -5,8 +5,13 @@ export function onCancel<T>(f: () => void): (source: Observable<T>) => Observabl
         new Observable(observer => {
             let completed = false;
             let errored = false;
+            let succeeded = false;
+
             const subscription = observable.subscribe({
-                next: v => observer.next(v),
+                next: v => {
+                    succeeded = true;
+                    observer.next(v);
+                },
                 error: e => {
                     errored = true;
                     observer.error(e);
@@ -14,6 +19,7 @@ export function onCancel<T>(f: () => void): (source: Observable<T>) => Observabl
                 complete: () => {
                     completed = true;
                     observer.complete();
+                    if (!succeeded && !errored) f();
                 }
             });
             return () => {
