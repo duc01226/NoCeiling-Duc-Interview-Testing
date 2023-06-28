@@ -124,6 +124,18 @@ public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity,
 
     public virtual TPrimaryKey Id { get; set; }
 
+    /// <summary>
+    /// Help to validate entity create/update must be unique. <br/>
+    /// Example: <br/>
+    /// public override PlatformCheckUniqueValidator[EmployeeRemainingAttendance] CheckUniqueValidator()
+    /// {
+    ///    return new PlatformCheckUniqueValidator[EmployeeRemainingAttendance](
+    ///       targetItem: this,
+    ///       findOtherDuplicatedItemExpr: otherItem =>
+    ///            !otherItem.Id.Equals(Id) && otherItem.EmployeeId == EmployeeId && otherItem.AttendanceTypeId == AttendanceTypeId && otherItem.CompanyId == CompanyId,
+    ///       "EmployeeRemainingAttendance must be unique");
+    /// }
+    /// </summary>
     public virtual PlatformCheckUniqueValidator<TEntity> CheckUniqueValidator()
     {
         return null;

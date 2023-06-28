@@ -279,6 +279,9 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         var autoClearDistributedCacheOnInitOptions = AutoClearDistributedCacheOnInitOptions(serviceScope);
         if (autoClearDistributedCacheOnInitOptions.EnableAutoClearDistributedCacheOnInit)
             await ClearDistributedCache(autoClearDistributedCacheOnInitOptions, serviceScope);
+
+        if (AutoRegisterDefaultCaching)
+            await serviceScope.ServiceProvider.GetRequiredService<PlatformCachingModule>().Init();
     }
 
     protected virtual PlatformApplicationAutoClearDistributedCacheOnInitOptions

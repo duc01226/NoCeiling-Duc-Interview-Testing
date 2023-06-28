@@ -198,6 +198,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 await UpdateExistingInboxProcessedMessageAsync(
                     serviceProvider,
                     existingInboxMessage.Id,
+                    loggerFactory,
                     cancellationToken);
             }
         }
@@ -273,21 +274,34 @@ public static class PlatformInboxMessageBusConsumerHelper
     public static async Task UpdateExistingInboxProcessedMessageAsync(
         IServiceProvider serviceProvider,
         string existingInboxMessageId,
+        Func<ILogger> loggerFactory,
         CancellationToken cancellationToken = default)
     {
-        await serviceProvider.ExecuteInjectScopedAsync(
-            async (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
-            {
-                var existingInboxMessage = await inboxBusMessageRepo.FirstOrDefaultAsync(
-                    predicate: p => p.Id == existingInboxMessageId,
-                    cancellationToken: cancellationToken);
+        try
+        {
+            await serviceProvider.ExecuteInjectScopedAsync(
+                async (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
+                {
+                    var existingInboxMessage = await inboxBusMessageRepo.FirstOrDefaultAsync(
+                        predicate: p => p.Id == existingInboxMessageId,
+                        cancellationToken: cancellationToken);
 
-                if (existingInboxMessage != null)
-                    await UpdateExistingInboxProcessedMessageAsync(
-                        serviceProvider,
-                        existingInboxMessage,
-                        cancellationToken);
-            });
+                    if (existingInboxMessage != null)
+                        await UpdateExistingInboxProcessedMessageAsync(
+                            serviceProvider,
+                            existingInboxMessage,
+                            cancellationToken);
+                });
+        }
+        catch (Exception ex)
+        {
+            loggerFactory()
+                .LogError(
+                    ex,
+                    "UpdateExistingInboxProcessedMessageAsync failed. [[Error:{Error}]], [ExistingInboxMessageId:{ExistingInboxMessageId}].",
+                    ex.Message,
+                    existingInboxMessageId);
+        }
     }
 
     public static async Task UpdateExistingInboxProcessedMessageAsync(

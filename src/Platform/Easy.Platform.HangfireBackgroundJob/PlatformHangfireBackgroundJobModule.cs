@@ -53,7 +53,7 @@ public abstract class PlatformHangfireBackgroundJobModule : PlatformBackgroundJo
         IServiceProvider provider,
         BackgroundJobServerOptions options)
     {
-        options.WorkerCount = Math.Min(Environment.ProcessorCount * 5, 10);
+        options.WorkerCount = Math.Max(Environment.ProcessorCount / 3, 1);
 
         return options;
     }

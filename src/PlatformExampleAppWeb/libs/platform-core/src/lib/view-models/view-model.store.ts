@@ -311,7 +311,14 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         completeFn?: () => void
     ): (source: Observable<T>) => Observable<T> {
         return tap({
-            next: nextFn,
+            next: data => {
+                try {
+                    nextFn(data);
+                } catch (error) {
+                    console.error(error);
+                    throw error;
+                }
+            },
             error: errorFn,
             complete: completeFn
         });

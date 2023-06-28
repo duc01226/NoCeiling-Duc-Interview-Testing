@@ -9,7 +9,9 @@ using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Common.Validations.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
+using Easy.Platform.Infrastructures.Caching;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.Cqrs.Queries;
@@ -23,6 +25,7 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
     : PlatformCqrsRequestApplicationHandler<TQuery>, IPlatformCqrsQueryApplicationHandler, IRequestHandler<TQuery, TResult>
     where TQuery : PlatformCqrsQuery<TResult>, IPlatformCqrsRequest
 {
+    protected readonly IPlatformCacheRepositoryProvider CacheRepositoryProvider;
     protected readonly IUnitOfWorkManager UnitOfWorkManager;
 
     public PlatformCqrsQueryApplicationHandler(
@@ -30,6 +33,7 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
         IUnitOfWorkManager unitOfWorkManager) : base(userContext)
     {
         UnitOfWorkManager = unitOfWorkManager;
+        CacheRepositoryProvider = PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformCacheRepositoryProvider>();
     }
 
     public async Task<TResult> Handle(TQuery request, CancellationToken cancellationToken)

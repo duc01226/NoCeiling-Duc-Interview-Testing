@@ -15,7 +15,7 @@ public interface IPlatformContextCacheKeyProvider
 
     PlatformCacheKey GetKey(
         string collection = PlatformContextCacheKeyProvider.DefaultCollection,
-        object[] requestKeyParts = null);
+        string[] requestKeyParts = null);
 
     Func<PlatformCacheKey, bool> MatchContextKeyPredicate();
 }
@@ -38,14 +38,14 @@ public class PlatformContextCacheKeyProvider : IPlatformContextCacheKeyProvider
         return new PlatformCacheKey(Context, collection ?? DefaultCollection, requestKey);
     }
 
-    public virtual PlatformCacheKey GetKey(string collection = DefaultCollection, object[] requestKeyParts = null)
+    public virtual PlatformCacheKey GetKey(string collection = DefaultCollection, string[] requestKeyParts = null)
     {
         EnsureValidProvider();
         return new PlatformCacheKey(
             Context,
             collection ?? DefaultCollection,
             requestKeyParts ??
-            new object[]
+            new[]
             {
                 DefaultRequestKey
             });
@@ -72,7 +72,7 @@ public class PlatformContextCacheKeyProvider<TFixedImplementationProvider> : Pla
         return Activator.CreateInstance<TFixedImplementationProvider>().GetKey(collection, requestKey);
     }
 
-    public static PlatformCacheKey CreateKey(string collection = DefaultCollection, object[] requestKeyParts = null)
+    public static PlatformCacheKey CreateKey(string collection = DefaultCollection, string[] requestKeyParts = null)
     {
         return Activator.CreateInstance<TFixedImplementationProvider>().GetKey(collection, requestKeyParts);
     }

@@ -5,7 +5,7 @@ namespace Easy.Platform.Common.Cqrs.Queries;
 
 public abstract class PlatformCqrsQueryPagedResult<TItem> : IPlatformPagedResult<TItem>
 {
-    private PlatformCqrsQueryPagedResult() { }
+    protected PlatformCqrsQueryPagedResult() { }
 
     public PlatformCqrsQueryPagedResult(List<TItem> items, long totalCount, IPlatformPagedRequest pagedRequest)
     {

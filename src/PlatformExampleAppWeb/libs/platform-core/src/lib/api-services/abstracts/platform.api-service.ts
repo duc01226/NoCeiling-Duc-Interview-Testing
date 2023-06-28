@@ -110,6 +110,7 @@ export abstract class PlatformApiService extends PlatformHttpService {
 
     protected catchHttpError<T>(errorResponse: HttpErrorResponse | Error): Observable<T> {
         if (errorResponse instanceof Error) {
+            console.error(errorResponse);
             return this.throwError<T>({
                 error: { code: errorResponse.name, message: errorResponse.message },
                 requestId: ''

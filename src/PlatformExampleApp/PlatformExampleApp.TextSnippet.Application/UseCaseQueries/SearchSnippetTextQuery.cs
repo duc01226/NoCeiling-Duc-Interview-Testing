@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Cqrs.Queries;
+using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Queries;
 using Easy.Platform.Common.Dtos;
 using Easy.Platform.Domain.UnitOfWork;
@@ -19,6 +20,17 @@ public sealed class SearchSnippetTextQuery : PlatformCqrsPagedQuery<SearchSnippe
     public string SearchAddress { get; set; }
     public string SearchAddressString { get; set; }
     public string SearchSingleAddress { get; set; }
+
+    public static string[] BuildCacheRequestKeyParts(
+        SearchSnippetTextQuery request,
+        string userId,
+        string companyId)
+    {
+        return IPlatformCqrsRequest.BuildCacheRequestKeyParts(
+            request,
+            userId,
+            companyId);
+    }
 }
 
 public sealed class SearchSnippetTextQueryResult : PlatformCqrsQueryPagedResult<TextSnippetEntityDto>

@@ -75,9 +75,19 @@ public static class Clock
         return NewDate(year, month, 1).AddMonths(1).AddDays(-1).EndOfDate();
     }
 
+    public static DateTime EndOfMonth(DateTime date)
+    {
+        return NewDate(date.Year, date.Month, 1).AddMonths(1).AddDays(-1).EndOfDate();
+    }
+
     public static DateTime StartOfMonth(int year, int month)
     {
         return NewDate(year, month, 1);
+    }
+
+    public static DateTime StartOfMonth(DateTime date)
+    {
+        return NewDate(date.Year, date.Month, 1);
     }
 
     public static DateTime EndOfCurrentMonth()

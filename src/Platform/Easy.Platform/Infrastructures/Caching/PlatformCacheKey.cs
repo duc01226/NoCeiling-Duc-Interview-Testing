@@ -20,7 +20,7 @@ public readonly struct PlatformCacheKey
         RequestKey = AutoFixKeyPartValue(requestKey);
     }
 
-    public PlatformCacheKey(object[] requestKeyParts)
+    public PlatformCacheKey(string[] requestKeyParts)
     {
         RequestKey = requestKeyParts.Length == 0 ? DefaultRequestKey : BuildRequestKey(requestKeyParts);
     }
@@ -30,7 +30,7 @@ public readonly struct PlatformCacheKey
         Collection = AutoFixKeyPartValue(collection);
     }
 
-    public PlatformCacheKey(string collection, params object[] requestKeyParts) : this(requestKeyParts)
+    public PlatformCacheKey(string collection, params string[] requestKeyParts) : this(requestKeyParts)
     {
         Collection = AutoFixKeyPartValue(collection);
     }
@@ -40,7 +40,7 @@ public readonly struct PlatformCacheKey
         Context = AutoFixKeyPartValue(context);
     }
 
-    public PlatformCacheKey(string context, string collection, params object[] requestKeyParts) : this(
+    public PlatformCacheKey(string context, string collection, params string[] requestKeyParts) : this(
         collection,
         requestKeyParts)
     {
@@ -100,26 +100,32 @@ public readonly struct PlatformCacheKey
         return new PlatformCacheKey(cacheKeyParts[0], cacheKeyParts[1], cacheKeyParts[2]);
     }
 
-    public static string BuildRequestKey(object[] requestKeyParts)
+    public static string BuildRequestKey(string[] requestKeyParts)
     {
         if (requestKeyParts.Length == 0)
             throw new ArgumentException("requestKeyParts must be not empty.", nameof(requestKeyParts));
 
         return
-            $"[{requestKeyParts.Select(p => p ?? "null").Select(p => p.ToJson().Replace("\"", "'")).JoinToString(RequestKeyPartsSeparator)}]";
+            $"{RequestKeyPrefix}{requestKeyParts.Select(p => (p ?? NullValue).ToJson() ?? "").JoinToString(RequestKeyPartsSeparator)}{RequestKeySuffix}";
     }
 
-    public static object[] BuildRequestKeyParts(string requestKey)
+    public const string RequestKeyPrefix = "[";
+    public const string RequestKeySuffix = "]";
+    public const string NullValue = "(NULL)";
+
+    public static string[] SplitRequestKeyParts(string requestKey)
     {
         return requestKey
-            .Substring(1, requestKey.Length - 1)
-            .Split(RequestKeySeparator)
+            .Substring(RequestKeyPrefix.Length, requestKey.Length - RequestKeySuffix.Length)
+            .Split(RequestKeyPartsSeparator)
             .Select(
                 requestKeyPartJsonString =>
                 {
                     try
                     {
-                        return PlatformJsonSerializer.Deserialize(requestKeyPartJsonString, typeof(object));
+                        var deserializedStr = PlatformJsonSerializer.Deserialize<string>(requestKeyPartJsonString);
+
+                        return deserializedStr == NullValue ? null : deserializedStr;
                     }
                     catch (Exception)
                     {
@@ -134,8 +140,8 @@ public readonly struct PlatformCacheKey
         return $"{Context}{RequestKeySeparator}{Collection}{RequestKeySeparator}{RequestKey}";
     }
 
-    public object[] RequestKeyParts()
+    public string[] RequestKeyParts()
     {
-        return BuildRequestKeyParts(RequestKey);
+        return SplitRequestKeyParts(RequestKey);
     }
 }

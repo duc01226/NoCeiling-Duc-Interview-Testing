@@ -80,6 +80,9 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
 
     public async Task ExecuteOnStartUpRecurringBackgroundJobImmediately()
     {
+        await Task.Run(
+            () => IPlatformModule.WaitAllModulesInitiated(typeof(IPlatformModule), Logger, "execute on start-up recurring background job"));
+
         await ServiceProvider.ExecuteInjectScopedAsync(
             (IPlatformBackgroundJobScheduler backgroundJobScheduler, IServiceProvider serviceProvider) =>
             {

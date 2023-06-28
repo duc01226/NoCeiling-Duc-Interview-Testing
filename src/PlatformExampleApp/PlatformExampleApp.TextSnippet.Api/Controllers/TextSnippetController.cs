@@ -1,8 +1,5 @@
 using Easy.Platform.AspNetCore.Controllers;
-using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
-using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.Utils;
 using Easy.Platform.Infrastructures.Caching;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -53,10 +50,7 @@ public class TextSnippetController : PlatformBaseController
         return await CacheRepositoryProvider.GetCollection<TextSnippetCollectionCacheKeyProvider>()
             .CacheRequestAsync(
                 () => Cqrs.SendQuery(request),
-                requestKeyParts: new object[]
-                {
-                    nameof(Search), request
-                });
+                requestKeyParts: SearchSnippetTextQuery.BuildCacheRequestKeyParts(request, userId: null, companyId: null));
 
         // Using distributed cache and also use CacheRequestUseConfigOptionsAsync for convenient
         //return await CacheRepositoryProvider.GetCollection<TextSnippetCollectionCacheKeyProvider>(PlatformCacheRepositoryType.Distributed)

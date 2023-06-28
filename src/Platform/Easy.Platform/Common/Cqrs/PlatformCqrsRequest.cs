@@ -4,15 +4,26 @@ using Easy.Platform.Common.Validations;
 
 namespace Easy.Platform.Common.Cqrs;
 
-public interface IPlatformCqrsRequest : IPlatformDto<IPlatformCqrsRequest>
+public interface IPlatformCqrsRequest : IPlatformDto<IPlatformCqrsRequest>, ICloneable
 {
-    public IPlatformCqrsRequestAuditInfo AuditInfo { get; }
+    public IPlatformCqrsRequestAuditInfo AuditInfo { get; set; }
 
     public TRequest SetAuditInfo<TRequest>(
         Guid auditTrackId,
         string auditRequestByUserId) where TRequest : class, IPlatformCqrsRequest;
 
     public TRequest SetAuditInfo<TRequest>(IPlatformCqrsRequestAuditInfo auditInfo) where TRequest : class, IPlatformCqrsRequest;
+
+    /// <summary>
+    /// Return a list of string which is used to build the cache key. Also could be used to filter, find the matched cache key
+    /// by the array key parts to remove/update cache. The query object will be to json string. You could also convert it back when try to find cache key
+    /// via request key parts to remove/update cache
+    /// </summary>
+    public static string[] BuildCacheRequestKeyParts<TRequest>(TRequest request, params string[] otherRequestKeyParts) where TRequest : class, IPlatformCqrsRequest
+    {
+        var requestJsonStr = request?.Clone().Cast<TRequest>().With(_ => _.AuditInfo = null).ToJson();
+        return new[] { requestJsonStr }.Concat(otherRequestKeyParts).ConcatSingle(typeof(TRequest).Name).ToArray();
+    }
 }
 
 public class PlatformCqrsRequest : IPlatformCqrsRequest
@@ -22,7 +33,7 @@ public class PlatformCqrsRequest : IPlatformCqrsRequest
         return PlatformValidationResult<IPlatformCqrsRequest>.Valid(value: this);
     }
 
-    public IPlatformCqrsRequestAuditInfo AuditInfo { get; private set; } = new PlatformCqrsRequestAuditInfo();
+    public IPlatformCqrsRequestAuditInfo AuditInfo { get; set; } = new PlatformCqrsRequestAuditInfo();
 
     public TRequest SetAuditInfo<TRequest>(
         Guid auditTrackId,
@@ -38,6 +49,11 @@ public class PlatformCqrsRequest : IPlatformCqrsRequest
         AuditInfo = auditInfo;
 
         return this.As<TRequest>();
+    }
+
+    public object Clone()
+    {
+        return MemberwiseClone();
     }
 
     public virtual PlatformValidationResult<TRequest> Validate<TRequest>() where TRequest : IPlatformCqrsRequest

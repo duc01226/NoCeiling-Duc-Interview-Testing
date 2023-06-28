@@ -34,9 +34,8 @@ export class Time implements ITime {
     public static compareTime(from: Time, to: Time): boolean {
         if (!from || !to) return false;
 
-        const fromDate = new Date(from.hour, from.minute, from.second);
-        const toDate = new Date(to.hour, to.minute, to.second);
-
+        const fromDate = this.setTimeIntoDate(new Date(), from) as Date;
+        const toDate = this.setTimeIntoDate(new Date(), to) as Date;
         return fromDate < toDate;
     }
 

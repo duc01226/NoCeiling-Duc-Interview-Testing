@@ -1,4 +1,7 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
+using Easy.Platform.Common;
+using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
@@ -14,7 +17,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
     public string SourceUowId { get; set; }
 
     public static async Task SendEvent<TEntity, TPrimaryKey>(
-        IUnitOfWork mappedToDbContextUow,
+        [AllowNull] IUnitOfWork mappedToDbContextUow,
         TEntity entity,
         PlatformCqrsEntityEventCrudAction crudAction,
         Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure,
@@ -24,10 +27,17 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
     {
         var entityEvent = new PlatformCqrsEntityEvent<TEntity>(entity, crudAction)
             .With(_ => sendEntityEventConfigure?.Invoke(_))
-            .With(_ => _.SourceUowId = mappedToDbContextUow.Id)
+            .With(_ => _.SourceUowId = mappedToDbContextUow?.Id)
             .WithIf(requestContext != null, _ => _.SetRequestContextValues(requestContext!()));
 
-        await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs.SendEvent(entityEvent, cancellationToken);
+        if (mappedToDbContextUow != null)
+            await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs.SendEvent(entityEvent, cancellationToken);
+        else
+            await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
+                (IPlatformCqrs cqrs) =>
+                {
+                    cqrs.SendEvent(entityEvent, cancellationToken);
+                });
     }
 
     public static async Task<TResult> ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TResult>(

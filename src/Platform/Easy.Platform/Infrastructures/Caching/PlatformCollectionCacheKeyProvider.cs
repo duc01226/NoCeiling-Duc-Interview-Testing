@@ -15,7 +15,7 @@ public class PlatformCollectionCacheKeyProvider : PlatformContextCacheKeyProvide
         return new PlatformCacheKey(Context, Collection, requestKey ?? DefaultRequestKey);
     }
 
-    public PlatformCacheKey GetKey(object[] requestKeyParts = null)
+    public PlatformCacheKey GetKey(string[] requestKeyParts = null)
     {
         EnsureValidProvider();
         return new PlatformCacheKey(
@@ -23,7 +23,7 @@ public class PlatformCollectionCacheKeyProvider : PlatformContextCacheKeyProvide
             Collection,
             requestKeyParts?.Any() == true
                 ? requestKeyParts
-                : new object[]
+                : new[]
                 {
                     DefaultRequestKey
                 });
@@ -51,7 +51,7 @@ public abstract class PlatformCollectionCacheKeyProvider<TFixedImplementationPro
         return Activator.CreateInstance<TFixedImplementationProvider>().GetKey(requestKey);
     }
 
-    public static PlatformCacheKey CreateKey(object[] requestKeyParts = null)
+    public static PlatformCacheKey CreateKey(string[] requestKeyParts = null)
     {
         return Activator.CreateInstance<TFixedImplementationProvider>().GetKey(requestKeyParts);
     }

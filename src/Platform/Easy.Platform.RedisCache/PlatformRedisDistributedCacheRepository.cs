@@ -47,8 +47,9 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
             {
                 return result == null ? default : PlatformJsonSerializer.Deserialize<T>(result);
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Logger.LogError(e, $"{GetType().Name} GetAsync failed. CacheKey:{{CacheKey}}", cacheKey);
                 // WHY: If parse failed, the cached data could be obsolete. Then just clear the cache
                 await RemoveAsync(cacheKey, token);
                 return default;
