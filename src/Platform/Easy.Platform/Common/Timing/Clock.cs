@@ -55,7 +55,17 @@ public static class Clock
         CurrentTimeZone = timeZoneInfo ?? throw new ArgumentNullException(nameof(timeZoneInfo));
     }
 
-    public static DateTime NewDate(int year, int month, int day, int hour = 0, int minute = 0, int second = 0, DateTimeKind? kind = null)
+    public static DateTime NewDate(int year, int month, int day)
+    {
+        return NewDate(year, month, day, null);
+    }
+
+    public static DateTime NewDate(int year, int month, int day, DateTimeKind? kind)
+    {
+        return NewDate(year, month, day, 0, 0, 0, kind);
+    }
+
+    public static DateTime NewDate(int year, int month, int day, int hour, int minute = 0, int second = 0, DateTimeKind? kind = null)
     {
         return new DateTime(year, month, day, hour, minute, second).SpecifyKind(kind ?? Kind);
     }

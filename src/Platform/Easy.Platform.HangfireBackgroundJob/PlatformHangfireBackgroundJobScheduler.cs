@@ -230,17 +230,9 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
         ExecuteBackgroundJobByInstance(jobExecutor, jobExecutorParam?.ToJson(true));
     }
 
-    public string EnsureValidToUpsertRecurringJob(Type jobExecutorType, Func<string> cronExpression)
+    public string Schedule<TJobExecutorParam>(Type jobExecutorType, TJobExecutorParam jobExecutorParam, DateTimeOffset enqueueAt) where TJobExecutorParam : class
     {
-        EnsureJobExecutorTypeValid(jobExecutorType);
-
-        var cronExpressionValue = cronExpression?.Invoke() ?? PlatformRecurringJobAttribute.GetRecurringJobAttributeInfo(jobExecutorType)?.CronExpression;
-
-        if (cronExpressionValue == null)
-            throw new Exception(
-                "Either recurring job must have cron expression from PlatformRecurringJobAttribute or cronExpression param must be not null");
-
-        return cronExpressionValue;
+        return BackgroundJob.Schedule(() => ExecuteBackgroundJobByType(jobExecutorType, jobExecutorParam != null ? jobExecutorParam.ToJson(true) : null), enqueueAt);
     }
 
     public void ExecuteBackgroundJobByType(Type jobExecutorType, string jobExecutorParamJson)
@@ -252,6 +244,19 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
             var jobExecutor = scope.ServiceProvider.GetService(jobExecutorType);
             if (jobExecutor != null) ExecuteBackgroundJobByInstance(jobExecutor.Cast<IPlatformBackgroundJobExecutor>(), jobExecutorParamJson);
         }
+    }
+
+    public string EnsureValidToUpsertRecurringJob(Type jobExecutorType, Func<string> cronExpression)
+    {
+        EnsureJobExecutorTypeValid(jobExecutorType);
+
+        var cronExpressionValue = cronExpression?.Invoke() ?? PlatformRecurringJobAttribute.GetRecurringJobAttributeInfo(jobExecutorType)?.CronExpression;
+
+        if (cronExpressionValue == null)
+            throw new Exception(
+                "Either recurring job must have cron expression from PlatformRecurringJobAttribute or cronExpression param must be not null");
+
+        return cronExpressionValue;
     }
 
     public void ExecuteBackgroundJobByInstance(IPlatformBackgroundJobExecutor jobExecutor, string jobExecutorParamJson)

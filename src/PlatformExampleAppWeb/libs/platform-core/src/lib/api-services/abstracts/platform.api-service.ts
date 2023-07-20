@@ -1,10 +1,11 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams, HttpStatusCode } from '@angular/common/http';
 import { Injectable, Optional } from '@angular/core';
-import { Observable, of, throwError } from 'rxjs';
-import { catchError, switchMap } from 'rxjs/operators';
+import { concat, Observable, of, throwError } from 'rxjs';
+import { catchError, delay, switchMap, tap } from 'rxjs/operators';
 
 import { HttpClientOptions, PlatformHttpService } from '../../http-services';
 import { PlatformCoreModuleConfig } from '../../platform-core.config';
+import { distinctUntilObjectValuesChanged } from '../../rxjs';
 import { removeNullProps, toPlainObj } from '../../utils';
 import {
     IPlatformApiServiceErrorResponse,
@@ -39,18 +40,77 @@ export abstract class PlatformApiService extends PlatformHttpService {
         return this.httpOptionsConfigService?.configOptions(options);
     }
 
+    protected maxNumberOfCacheItemPerRequestPath(): number {
+        return 10;
+    }
+
+    private cachedRequestDataDict: Dictionary<unknown> = {};
+    private cachedRequestDataKeys: Set<string> = new Set();
+    private setCachedRequestData<T>(requestCacheKey: string, data: T) {
+        this.cachedRequestDataDict[requestCacheKey] = data;
+
+        this.cachedRequestDataKeys.add(requestCacheKey);
+
+        this.clearOldestCachedData<T>(requestCacheKey);
+    }
+
+    /**
+     * Process clear oldest cached data if over maxNumberOfCacheItemPerRequestPath
+     */
+    private clearOldestCachedData<T>(requestCacheKey: string) {
+        const allRequestPathKeys = [...this.cachedRequestDataKeys].filter(key =>
+            key.startsWith(this.getRequestPathFromCacheKey(requestCacheKey))
+        );
+
+        while (allRequestPathKeys.length > this.maxNumberOfCacheItemPerRequestPath()) {
+            const oldestRequestKey = allRequestPathKeys.shift();
+            if (oldestRequestKey != null) {
+                delete this.cachedRequestDataDict[oldestRequestKey];
+                this.cachedRequestDataKeys.delete(oldestRequestKey);
+            }
+        }
+    }
+
     protected get<T>(
         path: string,
         params: unknown,
         configureOptions?: (option: HttpClientOptions) => HttpClientOptions | void | undefined
     ): Observable<T> {
+        const requestCacheKey = this.buildRequestCacheKey(path, params);
+        const cachedData = <T | null>this.cachedRequestDataDict[requestCacheKey];
+
+        if (cachedData == null) {
+            return this.getFromServer<T>(path, params, configureOptions);
+        } else {
+            // delay(1ms) a little to mimic the real async rxjs observable => the next will be async => the flow is corrected if before call api
+            // do update something in store
+            return concat(of(<T>cachedData).pipe(delay(1)), this.getFromServer<T>(path, params, configureOptions)).pipe(
+                distinctUntilObjectValuesChanged()
+            );
+        }
+    }
+
+    private getFromServer<T>(
+        path: string,
+        params: unknown,
+        configureOptions: ((option: HttpClientOptions) => HttpClientOptions | void | undefined) | undefined
+    ) {
         const options = this.getHttpOptions(this.preprocessData(params));
         const configuredOptions =
             configureOptions != null ? <HttpClientOptions | undefined>configureOptions(options) : options;
+        const requestCacheKey = this.buildRequestCacheKey(path, params);
 
-        return super
-            .httpGet<T>(this.apiUrl + path, configuredOptions ?? options)
-            .pipe(catchError(err => this.catchHttpError<T>(err)));
+        return super.httpGet<T>(this.apiUrl + path, configuredOptions ?? options).pipe(
+            tap({
+                next: result => {
+                    this.setCachedRequestData(requestCacheKey, result);
+                },
+                error: err => {
+                    this.setCachedRequestData(requestCacheKey, null);
+                }
+            }),
+            catchError(err => this.catchHttpError<T>(err))
+        );
     }
 
     protected post<T>(
@@ -167,6 +227,16 @@ export abstract class PlatformApiService extends PlatformHttpService {
         );
     }
 
+    protected setDefaultOptions(options?: HttpClientOptions): HttpClientOptions {
+        options = options ? options : {};
+        if (!options.headers) {
+            const httpHeaders = PlatformApiService.DefaultHeaders;
+            options.headers = httpHeaders;
+        }
+
+        return options;
+    }
+
     /**
      * We remove all null props because it's not necessary. And in server dotnet core, if the data is nullable => default value is null
      * so that do not need to submit null. If data is not nullable, then if submit null can raise exception.
@@ -232,14 +302,15 @@ export abstract class PlatformApiService extends PlatformHttpService {
         return returnParam;
     }
 
-    protected setDefaultOptions(options?: HttpClientOptions): HttpClientOptions {
-        options = options ? options : {};
-        if (!options.headers) {
-            const httpHeaders = PlatformApiService.DefaultHeaders;
-            options.headers = httpHeaders;
-        }
+    private requestCacheKeySeperator: string = '___';
+    private buildRequestCacheKey(requestPath: string, requestPayload: unknown): string {
+        return `${this.apiUrl}${requestPath}${
+            requestPayload != null ? this.requestCacheKeySeperator + JSON.stringify(requestPayload) : ''
+        }`;
+    }
 
-        return options;
+    private getRequestPathFromCacheKey(requestCacheKey: string): string {
+        return requestCacheKey.split(this.requestCacheKeySeperator)[0];
     }
 }
 

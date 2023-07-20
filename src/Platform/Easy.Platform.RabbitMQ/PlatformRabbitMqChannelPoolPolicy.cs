@@ -8,10 +8,10 @@ namespace Easy.Platform.RabbitMQ;
 public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>, IDisposable
 {
     private readonly IConnectionFactory connectionFactory;
-
-    private Lazy<IConnection> connectionInitializer;
     private readonly ILogger<PlatformRabbitMqChannelPoolPolicy> logger;
     private readonly PlatformRabbitMqOptions options;
+
+    private Lazy<IConnection> connectionInitializer;
 
     public PlatformRabbitMqChannelPoolPolicy(
         PlatformRabbitMqOptions options,
@@ -97,7 +97,8 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>, ID
             RequestedConnectionTimeout = options.RequestedConnectionTimeoutSeconds.Seconds(),
             ContinuationTimeout = options.RequestedConnectionTimeoutSeconds.Seconds(),
             SocketReadTimeout = options.SocketTimeoutSeconds.Seconds(),
-            SocketWriteTimeout = options.SocketTimeoutSeconds.Seconds()
+            SocketWriteTimeout = options.SocketTimeoutSeconds.Seconds(),
+            RequestedChannelMax = options.RequestedChannelMax
         };
 
         return connectionFactoryResult;
@@ -109,26 +110,20 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>, ID
         // after CreateConnection will lose full stack trace (may because it connect async to other external service)
         var fullStackTrace = Environment.StackTrace;
 
-        return Util.TaskRunner.WaitRetryThrowFinalException(
-            () =>
-            {
-                try
-                {
-                    var hostNames = options.HostNames.Split(',')
-                        .Where(hostName => hostName.IsNotNullOrEmpty())
-                        .ToArray();
+        try
+        {
+            var hostNames = options.HostNames.Split(',')
+                .Where(hostName => hostName.IsNotNullOrEmpty())
+                .ToArray();
 
-                    return connectionFactory.CreateConnection(hostNames);
-                }
-                catch (Exception ex)
-                {
-                    throw new Exception(
-                        $"{GetType().Name} CreateConnection failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
-                        ex);
-                }
-            },
-            retryAttempt => 1.Seconds(),
-            retryCount: 10);
+            return connectionFactory.CreateConnection(hostNames);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception(
+                $"{GetType().Name} CreateConnection failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
+                ex);
+        }
     }
 
     protected virtual void Dispose(bool disposing)

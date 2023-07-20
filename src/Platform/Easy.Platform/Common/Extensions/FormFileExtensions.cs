@@ -1,7 +1,7 @@
 using System.IO;
 using Microsoft.AspNetCore.Http;
 
-namespace Easy.Platform.AspNetCore.Extensions;
+namespace Easy.Platform.Common.Extensions;
 
 public static class FormFileExtensions
 {

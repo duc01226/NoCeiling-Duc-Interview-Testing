@@ -4,7 +4,10 @@ namespace Easy.Platform.HangfireBackgroundJob;
 
 public class PlatformHangfireUsePostgreSqlStorageOptions
 {
-    public static readonly PostgreSqlStorageOptions DefaultStorageOptions = new();
+    public static readonly PostgreSqlStorageOptions DefaultStorageOptions = new()
+    {
+        JobExpirationCheckInterval = PlatformHangfireCommonOptions.DefaultJobExpirationCheckInterval
+    };
 
     public string ConnectionString { get; set; }
 

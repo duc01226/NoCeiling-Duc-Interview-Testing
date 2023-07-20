@@ -9,9 +9,9 @@ public class PlatformHangfireBackgroundJobProcessingService : IPlatformBackgroun
 {
     public static readonly long WaitForShutdownTimeoutInSeconds = 5 * 60;
 
-    private BackgroundJobServer currentBackgroundJobServer;
-
     private readonly BackgroundJobServerOptions options;
+
+    private BackgroundJobServer currentBackgroundJobServer;
 
     public PlatformHangfireBackgroundJobProcessingService(BackgroundJobServerOptions options)
     {
@@ -34,11 +34,11 @@ public class PlatformHangfireBackgroundJobProcessingService : IPlatformBackgroun
 
     public async Task Start(CancellationToken cancellationToken = default)
     {
-        Logger.LogInformation($"{GetType().Name} STARTED");
+        Logger.LogInformation("{TargetName} STARTED", GetType().Name);
 
         currentBackgroundJobServer ??= new BackgroundJobServer(options);
 
-        Logger.LogInformation($"{GetType().Name} FINISHED");
+        Logger.LogInformation("{TargetName} FINISHED", GetType().Name);
     }
 
     public async Task Stop(CancellationToken cancellationToken = default)

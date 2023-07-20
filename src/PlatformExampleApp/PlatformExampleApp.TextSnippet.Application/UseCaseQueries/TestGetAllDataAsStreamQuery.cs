@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Cqrs.Queries;
 using Easy.Platform.Common.Cqrs.Queries;
-using Easy.Platform.Domain.UnitOfWork;
+using Easy.Platform.Infrastructures.Caching;
 using PlatformExampleApp.TextSnippet.Application.EntityDtos;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
@@ -29,8 +29,8 @@ internal sealed class TestGetAllDataAsStreamQueryHandler : PlatformCqrsQueryAppl
 
     public TestGetAllDataAsStreamQueryHandler(
         IPlatformApplicationUserContextAccessor userContext,
-        IUnitOfWorkManager unitOfWorkManager,
-        ITextSnippetRepository<TextSnippetEntity> textSnippetRepository) : base(userContext, unitOfWorkManager)
+        IPlatformCacheRepositoryProvider cacheRepositoryProvider,
+        ITextSnippetRepository<TextSnippetEntity> textSnippetRepository) : base(userContext, cacheRepositoryProvider)
     {
         this.textSnippetRepository = textSnippetRepository;
     }
@@ -54,7 +54,7 @@ internal sealed class TestGetAllDataAsStreamQueryHandler : PlatformCqrsQueryAppl
                 textSnippetRepository.CountAsync(cancellationToken: cancellationToken),
                 textSnippetRepository.FirstOrDefaultAsync(cancellationToken: cancellationToken));
 
-        return new TestGetAllDataAsStreamQueryResult()
+        return new TestGetAllDataAsStreamQueryResult
         {
             AsyncEnumerableResult = asyncEnumerableResult,
             EnumerableResult = enumerableResult,

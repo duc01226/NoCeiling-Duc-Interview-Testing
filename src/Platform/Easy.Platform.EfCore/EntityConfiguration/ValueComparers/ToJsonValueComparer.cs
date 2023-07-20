@@ -13,7 +13,10 @@ public class ToJsonValueComparer<T> : ValueComparer<T>
     {
     }
 
-    protected ToJsonValueComparer(Expression<Func<T, T, bool>> equalsExpression, Expression<Func<T, int>> hashCodeExpression, Expression<Func<T, T>> snapshotExpression) : base(
+    protected ToJsonValueComparer(
+        Expression<Func<T, T, bool>> equalsExpression,
+        Expression<Func<T, int>> hashCodeExpression,
+        Expression<Func<T, T>> snapshotExpression) : base(
         equalsExpression,
         hashCodeExpression,
         snapshotExpression)

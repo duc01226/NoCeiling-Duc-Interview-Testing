@@ -60,7 +60,7 @@ internal sealed class ParameterRebinder : ExpressionVisitor
     // replace parameters in the target lambda expression with parameters from the source
     public static Expression ReplaceParameters<T>(Expression<T> targetExpr, Expression<T> sourceExpr)
     {
-        var targetToSourceParamsMap = sourceExpr.Parameters
+        var currentTargetToSourceParamsMap = sourceExpr.Parameters
             .Select(
                 (sourceParam, firstParamIndex) => new
                 {
@@ -69,7 +69,7 @@ internal sealed class ParameterRebinder : ExpressionVisitor
                 })
             .ToDictionary(p => p.targetParam, p => p.sourceParam);
 
-        return new ParameterRebinder(targetToSourceParamsMap).Visit(targetExpr.Body);
+        return new ParameterRebinder(currentTargetToSourceParamsMap).Visit(targetExpr.Body);
     }
 
     protected override Expression VisitParameter(ParameterExpression node)

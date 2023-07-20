@@ -53,7 +53,9 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
             PlatformGlobal.LoggerFactory.CreateLogger(GetType())
                 .LogWarning(
                     ex,
-                    $"{GetType().Name} complete failed because of version conflict. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]");
+                    "Uow complete failed because of version conflict. [[Exception:{Exception}]]. FullStackTrace:{FullStackTrace}]]",
+                    ex.Message,
+                    fullStackTrace);
 
             throw new PlatformDomainRowVersionConflictException(
                 $"{GetType().Name} complete uow failed because of {nameof(DbUpdateConcurrencyException)}. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",

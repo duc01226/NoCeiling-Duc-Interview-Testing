@@ -21,8 +21,8 @@ internal interface IFcmSender
 /// </summary>
 internal sealed class FcmSender : IFcmSender
 {
-    private readonly HttpClient http;
     private readonly FireBasePushNotificationSettings settings;
+    private readonly HttpClient http;
 
     public FcmSender(FireBasePushNotificationSettings settings, HttpClient http)
     {

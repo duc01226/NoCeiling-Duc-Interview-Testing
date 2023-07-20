@@ -12,7 +12,6 @@ using Easy.Platform.MongoDB.Extensions;
 using Easy.Platform.MongoDB.Migration;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -29,10 +28,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     public const string PlatformDataMigrationHistoryCollectionName = "MigrationHistory";
 
     public readonly IMongoDatabase Database;
+    protected readonly IPlatformApplicationUserContextAccessor UserContextAccessor;
 
     protected readonly Lazy<Dictionary<Type, string>> EntityTypeToCollectionNameDictionary;
     protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
-    protected readonly IPlatformApplicationUserContextAccessor UserContextAccessor;
 
     public PlatformMongoDbContext(
         IOptions<PlatformMongoOptions<TDbContext>> options,
@@ -229,7 +228,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             },
             dismissSendEvent,
             sendEntityEventConfigure: sendEntityEventConfigure,
-            requestContext: () => PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.GetAllKeyValues(),
+            requestContext: () => PlatformGlobal.UserContext.Current.GetAllKeyValues(),
             cancellationToken);
     }
 
@@ -344,7 +343,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     public ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
-        return loggerFactory.CreateLogger(GetType());
+        return loggerFactory.CreateLogger(typeof(IPlatformDbContext));
     }
 
     public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
@@ -398,7 +397,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         cancellationToken),
                 dismissSendEvent,
                 sendEntityEventConfigure: sendEntityEventConfigure,
-                requestContext: () => PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.GetAllKeyValues(),
+                requestContext: () => PlatformGlobal.UserContext.Current.GetAllKeyValues(),
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -423,7 +422,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         cancellationToken),
                 dismissSendEvent,
                 sendEntityEventConfigure: sendEntityEventConfigure,
-                requestContext: () => PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.GetAllKeyValues(),
+                requestContext: () => PlatformGlobal.UserContext.Current.GetAllKeyValues(),
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -437,7 +436,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     {
         if (!recreate && IsEnsureIndexesMigrationExecuted()) return;
 
-        Logger.LogInformation($"[{GetType().Name}] EnsureIndexesAsync STARTED.");
+        Logger.LogInformation("[{TargetName}] EnsureIndexesAsync STARTED.", GetType().Name);
 
         await EnsureMigrationHistoryCollectionIndexesAsync(recreate);
         await EnsureApplicationDataMigrationHistoryCollectionIndexesAsync(recreate);
@@ -449,7 +448,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             await MigrationHistoryCollection.InsertOneAsync(
                 new PlatformMongoMigrationHistory(EnsureIndexesMigrationName));
 
-        Logger.LogInformation($"[{GetType().Name}] EnsureIndexesAsync FINISHED.");
+        Logger.LogInformation("[{TargetName}] EnsureIndexesAsync FINISHED.", GetType().Name);
     }
 
     public string GenerateId()
@@ -474,13 +473,13 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                     if (migrationExecutor.OnlyForDbInitBeforeDate == null ||
                         dbInitializedDate < migrationExecutor.OnlyForDbInitBeforeDate)
                     {
-                        Logger.LogInformation($"Migration {migrationExecutor.Name} STARTED.");
+                        Logger.LogInformation("Migration {MigrationExecutorName} STARTED.", migrationExecutor.Name);
 
                         await migrationExecutor.Execute((TDbContext)this);
                         await MigrationHistoryCollection.InsertOneAsync(new PlatformMongoMigrationHistory(migrationExecutor.Name));
                         await SaveChangesAsync();
 
-                        Logger.LogInformation($"Migration {migrationExecutor.Name} FINISHED.");
+                        Logger.LogInformation("Migration {MigrationExecutorName} FINISHED.", migrationExecutor.Name);
                     }
                 });
     }
@@ -616,7 +615,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     protected bool HasSupportOutboxEvent()
     {
-        return PlatformGlobal.RootServiceProvider.CheckHasRegisteredScopedService<IPlatformOutboxBusMessageRepository>();
+        return PlatformGlobal.ServiceProvider.CheckHasRegisteredScopedService<IPlatformOutboxBusMessageRepository>();
     }
 
     protected bool IsEnsureIndexesMigrationExecuted()
@@ -651,7 +650,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 entity => GetTable<TEntity>().InsertOneAsync(entity, null, cancellationToken).Then(() => entity),
                 dismissSendEvent,
                 sendEntityEventConfigure: sendEntityEventConfigure,
-                requestContext: () => PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.GetAllKeyValues(),
+                requestContext: () => PlatformGlobal.UserContext.Current.GetAllKeyValues(),
                 cancellationToken);
         else
             await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
@@ -666,7 +665,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                     .Then(() => entity),
                 dismissSendEvent,
                 sendEntityEventConfigure: sendEntityEventConfigure,
-                requestContext: () => PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.GetAllKeyValues(),
+                requestContext: () => PlatformGlobal.UserContext.Current.GetAllKeyValues(),
                 cancellationToken);
 
         return toBeCreatedEntity;

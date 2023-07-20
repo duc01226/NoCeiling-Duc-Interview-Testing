@@ -150,7 +150,10 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
             PlatformGlobal.LoggerFactory.CreateLogger(GetType())
                 .LogWarning(
                     ex,
-                    $"{GetType().Name} complete failed because of version conflict. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]");
+                    "{TargetName} complete failed because of version conflict. [[Exception:{Exception}]]. FullStackTrace:{FullStackTrace}]]",
+                    GetType().Name,
+                    ex.Message,
+                    fullStackTrace);
 
             throw new Exception(
                 $"{GetType().Name} complete uow failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",

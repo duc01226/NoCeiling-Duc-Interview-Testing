@@ -8,8 +8,8 @@ using PlatformExampleApp.TextSnippet.Application.UseCaseCommands;
 namespace PlatformExampleApp.TextSnippet.Application.MessageBus.Consumers.CommandEventConsumers;
 
 /// <summary>
-/// The SaveSnippetTextCommandBindingDefaultRoutingKeyConsumer will throw error => Trigger message requeue => <br/>
-/// Consumer use the default routing key using message class type name without using <see cref="PlatformConsumerRoutingKeyAttribute"/>
+/// The SaveSnippetTextCommandBindingDefaultRoutingKeyConsumer will throw error => Trigger message requeue => <br />
+/// Consumer use the default routing key using message class type name without using <see cref="PlatformConsumerRoutingKeyAttribute" />
 /// Must ensure TCommand class name is unique in the system.
 /// </summary>
 // Use self routing key binding [PlatformConsumerRoutingKey(messageGroup: PlatformCqrsCommandEvent.EventTypeValue, messageType: "PlatformCqrsCommandEvent<SaveSnippetTextCommand>")]
@@ -42,7 +42,7 @@ internal sealed class SaveSnippetTextCommandEventBusMessageConsumer : PlatformCq
         // Sleep to demo warning slow consumer
         Thread.Sleep(((SlowProcessWarningTimeMilliseconds() ?? PlatformMessageBusConfig.DefaultProcessWarningTimeMilliseconds) + 1000).Seconds());
 
-        Logger.LogInformation($"{GetType().FullName} has handled message. Message Detail: {{BusMessage}}", message.ToFormattedJson());
+        Logger.LogInformation("{GetTypeFullName} has handled message. Message Detail: {BusMessage}", GetType().FullName, message.ToFormattedJson());
 
         return Task.CompletedTask;
     }

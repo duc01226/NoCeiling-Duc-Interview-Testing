@@ -5,12 +5,18 @@ namespace Easy.Platform.Common.DependencyInjection;
 
 public static class PlatformRegisterModuleServiceCollectionExtensions
 {
+    /// <summary>
+    /// Registers a platform module of type 'TModule' into the services collection.
+    /// </summary>
     public static IServiceCollection RegisterModule<TModule>(
         this IServiceCollection services) where TModule : PlatformModule
     {
         return RegisterModule(services, typeof(TModule));
     }
 
+    /// <summary>
+    /// Registers a platform module of type of 'moduleType' param into the services collection.
+    /// </summary>
     public static IServiceCollection RegisterModule(
         this IServiceCollection services,
         Type moduleType)

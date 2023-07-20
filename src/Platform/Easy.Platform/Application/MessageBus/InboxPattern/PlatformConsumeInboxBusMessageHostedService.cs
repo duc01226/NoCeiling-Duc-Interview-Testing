@@ -22,9 +22,9 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
 
     private readonly IPlatformApplicationSettingContext applicationSettingContext;
     private readonly PlatformInboxConfig inboxConfig;
+    private readonly PlatformMessageBusConfig messageBusConfig;
 
     private bool isProcessing;
-    private readonly PlatformMessageBusConfig messageBusConfig;
 
     public PlatformConsumeInboxBusMessageHostedService(
         IServiceProvider serviceProvider,
@@ -66,14 +66,19 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                     if (currentRetry >= MinimumRetryConsumeInboxMessageTimesToWarning)
                         Logger.LogWarning(
                             ex,
-                            $"Retry ConsumeInboxEventBusMessages {currentRetry} time(s) failed. [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]");
+                            "Retry ConsumeInboxEventBusMessages {CurrentRetry} time(s) failed. [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
+                            currentRetry,
+                            applicationSettingContext.ApplicationName,
+                            applicationSettingContext.ApplicationAssembly.FullName);
                 });
         }
         catch (Exception ex)
         {
             Logger.LogError(
                 ex,
-                $"Retry ConsumeInboxEventBusMessages failed. [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]");
+                "Retry ConsumeInboxEventBusMessages failed. [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
+                applicationSettingContext.ApplicationName,
+                applicationSettingContext.ApplicationAssembly.FullName);
         }
 
         isProcessing = false;
@@ -157,7 +162,8 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                     consumer.CustomJsonSerializerOptions()),
                 ex => Logger.LogError(
                     ex,
-                    $"RabbitMQ parsing message to {consumerMessageType.Name}. [[Error:{{Error}}]].{Environment.NewLine} Body: {{InboxMessage}}",
+                    "RabbitMQ parsing message to {ConsumerMessageType.Name}. [[Error:{Error}]]. Body: {InboxMessage}",
+                    consumerMessageType.Name,
                     ex.Message,
                     toHandleInboxMessage.JsonMessage));
 
@@ -171,12 +177,13 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         }
         else
         {
-            await PlatformInboxMessageBusConsumerHelper.UpdateFailedInboxMessageAsync(
+            await PlatformInboxMessageBusConsumerHelper.UpdateExistingInboxFailedMessageAsync(
                 scope.ServiceProvider,
                 toHandleInboxMessage.Id,
                 new Exception(
                     $"[{GetType().Name}] Error resolve consumer type {toHandleInboxMessage.ConsumerBy}. InboxId:{toHandleInboxMessage.Id} "),
                 inboxConfig.RetryProcessFailedMessageInSecondsUnit,
+                () => Logger,
                 cancellationToken);
         }
     }

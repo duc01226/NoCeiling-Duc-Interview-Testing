@@ -23,7 +23,7 @@ namespace Easy.Platform.Application;
 /// </summary>
 public abstract class PlatformApplicationGlobal : PlatformGlobal
 {
-    public static IPlatformApplicationUserContextAccessor UserContextAccessor => RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>();
+    public static IPlatformApplicationUserContextAccessor UserContextAccessor => ServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>();
 
     public static IPlatformApplicationUserContext CurrentUserContext => UserContextAccessor.Current;
 }

@@ -4,7 +4,6 @@ using Easy.Platform.Application.Cqrs.Commands;
 using Easy.Platform.Application.Exceptions.Extensions;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Commands;
-using Easy.Platform.Common.Timing;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.Exceptions.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
@@ -251,7 +250,9 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
                 }.ToTask()); // return [{Id:"UserId1",Name:"User Index0 UserId1"},{Id:"UserId2",Name:"User Index1 UserId2"}]
         await Util.ListBuilder.New("UserId1", "UserId2")
             .ForEachAsync(
-                (userId, itemIndex) => Task.Run(() => logger.LogInformation($"{userId} {itemIndex}"), cancellationToken)); // Demo ForEach call async function
+                (userId, itemIndex) => Task.Run(
+                    () => logger.LogInformation("{UserId} {ItemIndex}", userId, itemIndex),
+                    cancellationToken)); // Demo ForEach call async function
 
         // Check that an obj could be a object as other type. Like xxx as TXX in c#. Return null if it could not be parsed.
         // This case return null so that EnsureFound will throw not found
@@ -331,7 +332,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
 
         // ADDITIONAL DEMO STEP 2 - Demo Validate Combine for a list of items.
         // I is equivalent to request.DemoCombineValidationsOfListItems.ForEach(item => if(item... not satisfy a condition1) throw Exception(error1) FAIL FAST);
-        request.DemoWorkWithListOfValidations.Select(p => p.Validate()).Combine().EnsureValid(); // I
+        request.DemoWorkWithListOfValidations.Select(p => p.Validate()).CombineValidations().EnsureValid(); // I
 
         // II is equivalent to
         // var listErrors;
@@ -340,7 +341,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
         //   if (item...not satisfy a condition2) listErrors.Add(error2);
         // });
         // if(listErrors.Any()) throw Exception(listErrors);
-        request.DemoWorkWithListOfValidations.Select(p => p.Validate()).Aggregate().EnsureValid(); // II
+        request.DemoWorkWithListOfValidations.Select(p => p.Validate()).AggregateValidations().EnsureValid(); // II
 
         // ADDITIONAL DEMO STEP 2 - DEMO Reuse logic and expression
         var hasSavePermissionSnippetTextEntities = await textSnippetEntityRepository.GetAllAsync(

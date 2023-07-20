@@ -5,7 +5,7 @@ namespace Easy.Platform.Common.Hosting;
 
 public abstract class PlatformIntervalProcessHostedService : PlatformHostedService
 {
-    protected readonly SemaphoreSlim IntervalProcessLock = new SemaphoreSlim(1, 1);
+    protected readonly SemaphoreSlim IntervalProcessLock = new(1, 1);
 
     public PlatformIntervalProcessHostedService(
         IServiceProvider serviceProvider,

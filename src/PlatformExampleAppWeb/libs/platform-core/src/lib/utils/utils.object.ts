@@ -373,7 +373,8 @@ function assignOrSetDeep<T extends object>(
 
             if (
                 (checkDiff === true && cloneOrPlainObjTarget[key] == (<any>source)[key]) ||
-                (checkDiff === 'deepCheck' && !isDifferent(cloneOrPlainObjTarget[key], (<any>source)[key]))
+                (checkDiff === 'deepCheck' &&
+                    !isDifferent(cloneOrPlainObjTarget[key], toPlainObj((<any>source)[key], true)))
             )
                 return;
 

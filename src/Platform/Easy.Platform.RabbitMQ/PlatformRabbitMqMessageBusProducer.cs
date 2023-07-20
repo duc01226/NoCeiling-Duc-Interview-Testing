@@ -16,10 +16,10 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
 {
     public static readonly ActivitySource ActivitySource = new(nameof(PlatformRabbitMqMessageBusProducer));
     public static readonly TextMapPropagator TracingActivityPropagator = Propagators.DefaultTextMapPropagator;
-    protected readonly PlatformProducerRabbitMqChannelPool ChannelPool;
+    protected readonly ILogger Logger;
 
     protected readonly IPlatformRabbitMqExchangeProvider ExchangeProvider;
-    protected readonly ILogger Logger;
+    protected readonly PlatformProducerRabbitMqChannelPool ChannelPool;
     protected readonly PlatformRabbitMqOptions Options;
 
     public PlatformRabbitMqMessageBusProducer(
@@ -88,9 +88,11 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
             {
                 if (alreadyClosedException.ShutdownReason.ReplyCode == 404)
                     Logger.LogWarning(
-                        $"Tried to send a message with routing key {routingKey} from {GetType().FullName} " +
+                        "Tried to send a message with routing key {RoutingKey} from {GetType().FullName} " +
                         "but exchange is not found. May be there is no consumer registered to consume this message." +
-                        "If in source code has consumers for this message, this could be unexpected errors");
+                        "If in source code has consumers for this message, this could be unexpected errors",
+                        routingKey,
+                        GetType().FullName);
                 else
                     throw;
             }

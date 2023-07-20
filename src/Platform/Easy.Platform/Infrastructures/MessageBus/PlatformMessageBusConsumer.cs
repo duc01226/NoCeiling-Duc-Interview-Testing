@@ -55,8 +55,7 @@ public interface IPlatformMessageBusConsumer
     {
         logger.LogError(
             e,
-            "Error Consume message bus. [ConsumerType:{ConsumerType}]; [MessageType:{MessageType}]; [RoutingKey:{RoutingKey}]; [MessageContent:{MessageContent}]" +
-            $"Message Info: {{BusMessage}}.{Environment.NewLine}",
+            "Error Consume message bus. [ConsumerType:{ConsumerType}]; [MessageType:{MessageType}]; [RoutingKey:{RoutingKey}]; [MessageContent:{MessageContent}]; ",
             consumerType.FullName,
             message.GetType().GetNameOrGenericTypeName(),
             routingKey,
@@ -146,7 +145,10 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
                                                                     messageBusConfig.LogSlowProcessWarningTimeMilliseconds;
                     if (elapsedMilliseconds >= toCheckSlowProcessWarningTimeMilliseconds)
                         logger?.LogWarning(
-                            $"[MessageBus] SlowProcessWarningTimeMilliseconds:{toCheckSlowProcessWarningTimeMilliseconds}. {logMessage}. MessageContent: {{BusMessage}}",
+                            "[MessageBus] SlowProcessWarningTimeMilliseconds:{SlowProcessWarningTimeMilliseconds}. ElapsedMilliseconds:{ElapsedMilliseconds}. {LogMessage}. MessageContent: {BusMessage}",
+                            toCheckSlowProcessWarningTimeMilliseconds,
+                            elapsedMilliseconds,
+                            logMessage,
                             busMessage.ToJson());
                 });
         else

@@ -114,8 +114,8 @@ public abstract class PlatformCollectionCacheRepository<TCollectionCacheKeyProvi
     where TCollectionCacheKeyProvider : PlatformCollectionCacheKeyProvider
 {
     protected readonly IPlatformCacheRepositoryProvider CacheRepositoryProvider;
-    protected readonly TCollectionCacheKeyProvider CollectionCacheKeyProvider;
     protected readonly IServiceProvider ServiceProvider;
+    protected readonly TCollectionCacheKeyProvider CollectionCacheKeyProvider;
 
     public PlatformCollectionCacheRepository(
         IPlatformCacheRepositoryProvider cacheRepositoryProvider,

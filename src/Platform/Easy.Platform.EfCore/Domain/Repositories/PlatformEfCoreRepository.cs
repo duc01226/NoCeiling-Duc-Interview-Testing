@@ -58,6 +58,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
     {
         return GetTable(uow)
             .AsQueryable()
+            .PipeIf(UowManager().HasCurrentActiveUow() == false, query => query.AsNoTracking())
             .PipeIf(
                 loadRelatedEntities.Any(),
                 query => loadRelatedEntities.Aggregate(query, (query, loadRelatedEntityFn) => query.Include(loadRelatedEntityFn).DefaultIfEmpty()));

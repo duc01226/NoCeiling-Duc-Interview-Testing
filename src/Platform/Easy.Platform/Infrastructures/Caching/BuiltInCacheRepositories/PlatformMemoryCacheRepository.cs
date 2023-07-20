@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
 using Microsoft.Extensions.Caching.Distributed;
@@ -9,6 +10,7 @@ namespace Easy.Platform.Infrastructures.Caching.BuiltInCacheRepositories;
 
 public class PlatformMemoryCacheRepository : PlatformCacheRepository, IPlatformMemoryCacheRepository
 {
+    protected readonly Lazy<ConcurrentDictionary<PlatformCacheKey, object>> GlobalAllRequestCachedKeys = new();
     private readonly MemoryDistributedCache memoryDistributedCache;
 
     public PlatformMemoryCacheRepository(

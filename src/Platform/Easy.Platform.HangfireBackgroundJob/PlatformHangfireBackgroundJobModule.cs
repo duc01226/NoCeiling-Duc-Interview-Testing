@@ -60,10 +60,13 @@ public abstract class PlatformHangfireBackgroundJobModule : PlatformBackgroundJo
 
     protected virtual void GlobalConfigurationConfigure(IGlobalConfiguration configuration)
     {
+        var commonOptions = CommonOptions();
+
         configuration
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
             .UseSimpleAssemblyNameTypeSerializer()
-            .UseRecommendedSerializerSettings();
+            .UseRecommendedSerializerSettings()
+            .UseFilter(new PlatformHangfireAutoDeleteJobAfterSuccessAttribute(commonOptions.JobSucceededExpirationTimeoutSeconds));
 
         switch (UseBackgroundJobStorage())
         {
@@ -104,17 +107,22 @@ public abstract class PlatformHangfireBackgroundJobModule : PlatformBackgroundJo
         }
     }
 
+    protected virtual string StorageOptionsConnectionString()
+    {
+        return Configuration.GetConnectionString($"{DefaultHangfireBackgroundJobAppSettingsName}:ConnectionString");
+    }
+
+    protected virtual PlatformHangfireCommonOptions CommonOptions()
+    {
+        return new PlatformHangfireCommonOptions();
+    }
+
     protected virtual PlatformHangfireUseSqlServerStorageOptions UseSqlServerStorageOptions()
     {
         return new PlatformHangfireUseSqlServerStorageOptions
         {
             ConnectionString = StorageOptionsConnectionString()
         };
-    }
-
-    protected virtual string StorageOptionsConnectionString()
-    {
-        return Configuration.GetConnectionString($"{DefaultHangfireBackgroundJobAppSettingsName}:ConnectionString");
     }
 
     protected virtual PlatformHangfireUseMongoStorageOptions UseMongoStorageOptions()

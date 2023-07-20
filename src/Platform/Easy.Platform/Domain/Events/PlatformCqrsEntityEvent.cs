@@ -33,7 +33,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         if (mappedToDbContextUow != null)
             await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs.SendEvent(entityEvent, cancellationToken);
         else
-            await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
+            await PlatformGlobal.ServiceProvider.ExecuteInjectScopedAsync(
                 (IPlatformCqrs cqrs) =>
                 {
                     cqrs.SendEvent(entityEvent, cancellationToken);

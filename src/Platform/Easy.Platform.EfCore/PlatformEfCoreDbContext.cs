@@ -11,7 +11,6 @@ using Easy.Platform.EfCore.EntityConfiguration;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.EfCore;
@@ -19,8 +18,8 @@ namespace Easy.Platform.EfCore;
 public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatformDbContext<TDbContext>
     where TDbContext : PlatformEfCoreDbContext<TDbContext>, IPlatformDbContext<TDbContext>
 {
-    protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
     protected readonly IPlatformApplicationUserContextAccessor UserContextAccessor;
+    protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
 
     public PlatformEfCoreDbContext(
         DbContextOptions<TDbContext> options,
@@ -208,7 +207,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             },
             dismissSendEvent,
             sendEntityEventConfigure: sendEntityEventConfigure,
-            requestContext: () => PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.GetAllKeyValues(),
+            requestContext: () => PlatformGlobal.UserContext.Current.GetAllKeyValues(),
             cancellationToken);
     }
 
@@ -260,7 +259,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             entity => GetTable<TEntity>().AddAsync(toBeCreatedEntity, cancellationToken).AsTask().Then(p => toBeCreatedEntity),
             dismissSendEvent,
             sendEntityEventConfigure: sendEntityEventConfigure,
-            requestContext: () => PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.GetAllKeyValues(),
+            requestContext: () => PlatformGlobal.UserContext.Current.GetAllKeyValues(),
             cancellationToken);
 
         return result;
@@ -309,12 +308,12 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     public ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
-        return loggerFactory.CreateLogger(GetType());
+        return loggerFactory.CreateLogger(typeof(IPlatformDbContext));
     }
 
     protected bool HasSupportOutboxEvent()
     {
-        return PlatformGlobal.RootServiceProvider.CheckHasRegisteredScopedService<IPlatformOutboxBusMessageRepository>();
+        return PlatformGlobal.ServiceProvider.CheckHasRegisteredScopedService<IPlatformOutboxBusMessageRepository>();
     }
 
     public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
@@ -358,7 +357,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             },
             dismissSendEvent,
             sendEntityEventConfigure: sendEntityEventConfigure,
-            requestContext: () => PlatformGlobal.RootServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>().Current.GetAllKeyValues(),
+            requestContext: () => PlatformGlobal.UserContext.Current.GetAllKeyValues(),
             cancellationToken);
 
         return result;

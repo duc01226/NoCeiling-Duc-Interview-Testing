@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection;
 using Easy.Platform.Common.Extensions;
@@ -53,9 +54,13 @@ public static partial class Util
             /// We could build a DynamicMethod, but that's significantly more work :) Please mail
             /// me if you really need this...
             /// </summary>
+            [SuppressMessage("Major Code Smell", "S2743:Static fields should not be used in generic types", Justification = "<Pending>")]
             private static readonly List<PropertyInfo> SourceProperties = new();
 
+            [SuppressMessage("Major Code Smell", "S2743:Static fields should not be used in generic types", Justification = "<Pending>")]
             private static readonly List<PropertyInfo> TargetProperties = new();
+
+            [SuppressMessage("Major Code Smell", "S2743:Static fields should not be used in generic types", Justification = "<Pending>")]
             private static readonly Exception InitializationException;
 
             static PropertyCopier()

@@ -7,6 +7,7 @@ using PlatformExampleApp.TextSnippet.Application.Caching;
 using PlatformExampleApp.TextSnippet.Application.EntityDtos;
 using PlatformExampleApp.TextSnippet.Application.Persistence;
 using PlatformExampleApp.TextSnippet.Application.UseCaseCommands;
+using PlatformExampleApp.TextSnippet.Application.UseCaseCommands.OtherDemos;
 using PlatformExampleApp.TextSnippet.Application.UseCaseQueries;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 
@@ -158,7 +159,7 @@ public class TextSnippetController : PlatformBaseController
     [Route("DemoUseCreateOrUpdateMany")]
     public async Task<DemoUseCreateOrUpdateManyCommandResult> DemoUseCreateOrUpdateMany([FromQuery] DemoUseCreateOrUpdateManyCommand request)
     {
-        var result = await Cqrs.SendCommand(new DemoUseCreateOrUpdateManyCommand());
+        var result = await Cqrs.SendCommand(request);
 
         return result;
     }

@@ -86,9 +86,9 @@ public interface IUnitOfWorkManager : IDisposable
 
 public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
 {
-    protected readonly SemaphoreSlim CreateNewUowLock = new(1, 1);
     protected readonly List<IUnitOfWork> CurrentUnitOfWorks = new();
     protected readonly List<IUnitOfWork> FreeCreatedUnitOfWorks = new();
+    protected readonly SemaphoreSlim CreateNewUowLock = new(1, 1);
     protected readonly SemaphoreSlim RemoveAllInactiveUowLock = new(1, 1);
 
     private IUnitOfWork globalUow;

@@ -12,8 +12,8 @@ namespace Easy.Platform.RedisCache;
 public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, IPlatformDistributedCacheRepository
 {
     private readonly IPlatformApplicationSettingContext applicationSettingContext;
-    private bool disposed;
     private readonly Lazy<Microsoft.Extensions.Caching.StackExchangeRedis.RedisCache> redisCache;
+    private bool disposed;
 
     public PlatformRedisDistributedCacheRepository(
         IServiceProvider serviceProvider,
@@ -49,7 +49,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
             }
             catch (Exception e)
             {
-                Logger.LogError(e, $"{GetType().Name} GetAsync failed. CacheKey:{{CacheKey}}", cacheKey);
+                Logger.LogError(e, "GetAsync failed. CacheKey:{CacheKey}", cacheKey);
                 // WHY: If parse failed, the cached data could be obsolete. Then just clear the cache
                 await RemoveAsync(cacheKey, token);
                 return default;
@@ -106,7 +106,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         Func<PlatformCacheKey, bool> cacheKeyPredicate,
         CancellationToken token = default)
     {
-        var allCachedKeys = GlobalAllRequestCachedKeys.Value;
+        var allCachedKeys = await LoadGlobalAllRequestCachedKeys();
 
         var globalMatchedKeys = allCachedKeys.Select(p => p.Key).Where(cacheKeyPredicate).ToList();
 
@@ -145,7 +145,9 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
 
     protected async Task UpdateGlobalCachedKeys(Action<ConcurrentDictionary<PlatformCacheKey, object>> updateCachedKeysAction)
     {
-        await GlobalAllRequestCachedKeys.Value
+        var currentGlobalAllRequestCachedKeys = await LoadGlobalAllRequestCachedKeys();
+
+        await currentGlobalAllRequestCachedKeys
             .With(updateCachedKeysAction)
             .Pipe(SetGlobalCachedKeysAsync);
     }

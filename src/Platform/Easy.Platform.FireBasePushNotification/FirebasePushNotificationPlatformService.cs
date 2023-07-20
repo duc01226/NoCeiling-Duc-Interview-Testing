@@ -17,7 +17,7 @@ internal sealed class FireBasePushNotificationService : IPushNotificationPlatfor
 
     public async Task SendAsync(PushNotificationPlatformMessage message, CancellationToken cancellationToken)
     {
-        message.Validate().EnsureValidationValid();
+        message.Validate().EnsureValid();
 
         var result = await fcmSender.SendAsync(
             deviceId: message.DeviceId,
@@ -26,6 +26,8 @@ internal sealed class FireBasePushNotificationService : IPushNotificationPlatfor
 
         if (!result.IsSuccess())
             logger.LogError(
-                $"Firebase notification error with Device Token Id: {message.DeviceId} - {result.Results[0].Error}");
+                "Firebase notification error with Device Token Id: {Message.DeviceId} - {Result.Results[0].Error}",
+                message.DeviceId,
+                result.Results[0].Error);
     }
 }

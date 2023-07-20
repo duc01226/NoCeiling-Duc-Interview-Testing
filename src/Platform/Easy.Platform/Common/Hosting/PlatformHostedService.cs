@@ -9,15 +9,15 @@ namespace Easy.Platform.Common.Hosting;
 /// </summary>
 public abstract class PlatformHostedService : IHostedService, IDisposable
 {
+    protected readonly ILogger Logger;
+    protected readonly IServiceProvider ServiceProvider;
     protected readonly SemaphoreSlim AsyncStartProcessLock = new(1, 1);
     protected readonly SemaphoreSlim AsyncStopProcessLock = new(1, 1);
-    protected Task ExecuteTask;
-    protected readonly ILogger Logger;
 
     protected bool ProcessStarted;
     protected bool ProcessStopped;
-    protected readonly IServiceProvider ServiceProvider;
     protected CancellationTokenSource StoppingCts;
+    protected Task ExecuteTask;
 
     public PlatformHostedService(IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
     {
@@ -39,7 +39,7 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
 
             if (ProcessStarted) return Task.CompletedTask;
 
-            Logger.LogInformation($"HostedService {GetType().Name} Start STARTED");
+            Logger.LogInformation("HostedService {TargetName} Start STARTED", GetType().Name);
 
             // Create linked token to allow cancelling executing task from provided token
             StoppingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -49,7 +49,7 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
 
             ProcessStarted = true;
 
-            Logger.LogInformation($"HostedService {GetType().Name} Start FINISHED");
+            Logger.LogInformation("HostedService {TargetName} Start FINISHED", GetType().Name);
 
             // If the task is completed then return it, this will bubble cancellation and failure to the caller
             if (ExecuteTask.IsCompleted) return ExecuteTask;
@@ -81,7 +81,7 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
 
             ProcessStopped = true;
 
-            Logger.LogInformation($"Process of {GetType().Name} Stopped");
+            Logger.LogInformation("Process of {TargetName} Stopped", GetType().Name);
         }
         finally
         {

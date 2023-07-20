@@ -6,7 +6,7 @@ using Easy.Platform.Domain.UnitOfWork;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
-namespace PlatformExampleApp.TextSnippet.Application.UseCaseCommands;
+namespace PlatformExampleApp.TextSnippet.Application.UseCaseCommands.OtherDemos;
 
 public sealed class DemoUseCreateOrUpdateManyCommand : PlatformCqrsCommand<DemoUseCreateOrUpdateManyCommandResult>
 {
@@ -16,7 +16,8 @@ public sealed class DemoUseCreateOrUpdateManyCommandResult : PlatformCqrsCommand
 {
 }
 
-internal sealed class DemoUseCreateOrUpdateManyCommandHandler : PlatformCqrsCommandApplicationHandler<DemoUseCreateOrUpdateManyCommand, DemoUseCreateOrUpdateManyCommandResult>
+internal sealed class DemoUseCreateOrUpdateManyCommandHandler
+    : PlatformCqrsCommandApplicationHandler<DemoUseCreateOrUpdateManyCommand, DemoUseCreateOrUpdateManyCommandResult>
 {
     private readonly ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository;
 

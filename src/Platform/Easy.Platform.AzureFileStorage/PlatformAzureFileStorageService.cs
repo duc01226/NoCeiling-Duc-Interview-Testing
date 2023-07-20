@@ -14,9 +14,9 @@ namespace Easy.Platform.AzureFileStorage;
 public class PlatformAzureFileStorageService : IPlatformFileStorageService
 {
     private readonly BlobServiceClient blobServiceClient;
+    private readonly ILogger logger;
     private readonly PlatformAzureFileStorageConfiguration fileStorageConfiguration;
     private readonly PlatformFileStorageOptions fileStorageOptions;
-    private readonly ILogger logger;
 
     public PlatformAzureFileStorageService(
         PlatformAzureFileStorageConfiguration fileStorageConfigurationOptions,
@@ -78,7 +78,11 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
                 var errContent = response.GetRawResponse().Content.ToString();
 
                 logger.LogError(
-                    $"[{GetType().FullName}] Fail to upload blob {pureFilePath} in {rootDirectory}, statusCode: {statusCode} , content: {errContent}");
+                    "Fail to upload blob {PureFilePath} in {RootDirectory}, statusCode: {StatusCode} , content: {ErrContent}",
+                    pureFilePath,
+                    rootDirectory,
+                    statusCode,
+                    errContent);
 
                 throw new Exception(errContent);
             }
@@ -96,7 +100,7 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
         }
         catch (Exception e)
         {
-            logger.LogError(e, $"[{GetType().FullName}] Fail to upload blob {pureFilePath} in {rootDirectory} container");
+            logger.LogError(e, "Fail to upload blob {PureFilePath} in {RootDirectory} container", pureFilePath, rootDirectory);
             throw;
         }
     }
@@ -191,7 +195,7 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
 
         if (!await srcBlobClient.ExistsAsync())
         {
-            logger.LogError($"[{GetType().FullName}] file {sourceFullFilePath} do not existed");
+            logger.LogError("File '{SourceFullFilePath}' do not existed", sourceFullFilePath);
             return null;
         }
 
@@ -280,7 +284,11 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
             var errContent = rawResponse.Content.ToString();
 
             logger.LogError(
-                $"[{GetType().FullName}] Fail to update file description {filePath} in {rootDirectory}, statusCode: {statusCode} , content: {errContent}");
+                "Fail to update file description {FilePath} in {RootDirectory}, statusCode: {StatusCode} , content: {ErrContent}",
+                filePath,
+                rootDirectory,
+                statusCode,
+                errContent);
 
             throw new Exception(errContent);
         }
@@ -375,7 +383,7 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
     private static readonly RegexOptions RegexOptions = RegexOptions.ExplicitCapture | RegexOptions.Singleline | RegexOptions.CultureInvariant;
     private static readonly Regex FileDirectoryRegex = new("^[^\"\\\\/:|<>*?]*\\/{0,1}$", RegexOptions);
 
-    private static readonly string[] ReservedFileNames = new string[25]
+    private static readonly string[] ReservedFileNames =
     {
         ".",
         "..",

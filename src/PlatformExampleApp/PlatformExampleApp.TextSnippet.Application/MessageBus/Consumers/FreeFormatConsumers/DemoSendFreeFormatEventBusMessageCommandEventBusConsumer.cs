@@ -18,7 +18,9 @@ internal sealed class DemoSendFreeFormatEventBusMessageCommandEventBusConsumer
     public override Task HandleLogicAsync(DemoSendFreeFormatEventBusMessage message, string routingKey)
     {
         Logger.LogInformation(
-            $"Message {nameof(DemoSendFreeFormatEventBusMessage)} by {GetType().Name} has been handled");
+            "Message {Message} by {TargetName} has been handled",
+            nameof(DemoSendFreeFormatEventBusMessage),
+            GetType().Name);
 
         return Task.CompletedTask;
     }
@@ -42,7 +44,7 @@ internal sealed class DemoSendFreeFormatInboxEventBusMessageCommandApplicationEv
 
     public override Task HandleLogicAsync(DemoSendFreeFormatEventBusMessage message, string routingKey)
     {
-        Logger.LogInformation($"Message {nameof(DemoSendFreeFormatEventBusMessage)} has been handled");
+        Logger.LogInformation("Message {MessageName} has been handled", nameof(DemoSendFreeFormatEventBusMessage));
 
         return Task.CompletedTask;
     }

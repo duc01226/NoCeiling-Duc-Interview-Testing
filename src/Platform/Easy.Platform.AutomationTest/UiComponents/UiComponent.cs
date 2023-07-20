@@ -1,5 +1,6 @@
 using Easy.Platform.AutomationTest.Extensions;
 using OpenQA.Selenium;
+using OpenQA.Selenium.Support.UI;
 
 namespace Easy.Platform.AutomationTest.UiComponents;
 
@@ -190,6 +191,7 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
             retryCount: DefaultGetElementRetry);
     }
 
+
     // Retry to enhance testing resilient, prevent sometime got errors like StaleElementReferenceException event after get element sucess
     public bool IsClickable()
     {
@@ -352,9 +354,18 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
         return IUiComponent.FindChildElements(component: this, childElementSelector);
     }
 
+    public string SelectedOptionText()
+    {
+        var selectElement = new SelectElement(RootElement);
+
+        return Util.TaskRunner.WaitRetryThrowFinalException(
+            executeFunc: () => selectElement.SelectedOption.Text ?? "",
+            retryCount: DefaultGetElementRetry);
+    }
+
     public bool IsSelected()
     {
-        // Retry to enhance testing resilient, prevent sometime got errors like StaleElementReferenceException event after get element sucess
+        // Retry to enhance testing resilient, prevent sometime got errors like StaleElementReferenceException event after get element success
         return Util.TaskRunner.WaitRetryThrowFinalException(
             executeFunc: () => RootElement?.IsSelected() == true,
             retryCount: DefaultGetElementRetry);

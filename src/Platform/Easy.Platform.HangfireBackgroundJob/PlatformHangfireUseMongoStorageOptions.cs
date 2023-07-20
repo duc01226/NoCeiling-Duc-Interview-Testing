@@ -8,7 +8,7 @@ public class PlatformHangfireUseMongoStorageOptions
 {
     public const string DefaultDatabaseName = "HangfireBackgroundJob";
 
-    public static readonly MongoStorageOptions DefaultStorageOptions = new MongoStorageOptions
+    public static readonly MongoStorageOptions DefaultStorageOptions = new()
     {
         MigrationOptions = new MongoMigrationOptions
         {
@@ -16,7 +16,8 @@ public class PlatformHangfireUseMongoStorageOptions
             BackupStrategy = new CollectionMongoBackupStrategy()
         },
         Prefix = "hangfire.mongo",
-        CheckConnection = true
+        CheckConnection = true,
+        JobExpirationCheckInterval = PlatformHangfireCommonOptions.DefaultJobExpirationCheckInterval
     };
 
     public string ConnectionString { get; set; }

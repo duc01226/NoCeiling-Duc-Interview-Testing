@@ -6,7 +6,7 @@ public class Option
 {
     public readonly struct None
     {
-        public static readonly None Default = new();
+        public static readonly None Default = default;
     }
 
     public readonly struct Some<T>
@@ -86,7 +86,7 @@ public readonly struct Option<T> : IEquatable<Option.None>, IEquatable<Option<T>
         return IsSome == other.IsSome && (IsNone || value.Equals(other.value));
     }
 
-    public bool Equals(Option.None target)
+    public bool Equals(Option.None other)
     {
         return IsNone;
     }

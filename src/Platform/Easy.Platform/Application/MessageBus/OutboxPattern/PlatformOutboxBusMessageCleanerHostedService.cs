@@ -46,15 +46,20 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
                     if (currentRetry >= MinimumRetryCleanOutboxMessageTimesToWarning)
                         Logger.LogWarning(
                             ex,
-                            $"Retry CleanOutboxEventBusMessage {currentRetry} time(s) failed. [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]");
+                            "Retry CleanOutboxEventBusMessage {CurrentRetry} time(s) failed. [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
+                            currentRetry,
+                            applicationSettingContext.ApplicationName,
+                            applicationSettingContext.ApplicationAssembly.FullName);
                 });
         }
         catch (Exception ex)
         {
             Logger.LogError(
                 ex,
-                $"CleanOutboxEventBusMessage failed. [[Error:{{Error}}]] [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]",
-                ex.Message);
+                "CleanOutboxEventBusMessage failed. [[Error:{Error}]] [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
+                ex.Message,
+                applicationSettingContext.ApplicationName,
+                applicationSettingContext.ApplicationAssembly.FullName);
         }
 
         isProcessing = false;
@@ -100,12 +105,12 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
                 .CountAsync(p => p.SendStatus == PlatformOutboxBusMessage.SendStatuses.Processed, cancellationToken));
 
         if (totalProcessedMessages > OutboxConfig.MaxStoreProcessedMessageCount)
-            await ProcessCleanMessageByMaxStoreProcessedMessageCount(cancellationToken, totalProcessedMessages);
+            await ProcessCleanMessageByMaxStoreProcessedMessageCount(totalProcessedMessages, cancellationToken);
         else
             await ProcessCleanMessageByExpiredTime(cancellationToken);
     }
 
-    private async Task ProcessCleanMessageByMaxStoreProcessedMessageCount(CancellationToken cancellationToken, int totalProcessedMessages)
+    private async Task ProcessCleanMessageByMaxStoreProcessedMessageCount(int totalProcessedMessages, CancellationToken cancellationToken)
     {
         await ServiceProvider.ExecuteInjectScopedScrollingPagingAsync<PlatformOutboxBusMessage>(
             async (IPlatformOutboxBusMessageRepository outboxEventBusMessageRepo) =>
@@ -129,8 +134,8 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
             });
 
         Logger.LogInformation(
-            message:
-            $"CleanOutboxEventBusMessage success. Number of deleted messages: {totalProcessedMessages - OutboxConfig.MaxStoreProcessedMessageCount}");
+            "CleanOutboxEventBusMessage success. Number of deleted messages: {DeletedMessageCount}",
+            totalProcessedMessages - OutboxConfig.MaxStoreProcessedMessageCount);
     }
 
     private async Task ProcessCleanMessageByExpiredTime(CancellationToken cancellationToken)
@@ -173,9 +178,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
                     }
                 });
 
-            Logger.LogInformation(
-                message:
-                $"CleanOutboxEventBusMessage success. Number of deleted messages: {toCleanMessageCount}");
+            Logger.LogInformation("CleanOutboxEventBusMessage success. Number of deleted messages: {ToCleanMessageCount}", toCleanMessageCount);
         }
     }
 }

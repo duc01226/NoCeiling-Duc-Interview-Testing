@@ -132,10 +132,11 @@ public static class EnsureThrowDomainExceptionExtension
             .Where(entity => entity.CheckUniqueValidator() != null)
             .Select<IValidatableEntity<TEntity, TPrimaryKey>, Func<Task<PlatformValidationResult>>>(
                 entity =>
-                    () => entity.CheckUniqueValidator().Validate(
-                        checkAnyDuplicatedItemAsyncFunction: async findOtherDuplicatedItemPredicate =>
-                            entities.Any(findOtherDuplicatedItemPredicate.Compile()) ||
-                            await anyAsyncFunc(findOtherDuplicatedItemPredicate, cancellationToken)))
+                    () => entity.CheckUniqueValidator()
+                        .Validate(
+                            checkAnyDuplicatedItemAsyncFunction: async findOtherDuplicatedItemPredicate =>
+                                entities.Any(findOtherDuplicatedItemPredicate.Compile()) ||
+                                await anyAsyncFunc(findOtherDuplicatedItemPredicate, cancellationToken)))
             .ToList();
 
         await validateEntityUniqueActions.EnsureDomainValidationValid();

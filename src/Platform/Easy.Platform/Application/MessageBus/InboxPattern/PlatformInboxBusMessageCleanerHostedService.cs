@@ -45,14 +45,19 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
                     if (currentRetry >= MinimumRetryCleanInboxMessageTimesToWarning)
                         Logger.LogWarning(
                             ex,
-                            $"Retry CleanInboxEventBusMessage {currentRetry} time(s) failed. [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]");
+                            "Retry CleanInboxEventBusMessage {CurrentRetry} time(s) failed. [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
+                            currentRetry,
+                            applicationSettingContext.ApplicationName,
+                            applicationSettingContext.ApplicationAssembly.FullName);
                 });
         }
         catch (Exception ex)
         {
             Logger.LogError(
                 ex,
-                $"CleanInboxEventBusMessage failed. [ApplicationName:{applicationSettingContext.ApplicationName}]. [ApplicationAssembly:{applicationSettingContext.ApplicationAssembly.FullName}]");
+                "CleanInboxEventBusMessage failed. [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
+                applicationSettingContext.ApplicationName,
+                applicationSettingContext.ApplicationAssembly.FullName);
         }
 
         isProcessing = false;
@@ -98,12 +103,12 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
                 .CountAsync(p => p.ConsumeStatus == PlatformInboxBusMessage.ConsumeStatuses.Processed, cancellationToken));
 
         if (totalProcessedMessages > InboxConfig.MaxStoreProcessedMessageCount)
-            await ProcessCleanMessageByMaxStoreProcessedMessageCount(cancellationToken, totalProcessedMessages);
+            await ProcessCleanMessageByMaxStoreProcessedMessageCount(totalProcessedMessages, cancellationToken);
         else
             await ProcessCleanMessageByExpiredTime(cancellationToken);
     }
 
-    private async Task ProcessCleanMessageByMaxStoreProcessedMessageCount(CancellationToken cancellationToken, int totalProcessedMessages)
+    private async Task ProcessCleanMessageByMaxStoreProcessedMessageCount(int totalProcessedMessages, CancellationToken cancellationToken)
     {
         await ServiceProvider.ExecuteInjectScopedScrollingPagingAsync<PlatformInboxBusMessage>(
             async (IPlatformInboxBusMessageRepository inboxEventBusMessageRepo) =>
@@ -127,19 +132,19 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
             });
 
         Logger.LogInformation(
-            message:
-            $"CleanInboxEventBusMessage success. Number of deleted messages: {totalProcessedMessages - InboxConfig.MaxStoreProcessedMessageCount}");
+            "CleanInboxEventBusMessage success. Number of deleted messages: {DeletedMessagesCount}",
+            totalProcessedMessages - InboxConfig.MaxStoreProcessedMessageCount);
     }
 
     private async Task ProcessCleanMessageByExpiredTime(CancellationToken cancellationToken)
     {
-        var toCleanMessageCount = await ServiceProvider.ExecuteScopedAsync(
+        var toDeleteMessageCount = await ServiceProvider.ExecuteScopedAsync(
             p => p.ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>()
                 .CountAsync(
                     PlatformInboxBusMessage.ToCleanExpiredMessagesByTimeExpr(DeleteProcessedMessageInSeconds(), DeleteExpiredFailedMessageInSeconds()),
                     cancellationToken));
 
-        if (toCleanMessageCount > 0)
+        if (toDeleteMessageCount > 0)
         {
             await ServiceProvider.ExecuteInjectScopedScrollingPagingAsync<PlatformInboxBusMessage>(
                 async (IPlatformInboxBusMessageRepository inboxEventBusMessageRepo) =>
@@ -164,9 +169,7 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
                     return expiredMessages;
                 });
 
-            Logger.LogInformation(
-                message:
-                $"CleanInboxEventBusMessage success. Number of deleted messages: {toCleanMessageCount}");
+            Logger.LogInformation("CleanInboxEventBusMessage success. Number of deleted messages: {DeletedMessageCount}", toDeleteMessageCount);
         }
     }
 }

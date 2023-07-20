@@ -376,6 +376,27 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
     }
 
+    public override async Task<List<TEntity>> UpdateManyAsync(
+        IUnitOfWork uow,
+        List<TEntity> entities,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (entities.IsEmpty()) return entities;
+
+        if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+            return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling<List<TEntity>, TEntity>(
+                () => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, sendEntityEventConfigure, cancellationToken),
+                Logger,
+                PersistenceConfiguration,
+                forWriteQuery: true,
+                resultQuery: null,
+                resultQueryStringBuilder: null);
+
+        return await GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
+    }
+
     public override Task<List<TEntity>> DeleteManyAsync(
         List<TPrimaryKey> entityIds,
         bool dismissSendEvent = false,
@@ -386,6 +407,27 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
 
         return ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).DeleteManyAsync(entityIds, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
+    }
+
+    public override async Task<List<TEntity>> DeleteManyAsync(
+        IUnitOfWork uow,
+        List<TEntity> entities,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (entities.IsEmpty()) return entities;
+
+        if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+            return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling<List<TEntity>, TEntity>(
+                () => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, sendEntityEventConfigure, cancellationToken),
+                Logger,
+                PersistenceConfiguration,
+                forWriteQuery: true,
+                resultQuery: null,
+                resultQueryStringBuilder: null);
+
+        return await GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
     }
 
     public override Task<List<TEntity>> DeleteManyAsync(

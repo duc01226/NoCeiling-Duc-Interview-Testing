@@ -6,7 +6,7 @@ using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.BackgroundJob;
 using PlatformExampleApp.TextSnippet.Application.BackgroundJob;
 
-namespace PlatformExampleApp.TextSnippet.Application.UseCaseCommands;
+namespace PlatformExampleApp.TextSnippet.Application.UseCaseCommands.OtherDemos;
 
 public sealed class DemoScheduleBackgroundJobManuallyCommand : PlatformCqrsCommand<DemoScheduleBackgroundJobManuallyCommandResult>
 {

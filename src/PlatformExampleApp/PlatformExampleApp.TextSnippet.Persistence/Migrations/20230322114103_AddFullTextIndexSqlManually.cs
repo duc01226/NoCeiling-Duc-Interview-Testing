@@ -2,8 +2,6 @@ using Easy.Platform.EfCore.Utils;
 using Microsoft.EntityFrameworkCore.Migrations;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 
-#nullable disable
-
 namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
 {
     /// <inheritdoc />

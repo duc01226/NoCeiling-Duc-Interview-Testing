@@ -1,5 +1,4 @@
 using Easy.Platform.Application.BackgroundJob;
-using Easy.Platform.Common.Timing;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Logging;
 using PlatformExampleApp.TextSnippet.Domain.Entities;

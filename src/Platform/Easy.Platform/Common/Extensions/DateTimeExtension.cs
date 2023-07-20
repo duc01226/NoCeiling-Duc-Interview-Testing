@@ -53,6 +53,13 @@ public static class DateTimeExtension
         return TimeZoneInfo.ConvertTime(utcDateTime, timeZoneInfo);
     }
 
+    public static DateTime ConvertToUtc(this DateTime dateTime, string timeZoneId)
+    {
+        var unspecifiedDateTime = dateTime.SpecifyKind(DateTimeKind.Unspecified);
+        var timeZoneInfo = Util.TimeZoneParser.TryGetTimeZoneById(timeZoneId);
+        return TimeZoneInfo.ConvertTimeToUtc(unspecifiedDateTime, timeZoneInfo);
+    }
+
     public static DateTime ToDateOfMonToSunWeek(this DateTime currentDate, MonToSunDayOfWeeks monToSunDayOfWeek)
     {
         var firstDateOfMonToSunWeek = currentDate.AddDays(-(int)currentDate.MonToSunDayOfWeek());
@@ -145,6 +152,12 @@ public static class DateTimeExtension
     public static DateTime SetTime(this DateTime dateTime, TimeOnly? time)
     {
         return time.HasValue ? dateTime.SetTime(time.Value) : dateTime;
+    }
+
+    public static DateTime TrimSeconds(this DateTime dateTime)
+    {
+        var time = new TimeOnly(dateTime.Hour, dateTime.Minute);
+        return dateTime.SetTime(time);
     }
 
     public enum MonToSunDayOfWeeks

@@ -24,6 +24,8 @@ public interface IPlatformBackgroundJobScheduler
     public string Schedule<TJobExecutor>(DateTimeOffset enqueueAt)
         where TJobExecutor : IPlatformBackgroundJobExecutor;
 
+    public string Schedule<TJobExecutorParam>(Type jobExecutorType, TJobExecutorParam jobExecutorParam, DateTimeOffset enqueueAt) where TJobExecutorParam : class;
+
     /// <summary>
     /// Creates a new background job based on a specified method call expression
     /// and schedules it to be enqueued at the given moment of time.
@@ -200,4 +202,6 @@ public interface IPlatformBackgroundJobScheduler
     public void ExecuteBackgroundJob<TJobExecutor>(TJobExecutor jobExecutor) where TJobExecutor : IPlatformBackgroundJobExecutor;
 
     public void ExecuteBackgroundJob<TJobExecutor, TParam>(TJobExecutor jobExecutor, TParam jobExecutorParam) where TJobExecutor : IPlatformBackgroundJobExecutor<TParam>;
+
+    public void ExecuteBackgroundJobByType(Type jobExecutorType, string jobExecutorParamJson);
 }

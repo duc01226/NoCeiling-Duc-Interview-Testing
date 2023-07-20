@@ -71,8 +71,8 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                 var dataSeeders = serviceScope.ServiceProvider
                     .GetServices<IPlatformApplicationDataSeeder>()
                     .DistinctBy(p => p.GetType())
-                    .OrderBy(p => p.SeedOrder)
-                    .ThenBy(p => p.DelaySeedingInBackgroundBySeconds);
+                    .OrderBy(p => p.DelaySeedingInBackgroundBySeconds)
+                    .ThenBy(p => p.SeedOrder);
 
                 await dataSeeders.ForEachAsync(
                     async seeder =>
@@ -80,7 +80,9 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                         if (seeder.DelaySeedingInBackgroundBySeconds > 0)
                         {
                             Logger.LogInformation(
-                                $"[SeedData] {seeder.GetType().Name} is scheduled running in background after {seeder.DelaySeedingInBackgroundBySeconds} seconds.");
+                                "[SeedData] {Seeder} is scheduled running in background after {DelaySeedingInBackgroundBySeconds} seconds.",
+                                seeder.GetType().Name,
+                                seeder.DelaySeedingInBackgroundBySeconds);
 
                             Util.TaskRunner.QueueActionInBackground(
                                 async () => await ExecuteSeedingWithNewScopeInBackground(seeder.GetType(), Logger),
@@ -114,7 +116,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                 await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                     async () =>
                     {
-                        using (var newScope = PlatformGlobal.RootServiceProvider.CreateScope())
+                        using (var newScope = PlatformGlobal.ServiceProvider.CreateScope())
                         {
                             var dataSeeder = newScope.ServiceProvider
                                 .GetServices<IPlatformApplicationDataSeeder>()
@@ -130,24 +132,26 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                         if (currentRetry >= MinimumRetryTimesToWarning)
                             logger.LogWarning(
                                 ex,
-                                $"[SeedData] Retry seed data in background {seederType.Name}.");
+                                "[SeedData] Retry seed data in background {SeederTypeName}.",
+                                seederType.Name);
                     });
             }
             catch (Exception ex)
             {
                 logger.LogError(
                     ex,
-                    $"[SeedData] Seed data in background {seederType.Name} failed.");
+                    "[SeedData] Seed data in background {SeederTypeName} failed.",
+                    seederType.Name);
             }
         }
 
         static async Task ExecuteDataSeederWithLog(IPlatformApplicationDataSeeder dataSeeder, ILogger logger)
         {
-            logger.LogInformation($"[SeedData] {dataSeeder.GetType().Name} STARTED.");
+            logger.LogInformation("[SeedData] {DataSeeder} STARTED.", dataSeeder.GetType().Name);
 
             await dataSeeder.SeedData();
 
-            logger.LogInformation($"[SeedData] {dataSeeder.GetType().Name} FINISHED.");
+            logger.LogInformation("[SeedData] {DataSeeder} FINISHED.", dataSeeder.GetType().Name);
         }
     }
 
@@ -311,7 +315,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             serviceCollection.Register<IPlatformApplicationSettingContext>(DefaultApplicationSettingContextFactory);
     }
 
-    private void RegisterDefaultApplicationUserContext(IServiceCollection serviceCollection)
+    private static void RegisterDefaultApplicationUserContext(IServiceCollection serviceCollection)
     {
         if (serviceCollection.All(p => p.ServiceType != typeof(IPlatformApplicationUserContextAccessor)))
             serviceCollection.Register(

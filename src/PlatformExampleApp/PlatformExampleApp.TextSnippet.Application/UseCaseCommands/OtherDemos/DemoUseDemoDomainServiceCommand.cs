@@ -5,7 +5,7 @@ using Easy.Platform.Common.Cqrs.Commands;
 using Easy.Platform.Domain.UnitOfWork;
 using PlatformExampleApp.TextSnippet.Domain.Services;
 
-namespace PlatformExampleApp.TextSnippet.Application.UseCaseCommands;
+namespace PlatformExampleApp.TextSnippet.Application.UseCaseCommands.OtherDemos;
 
 public sealed class DemoUseDemoDomainServiceCommand : PlatformCqrsCommand<DemoUseDemoDomainServiceCommandResult>
 {
@@ -21,7 +21,8 @@ public sealed class DemoUseDemoDomainServiceCommandResult : PlatformCqrsCommandR
     }
 }
 
-internal sealed class DemoUseDemoDomainServiceCommandHandler : PlatformCqrsCommandApplicationHandler<DemoUseDemoDomainServiceCommand, DemoUseDemoDomainServiceCommandResult>
+internal sealed class DemoUseDemoDomainServiceCommandHandler
+    : PlatformCqrsCommandApplicationHandler<DemoUseDemoDomainServiceCommand, DemoUseDemoDomainServiceCommandResult>
 {
     // Demo use demoDomainService
     private readonly TransferSnippetTextToMultiDbDemoEntityNameService transferSnippetTextToMultiDbDemoEntityNameService;

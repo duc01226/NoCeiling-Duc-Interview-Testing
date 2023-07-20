@@ -234,7 +234,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
     {
         return Errors?.Aggregate(
             string.Empty,
-            (currentMsg, error) => $"{(currentMsg == string.Empty ? string.Empty : ". ")}{error}.");
+            (currentMsg, error) => $"{(currentMsg == string.Empty ? string.Empty : $"{currentMsg}; ")}{error}");
     }
 
     public override string ToString()
@@ -250,7 +250,9 @@ public class PlatformValidationResult<TValue> : ValidationResult
             invalid: err => Of<T>(default));
     }
 
-
+    /// <summary>
+    /// Performs an additional asynchronous validation operation on the value using the specified nextVal function if this validation is valid.
+    /// </summary>
     public Task<PlatformValidationResult<T>> ThenAsync<T>(
         Func<Task<PlatformValidationResult<T>>> nextVal)
     {
@@ -259,6 +261,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
             invalid: err => Of<T>(default).ToTask());
     }
 
+    /// <inheritdoc cref="ThenAsync{T}(Func{Task{PlatformValidationResult{T}}})"/>
     public Task<PlatformValidationResult<T>> ThenAsync<T>(
         Func<TValue, Task<PlatformValidationResult<T>>> nextVal)
     {
@@ -267,6 +270,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
             invalid: err => Of<T>(default).ToTask());
     }
 
+    /// <inheritdoc cref="ThenAsync{T}(Func{Task{PlatformValidationResult{T}}})"/>
     public async Task<PlatformValidationResult<T>> ThenAsync<T>(
         Func<TValue, Task<T>> next)
     {
@@ -275,7 +279,9 @@ public class PlatformValidationResult<TValue> : ValidationResult
             invalid: err => Of<T>(default).ToTask());
     }
 
-
+    /// <summary>
+    ///  Executes a specified function based on whether the validation result is valid or invalid.
+    /// </summary>
     public PlatformValidationResult<T> Match<T>(
         Func<TValue, PlatformValidationResult<T>> valid,
         Func<IEnumerable<PlatformValidationError>, PlatformValidationResult<T>> invalid)
@@ -283,6 +289,9 @@ public class PlatformValidationResult<TValue> : ValidationResult
         return IsValid ? valid(Value) : invalid(Errors);
     }
 
+    /// <summary>
+    /// Executes a specified asynchronous function based on whether the validation result is valid or invalid.
+    /// </summary>
     public async Task<PlatformValidationResult<T>> MatchAsync<T>(
         Func<TValue, Task<PlatformValidationResult<T>>> valid,
         Func<IEnumerable<PlatformValidationError>, Task<PlatformValidationResult<T>>> invalid)
@@ -398,23 +407,17 @@ public class PlatformValidationResult<TValue> : ValidationResult
         return IsValid ? this : await nextValidation();
     }
 
+    /// <summary>
+    /// Throws an exception if the validation result is invalid. It returns the validated value if the result is valid.
+    /// </summary>
     public TValue EnsureValid(Func<PlatformValidationResult<TValue>, Exception> invalidException = null)
     {
-        if (Errors.Any())
+        if (!IsValid)
             throw invalidException != null
                 ? invalidException(this)
                 : InvalidException != null
                     ? InvalidException(this)
                     : new PlatformValidationException(this);
-
-        if (LogicalAndValidationsChain.Any())
-            return LogicalAndValidationsChain
-                .Aggregate(
-                    Valid(Value),
-                    (prevValResult, nextValChainItem) =>
-                        prevValResult.IsValid ? nextValChainItem.ValidationFn(prevValResult.Value) : prevValResult,
-                    valResult => valResult)
-                .EnsureValid();
 
         return Value;
     }
@@ -435,6 +438,9 @@ public class PlatformValidationResult<TValue> : ValidationResult
             InvalidException != null ? val => InvalidException(this) : null);
     }
 
+    /// <summary>
+    /// Use this to set the specific exception for the current validation chain. So that when use ensure valid, each validation condition chain could throw the attached exception
+    /// </summary>
     public PlatformValidationResult<TValue> WithInvalidException(Func<PlatformValidationResult<TValue>, Exception> invalidException)
     {
         if (!LogicalAndValidationsChain.Any())
@@ -522,7 +528,7 @@ public class PlatformValidationResult : PlatformValidationResult<object>
         TValue value,
         params PlatformValidationError[] errors)
     {
-        return errors?.Any() == true
+        return errors?.Any(p => p?.ToString().IsNotNullOrEmpty() == true) == true
             ? new PlatformValidationResult<TValue>(value, errors.ToList())
             : new PlatformValidationResult<TValue>(
                 value,

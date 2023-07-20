@@ -29,16 +29,34 @@ export abstract class PlatformHttpService {
     protected abstract appendAdditionalHttpOptions(options: HttpClientOptions): HttpClientOptions;
 
     protected httpGet<T>(url: string, options?: HttpClientOptions | (() => HttpClientOptions)): Observable<T> {
+        const finalOptions = this.getFinalOptions(options);
         return this.http
-            .get(url, this.getFinalOptions(options))
-            .pipe(<OperatorFunction<Object, T>>timeout(this.requestTimeoutInMs));
+            .get(url, finalOptions)
+            .pipe(
+                <OperatorFunction<Object, T>>(
+                    timeout(
+                        finalOptions.timeoutSeconds != null
+                            ? finalOptions.timeoutSeconds * 1000
+                            : this.requestTimeoutInMs
+                    )
+                )
+            );
     }
 
     protected httpPost<TResult>(url: string, body: object, options?: HttpClientOptions | (() => HttpClientOptions)) {
-        const finalBody = this.buildHttpBody(body, this.getFinalOptions(options));
+        const finalOptions = this.getFinalOptions(options);
+        const finalBody = this.buildHttpBody(body, finalOptions);
         return this.http
-            .post(url, finalBody, this.getFinalOptions(options))
-            .pipe(<OperatorFunction<Object, TResult>>timeout(this.requestTimeoutInMs));
+            .post(url, finalBody, finalOptions)
+            .pipe(
+                <OperatorFunction<Object, TResult>>(
+                    timeout(
+                        finalOptions.timeoutSeconds != null
+                            ? finalOptions.timeoutSeconds * 1000
+                            : this.requestTimeoutInMs
+                    )
+                )
+            );
     }
 
     protected httpPostFileMultiPartForm<TResult>(
@@ -57,20 +75,46 @@ export abstract class PlatformHttpService {
 
         return this.http
             .post(url, finalBody, finalOptions)
-            .pipe(<OperatorFunction<Object, TResult>>timeout(this.requestTimeoutInMs));
+            .pipe(
+                <OperatorFunction<Object, TResult>>(
+                    timeout(
+                        finalOptions.timeoutSeconds != null
+                            ? finalOptions.timeoutSeconds * 1000
+                            : this.requestTimeoutInMs
+                    )
+                )
+            );
     }
 
     protected httpPut<T>(url: string, body: T, options?: HttpClientOptions | (() => HttpClientOptions)) {
-        const finalBody = this.buildHttpBody(body, this.getFinalOptions(options));
+        const finalOptions = this.getFinalOptions(options);
+        const finalBody = this.buildHttpBody(body, finalOptions);
         return this.http
-            .put(url, finalBody, this.getFinalOptions(options))
-            .pipe(<OperatorFunction<Object, T>>timeout(this.requestTimeoutInMs));
+            .put(url, finalBody, finalOptions)
+            .pipe(
+                <OperatorFunction<Object, T>>(
+                    timeout(
+                        finalOptions.timeoutSeconds != null
+                            ? finalOptions.timeoutSeconds * 1000
+                            : this.requestTimeoutInMs
+                    )
+                )
+            );
     }
 
     protected httpDelete<T>(url: string, options?: HttpClientOptions | (() => HttpClientOptions)) {
+        const finalOptions = this.getFinalOptions(options);
         return this.http
-            .delete(url, this.getFinalOptions(options))
-            .pipe(<OperatorFunction<Object, T>>timeout(this.requestTimeoutInMs));
+            .delete(url, finalOptions)
+            .pipe(
+                <OperatorFunction<Object, T>>(
+                    timeout(
+                        finalOptions.timeoutSeconds != null
+                            ? finalOptions.timeoutSeconds * 1000
+                            : this.requestTimeoutInMs
+                    )
+                )
+            );
     }
 
     protected buildHttpBody<T>(body: T, options: HttpClientOptions | (() => HttpClientOptions)) {

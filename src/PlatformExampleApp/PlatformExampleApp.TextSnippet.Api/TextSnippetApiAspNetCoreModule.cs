@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Easy.Platform.AspNetCore;
-using Easy.Platform.Common.Extensions.WhenCases;
 using Easy.Platform.Common.JsonSerialization;
 using Microsoft.Extensions.Configuration;
 using PlatformExampleApp.TextSnippet.Api.Context.UserContext;

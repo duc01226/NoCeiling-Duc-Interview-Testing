@@ -81,7 +81,7 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
     /// </summary>
     public string GetOrderByValue()
     {
-        return Name;
+        return CreationDate.ToString("yyyyMMdd") + $"_{Name}";
     }
 
     public void Dispose()

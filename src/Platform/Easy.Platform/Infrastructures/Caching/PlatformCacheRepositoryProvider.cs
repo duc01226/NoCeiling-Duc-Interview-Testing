@@ -38,12 +38,11 @@ public interface IPlatformCacheRepositoryProvider
 
 public class PlatformCacheRepositoryProvider : IPlatformCacheRepositoryProvider
 {
-    private readonly List<IPlatformCacheRepository> registeredCacheRepositories;
-
     private readonly Dictionary<PlatformCacheRepositoryType, IPlatformCacheRepository>
         registeredCacheRepositoriesDic;
 
     private readonly IServiceProvider serviceProvider;
+    private readonly List<IPlatformCacheRepository> registeredCacheRepositories;
 
     public PlatformCacheRepositoryProvider(
         IServiceProvider serviceProvider,

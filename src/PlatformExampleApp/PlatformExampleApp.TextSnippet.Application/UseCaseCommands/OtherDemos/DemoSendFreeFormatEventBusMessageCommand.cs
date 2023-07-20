@@ -6,7 +6,7 @@ using Easy.Platform.Common.Cqrs.Commands;
 using Easy.Platform.Domain.UnitOfWork;
 using PlatformExampleApp.TextSnippet.Application.MessageBus.FreeFormatMessages;
 
-namespace PlatformExampleApp.TextSnippet.Application.UseCaseCommands;
+namespace PlatformExampleApp.TextSnippet.Application.UseCaseCommands.OtherDemos;
 
 public sealed class DemoSendFreeFormatEventBusMessageCommand : PlatformCqrsCommand<DemoSendFreeFormatEventBusMessageCommandResult>
 {

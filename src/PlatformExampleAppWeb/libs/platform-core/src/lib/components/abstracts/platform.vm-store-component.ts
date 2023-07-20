@@ -3,7 +3,7 @@ import { Directive, OnInit } from '@angular/core';
 import { combineLatest, map, Observable } from 'rxjs';
 import { PartialDeep } from 'type-fest';
 
-import { keys } from '../../utils';
+import { keys, list_all } from '../../utils';
 import { PlatformVm, PlatformVmStore, requestStateDefaultKey } from '../../view-models';
 import { PlatformComponent } from './platform.component';
 
@@ -37,6 +37,12 @@ export abstract class PlatformVmStoreComponent<
 
     public override ngOnInit(): void {
         super.ngOnInit();
+
+        if (
+            (this.store.currentState.isStateSuccess || this.store.currentState.isStateError) &&
+            list_all(this.additionalStores, p => p.currentState.isStateSuccess || p.currentState.isStateError)
+        )
+            this.reload();
     }
 
     private _state$?: Observable<TViewModel>;

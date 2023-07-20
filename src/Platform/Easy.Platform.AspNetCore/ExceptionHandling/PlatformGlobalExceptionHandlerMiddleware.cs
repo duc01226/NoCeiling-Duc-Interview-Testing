@@ -49,7 +49,7 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
             catch (Exception exception)
             {
                 if (exception is OperationCanceledException or TaskCanceledException)
-                    Logger.LogWarning(exception, exception.GetType().Name);
+                    Logger.LogWarning(exception, "Exception {Exception}", exception.GetType().Name);
                 else
                     throw;
             }
@@ -60,7 +60,7 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
     {
         if (exception is BadHttpRequestException or OperationCanceledException or TaskCanceledException)
         {
-            Logger.LogWarning(exception, exception.GetType().Name);
+            Logger.LogWarning(exception, "Exception {Exception}", exception.GetType().Name);
             return Task.CompletedTask;
         }
 

@@ -45,7 +45,7 @@ public interface IPlatformModule
 
     public static void WaitAllModulesInitiated(Type moduleType, ILogger logger = null, string logSuffix = null)
     {
-        if (PlatformGlobal.RootServiceProvider.GetServices(moduleType).Select(p => p.As<IPlatformModule>()).All(p => p.Initiated)) return;
+        if (PlatformGlobal.ServiceProvider.GetServices(moduleType).Select(p => p.As<IPlatformModule>()).All(p => p.Initiated)) return;
 
         var useLogger = logger ?? PlatformGlobal.CreateDefaultLogger();
 
@@ -54,11 +54,11 @@ public interface IPlatformModule
         Util.TaskRunner.WaitUntil(
             () =>
             {
-                var modules = PlatformGlobal.RootServiceProvider.GetServices(moduleType).Select(p => p.As<IPlatformModule>());
+                var modules = PlatformGlobal.ServiceProvider.GetServices(moduleType).Select(p => p.As<IPlatformModule>());
 
                 return modules.All(p => p.Initiated);
             },
-            maxWaitSeconds: PlatformGlobal.RootServiceProvider.GetServices(moduleType).Count() * DefaultMaxWaitModuleInitiatedSeconds,
+            maxWaitSeconds: PlatformGlobal.ServiceProvider.GetServices(moduleType).Count() * DefaultMaxWaitModuleInitiatedSeconds,
             waitForMsg: $"Wait for all modules of type {moduleType.Name} get initiated",
             waitIntervalSeconds: 5);
 

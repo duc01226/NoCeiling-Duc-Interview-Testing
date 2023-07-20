@@ -1,7 +1,6 @@
 using Easy.Platform.Application.MessageBus.Consumers;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
@@ -11,7 +10,7 @@ namespace Easy.Platform.Application.MessageBus.InboxPattern;
 
 public static class PlatformInboxMessageBusConsumerHelper
 {
-    public const int DefaultResilientRetiredCount = 5;
+    public const int DefaultResilientRetiredCount = 2;
     public const int DefaultResilientRetiredDelayMilliseconds = 200;
 
     /// <summary>
@@ -35,7 +34,6 @@ public static class PlatformInboxMessageBusConsumerHelper
         CancellationToken cancellationToken = default) where TMessage : class, new()
     {
         if (handleExistingInboxMessage != null && handleExistingInboxMessage.ConsumeStatus != PlatformInboxBusMessage.ConsumeStatuses.Processed)
-        {
             await ExecuteDirectlyConsumerWithExistingInboxMessage(
                 handleExistingInboxMessage,
                 consumer,
@@ -46,73 +44,113 @@ public static class PlatformInboxMessageBusConsumerHelper
                 retryProcessFailedMessageInSecondsUnit,
                 autoDeleteProcessedMessage,
                 cancellationToken);
-        }
         else if (handleExistingInboxMessage == null)
+            await SaveAndTryConsumeNewInboxMessageAsync(
+                consumer,
+                inboxBusMessageRepository,
+                inboxConfig,
+                message,
+                routingKey,
+                loggerFactory,
+                allowProcessInBackgroundThread,
+                handleInUow,
+                autoDeleteProcessedMessage,
+                cancellationToken);
+    }
+
+    private static async Task SaveAndTryConsumeNewInboxMessageAsync<TMessage>(
+        IPlatformApplicationMessageBusConsumer<TMessage> consumer,
+        IPlatformInboxBusMessageRepository inboxBusMessageRepository,
+        PlatformInboxConfig inboxConfig,
+        TMessage message,
+        string routingKey,
+        Func<ILogger> loggerFactory,
+        bool allowProcessInBackgroundThread,
+        IUnitOfWork handleInUow,
+        bool autoDeleteProcessedMessage,
+        CancellationToken cancellationToken) where TMessage : class, new()
+    {
+        var (toProcessInboxMessage, existedInboxMessage) =
+            await GetOrCreateToProcessInboxMessage(consumer, inboxBusMessageRepository, message, routingKey, cancellationToken);
+
+        if (existedInboxMessage == null ||
+            PlatformInboxBusMessage.CanHandleMessagesExpr(inboxConfig.MessageProcessingMaxSeconds).Compile()(existedInboxMessage))
         {
-            var trackId = message.As<IPlatformTrackableBusMessage>()?.TrackingId;
-
-            var existedInboxMessage = trackId != null
-                ? await inboxBusMessageRepository.FirstOrDefaultAsync(
-                    p => p.Id == PlatformInboxBusMessage.BuildId(trackId, consumer.GetType()),
-                    cancellationToken)
-                : null;
-
-            var newInboxMessage = existedInboxMessage == null
-                ? await CreateNewInboxMessageAsync(
-                    inboxBusMessageRepository,
-                    consumer.GetType(),
-                    message,
-                    routingKey,
-                    PlatformInboxBusMessage.ConsumeStatuses.Processing,
-                    loggerFactory,
-                    cancellationToken)
-                : null;
-
-            var toProcessInboxMessage = existedInboxMessage ?? newInboxMessage;
-
-            if (existedInboxMessage == null ||
-                PlatformInboxBusMessage.CanHandleMessagesExpr(inboxConfig.MessageProcessingMaxSeconds).Compile()(existedInboxMessage))
+            if (handleInUow != null && !handleInUow.IsPseudoTransactionUow())
             {
-                if (handleInUow != null)
-                {
-                    handleInUow.OnCompletedActions.Add(
-                        async () => await ExecuteConsumerForNewInboxMessage(
-                            consumer.GetType(),
-                            message,
-                            toProcessInboxMessage,
-                            routingKey,
-                            autoDeleteProcessedMessage,
-                            loggerFactory));
-                }
-                else
-                {
-                    // Check try CompleteAsync current active uow if any to ensure that newInboxMessage will be saved
-                    // Do this to fix if someone open uow without complete it for some legacy project
-                    if (inboxBusMessageRepository.UowManager().TryGetCurrentActiveUow() != null)
-                        await inboxBusMessageRepository.UowManager().CurrentActiveUow().CompleteAsync(cancellationToken);
+                handleInUow.OnCompletedActions.Add(
+                    async () => await ExecuteConsumerForNewInboxMessage(
+                        consumer.GetType(),
+                        message,
+                        toProcessInboxMessage,
+                        routingKey,
+                        autoDeleteProcessedMessage,
+                        loggerFactory));
+            }
+            else
+            {
+                // Check try CompleteAsync current active uow if any to ensure that newInboxMessage will be saved
+                // Do this to fix if someone open uow without complete it for some legacy project
+                if (inboxBusMessageRepository.UowManager().TryGetCurrentActiveUow() != null)
+                    await inboxBusMessageRepository.UowManager().CurrentActiveUow().CompleteAsync(cancellationToken);
 
-                    if (allowProcessInBackgroundThread || toProcessInboxMessage == existedInboxMessage)
-                        Util.TaskRunner.QueueActionInBackground(
-                            () => ExecuteConsumerForNewInboxMessage(
-                                consumer.GetType(),
-                                message,
-                                toProcessInboxMessage,
-                                routingKey,
-                                autoDeleteProcessedMessage,
-                                loggerFactory),
-                            loggerFactory,
-                            cancellationToken: cancellationToken);
-                    else
-                        await ExecuteConsumerForNewInboxMessage(
+                if (allowProcessInBackgroundThread || toProcessInboxMessage == existedInboxMessage)
+                    Util.TaskRunner.QueueActionInBackground(
+                        () => ExecuteConsumerForNewInboxMessage(
                             consumer.GetType(),
                             message,
                             toProcessInboxMessage,
                             routingKey,
                             autoDeleteProcessedMessage,
-                            loggerFactory);
-                }
+                            loggerFactory),
+                        loggerFactory,
+                        cancellationToken: cancellationToken);
+                else
+                    await ExecuteConsumerForNewInboxMessage(
+                        consumer.GetType(),
+                        message,
+                        toProcessInboxMessage,
+                        routingKey,
+                        autoDeleteProcessedMessage,
+                        loggerFactory);
             }
         }
+    }
+
+    private static async Task<ValueTuple<PlatformInboxBusMessage, PlatformInboxBusMessage>> GetOrCreateToProcessInboxMessage<TMessage>(
+        IPlatformApplicationMessageBusConsumer<TMessage> consumer,
+        IPlatformInboxBusMessageRepository inboxBusMessageRepository,
+        TMessage message,
+        string routingKey,
+        CancellationToken cancellationToken) where TMessage : class, new()
+    {
+        return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+            async () =>
+            {
+                var trackId = message.As<IPlatformTrackableBusMessage>()?.TrackingId;
+
+                var existedInboxMessage = trackId != null
+                    ? await inboxBusMessageRepository.FirstOrDefaultAsync(
+                        p => p.Id == PlatformInboxBusMessage.BuildId(trackId, consumer.GetType()),
+                        cancellationToken)
+                    : null;
+
+                var newInboxMessage = existedInboxMessage == null
+                    ? await CreateNewInboxMessageAsync(
+                        inboxBusMessageRepository,
+                        consumer.GetType(),
+                        message,
+                        routingKey,
+                        PlatformInboxBusMessage.ConsumeStatuses.Processing,
+                        cancellationToken)
+                    : null;
+
+                var toProcessInboxMessage = existedInboxMessage ?? newInboxMessage;
+
+                return (toProcessInboxMessage, existedInboxMessage);
+            },
+            _ => DefaultResilientRetiredDelayMilliseconds.Milliseconds(),
+            DefaultResilientRetiredCount);
     }
 
     public static async Task ExecuteConsumerForNewInboxMessage<TMessage>(
@@ -123,42 +161,27 @@ public static class PlatformInboxMessageBusConsumerHelper
         bool autoDeleteProcessedMessage,
         Func<ILogger> loggerFactory) where TMessage : class, new()
     {
-        await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
-            DoExecuteConsumerForNewInboxMessage,
-            consumerType,
-            message,
-            newInboxMessage,
-            routingKey,
-            autoDeleteProcessedMessage,
-            loggerFactory);
-
-        static async Task DoExecuteConsumerForNewInboxMessage(
-            Type consumerType,
-            TMessage message,
-            PlatformInboxBusMessage newInboxMessage,
-            string routingKey,
-            bool autoDeleteProcessedMessage,
-            Func<ILogger> loggerFactory,
-            IServiceProvider serviceProvider)
-        {
-            try
+        await PlatformGlobal.ServiceProvider.ExecuteInjectScopedAsync(
+            async (IServiceProvider serviceProvider) =>
             {
-                await serviceProvider.GetService(consumerType)
-                    .Cast<IPlatformApplicationMessageBusConsumer<TMessage>>()
-                    .With(_ => _.HandleDirectlyExistingInboxMessage = newInboxMessage)
-                    .With(_ => _.AutoDeleteProcessedInboxEventMessage = autoDeleteProcessedMessage)
-                    .HandleAsync(message, routingKey);
-            }
-            catch (Exception e)
-            {
-                // Catch and just log error to prevent retry queue message. Inbox message will be automatically retry handling via inbox hosted service
-                loggerFactory()
-                    .LogError(
-                        e,
-                        $"{nameof(ExecuteConsumerForNewInboxMessage)} [Consumer:{{ConsumerType}}] failed. Inbox message will be automatically retry later.",
-                        consumerType.Name);
-            }
-        }
+                try
+                {
+                    await serviceProvider.GetService(consumerType)
+                        .Cast<IPlatformApplicationMessageBusConsumer<TMessage>>()
+                        .With(_ => _.HandleDirectlyExistingInboxMessage = newInboxMessage)
+                        .With(_ => _.AutoDeleteProcessedInboxEventMessage = autoDeleteProcessedMessage)
+                        .HandleAsync(message, routingKey);
+                }
+                catch (Exception e)
+                {
+                    // Catch and just log error to prevent retry queue message. Inbox message will be automatically retry handling via inbox hosted service
+                    loggerFactory()
+                        .LogError(
+                            e,
+                            $"{nameof(ExecuteConsumerForNewInboxMessage)} [Consumer:{{ConsumerType}}] failed. Inbox message will be automatically retry later.",
+                            consumerType.Name);
+                }
+            });
     }
 
     public static async Task ExecuteDirectlyConsumerWithExistingInboxMessage<TMessage>(
@@ -179,44 +202,38 @@ public static class PlatformInboxMessageBusConsumerHelper
                 .With(_ => _.AutoDeleteProcessedInboxEventMessage = autoDeleteProcessedMessage)
                 .HandleAsync(message, routingKey);
 
-            try
-            {
-                if (autoDeleteProcessedMessage)
-                    await DeleteExistingInboxProcessedMessageAsync(
-                        serviceProvider,
-                        existingInboxMessage,
-                        cancellationToken);
-                else
+            if (autoDeleteProcessedMessage)
+                await DeleteExistingInboxProcessedMessageAsync(
+                    serviceProvider,
+                    existingInboxMessage,
+                    loggerFactory,
+                    cancellationToken);
+            else
+                try
+                {
                     await UpdateExistingInboxProcessedMessageAsync(
                         serviceProvider,
                         existingInboxMessage,
                         cancellationToken);
-            }
-            catch (Exception)
-            {
-                // If failed for some reason like concurrency token conflict or entity is not existing, try to update again by Id
-                await UpdateExistingInboxProcessedMessageAsync(
-                    serviceProvider,
-                    existingInboxMessage.Id,
-                    loggerFactory,
-                    cancellationToken);
-            }
+                }
+                catch (Exception)
+                {
+                    // If failed for some reason like concurrency token conflict or entity is not existing, try to update again by Id
+                    await UpdateExistingInboxProcessedMessageAsync(
+                        serviceProvider,
+                        existingInboxMessage.Id,
+                        loggerFactory,
+                        cancellationToken);
+                }
         }
         catch (Exception ex)
         {
-            loggerFactory()
-                .LogError(
-                    ex,
-                    "ExecuteConsumerForExistingInboxMessage failed. [[Error:{Error}]]; [MessageType: {MessageType}]; [ConsumerType: {ConsumerType}]; [RoutingKey: {RoutingKey}]; [MessageContent: {MessageContent}];",
-                    ex.Message,
-                    message.GetType().GetNameOrGenericTypeName(),
-                    consumer.GetType().GetNameOrGenericTypeName(),
-                    routingKey,
-                    message.ToJson());
-
             await UpdateExistingInboxFailedMessageAsync(
                 serviceProvider,
                 existingInboxMessage,
+                message,
+                consumer,
+                routingKey,
                 ex,
                 retryProcessFailedMessageInSecondsUnit,
                 loggerFactory,
@@ -230,7 +247,6 @@ public static class PlatformInboxMessageBusConsumerHelper
         TMessage message,
         string routingKey,
         PlatformInboxBusMessage.ConsumeStatuses consumeStatus,
-        Func<ILogger> loggerFactory,
         CancellationToken cancellationToken = default) where TMessage : class, new()
     {
         var newInboxMessage = PlatformInboxBusMessage.Create(
@@ -241,34 +257,13 @@ public static class PlatformInboxMessageBusConsumerHelper
             consumerType,
             consumeStatus);
 
-        try
-        {
-            return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                async () =>
-                {
-                    var result = await inboxBusMessageRepository.CreateAsync(
-                        newInboxMessage,
-                        dismissSendEvent: true,
-                        sendEntityEventConfigure: null,
-                        cancellationToken);
+        var result = await inboxBusMessageRepository.CreateAsync(
+            newInboxMessage,
+            dismissSendEvent: true,
+            sendEntityEventConfigure: null,
+            cancellationToken);
 
-                    return result;
-                },
-                sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
-                retryCount: DefaultResilientRetiredCount);
-        }
-        catch (Exception ex)
-        {
-            loggerFactory()
-                .LogError(
-                    ex,
-                    "CreateNewInboxMessageAsync failed. [[Error:{Error}]], [RoutingKey:{RoutingKey}], [Type:{MessageType}]. NewInboxMessage: {NewInboxMessage}.",
-                    ex.Message,
-                    routingKey,
-                    message.GetType().GetNameOrGenericTypeName(),
-                    newInboxMessage.ToJson());
-            throw;
-        }
+        return result;
     }
 
     public static async Task UpdateExistingInboxProcessedMessageAsync(
@@ -323,47 +318,72 @@ public static class PlatformInboxMessageBusConsumerHelper
     public static async Task DeleteExistingInboxProcessedMessageAsync(
         IServiceProvider serviceProvider,
         PlatformInboxBusMessage existingInboxMessage,
-        CancellationToken cancellationToken = default)
-    {
-        await serviceProvider.ExecuteInjectScopedAsync(
-            async (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
-            {
-                await inboxBusMessageRepo.DeleteAsync(existingInboxMessage.Id, dismissSendEvent: true, sendEntityEventConfigure: null, cancellationToken);
-            });
-    }
-
-    public static async Task UpdateExistingInboxFailedMessageAsync(
-        IServiceProvider serviceProvider,
-        PlatformInboxBusMessage existingInboxMessage,
-        Exception exception,
-        double retryProcessFailedMessageInSecondsUnit,
         Func<ILogger> loggerFactory,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            await serviceProvider.ExecuteInjectScopedAsync(
-                async (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
+            await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                async () =>
                 {
-                    await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                        async () =>
+                    await serviceProvider.ExecuteInjectScopedAsync(
+                        async (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
+                        {
+                            await inboxBusMessageRepo.DeleteAsync(existingInboxMessage.Id, dismissSendEvent: true, sendEntityEventConfigure: null, cancellationToken);
+                        });
+                },
+                sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
+                retryCount: DefaultResilientRetiredCount);
+        }
+        catch (Exception e)
+        {
+            loggerFactory().LogWarning(e, "Try DeleteExistingInboxProcessedMessageAsync failed");
+        }
+    }
+
+    public static async Task UpdateExistingInboxFailedMessageAsync<TMessage>(
+        IServiceProvider serviceProvider,
+        PlatformInboxBusMessage existingInboxMessage,
+        TMessage message,
+        IPlatformApplicationMessageBusConsumer<TMessage> consumer,
+        string routingKey,
+        Exception exception,
+        double retryProcessFailedMessageInSecondsUnit,
+        Func<ILogger> loggerFactory,
+        CancellationToken cancellationToken = default) where TMessage : class, new()
+    {
+        try
+        {
+            loggerFactory()
+                .LogError(
+                    exception,
+                    "UpdateExistingInboxFailedMessageAsync. [[Error:{Error}]]; [MessageType: {MessageType}]; [ConsumerType: {ConsumerType}]; [RoutingKey: {RoutingKey}]; [MessageContent: {MessageContent}];",
+                    exception.Message,
+                    message.GetType().GetNameOrGenericTypeName(),
+                    consumer.GetType().GetNameOrGenericTypeName(),
+                    routingKey,
+                    message.ToJson());
+
+            await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                async () =>
+                {
+                    await serviceProvider.ExecuteInjectScopedAsync(
+                        async (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
                         {
                             // Get again to update to prevent concurrency error ensure that update messaged failed should not be failed
-                            existingInboxMessage = await inboxBusMessageRepo.GetByIdAsync(existingInboxMessage.Id);
+                            var latestCurrentExistingInboxMessage = await inboxBusMessageRepo.FirstOrDefaultAsync(p => p.Id == existingInboxMessage.Id);
 
-                            existingInboxMessage.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Failed;
-                            existingInboxMessage.LastConsumeDate = DateTime.UtcNow;
-                            existingInboxMessage.LastConsumeError = PlatformJsonSerializer.Serialize(new { exception.Message, exception.StackTrace });
-                            existingInboxMessage.RetriedProcessCount = (existingInboxMessage.RetriedProcessCount ?? 0) + 1;
-                            existingInboxMessage.NextRetryProcessAfter = PlatformInboxBusMessage.CalculateNextRetryProcessAfter(
-                                existingInboxMessage.RetriedProcessCount,
-                                retryProcessFailedMessageInSecondsUnit);
-
-                            await inboxBusMessageRepo.UpdateAsync(existingInboxMessage, dismissSendEvent: true, sendEntityEventConfigure: null, cancellationToken);
-                        },
-                        sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
-                        retryCount: DefaultResilientRetiredCount);
-                });
+                            if (latestCurrentExistingInboxMessage != null)
+                                await UpdateExistingInboxFailedMessageAsync(
+                                    exception,
+                                    retryProcessFailedMessageInSecondsUnit,
+                                    cancellationToken,
+                                    latestCurrentExistingInboxMessage,
+                                    inboxBusMessageRepo);
+                        });
+                },
+                sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
+                retryCount: DefaultResilientRetiredCount);
         }
         catch (Exception ex)
         {
@@ -376,39 +396,68 @@ public static class PlatformInboxMessageBusConsumerHelper
         }
     }
 
-    public static async Task UpdateFailedInboxMessageAsync(
+    public static async Task UpdateExistingInboxFailedMessageAsync(
         IServiceProvider serviceProvider,
         string id,
         Exception exception,
         double retryProcessFailedMessageInSecondsUnit,
+        Func<ILogger> loggerFactory,
         CancellationToken cancellationToken = default)
     {
-        await serviceProvider.ExecuteInjectScopedAsync(
-            async (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
-            {
-                await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                    async () =>
-                    {
-                        var existingInboxMessage = await inboxBusMessageRepo.GetByIdAsync(id, cancellationToken);
-                        var consumeError = PlatformJsonSerializer.Serialize(
-                            new
-                            {
-                                exception.Message,
-                                exception.StackTrace
-                            });
+        try
+        {
+            loggerFactory()
+                .LogError(
+                    exception,
+                    "UpdateExistingInboxFailedMessageAsync. [[Error:{Error}]]; [MessageId: {MessageId}];",
+                    exception.Message,
+                    id);
 
-                        existingInboxMessage.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Failed;
-                        existingInboxMessage.LastConsumeDate = DateTime.UtcNow;
-                        existingInboxMessage.LastConsumeError = consumeError;
-                        existingInboxMessage.RetriedProcessCount = (existingInboxMessage.RetriedProcessCount ?? 0) + 1;
-                        existingInboxMessage.NextRetryProcessAfter = PlatformInboxBusMessage.CalculateNextRetryProcessAfter(
-                            retriedProcessCount: existingInboxMessage.RetriedProcessCount,
-                            retryProcessFailedMessageInSecondsUnit);
+            await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                async () =>
+                {
+                    await serviceProvider.ExecuteInjectScopedAsync(
+                        async (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
+                        {
+                            var existingInboxMessage = await inboxBusMessageRepo.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
-                        await inboxBusMessageRepo.UpdateAsync(existingInboxMessage, dismissSendEvent: true, sendEntityEventConfigure: null, cancellationToken);
-                    },
-                    sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
-                    retryCount: DefaultResilientRetiredCount);
-            });
+                            if (existingInboxMessage != null)
+                                await UpdateExistingInboxFailedMessageAsync(
+                                    exception,
+                                    retryProcessFailedMessageInSecondsUnit,
+                                    cancellationToken,
+                                    existingInboxMessage,
+                                    inboxBusMessageRepo);
+                        });
+                },
+                sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
+                retryCount: DefaultResilientRetiredCount);
+        }
+        catch (Exception ex)
+        {
+            loggerFactory()
+                .LogError(
+                    ex,
+                    "UpdateExistingInboxFailedMessageAsync failed. [[Error:{Error}]]].",
+                    ex.Message);
+        }
+    }
+
+    private static async Task UpdateExistingInboxFailedMessageAsync(
+        Exception exception,
+        double retryProcessFailedMessageInSecondsUnit,
+        CancellationToken cancellationToken,
+        PlatformInboxBusMessage existingInboxMessage,
+        IPlatformInboxBusMessageRepository inboxBusMessageRepo)
+    {
+        existingInboxMessage.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Failed;
+        existingInboxMessage.LastConsumeDate = DateTime.UtcNow;
+        existingInboxMessage.LastConsumeError = PlatformInboxBusMessage.SerializeOneLevelExceptionForLastConsumeError(exception);
+        existingInboxMessage.RetriedProcessCount = (existingInboxMessage.RetriedProcessCount ?? 0) + 1;
+        existingInboxMessage.NextRetryProcessAfter = PlatformInboxBusMessage.CalculateNextRetryProcessAfter(
+            existingInboxMessage.RetriedProcessCount,
+            retryProcessFailedMessageInSecondsUnit);
+
+        await inboxBusMessageRepo.UpdateAsync(existingInboxMessage, dismissSendEvent: true, sendEntityEventConfigure: null, cancellationToken);
     }
 }

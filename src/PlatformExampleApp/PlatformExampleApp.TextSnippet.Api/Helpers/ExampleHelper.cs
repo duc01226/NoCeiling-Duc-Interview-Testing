@@ -1,6 +1,4 @@
-using Easy.Platform.Common;
-
-namespace PlatformExampleApp.TextSnippet.Application.Helpers;
+namespace PlatformExampleApp.TextSnippet.Api.Helpers;
 
 /// <summary>
 /// This is just an example helper to solve internal logic reuse code for any layer

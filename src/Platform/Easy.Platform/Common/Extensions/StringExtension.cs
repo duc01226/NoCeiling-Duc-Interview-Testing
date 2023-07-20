@@ -97,6 +97,11 @@ public static class StringExtension
         return string.Concat(chars);
     }
 
+    public static string ConcatString(this string prevStr, ReadOnlySpan<char> chars)
+    {
+        return string.Concat(prevStr.AsSpan(), chars);
+    }
+
     public static string TakeUntilNextChar(this string str, char beforeChar)
     {
         return str.Substring(0, str.IndexOf(beforeChar));
@@ -131,5 +136,10 @@ public static class StringExtension
     public static string ToUniqueStr(this string str)
     {
         return str + " " + Guid.NewGuid();
+    }
+
+    public static string ConcatString(this ReadOnlySpan<char> str1, params string[] otherStrings)
+    {
+        return string.Concat(str1, otherStrings.Aggregate((current, next) => string.Concat(current.AsSpan(), next.AsSpan())).AsSpan());
     }
 }

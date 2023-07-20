@@ -67,7 +67,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
     protected async Task DoExecuteInstanceInNewScope(
         TEvent notification)
     {
-        await PlatformGlobal.RootServiceProvider.ExecuteInjectScopedAsync(
+        await PlatformGlobal.ServiceProvider.ExecuteInjectScopedAsync(
             async (IServiceProvider sp) =>
             {
                 var thisHandlerNewInstance = sp.GetRequiredService(GetType())

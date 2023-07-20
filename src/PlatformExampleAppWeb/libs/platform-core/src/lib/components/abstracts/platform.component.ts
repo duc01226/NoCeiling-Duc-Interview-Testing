@@ -24,10 +24,9 @@ import { filter, finalize, map, takeUntil, tap, throttleTime } from 'rxjs/operat
 
 import { PlatformApiServiceErrorResponse } from '../../api-services';
 import { LifeCycleHelper } from '../../helpers';
-import { onCancel, tapOnce } from '../../rxjs';
+import { distinctUntilObjectValuesChanged, onCancel, tapOnce } from '../../rxjs';
 import { PlatformTranslateService } from '../../translations';
 import { clone, keys, list_remove, task_delay } from '../../utils';
-import { ComponentSimpleChanges } from '../simple-changes';
 
 export const enum LoadingState {
     Error = 'Error',
@@ -57,11 +56,15 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     public loadingMap$: BehaviorSubject<Dictionary<boolean | null>> = new BehaviorSubject<Dictionary<boolean | null>>(
         {}
     );
+    public reloadingMap$: BehaviorSubject<Dictionary<boolean | null>> = new BehaviorSubject<Dictionary<boolean | null>>(
+        {}
+    );
 
     protected storedSubscriptionsMap: Map<string, Subscription> = new Map();
     protected storedAnonymousSubscriptions: Subscription[] = [];
     protected cachedErrorMsg$: Dictionary<Observable<string | null | undefined>> = {};
     protected cachedLoading$: Dictionary<Observable<boolean | null>> = {};
+    protected cachedReloading$: Dictionary<Observable<boolean | null>> = {};
     protected allErrorMsgs!: Observable<string | null>;
 
     protected detectChangesThrottleSource = new Subject<DetectChangesParams>();
@@ -98,10 +101,16 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         }
     }
 
+    /**
+     * Creates an RxJS operator function that unsubscribes from the observable when the component is destroyed.
+     */
     public untilDestroyed<T>(): MonoTypeOperatorFunction<T> {
         return takeUntil(this.destroyed$.pipe(filter(destroyed => destroyed == true)));
     }
 
+    /**
+     * Creates an RxJS operator function that triggers change detection after the observable completes.
+     */
     public finalDetectChanges<T>(): MonoTypeOperatorFunction<T> {
         return finalize(() => this.detectChanges());
     }
@@ -117,7 +126,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         }
     }
 
-    public ngOnInputChanged(changes: ComponentSimpleChanges<object>): void {
+    public ngOnInputChanged(changes: SimpleChanges): void {
         // Default empty here. Override to implement logic
     }
 
@@ -133,6 +142,9 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     }
 
     private loadingRequestsCountMap: Dictionary<number> = {};
+    /**
+     * Returns the total number of active loading requests.
+     */
     public loadingRequestsCount() {
         let result = 0;
         Object.keys(this.loadingRequestsCountMap).forEach(key => {
@@ -141,14 +153,24 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         return result;
     }
 
+    private reloadingRequestsCountMap: Dictionary<number> = {};
     /**
-     *
-     *  Changes state based on observable request
-     *
-     * @template T Type of observable
-     * @returns
+     * Returns the total number of active reloading requests.
+     */
+    public reloadingRequestsCount() {
+        let result = 0;
+        Object.keys(this.reloadingRequestsCountMap).forEach(key => {
+            result += this.reloadingRequestsCountMap[key];
+        });
+        return result;
+    }
+
+    /**
+     *  Creates an RxJS operator function that changes the loading state based on an observable request.
+     * @param [requestKey=requestStateDefaultKey]  (optional): A key to identify the request. Default is requestStateDefaultKey
+     * @param options (optional): Additional options for handling success and error states.
      * @usage
-     *  ** TS:
+     *  Example:
      *  apiService.loadData().pipe(this.observerLoadingState()).subscribe()
      */
     public observerLoadingState<T>(
@@ -156,9 +178,11 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         options?: PlatformObserverLoadingStateOptions<T>
     ): (source: Observable<T>) => Observable<T> {
         const setLoadingState = () => {
-            this.loadingState$.next(LoadingState.Loading);
+            if (!this.isForSetReloadingState(options) && this.loadingState$.getValue() != LoadingState.Loading)
+                this.loadingState$.next(LoadingState.Loading);
 
-            this.setLoading(true, requestKey);
+            if (this.isForSetReloadingState(options)) this.setReloading(true, requestKey);
+            else this.setLoading(true, requestKey);
             this.setErrorMsg(null, requestKey);
         };
 
@@ -167,24 +191,38 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                 setLoadingState();
 
                 return source.pipe(
-                    onCancel(() => this.setLoading(false, requestKey)),
+                    onCancel(() => {
+                        if (this.isForSetReloadingState(options)) this.setReloading(false, requestKey);
+                        else this.setLoading(false, requestKey);
+                    }),
+
                     tapOnce({
                         next: value => {
-                            // Timeout to queue this update state success/failed after tapResponse
-                            setTimeout(() => {
-                                this.setLoading(false, requestKey);
-                                if (this.loadingState$.value != LoadingState.Error && this.loadingRequestsCount() <= 0)
-                                    this.loadingState$.next(LoadingState.Success);
+                            if (this.isForSetReloadingState(options)) this.setReloading(false, requestKey);
+                            else this.setLoading(false, requestKey);
 
-                                if (options?.onSuccess != null) options.onSuccess(value);
-                            });
+                            if (options?.onSuccess != null) options.onSuccess(value);
                         },
                         error: (err: PlatformApiServiceErrorResponse | Error) => {
-                            this.setLoading(false, requestKey);
-                            this.setErrorMsg(err, requestKey);
-                            this.loadingState$.next(LoadingState.Error);
+                            if (this.isForSetReloadingState(options)) this.setReloading(false, requestKey);
+                            else this.setLoading(false, requestKey);
 
                             if (options?.onError != null) options.onError(err);
+                        }
+                    }),
+                    tap({
+                        next: value => {
+                            if (
+                                this.loadingState$.value != LoadingState.Error &&
+                                this.loadingState$.value != LoadingState.Success &&
+                                this.loadingRequestsCount() <= 0 &&
+                                this.reloadingRequestsCount() <= 0
+                            )
+                                this.loadingState$.next(LoadingState.Success);
+                        },
+                        error: (err: PlatformApiServiceErrorResponse | Error) => {
+                            this.setErrorMsg(err, requestKey);
+                            this.loadingState$.next(LoadingState.Error);
                         }
                     })
                 );
@@ -192,13 +230,27 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         };
     }
 
+    private isForSetReloadingState<T>(options: PlatformObserverLoadingStateOptions<T> | undefined) {
+        return options?.isReloading && this.getErrorMsg() == null && !this.isLoading;
+    }
+
+    /**
+     * Returns an observable that emits the error message associated with the specified request key.
+     */
     public getErrorMsg$(requestKey: string = requestStateDefaultKey): Observable<string | null | undefined> {
         if (this.cachedErrorMsg$[requestKey] == null) {
-            this.cachedErrorMsg$[requestKey] = this.errorMsgMap$.pipe(map(_ => this.getErrorMsg(requestKey)));
+            this.cachedErrorMsg$[requestKey] = this.errorMsgMap$.pipe(
+                map(_ => this.getErrorMsg(requestKey)),
+                distinctUntilObjectValuesChanged()
+            );
         }
         return this.cachedErrorMsg$[requestKey];
     }
 
+    /**
+     * Returns the error message associated with the specified request key.
+     * * @param [requestKey=requestStateDefaultKey] (optional): A key to identify the request. Default is requestStateDefaultKey.
+     */
     public getErrorMsg(requestKey: string = requestStateDefaultKey): string | undefined | null {
         if (this.errorMsgMap$.getValue()[requestKey] == null && requestKey == requestStateDefaultKey)
             return Object.keys(this.errorMsgMap$.getValue())
@@ -208,6 +260,9 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         return this.errorMsgMap$.getValue()[requestKey];
     }
 
+    /**
+     * Returns an observable that emits all error messages combined into a single string.
+     */
     public getAllErrorMsgs$(): Observable<string | null> {
         if (this.allErrorMsgs == null) {
             this.allErrorMsgs = this.errorMsgMap$.pipe(
@@ -217,24 +272,64 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                         .filter(msg => msg != '' && msg != null)
                         .join('; ')
                 ),
-                filter(_ => _ != '')
+                filter(_ => _ != ''),
+                distinctUntilObjectValuesChanged()
             );
         }
 
         return this.allErrorMsgs;
     }
 
+    /**
+     * Returns an obseravble that emits the loading state (true or false) associated with the specified request key.
+     * @param [requestKey=requestStateDefaultKey] (optional): A key to identify the request. Default is requestStateDefaultKey.
+     */
     public isLoading$(requestKey: string = requestStateDefaultKey): Observable<boolean | null> {
         if (this.cachedLoading$[requestKey] == null) {
-            this.cachedLoading$[requestKey] = this.loadingMap$.pipe(map(_ => this.isLoading(requestKey)));
+            this.cachedLoading$[requestKey] = this.loadingMap$.pipe(
+                map(_ => this.isLoading(requestKey)),
+                distinctUntilObjectValuesChanged()
+            );
         }
         return this.cachedLoading$[requestKey];
     }
 
+    /**
+     * Returns the loading state (true or false) associated with the specified request key.
+     * @param errorKey (optional): A key to identify the request. Default is requestStateDefaultKey.
+     */
     public isLoading(errorKey: string = requestStateDefaultKey): boolean | null {
         return this.loadingMap$.getValue()[errorKey];
     }
 
+    /**
+     * Returns an obseravble that emits the reloading state (true or false) associated with the specified request key.
+     * @param [requestKey=requestStateDefaultKey] (optional): A key to identify the request. Default is requestStateDefaultKey.
+     */
+    public isReloading$(requestKey: string = requestStateDefaultKey): Observable<boolean | null> {
+        if (this.cachedReloading$[requestKey] == null) {
+            this.cachedReloading$[requestKey] = this.reloadingMap$.pipe(
+                map(_ => this.isReloading(requestKey)),
+                distinctUntilObjectValuesChanged()
+            );
+        }
+        return this.cachedReloading$[requestKey];
+    }
+
+    /**
+     * Returns the reloading state (true or false) associated with the specified request key.
+     * @param errorKey (optional): A key to identify the request. Default is requestStateDefaultKey.
+     */
+    public isReloading(errorKey: string = requestStateDefaultKey): boolean | null {
+        return this.reloadingMap$.getValue()[errorKey];
+    }
+
+    /**
+     * Creates an RxJS operator function that taps into the source observable to handle next, error, and complete events.
+     * @param nextFn A function to handle the next value emitted by the source observable.
+     * @param errorFn  (optional): A function to handle errors emitted by the source observable.
+     * @param completeFn (optional): A function to handle the complete event emitted by the source observable.
+     */
     protected tapResponse<T>(
         nextFn: (next: T) => void,
         errorFn?: (error: PlatformApiServiceErrorResponse | Error) => any,
@@ -245,26 +340,31 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     }
 
     /**
-     * Creates an effect. Ex: this.effect()
+     * Creates an effect, which return a function when called will subscribe to the RXJS observable returned
+     * by the given generator. This used to the define loading/updating data method in the component.
      *
      * This effect is subscribed to throughout the lifecycle of the Component.
      * @param generator A function that takes an origin Observable input and
      *     returns an Observable. The Observable that is returned will be
      *     subscribed to for the life of the component.
      * @return A function that, when called, will trigger the origin Observable.
+     * @usage
+     * Ex1: public loadData = this.effect(() => this.someApi.load()); Use function: this.loadData();
+     *
+     * Ex2: public loadData = this.effect((query$: Observable<TQuery>) => query$.pipe(switchMap(query => this.someApi.load(query)))); Use function: this.loadData(<TQuery>query param here);
      */
     public effect<TOrigin, TReturn>(
-        generator: (origin: TOrigin | Observable<TOrigin | null> | null) => Observable<TReturn>
+        generator: (origin: TOrigin | Observable<TOrigin | null> | null, isReloading?: boolean) => Observable<TReturn>
     ) {
         let previousEffectSub: Subscription = new Subscription();
 
-        return (observableOrValue: TOrigin | Observable<TOrigin> | null = null) => {
+        return (observableOrValue: TOrigin | Observable<TOrigin> | null = null, isReloading?: boolean) => {
             previousEffectSub.unsubscribe();
 
             // ThrottleTime explain: Delay to enhance performance
             // { leading: true, trailing: true } <=> emit the first item to ensure not delay, but also ignore the sub-sequence,
             // and still emit the latest item to ensure data is latest
-            const newEffectSub: Subscription = generator(observableOrValue)
+            const newEffectSub: Subscription = generator(observableOrValue, isReloading)
                 .pipe(throttleTime(300, asyncScheduler, { leading: true, trailing: true }))
                 .pipe(
                     this.untilDestroyed(),
@@ -287,10 +387,16 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         return this.initiated$.value && !this.destroyed$.value;
     }
 
+    /**
+     * Stores a subscription using the specified key. The subscription will be unsubscribed when the component is destroyed.
+     */
     protected storeSubscription(key: string, subscription: Subscription): void {
         this.storedSubscriptionsMap.set(key, subscription);
     }
 
+    /**
+     * Stores a subscription. The subscription will be unsubscribed when the component is destroyed.
+     */
     protected storeAnonymousSubscription(subscription: Subscription): void {
         list_remove(this.storedAnonymousSubscriptions, p => p.closed);
         this.storedAnonymousSubscriptions.push(subscription);
@@ -301,6 +407,9 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         this.storedSubscriptionsMap.delete(key);
     }
 
+    /**
+     * Sets the error message for the specified request key.
+     */
     protected setErrorMsg = (
         error: string | null | PlatformApiServiceErrorResponse | Error,
         requestKey: string = requestStateDefaultKey
@@ -325,6 +434,9 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         this.errorMsgMap$.next({});
     };
 
+    /**
+     * Sets the loading state for the specified request key.
+     */
     protected setLoading = (value: boolean | null, requestKey: string = requestStateDefaultKey) => {
         if (this.loadingRequestsCountMap[requestKey] == undefined) this.loadingRequestsCountMap[requestKey] = 0;
 
@@ -341,15 +453,42 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         this.detectChanges();
     };
 
+    /**
+     * Sets the loading state for the specified request key.
+     */
+    protected setReloading = (value: boolean | null, requestKey: string = requestStateDefaultKey) => {
+        if (this.reloadingRequestsCountMap[requestKey] == undefined) this.reloadingRequestsCountMap[requestKey] = 0;
+
+        if (value == true) this.reloadingRequestsCountMap[requestKey] += 1;
+        if (value == false && this.reloadingRequestsCountMap[requestKey] > 0)
+            this.reloadingRequestsCountMap[requestKey] -= 1;
+
+        this.reloadingMap$.next(
+            clone(this.reloadingMap$.value, _ => {
+                _[requestKey] = this.reloadingRequestsCountMap[requestKey] > 0;
+            })
+        );
+
+        this.detectChanges();
+    };
+
     protected cancelAllStoredSubscriptions(): void {
         this.storedSubscriptionsMap.forEach((value, key) => this.cancelStoredSubscription(key));
         this.cancelAllStoredAnonymousSubscriptions();
     }
 
+    /**
+     * Track-by function for ngFor that uses an immutable list as the tracking target. Use this to improve performance
+     * if we know that the list is immutable
+     */
     protected ngForTrackByImmutableList<TItem>(trackTargetList: TItem[]): (index: number, item: TItem) => TItem[] {
         return () => trackTargetList;
     }
 
+    /**
+     * Track-by function for ngFor that uses a specific property of the item as the tracking key.
+     * @param itemPropKey The property key of the item to use as the tracking key.
+     */
     protected ngForTrackByItemProp<TItem extends object>(
         itemPropKey: keyof TItem
     ): (index: number, item: TItem) => unknown {
@@ -377,6 +516,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
 export interface PlatformObserverLoadingStateOptions<T> {
     onSuccess?: (value: T) => any;
     onError?: (err: PlatformApiServiceErrorResponse | Error) => any;
+    isReloading?: boolean;
 }
 
 interface DetectChangesParams {

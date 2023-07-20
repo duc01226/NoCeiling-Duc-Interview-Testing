@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 
-namespace PlatformExampleApp.TextSnippet.Persistence.EntityConfigurations;
+namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.EntityConfigurations;
 
 internal sealed class TextSnippetEntityConfiguration : PlatformAuditedEntityConfiguration<TextSnippetEntity, Guid, Guid?>
 {

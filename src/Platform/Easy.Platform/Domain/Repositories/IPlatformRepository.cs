@@ -134,6 +134,13 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> UpdateManyAsync(
+        IUnitOfWork uow,
+        List<TEntity> entities,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        CancellationToken cancellationToken = default);
+
+    public Task<List<TEntity>> UpdateManyAsync(
         Expression<Func<TEntity, bool>> predicate,
         Action<TEntity> updateAction,
         bool dismissSendEvent = false,
@@ -147,6 +154,13 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> DeleteManyAsync(
+        List<TEntity> entities,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        CancellationToken cancellationToken = default);
+
+    public Task<List<TEntity>> DeleteManyAsync(
+        IUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
@@ -383,7 +397,9 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                         GetQuery(uow).Where(predicate).Take(pageSize),
                         cancellationToken: cancellationToken);
 
-                    await DeleteManyAsync(pagingDeleteItems, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
+                    await DeleteManyAsync(uow, pagingDeleteItems, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
+
+                    await uow.CompleteAsync(cancellationToken);
 
                     return pagingDeleteItems;
                 }
@@ -439,7 +455,11 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                             cancellationToken: cancellationToken)
                         .ThenAction(items => items.ForEach(updateAction));
 
-                    return await UpdateManyAsync(pagingUpdateItems, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
+                    var updatedItems = await UpdateManyAsync(uow, pagingUpdateItems, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
+
+                    await uow.CompleteAsync(cancellationToken);
+
+                    return updatedItems;
                 }
             });
     }

@@ -34,6 +34,10 @@ export class PlatformTranslateService {
         );
     }
 
+    public getValue(key: string | string[]) {
+        return this.ngxTranslate.instant(key);
+    }
+
     public getBrowserLangTranslatedText(value: Dictionary<string>) {
         const browserLang = PlatformLanguageUtil.getBrowserLang();
         return value[browserLang] != undefined

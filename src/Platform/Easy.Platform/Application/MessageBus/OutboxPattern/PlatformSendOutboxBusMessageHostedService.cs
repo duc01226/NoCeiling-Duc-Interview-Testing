@@ -145,15 +145,14 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
                 }
                 else
                 {
-                    await PlatformOutboxMessageBusProducerHelper.UpdateExistingOutboxMessageFailedAsync(
+                    await PlatformOutboxMessageBusProducerHelper.UpdateExistingOutboxMessageFailedInNewScopeAsync(
                         toHandleOutboxMessage,
                         new Exception(
                             $"[{GetType().Name}] Error resolve outbox message type " +
                             $"[TypeName:{toHandleOutboxMessage.MessageTypeFullName}]. OutboxId:{toHandleOutboxMessage.Id}"),
                         retryProcessFailedMessageInSecondsUnit,
                         cancellationToken,
-                        Logger,
-                        ServiceProvider.GetService<IPlatformOutboxBusMessageRepository>());
+                        Logger);
                 }
             });
     }

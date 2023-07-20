@@ -1,5 +1,3 @@
-using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.Extensions.WhenCases;
 using Easy.Platform.HangfireBackgroundJob;
 using Microsoft.Extensions.Configuration;
 

@@ -91,7 +91,7 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
                     .Where(p => PlatformRecurringJobAttribute.GetRecurringJobAttributeInfo(p.GetType()) is { ExecuteOnStartUp: true })
                     .ToList();
 
-                allExecuteOnStartUpCurrentRecurringJobExecutors.ForEach(p => backgroundJobScheduler.ExecuteBackgroundJob(p));
+                allExecuteOnStartUpCurrentRecurringJobExecutors.ForEach(p => backgroundJobScheduler.Schedule<object>(p.GetType(), null, DateTimeOffset.UtcNow));
             });
     }
 

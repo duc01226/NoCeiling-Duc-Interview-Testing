@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Timing;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Infrastructures.MessageBus;
@@ -40,6 +41,17 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
     public string LastConsumeError { get; set; }
 
     public Guid? ConcurrencyUpdateToken { get; set; }
+
+    public static string SerializeOneLevelExceptionForLastConsumeError(Exception exception)
+    {
+        return PlatformJsonSerializer.Serialize(
+            new
+            {
+                exception.Message,
+                InnerException = exception.InnerException?.Pipe(ex => SerializeOneLevelExceptionForLastConsumeError(ex)),
+                exception.StackTrace
+            });
+    }
 
     public static Expression<Func<PlatformInboxBusMessage, bool>> CanHandleMessagesExpr(
         double messageProcessingMaximumTimeInSeconds)

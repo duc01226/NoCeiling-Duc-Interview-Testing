@@ -7,7 +7,7 @@ namespace Easy.Platform.MongoDB.Serializer;
 
 public class PlatformGuidToStringMongoDbSerializer : SerializerBase<Guid>, IPlatformMongoBaseSerializer<Guid>
 {
-    private readonly GuidSerializer guidAsBinarySerializer = new GuidSerializer(BsonType.Binary);
+    private readonly GuidSerializer guidAsBinarySerializer = new(BsonType.Binary);
 
     public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, Guid value)
     {
@@ -25,7 +25,7 @@ public class PlatformGuidToStringMongoDbSerializer : SerializerBase<Guid>, IPlat
 
 public class PlatformNullableGuidToStringMongoDbSerializer : SerializerBase<Guid?>, IPlatformMongoBaseSerializer<Guid?>
 {
-    private readonly GuidSerializer guidAsBinarySerializer = new GuidSerializer(BsonType.Binary);
+    private readonly GuidSerializer guidAsBinarySerializer = new(BsonType.Binary);
 
     public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, Guid? value)
     {

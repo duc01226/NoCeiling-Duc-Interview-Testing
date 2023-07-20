@@ -31,8 +31,11 @@ internal sealed class SnippetTextEntityEventBusConsumer : PlatformCqrsEntityEven
             () => throw new Exception("Random Test Retry Consumer Throw Exception"));
 
         Logger.LogInformation(
-            $"{GetType().FullName} has handled message {(message.Payload.DomainEvents.Any() ? $"for DomainEvents [{message.Payload.DomainEvents.Select(p => p.Key).JoinToString(", ")}]" : "")}.\r\n" +
-            $"Message Detail: ${message.ToJson()}");
+            "{GetTypeFullName} has handled message {DomainEventsMessage}.\r\n" +
+            "Message Detail: {Message}",
+            GetType().FullName,
+            message.Payload.DomainEvents.Any() ? $"for DomainEvents [{message.Payload.DomainEvents.Select(p => p.Key).JoinToString(", ")}]" : "",
+            message.ToJson());
 
         return Task.CompletedTask;
     }

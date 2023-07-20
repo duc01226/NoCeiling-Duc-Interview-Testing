@@ -7,7 +7,7 @@ using PlatformExampleApp.TextSnippet.Domain.Events;
 namespace PlatformExampleApp.TextSnippet.Application.MessageBus.Consumers.DomainEventConsumers;
 
 /// <summary>
-/// Consumer use the default routing key using message class type name without using <see cref="PlatformConsumerRoutingKeyAttribute"/>
+/// Consumer use the default routing key using message class type name without using <see cref="PlatformConsumerRoutingKeyAttribute" />
 /// Must ensure TDomainEvent class name (TransferSnippetTextToMultiDbDemoEntityNameDomainEvent) is unique in the system.
 /// </summary>
 // Use self routing key binding [PlatformConsumerRoutingKey(messageGroup: PlatformCqrsDomainEvent.EventTypeValue, messageType: nameof(TransferSnippetTextToMultiDbDemoEntityNameDomainEvent))]
@@ -31,7 +31,8 @@ internal sealed class TransferSnippetTextToMultiDbDemoEntityNameDomainEventConsu
             () => throw new Exception("Random Test Retry Consumer Throw Exception"));
 
         Logger.LogInformation(
-            $"{GetType().FullName} has handled message. Message Detail: {{BusMessage}}",
+            "{GetTypeFullName} has handled message. Message Detail: {BusMessage}",
+            GetType().FullName,
             message.ToFormattedJson());
 
         return Task.CompletedTask;

@@ -1,5 +1,4 @@
 using System.IO;
-using Easy.Platform.AspNetCore.Extensions;
 using Easy.Platform.Common.Extensions;
 using Microsoft.AspNetCore.Http;
 

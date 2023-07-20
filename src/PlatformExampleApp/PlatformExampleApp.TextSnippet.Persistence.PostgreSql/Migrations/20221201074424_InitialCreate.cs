@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 using PlatformExampleApp.TextSnippet.Domain.ValueObjects;
-
-#nullable disable
 
 namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
 {

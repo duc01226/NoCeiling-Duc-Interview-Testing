@@ -1,4 +1,5 @@
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.Timing;
 
 namespace Easy.Platform.Domain.Entities;
 
@@ -29,13 +30,12 @@ public interface IFullAuditedEntity<TUserId> : IDateAuditedEntity, IUserAuditedE
 public abstract class RootAuditedEntity<TEntity, TPrimaryKey, TUserId> : RootEntity<TEntity, TPrimaryKey>, IFullAuditedEntity<TUserId>
     where TEntity : Entity<TEntity, TPrimaryKey>, new()
 {
+    private DateTime? createdDate = Clock.UtcNow;
     private TUserId lastUpdatedBy;
-    private DateTime? lastUpdatedDate;
+    private DateTime? lastUpdatedDate = Clock.UtcNow;
 
     public RootAuditedEntity()
     {
-        CreatedDate ??= DateTime.UtcNow;
-        LastUpdatedDate ??= CreatedDate;
     }
 
     public RootAuditedEntity(TUserId createdBy) : this()
@@ -52,11 +52,15 @@ public abstract class RootAuditedEntity<TEntity, TPrimaryKey, TUserId> : RootEnt
         set => lastUpdatedBy = value;
     }
 
-    public DateTime? CreatedDate { get; set; }
+    public DateTime? CreatedDate
+    {
+        get => createdDate ??= Clock.UtcNow;
+        set => createdDate = value;
+    }
 
     public DateTime? LastUpdatedDate
     {
-        get => lastUpdatedDate ?? CreatedDate;
+        get => lastUpdatedDate ??= CreatedDate;
         set => lastUpdatedDate = value;
     }
 

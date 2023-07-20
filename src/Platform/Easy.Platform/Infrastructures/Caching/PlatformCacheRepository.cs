@@ -123,16 +123,14 @@ public interface IPlatformCacheRepository
 public abstract class PlatformCacheRepository : IPlatformCacheRepository
 {
     public static readonly string CachedKeysCollectionName = "___PlatformGlobalCacheKeys___";
-
-    protected readonly Lazy<ConcurrentDictionary<PlatformCacheKey, object>> GlobalAllRequestCachedKeys;
     protected readonly ILogger Logger;
+
     private readonly IServiceProvider serviceProvider;
 
     public PlatformCacheRepository(IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
     {
         this.serviceProvider = serviceProvider;
         Logger = loggerFactory.CreateLogger(typeof(PlatformCacheRepository));
-        GlobalAllRequestCachedKeys = new Lazy<ConcurrentDictionary<PlatformCacheKey, object>>(() => LoadGlobalAllRequestCachedKeys().GetResult());
     }
 
     public abstract T Get<T>(PlatformCacheKey cacheKey);
@@ -191,9 +189,7 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
         PlatformCacheEntryOptions cacheOptions = null,
         CancellationToken token = default)
     {
-        var cachedData = GlobalAllRequestCachedKeys.Value.ContainsKey(cacheKey)
-            ? await GetAsync<TData>(cacheKey, token)
-            : default;
+        var cachedData = await GetAsync<TData>(cacheKey, token);
 
         return cachedData ?? await RequestAndCacheNewData();
 

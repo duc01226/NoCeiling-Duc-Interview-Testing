@@ -11,8 +11,8 @@ namespace Easy.Platform.RabbitMQ;
 /// </summary>
 public class PlatformRabbitMqChannelPool : IDisposable
 {
-    protected readonly PlatformRabbitMqChannelPoolPolicy ChannelPoolPolicy;
     protected readonly ConcurrentDictionary<int, IModel> CreatedChannelDict = new();
+    protected readonly PlatformRabbitMqChannelPoolPolicy ChannelPoolPolicy;
 
     protected readonly SemaphoreSlim InitInternalObjectPoolLock = new(1, 1);
     protected DefaultObjectPool<IModel> InternalObjectPool;

@@ -22,14 +22,38 @@ public static class PlatformStringToDateTimeConverterHelper
         {
             try
             {
-                return DateTime.Parse(dateTimeStr!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.None)
+                return DateTime.ParseExact(dateTimeStr, SupportDateOnlyFormats, CultureInfo.InvariantCulture)
                     .PipeIf(p => p.Kind == DateTimeKind.Unspecified, p => p.SpecifyKind(DateTimeKind.Utc));
             }
             catch (Exception)
             {
-                return DateTime.ParseExact(dateTimeStr, SupportDateOnlyFormats, CultureInfo.InvariantCulture)
+                return DateTime.Parse(dateTimeStr!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.None)
                     .PipeIf(p => p.Kind == DateTimeKind.Unspecified, p => p.SpecifyKind(DateTimeKind.Utc));
             }
+        }
+    }
+
+    public static DateOnly? TryReadDateOnly(string datetimeOrDateOnlyStr)
+    {
+        if (datetimeOrDateOnlyStr.IsNullOrEmpty()) return null;
+
+        try
+        {
+            try
+            {
+                return DateTime.ParseExact(datetimeOrDateOnlyStr, SupportDateOnlyFormats, CultureInfo.InvariantCulture).ToDateOnly();
+            }
+            catch (Exception)
+            {
+                return DateTime.Parse(datetimeOrDateOnlyStr!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.None).ToDateOnly();
+            }
+        }
+        catch (Exception)
+        {
+            // Try Deserialize like normal standard for normal standard datetime format string
+            return datetimeOrDateOnlyStr.StartsWith('"')
+                ? JsonSerializer.Deserialize<DateTime>(datetimeOrDateOnlyStr).ToDateOnly()
+                : JsonSerializer.Deserialize<DateTime>($"\"{datetimeOrDateOnlyStr}\"").ToDateOnly();
         }
     }
 }

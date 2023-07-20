@@ -17,6 +17,7 @@ export class PlatformVm implements IPlatformVm {
 
     public errorMsgMap: Dictionary<string | undefined | null> = {};
     public loadingMap: Dictionary<boolean | undefined | null> = {};
+    public reloadingMap: Dictionary<boolean | undefined | null> = {};
     public allErrorMsgs?: string;
 
     constructor(data?: Partial<IPlatformVm>) {
@@ -69,23 +70,37 @@ export class PlatformVm implements IPlatformVm {
         this.error = errorMsg;
     }
 
-    public setLoading(value: boolean | undefined, requestKey: string = requestStateDefaultKey) {
-        this.loadingMap = immutableUpdate(this.loadingMap, _ => {
-            _[requestKey] = value;
-        });
-    }
-
     public getErrorMsg(requestKey: string = requestStateDefaultKey): string | null | undefined {
         if (this.errorMsgMap[requestKey] == null && requestKey == requestStateDefaultKey) return this.error;
 
         return this.errorMsgMap[requestKey];
     }
 
+    public setLoading(value: boolean | undefined, requestKey: string = requestStateDefaultKey) {
+        this.loadingMap = immutableUpdate(this.loadingMap, _ => {
+            _[requestKey] = value;
+        });
+    }
+
+    public setReloading(value: boolean | undefined, requestKey: string = requestStateDefaultKey) {
+        this.reloadingMap = immutableUpdate(this.reloadingMap, _ => {
+            _[requestKey] = value;
+        });
+    }
+
     public isLoading(requestKey: string = requestStateDefaultKey): boolean | null | undefined {
         return this.loadingMap[requestKey];
     }
 
+    public isReloading(requestKey: string = requestStateDefaultKey): boolean | null | undefined {
+        return this.reloadingMap[requestKey];
+    }
+
     public isAnyLoadingRequest(): boolean | undefined {
         return keys(this.loadingMap).find(requestKey => this.loadingMap[requestKey]) != undefined;
+    }
+
+    public isAnyReloadingRequest(): boolean | undefined {
+        return keys(this.reloadingMap).find(requestKey => this.reloadingMap[requestKey]) != undefined;
     }
 }

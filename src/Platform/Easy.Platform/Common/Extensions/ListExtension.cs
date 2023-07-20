@@ -1,4 +1,5 @@
 #nullable enable
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 
 namespace Easy.Platform.Common.Extensions;
@@ -447,13 +448,13 @@ public static class ListExtension
     }
 
     // Add this to fix ambiguous evocation with other library by help compiler to select exact type extension
-    public static bool IsNullOrEmpty<T>(this List<T>? items)
+    public static bool IsNullOrEmpty<T>([NotNullWhen(false)] this List<T>? items)
     {
         return items == null || !items.Any();
     }
 
     // Add this to fix ambiguous evocation with other library by help compiler to select exact type extension
-    public static bool IsNullOrEmpty<TKey, TValue>(this Dictionary<TKey, TValue>? items) where TKey : notnull
+    public static bool IsNullOrEmpty<TKey, TValue>([NotNullWhen(false)] this Dictionary<TKey, TValue>? items) where TKey : notnull
     {
         return items == null || !items.Any();
     }

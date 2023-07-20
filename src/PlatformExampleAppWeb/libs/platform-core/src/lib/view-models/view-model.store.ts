@@ -5,7 +5,6 @@ import {
     asyncScheduler,
     defer,
     isObservable,
-    map,
     Observable,
     of,
     OperatorFunction,
@@ -35,6 +34,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
     private storedAnonymousSubscriptions: Subscription[] = [];
     private cachedErrorMsg$: Dictionary<Observable<string | undefined | null>> = {};
     private cachedLoading$: Dictionary<Observable<boolean | undefined | null>> = {};
+    private cachedReloading$: Dictionary<Observable<boolean | undefined | null>> = {};
     private innerStore: ComponentStore<TViewModel>;
     private onInitVmTriggered: boolean = false;
 
@@ -44,15 +44,16 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
 
     private _vm$?: Observable<TViewModel>;
     public get vm$(): Observable<TViewModel> {
-        if (this._vm$ == undefined) {
-            this._vm$ = this.select(s => s).pipe(tapOnce({ next: s => this.triggerOnInitVm() }));
-        }
+        this._vm$ ??= this.select(s => s);
 
         return this._vm$;
     }
 
     public abstract onInitVm: () => Observable<unknown> | void;
 
+    /**
+     * Triggers the onInitVm function and initializes the store's view model state.
+     */
     public triggerOnInitVm() {
         if (!this.onInitVmTriggered) {
             this.onInitVmTriggered = true;
@@ -70,8 +71,11 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         this.cancelAllStoredSubscriptions();
     }
 
+    /**
+     * Returns the state observable of the store.
+     */
     public get state$() {
-        return this.innerStore.select(p => p);
+        return this.vm$;
     }
 
     public abstract reload: () => void;
@@ -83,32 +87,38 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
 
     private _isStatePending$?: Observable<boolean>;
     public get isStatePending$(): Observable<boolean> {
-        this._isStatePending$ ??= this.state$.pipe(map(_ => _.isStatePending));
+        this._isStatePending$ ??= this.select(_ => _.isStatePending);
 
         return this._isStatePending$;
     }
 
     private _isStateLoading$?: Observable<boolean>;
     public get isStateLoading$(): Observable<boolean> {
-        this._isStateLoading$ ??= this.state$.pipe(map(_ => _.isStateLoading));
+        this._isStateLoading$ ??= this.select(_ => _.isStateLoading);
 
         return this._isStateLoading$;
     }
 
     private _isStateSuccess$?: Observable<boolean>;
     public get isStateSuccess$(): Observable<boolean> {
-        this._isStateSuccess$ ??= this.state$.pipe(map(_ => _.isStateSuccess));
+        this._isStateSuccess$ ??= this.select(_ => _.isStateSuccess);
 
         return this._isStateSuccess$;
     }
 
     private _isStateError$?: Observable<boolean>;
     public get isStateError$(): Observable<boolean> {
-        this._isStateError$ ??= this.state$.pipe(map(_ => _.isStateError));
+        this._isStateError$ ??= this.select(_ => _.isStateError);
 
         return this._isStateError$;
     }
 
+    /**
+     * Updates the state of the innerStore of the component with the provided partial state or updater function.
+     *
+     * @param partialStateOrUpdaterFn - Partial state or updater function to update the component's state.
+     * @param assignDeepLevel - Level of deep assignment for the state update (default is 1).
+     */
     public updateState(
         partialStateOrUpdaterFn:
             | PartialDeep<TViewModel>
@@ -118,17 +128,33 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
     ): void {
         this.innerStore.setState(state => {
             try {
-                return immutableUpdate(state, partialStateOrUpdaterFn, true, assignDeepLevel);
+                return immutableUpdate(state, partialStateOrUpdaterFn, 'deepCheck', assignDeepLevel);
             } catch (error) {
-                return immutableUpdate(state, this.buildSetErrorPartialState(<Error>error), true, assignDeepLevel);
+                return immutableUpdate(
+                    state,
+                    this.buildSetErrorPartialState(<Error>error),
+                    'deepCheck',
+                    assignDeepLevel
+                );
             }
         });
     }
 
+    /**
+     * Sets the error state of the component with the provided error response or error.
+     *
+     * @param errorResponse - Error response or error to set the component's error state.
+     */
     public readonly setErrorState = (errorResponse: PlatformApiServiceErrorResponse | Error) => {
         this.updateState(this.buildSetErrorPartialState(errorResponse));
     };
 
+    /**
+     * Builds a partial state object with the error details.
+     *
+     * @param errorResponse - Error response or error to build the partial state with error details.
+     * @returns Partial state object with error details.
+     */
     public buildSetErrorPartialState(
         errorResponse: PlatformApiServiceErrorResponse | Error
     ):
@@ -154,24 +180,45 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         });
         return result;
     }
+
+    private reloadingRequestsCountMap: Dictionary<number> = {};
+    public reloadingRequestsCount() {
+        let result = 0;
+        Object.keys(this.reloadingRequestsCountMap).forEach(key => {
+            result += this.reloadingRequestsCountMap[key];
+        });
+        return result;
+    }
+
     /**
+     * Observes the loading state of a request and updates the component's state accordingly.
      *
-     *  Changes state based on observable request
+     * @template T - Type of observable.
+     * @param requestKey - Key to identify the request.
+     * @param options - Custom loading observer configuration.
+     * @returns Operator function to observe the loading state.
      *
-     * @template T Type of observable
-     * @returns
      * @usage
      *  ** TS:
      *  apiService.loadData().pipe(this.observerLoadingState()).subscribe()
      */
     public observerLoadingState<T>(
-        requestKey: string = PlatformVm.requestStateDefaultKey
+        requestKey?: string,
+        options?: PlatformVmObserverLoadingOptions
     ): (source: Observable<T>) => Observable<T> {
-        const setLoadingState = () => {
-            this.updateState(<Partial<TViewModel>>{ status: 'Loading' });
+        if (requestKey == undefined) requestKey = PlatformVm.requestStateDefaultKey;
 
-            this.setLoading(true, requestKey);
+        const setLoadingState = () => {
+            if (!this.isForSetReloadingState(options) && this.currentState.status != 'Loading')
+                this.updateState(<Partial<TViewModel>>{
+                    status: 'Loading'
+                });
+
+            if (this.isForSetReloadingState(options)) this.setReloading(true, requestKey);
+            else this.setLoading(true, requestKey);
             this.setErrorMsg(null, requestKey);
+
+            if (options?.onShowLoading != null && !this.isForSetReloadingState(options)) options.onShowLoading();
         };
 
         return (source: Observable<T>) => {
@@ -179,18 +226,41 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                 setLoadingState();
 
                 return source.pipe(
-                    onCancel(() => this.setLoading(false, requestKey)),
+                    onCancel(() => {
+                        if (this.isForSetReloadingState(options)) this.setReloading(false, requestKey);
+                        else this.setLoading(false, requestKey);
+
+                        if (options?.onHideLoading != null && !this.isForSetReloadingState(options))
+                            options.onHideLoading();
+                    }),
+
                     tapOnce({
                         next: result => {
-                            // Timeout to queue this update state success/failed after tapResponse
-                            setTimeout(() => {
-                                this.setLoading(false, requestKey);
-                                if (this.currentState.status != 'Error' && this.loadingRequestsCount() <= 0)
-                                    this.updateState(<Partial<TViewModel>>{ status: 'Success' });
-                            });
+                            if (this.isForSetReloadingState(options)) this.setReloading(false, requestKey);
+                            else this.setLoading(false, requestKey);
+
+                            if (options?.onHideLoading != null && !this.isForSetReloadingState(options))
+                                options.onHideLoading();
                         },
                         error: (err: PlatformApiServiceErrorResponse | Error) => {
-                            this.setLoading(false, requestKey);
+                            if (this.isForSetReloadingState(options)) this.setReloading(false, requestKey);
+                            else this.setLoading(false, requestKey);
+
+                            if (options?.onHideLoading != null && !this.isForSetReloadingState(options))
+                                options.onHideLoading();
+                        }
+                    }),
+                    tap({
+                        next: result => {
+                            if (
+                                this.currentState.status != 'Error' &&
+                                this.currentState.status != 'Success' &&
+                                this.loadingRequestsCount() <= 0 &&
+                                this.reloadingRequestsCount() <= 0
+                            )
+                                this.updateState(<Partial<TViewModel>>{ status: 'Success' });
+                        },
+                        error: (err: PlatformApiServiceErrorResponse | Error) => {
                             this.setErrorMsg(err, requestKey);
                             this.setErrorState(err);
                         }
@@ -200,6 +270,16 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         };
     }
 
+    private isForSetReloadingState(options: PlatformVmObserverLoadingOptions | undefined) {
+        return options?.isReloading && !this.currentState.isStateError && !this.currentState.isStateLoading;
+    }
+
+    /**
+     * Sets the error message for a specific request key in the component's state.
+     *
+     * @param error - Error message or null.
+     * @param requestKey - Key to identify the request.
+     */
     public setErrorMsg = (
         error: string | null | PlatformApiServiceErrorResponse | Error,
         requestKey: string = PlatformVm.requestStateDefaultKey
@@ -215,13 +295,25 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         });
     };
 
+    /**
+     * Returns the error message observable for a specific request key.
+     *
+     * @param requestKey - Key to identify the request.
+     * @returns Error message observable.
+     */
     public getErrorMsg$ = (requestKey: string = requestStateDefaultKey) => {
         if (this.cachedErrorMsg$[requestKey] == null) {
-            this.cachedErrorMsg$[requestKey] = this.state$.pipe(map(_ => _.getErrorMsg(requestKey)));
+            this.cachedErrorMsg$[requestKey] = this.select(_ => _.getErrorMsg(requestKey));
         }
         return this.cachedErrorMsg$[requestKey];
     };
 
+    /**
+     * Sets the loading state for a specific request key in the component's state.
+     *
+     * @param value - Loading state value (true, false, or null).
+     * @param requestKey - Key to identify the request.
+     */
     public setLoading = (value: boolean | null, requestKey: string = PlatformVm.requestStateDefaultKey) => {
         if (this.loadingRequestsCountMap[requestKey] == undefined) this.loadingRequestsCountMap[requestKey] = 0;
 
@@ -236,13 +328,60 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         });
     };
 
+    /**
+     * Sets the reloading state for a specific request key in the component's state.
+     *
+     * @param value - Reloading state value (true, false, or null).
+     * @param requestKey - Key to identify the request.
+     */
+    public setReloading = (value: boolean | null, requestKey: string = PlatformVm.requestStateDefaultKey) => {
+        if (this.reloadingRequestsCountMap[requestKey] == undefined) this.reloadingRequestsCountMap[requestKey] = 0;
+
+        if (value == true) this.reloadingRequestsCountMap[requestKey] += 1;
+        if (value == false && this.reloadingRequestsCountMap[requestKey] > 0)
+            this.reloadingRequestsCountMap[requestKey] -= 1;
+
+        this.updateState(<Partial<TViewModel>>{
+            reloadingMap: immutableUpdate(this.currentState.reloadingMap, {
+                [requestKey]: this.reloadingRequestsCountMap[requestKey] > 0
+            })
+        });
+    };
+
+    /**
+     * Returns the loading state observable for a specific request key.
+     *
+     * @param requestKey - Key to identify the request.
+     * @returns Loading state observable.
+     */
     public isLoading$ = (requestKey: string = requestStateDefaultKey) => {
         if (this.cachedLoading$[requestKey] == null) {
-            this.cachedLoading$[requestKey] = this.state$.pipe(map(_ => _.isLoading(requestKey)));
+            this.cachedLoading$[requestKey] = this.select(_ => _.isLoading(requestKey));
         }
         return this.cachedLoading$[requestKey];
     };
 
+    /**
+     * Returns the reloading state observable for a specific request key.
+     *
+     * @param requestKey - Key to identify the request.
+     * @returns Reloading state observable.
+     */
+    public isReloading$ = (requestKey: string = requestStateDefaultKey) => {
+        if (this.cachedReloading$[requestKey] == null) {
+            this.cachedReloading$[requestKey] = this.select(_ => _.isReloading(requestKey));
+        }
+        return this.cachedReloading$[requestKey];
+    };
+
+    /**
+     * Selects a slice of the component's state and returns an observable of the selected slice.
+     *
+     * @template Result - Type of the selected slice.
+     * @param projector - Function to select the desired slice of the state.
+     * @param config - Select configuration options (optional).
+     * @returns Observable of the selected slice of the state.
+     */
     public select<Result>(
         projector: (s: TViewModel) => Result,
         config?: PlatformStoreSelectConfig
@@ -264,17 +403,37 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         return selectResult$;
     }
 
+    /**
+     * Creates an effect, which return a function when called will subscribe to the RXJS observable returned
+     * by the given generator. This used to the define loading/updating data method in the store.
+     *
+     * This effect is subscribed to throughout the lifecycle of the store.
+     * @param generator A function that takes an origin Observable input and
+     *     returns an Observable. The Observable that is returned will be
+     *     subscribed to for the life of the store.
+     * @return A function that, when called, will trigger the origin Observable.
+     * @usage
+     * Ex1: public loadData = this.effect(() => this.someApi.load()); Use function: this.loadData();
+     *
+     * Ex2: public loadData = this.effect((query$: Observable<TQuery>, isReloading?: boolean) => query$.pipe(switchMap(query => this.someApi.load(query)))); Use function: this.loadData(<TQuery>query param here);
+     */
     public effect<
         ProvidedType,
         OriginType extends Observable<ProvidedType> | unknown = Observable<ProvidedType>,
         ObservableType = OriginType extends Observable<infer A> ? A : never,
         ReturnType = ProvidedType | ObservableType extends void
-            ? (observableOrValue?: ObservableType | Observable<ObservableType> | undefined) => Subscription
-            : (observableOrValue: ObservableType | Observable<ObservableType>) => Subscription
-    >(generator: (origin$: OriginType) => Observable<unknown>): ReturnType {
+            ? (
+                  observableOrValue?: ObservableType | Observable<ObservableType> | undefined,
+                  isReloading?: boolean
+              ) => Subscription
+            : (observableOrValue: ObservableType | Observable<ObservableType>, isReloading?: boolean) => Subscription
+    >(generator: (origin$: OriginType, isReloading?: boolean) => Observable<unknown>): ReturnType {
         let previousEffectSub: Subscription = new Subscription();
 
-        return ((observableOrValue?: ObservableType | Observable<ObservableType>): Subscription => {
+        return ((
+            observableOrValue?: ObservableType | Observable<ObservableType>,
+            isReloading?: boolean
+        ): Subscription => {
             previousEffectSub.unsubscribe();
 
             const observable$ = isObservable(observableOrValue) ? observableOrValue : of(observableOrValue);
@@ -289,7 +448,8 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                             throttleTime(defaultThrottleDuration, asyncScheduler, { leading: true, trailing: true })
                         )
                     ))
-                )
+                ),
+                isReloading
             )
                 .pipe(takeUntil(this.innerStore.destroy$))
                 .subscribe();
@@ -301,10 +461,22 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         }) as unknown as ReturnType;
     }
 
+    /**
+     * Maps the emitted value of the source observable to the current view model state.
+     *
+     * @template T - Type emitted by the source observable.
+     * @returns Operator function to map the emitted value to the current view model state.
+     */
     public switchMapVm<T>(): OperatorFunction<T, TViewModel> {
         return switchMap(p => this.select(vm => vm));
     }
 
+    /**
+     * Creates an RxJS operator function that taps into the source observable to handle next, error, and complete events.
+     * @param nextFn A function to handle the next value emitted by the source observable.
+     * @param errorFn  (optional): A function to handle errors emitted by the source observable.
+     * @param completeFn (optional): A function to handle the complete event emitted by the source observable.
+     */
     protected tapResponse<T, E = any>(
         nextFn: (next: T) => void,
         errorFn?: (error: E) => void,
@@ -324,15 +496,24 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         });
     }
 
+    /**
+     * Stores a subscription using the specified key. The subscription will be unsubscribed when the store is destroyed.
+     */
     protected storeSubscription(key: string, subscription: Subscription): void {
         this.storedSubscriptionsMap.set(key, subscription);
     }
 
+    /**
+     * Stores a subscription. The subscription will be unsubscribed when the store is destroyed.
+     */
     protected storeAnonymousSubscription(subscription: Subscription): void {
         list_remove(this.storedAnonymousSubscriptions, p => p.closed);
         this.storedAnonymousSubscriptions.push(subscription);
     }
 
+    /**
+     * Subscribes to the provided observable and stores the subscription in the storedAnonymousSubscriptions array.
+     */
     protected subscribe<T>(observable: Observable<T>): Subscription {
         const subs = observable.subscribe();
 
@@ -341,32 +522,32 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         return subs;
     }
 
+    /**
+     * Cancels and removes a stored subscription identified by the provided key from the
+     */
     protected cancelStoredSubscription(key: string): void {
         this.storedSubscriptionsMap.get(key)?.unsubscribe();
         this.storedSubscriptionsMap.delete(key);
     }
 
+    /**
+     * Cancels and removes all stored subscriptions from both the storedSubscriptionsMap and storedAnonymousSubscriptions.
+     */
     protected cancelAllStoredSubscriptions(): void {
         this.storedSubscriptionsMap.forEach((sub, key) => this.cancelStoredSubscription(key));
         this.storedAnonymousSubscriptions.forEach(sub => sub.unsubscribe());
     }
 
+    /**
+     * Returns the current state of the store.
+     */
     protected get(): TViewModel {
         return this.currentState;
     }
-
-    // public override patchState(
-    //     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    //     partialStateOrUpdaterFn:
-    //         | Partial<TViewModel>
-    //         | Observable<Partial<TViewModel>>
-    //         | ((state: TViewModel) => Partial<TViewModel>)
-    // ): void {
-    //     throw new Error('Do not use this function from the library. Use updateState instead to handle immutable case');
-    // }
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    // public override setState(stateOrUpdaterFn: TViewModel | ((state: TViewModel) => TViewModel)): void {
-    //     throw new Error('Do not use this function from the library. Use updateState instead to handle immutable case');
-    // }
 }
+
+export type PlatformVmObserverLoadingOptions = {
+    onShowLoading?: () => unknown;
+    onHideLoading?: () => unknown;
+    isReloading?: boolean;
+};

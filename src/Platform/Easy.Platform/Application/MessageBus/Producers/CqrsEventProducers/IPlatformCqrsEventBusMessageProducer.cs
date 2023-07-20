@@ -57,6 +57,8 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
 
     protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
 
+    protected override bool AllowUsingUserContextAccessor => true;
+
     protected abstract TMessage BuildMessage(TEvent @event);
 
     protected override async Task HandleAsync(

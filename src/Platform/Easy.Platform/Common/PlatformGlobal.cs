@@ -1,3 +1,5 @@
+using Easy.Platform.Application.Context.UserContext;
+using Easy.Platform.Infrastructures.Caching;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -6,15 +8,22 @@ namespace Easy.Platform.Common;
 
 public abstract class PlatformGlobal
 {
-    public static IServiceProvider RootServiceProvider { get; private set; }
+    /// <summary>
+    /// This by default will be set as root service provider of the application on application module init
+    /// </summary>
+    public static IServiceProvider ServiceProvider { get; private set; }
 
-    public static ILoggerFactory LoggerFactory => RootServiceProvider.GetRequiredService<ILoggerFactory>();
+    public static ILoggerFactory LoggerFactory => ServiceProvider.GetRequiredService<ILoggerFactory>();
 
-    public static IConfiguration Configuration => RootServiceProvider.GetRequiredService<IConfiguration>();
+    public static IConfiguration Configuration => ServiceProvider.GetRequiredService<IConfiguration>();
+
+    public static IPlatformApplicationUserContextAccessor UserContext => ServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>();
+
+    public static IPlatformCacheRepositoryProvider CacheRepositoryProvider => ServiceProvider.GetRequiredService<IPlatformCacheRepositoryProvider>();
 
     public static ILogger CreateDefaultLogger()
     {
-        return CreateDefaultLogger(RootServiceProvider);
+        return CreateDefaultLogger(ServiceProvider);
     }
 
     public static ILogger CreateDefaultLogger(IServiceProvider serviceProvider)
@@ -24,6 +33,6 @@ public abstract class PlatformGlobal
 
     public static void SetRootServiceProvider(IServiceProvider rootServiceProvider)
     {
-        RootServiceProvider = rootServiceProvider;
+        ServiceProvider = rootServiceProvider;
     }
 }

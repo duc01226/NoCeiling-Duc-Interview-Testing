@@ -28,26 +28,31 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
 {
     public const int AckMessageRetryCount = int.MaxValue;
     public const int AckMessageRetryDelaySeconds = 10;
+
     public static readonly ActivitySource ActivitySource = new(nameof(PlatformRabbitMqProcessInitializerService));
     public static readonly TextMapPropagator TracingActivityPropagator = Propagators.DefaultTextMapPropagator;
+
     private readonly IPlatformApplicationSettingContext applicationSettingContext;
     private readonly PlatformConsumerRabbitMqChannelPool channelPool;
-
-    private CancellationToken currentStartProcessCancellationToken;
+    private readonly PlatformConsumeInboxBusMessageHostedService consumeInboxBusMessageHostedService;
     private readonly IPlatformRabbitMqExchangeProvider exchangeProvider;
+    private readonly PlatformInboxBusMessageCleanerHostedService inboxBusMessageCleanerHostedService;
     private readonly PlatformMessageBusConfig messageBusConfig;
     private readonly IPlatformMessageBusScanner messageBusScanner;
     private readonly PlatformRabbitMqOptions options;
-    private bool processStarted;
-    private readonly ConcurrentDictionary<string, List<Type>> routingKeyToCanProcessConsumerTypesCacheMap = new();
+    private readonly PlatformOutboxBusMessageCleanerHostedService outboxBusMessageCleanerHostedService;
 
-    private readonly IServiceProvider serviceProvider;
+    private readonly ConcurrentDictionary<string, List<Type>> routingKeyToCanProcessConsumerTypesCacheMap = new();
+    private readonly PlatformSendOutboxBusMessageHostedService sendOutboxBusMessageHostedService;
 
     // Because connect consumer could lead to timeout exception if call parallel connect a lot, so that lock to just connect once at a time
     private readonly SemaphoreSlim startConnectSingleConsumerLock = new(initialCount: 1, maxCount: 1);
     private readonly SemaphoreSlim startProcessLock = new(initialCount: 1, maxCount: 1);
     private readonly SemaphoreSlim stopProcessLock = new(initialCount: 1, maxCount: 1);
     private readonly ConcurrentDictionary<string, object> waitingAckMessages = new();
+    private CancellationToken currentStartProcessCancellationToken;
+
+    private bool processStarted;
 
     public PlatformRabbitMqProcessInitializerService(
         IPlatformApplicationSettingContext applicationSettingContext,
@@ -55,16 +60,22 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         IPlatformMessageBusScanner messageBusScanner,
         PlatformConsumerRabbitMqChannelPool channelPool,
         PlatformRabbitMqOptions options,
-        IServiceProvider serviceProvider,
-        PlatformMessageBusConfig messageBusConfig)
+        PlatformMessageBusConfig messageBusConfig,
+        PlatformSendOutboxBusMessageHostedService sendOutboxBusMessageHostedService,
+        PlatformOutboxBusMessageCleanerHostedService outboxBusMessageCleanerHostedService,
+        PlatformConsumeInboxBusMessageHostedService consumeInboxBusMessageHostedService,
+        PlatformInboxBusMessageCleanerHostedService inboxBusMessageCleanerHostedService)
     {
         this.applicationSettingContext = applicationSettingContext;
         this.exchangeProvider = exchangeProvider;
         this.messageBusScanner = messageBusScanner;
         this.channelPool = channelPool;
         this.options = options;
-        this.serviceProvider = serviceProvider;
         this.messageBusConfig = messageBusConfig;
+        this.sendOutboxBusMessageHostedService = sendOutboxBusMessageHostedService;
+        this.outboxBusMessageCleanerHostedService = outboxBusMessageCleanerHostedService;
+        this.consumeInboxBusMessageHostedService = consumeInboxBusMessageHostedService;
+        this.inboxBusMessageCleanerHostedService = inboxBusMessageCleanerHostedService;
         Logger = PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformRabbitMqProcessInitializerService));
         InvokeConsumerLogger = PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformMessageBusConsumer));
     }
@@ -89,21 +100,21 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         {
             if (processStarted) return;
 
-            Logger.LogInformation($"[{GetType().Name}] RabbitMq init process STARTED");
+            Logger.LogInformation("[{TargetName}] RabbitMq init process STARTED", GetType().Name);
 
             DeclareRabbitMqConfiguration();
 
             await StartConnectConsumersToQueues();
 
             await Task.WhenAll(
-                PlatformGlobal.RootServiceProvider.GetRequiredService<PlatformSendOutboxBusMessageHostedService>().StartAsync(currentStartProcessCancellationToken),
-                PlatformGlobal.RootServiceProvider.GetRequiredService<PlatformOutboxBusMessageCleanerHostedService>().StartAsync(currentStartProcessCancellationToken),
-                PlatformGlobal.RootServiceProvider.GetRequiredService<PlatformConsumeInboxBusMessageHostedService>().StartAsync(currentStartProcessCancellationToken),
-                PlatformGlobal.RootServiceProvider.GetRequiredService<PlatformInboxBusMessageCleanerHostedService>().StartAsync(currentStartProcessCancellationToken));
+                sendOutboxBusMessageHostedService.StartAsync(currentStartProcessCancellationToken),
+                outboxBusMessageCleanerHostedService.StartAsync(currentStartProcessCancellationToken),
+                consumeInboxBusMessageHostedService.StartAsync(currentStartProcessCancellationToken),
+                inboxBusMessageCleanerHostedService.StartAsync(currentStartProcessCancellationToken));
 
             processStarted = true;
 
-            Logger.LogInformation($"[{GetType().Name}] RabbitMq init process FINISHED");
+            Logger.LogInformation("[{TargetName}] RabbitMq init process FINISHED", GetType().Name);
         }
         finally
         {
@@ -158,34 +169,38 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
             // Binding all defined event bus consumer to RabbitMQ Basic Consumer
             await messageBusScanner.ScanAllDefinedConsumerBindingRoutingKeys()
                 .Select(GetConsumerQueueName)
-                .ParallelAsync(
+                .ForEachAsync(
                     async queueName =>
                     {
-                        // Support parallel handling messages for one queue. Each channel only can handling on thread, so that create each channel used for each consumer
-                        // for one queue
-                        await Enumerable.Range(0, NumberOfParallelConsumersPerQueue.Value)
-                            .ParallelAsync(
-                                async _ =>
-                                {
-                                    var currentChannel = channelPool.Get();
+                        var forAConsumerQueueParallelChannels = Enumerable.Range(0, options.CalculateNumberOfParallelConsumers()).Select(_ => channelPool.Get()).ToList();
 
-                                    // Config RabbitMQ Basic Consumer
-                                    var applicationRabbitConsumer = new AsyncEventingBasicConsumer(currentChannel)
-                                        .With(_ => _.Received += OnMessageReceived);
+                        // Support parallel handling messages for one queue. Each channel only can handling on thread, so that create each channel used for each consumer for one queue
+                        await forAConsumerQueueParallelChannels.ParallelAsync(
+                            async currentChannel =>
+                            {
+                                await Task.Run(
+                                    () =>
+                                    {
+                                        // Config RabbitMQ Basic Consumer
+                                        var applicationRabbitConsumer = new AsyncEventingBasicConsumer(currentChannel)
+                                            .With(_ => _.Received += OnMessageReceived);
 
-                                    // autoAck: false -> the Consumer will ack manually.
-                                    startConnectSingleConsumerLock.ExecuteLockAction(
-                                        () => currentChannel.BasicConsume(queueName, autoAck: false, applicationRabbitConsumer));
-                                });
+                                        // autoAck: false -> the Consumer will ack manually.
+                                        startConnectSingleConsumerLock.ExecuteLockAction(
+                                            () => currentChannel.BasicConsume(queueName, autoAck: false, applicationRabbitConsumer));
+                                    });
+                            });
 
-                        Logger.LogInformation(message: $"Consumer connected to queue {queueName}");
+                        forAConsumerQueueParallelChannels.ForEach(channel => channelPool.Return(channel));
+
+                        Logger.LogInformation("Consumers connected to queue {QueueName}", queueName);
                     });
 
             Logger.LogInformation("Start connect all consumers to rabbitmq queue FINISHED");
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, $"[{GetType().FullName}] RabbitMq Consumer can't start");
+            Logger.LogWarning(ex, "[{GetTypeFullName}] RabbitMq Consumer can't start", GetType().FullName);
             throw;
         }
     }
@@ -231,7 +246,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                             ActivityKind.Consumer,
                             parentContext.ActivityContext))
                         {
-                            using (var scope = serviceProvider.CreateScope())
+                            using (var scope = PlatformGlobal.ServiceProvider.CreateScope())
                             {
                                 var consumer = scope.ServiceProvider.GetService(consumerType).Cast<IPlatformMessageBusConsumer>();
 
@@ -247,8 +262,9 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         {
             Logger.LogError(
                 ex,
-                $"[MessageBus] Consume message error. [RoutingKey:{rabbitMqMessage.RoutingKey}].{Environment.NewLine}" +
-                $"Message: {Encoding.UTF8.GetString(rabbitMqMessage.Body.Span)}");
+                "[MessageBus] Consume message error. [RoutingKey:{RabbitMqMessage.RoutingKey}]. Message: {RabbitMqMessage.Body}",
+                rabbitMqMessage.RoutingKey,
+                Encoding.UTF8.GetString(rabbitMqMessage.Body.Span));
 
             if (ProcessRequeueMessage(channel, rabbitMqMessage, ex.BusMessage) == false) AckMessage(channel, rabbitMqMessage, isReject: true);
         }
@@ -256,8 +272,9 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         {
             Logger.LogError(
                 ex,
-                $"[MessageBus] Consume message error must REJECT. [RoutingKey:{rabbitMqMessage.RoutingKey}].{Environment.NewLine}" +
-                $"Message: {Encoding.UTF8.GetString(rabbitMqMessage.Body.Span)}");
+                "[MessageBus] Consume message error must REJECT. [RoutingKey:{RabbitMqMessage.RoutingKey}]. Message: {RabbitMqMessage.Body}",
+                rabbitMqMessage.RoutingKey,
+                Encoding.UTF8.GetString(rabbitMqMessage.Body.Span));
 
             // Reject the message.
             Util.TaskRunner.WaitRetry(
@@ -326,7 +343,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                 consumerType => new
                 {
                     ConsumerType = consumerType,
-                    ConsumerExecuteOrder = serviceProvider.ExecuteScoped(
+                    ConsumerExecuteOrder = PlatformGlobal.ServiceProvider.ExecuteScoped(
                         scope => scope.ServiceProvider.GetService(consumerType).Cast<IPlatformMessageBusConsumer>().ExecuteOrder())
                 })
             .OrderBy(p => p.ConsumerExecuteOrder)
@@ -361,16 +378,18 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                         channel.BasicNack(rabbitMqMessage.DeliveryTag, multiple: true, requeue: true);
 
                         Logger.LogWarning(
-                            message: $"RabbitMQ retry queue message for the routing key: {rabbitMqMessage.RoutingKey}.{Environment.NewLine}" +
+                            message: "RabbitMQ retry queue message for the routing key: {RabbitMqMessage.RoutingKey}. " +
                                      "Message: {BusMessage}",
+                            rabbitMqMessage.RoutingKey,
                             busMessage.ToJson());
                     },
                     retryAttempt => TimeSpan.FromSeconds(options.ProcessRequeueMessageRetryDelaySeconds),
                     retryCount: options.ProcessRequeueMessageRetryCount,
                     finalEx => Logger.LogError(
                         finalEx,
-                        message: $"RabbitMQ retry queue failed message for the routing key: {rabbitMqMessage.RoutingKey}.{Environment.NewLine}" +
+                        message: "RabbitMQ retry queue failed message for the routing key: {RabbitMqMessage.RoutingKey}. " +
                                  "Message: {BusMessage}",
+                        rabbitMqMessage.RoutingKey,
                         busMessage.ToJson()));
             },
             () => Logger,
@@ -395,7 +414,10 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                 consumer.CustomJsonSerializerOptions()),
             ex => Logger.LogError(
                 ex,
-                $"RabbitMQ parsing message to {consumerMessageType.Name} error for the routing key {args.RoutingKey}.{Environment.NewLine} Body: {Encoding.UTF8.GetString(args.Body.Span)}"));
+                "RabbitMQ parsing message to {ConsumerMessageType.Name} error for the routing key {Args.RoutingKey}. Body: {Args.Body}",
+                consumerMessageType.Name,
+                args.RoutingKey,
+                Encoding.UTF8.GetString(args.Body.Span)));
 
         if (busMessage != null)
         {
@@ -436,7 +458,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
             .Handle<Exception>()
             .WaitAndRetry(
                 options.InitRabbitMqChannelRetryCount,
-                retryAttempt => 10.Seconds())
+                retryAttempt => 5.Seconds())
             .ExecuteAndThrowFinalException(
                 () => channelPool.TryInitFirstChannel(),
                 ex =>
@@ -534,7 +556,10 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
 
         Logger.LogInformation(
             message:
-            $"Queue {queueName} has been declared. Exchange:{exchange}. RoutingKey:{consumerBindingRoutingKey}");
+            "Queue {QueueName} has been declared. Exchange:{Exchange}. RoutingKey:{ConsumerBindingRoutingKey}",
+            queueName,
+            exchange,
+            consumerBindingRoutingKey);
     }
 
     private void DeclareExchangesForRoutingKeys(List<string> routingKeys)

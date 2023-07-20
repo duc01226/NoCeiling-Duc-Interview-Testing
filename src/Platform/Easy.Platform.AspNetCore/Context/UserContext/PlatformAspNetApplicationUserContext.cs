@@ -11,11 +11,11 @@ namespace Easy.Platform.AspNetCore.Context.UserContext;
 
 public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserContext
 {
-    private bool cachedUserContextDataInitiated;
+    private readonly IHttpContextAccessor httpContextAccessor;
     private readonly IPlatformApplicationUserContextKeyToClaimTypeMapper claimTypeMapper;
     private readonly MethodInfo getValueByGenericTypeMethodInfo;
-    private readonly IHttpContextAccessor httpContextAccessor;
     private readonly object initCachedUserContextDataLock = new();
+    private bool cachedUserContextDataInitiated;
 
     public PlatformAspNetApplicationUserContext(
         IHttpContextAccessor httpContextAccessor,

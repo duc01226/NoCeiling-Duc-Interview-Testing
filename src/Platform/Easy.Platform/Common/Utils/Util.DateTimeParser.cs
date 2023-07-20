@@ -15,18 +15,31 @@ public static partial class Util
             "dd-MM-yyyy"
         };
 
-        public static DateTimeOffset? ParseDateTimeOffset(dynamic value)
+        public static DateTimeOffset? ParseDateTimeOffset(string value)
         {
-            return DateTimeOffset.TryParse(value, out DateTimeOffset dateTimeOffsetValue)
+            if (value.IsNullOrEmpty()) return null;
+
+            return DateTimeOffset.TryParse(value, out var dateTimeOffsetValue)
                 ? dateTimeOffsetValue
                 : null;
         }
 
-        public static DateTime? Parse(dynamic value)
+        public static DateTime? Parse(string value)
         {
-            return DateTime.TryParse(value, out DateTime dateTimeOffsetValue)
-                ? dateTimeOffsetValue
-                : null;
+            if (value.IsNullOrEmpty()) return null;
+
+            if (DateTime.TryParse(value, out var tryParsedValue))
+                return tryParsedValue.PipeIf(tryParsedValue.Kind == DateTimeKind.Unspecified, _ => _.SpecifyKind(DateTimeKind.Utc));
+
+            if (DateTime.TryParseExact(
+                value,
+                DefaultSupportDateOnlyFormats,
+                null,
+                DateTimeStyles.None,
+                out var tryParseExactValue))
+                return tryParseExactValue.PipeIf(tryParseExactValue.Kind == DateTimeKind.Unspecified, _ => _.SpecifyKind(DateTimeKind.Utc));
+
+            return null;
         }
 
         public static DateTime? ToPredefinedDateTimeFormat(string dateTime, string[] dateTimeFormats = null)
@@ -39,7 +52,7 @@ public static partial class Util
                 provider: null,
                 style: DateTimeStyles.None,
                 out var result)
-                ? result
+                ? result.PipeIf(result.Kind == DateTimeKind.Unspecified, _ => _.SpecifyKind(DateTimeKind.Utc))
                 : null;
         }
     }

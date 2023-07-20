@@ -14,4 +14,5 @@ export interface HttpClientOptions {
           };
     reportProgress?: boolean;
     withCredentials?: boolean;
+    timeoutSeconds?: number;
 }

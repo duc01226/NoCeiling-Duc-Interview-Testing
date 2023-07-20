@@ -35,12 +35,18 @@ internal sealed class DemoUsingFieldUpdatedDomainEventOnSnippetTextEntityEventHa
         if (snippetTextPropUpdatedEvent != null)
             CreateGlobalLogger()
                 .LogInformation(
-                    $"TextSnippetEntity Id:'{@event.EntityData.Id}' SnippetText updated. Prev: {snippetTextPropUpdatedEvent.OriginalValue}. New: {snippetTextPropUpdatedEvent.NewValue}");
+                    "TextSnippetEntity Id:'{EntityDataId}' SnippetText updated. Prev: {OriginalValue}. New: {NewValue}",
+                    @event.EntityData.Id,
+                    snippetTextPropUpdatedEvent.OriginalValue,
+                    snippetTextPropUpdatedEvent.NewValue);
 
         var fullTextPropUpdatedEvent = @event.FindFieldUpdatedEvent(p => p.FullText);
         if (fullTextPropUpdatedEvent != null)
             CreateGlobalLogger()
                 .LogInformation(
-                    $"TextSnippetEntity Id:'{@event.EntityData.Id}' FullText updated. Prev: {fullTextPropUpdatedEvent.OriginalValue}. New: {fullTextPropUpdatedEvent.NewValue}");
+                    "TextSnippetEntity Id:'{Id}' FullText updated. Prev: {OriginalValue}. New: {NewValue}",
+                    @event.EntityData.Id,
+                    fullTextPropUpdatedEvent.OriginalValue,
+                    fullTextPropUpdatedEvent.NewValue);
     }
 }

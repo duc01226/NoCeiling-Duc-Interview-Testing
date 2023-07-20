@@ -50,18 +50,18 @@ public static class EnsureThrowCommonExceptionExtension
     }
 
     [return: NotNull]
-    public static T EnsureFound<T>(this T? obj, string? errorMsg = null)
+    public static T EnsureFound<T>(this T? obj, string errorMsg = PlatformValidateObjectExtension.DefaultNotFoundMessage)
     {
         if (obj is Task) throw new Exception($"Target should not be a task. You might want to use {nameof(EnsureFound)} instead.");
         return obj.ValidateFound(errorMsg).WithNotFoundException().EnsureValid()!;
     }
 
-    public static IEnumerable<T> EnsureFound<T>(this IEnumerable<T> objects, string? errorMsg = null)
+    public static IEnumerable<T> EnsureFound<T>(this IEnumerable<T> objects, string errorMsg = PlatformValidateObjectExtension.DefaultNotFoundMessage)
     {
         return objects.ValidateFound(errorMsg).WithNotFoundException().EnsureValid();
     }
 
-    public static List<T> EnsureFound<T>(this List<T> objects, string? errorMsg = null)
+    public static List<T> EnsureFound<T>(this List<T> objects, string errorMsg = PlatformValidateObjectExtension.DefaultNotFoundMessage)
     {
         return objects.ValidateFound(errorMsg).WithNotFoundException().EnsureValid();
     }
@@ -75,61 +75,69 @@ public static class EnsureThrowCommonExceptionExtension
         this List<T> objects,
         Func<T, TFoundBy> foundBy,
         List<TFoundBy> toFoundByObjects,
-        Func<List<TFoundBy>, string> notFoundByObjectsToErrorMsg)
+        Func<List<TFoundBy>, string>? notFoundByObjectsToErrorMsg = null)
     {
         return objects.ValidateFoundAllBy(foundBy, toFoundByObjects, notFoundByObjectsToErrorMsg).WithNotFoundException().EnsureValid();
     }
 
-    public static ICollection<T> EnsureFound<T>(this ICollection<T> objects, string? errorMsg = null)
+    public static ICollection<T> EnsureFound<T>(this ICollection<T> objects, string errorMsg = PlatformValidateObjectExtension.DefaultNotFoundMessage)
     {
         return objects.ValidateFound(errorMsg).WithNotFoundException().EnsureValid();
     }
 
     [return: NotNull]
-    public static T EnsureFound<T>(this T? obj, Func<T, bool> and, string? errorMsg = null)
+    public static T EnsureFound<T>(this T? obj, Func<T, bool> and, string errorMsg = PlatformValidateObjectExtension.DefaultNotFoundMessage)
     {
         if (obj is Task) throw new Exception($"Target should not be a task. You might want to use {nameof(EnsureFound)} instead.");
         return obj.ValidateFound(and, errorMsg).WithNotFoundException().EnsureValid()!;
     }
 
-    public static IQueryable<T> EnsureFoundAny<T>(this IQueryable<T> query, Expression<Func<T, bool>> any, string? errorMsg = null)
+    public static IQueryable<T> EnsureFoundAny<T>(
+        this IQueryable<T> query,
+        Expression<Func<T, bool>> any,
+        string errorMsg = PlatformValidateObjectExtension.DefaultNotFoundMessage)
     {
         return query.ValidateFoundAny(any, errorMsg).WithNotFoundException().EnsureValid();
     }
 
-    public static async Task<T> EnsureFound<T>(this Task<T> objectTask, string? errorMessage = null)
+    public static async Task<T> EnsureFound<T>(this Task<T> objectTask, string errorMsg = PlatformValidateObjectExtension.DefaultNotFoundMessage)
     {
         var obj = await objectTask;
-        return obj.EnsureFound(errorMessage);
+        return obj.EnsureFound(errorMsg);
     }
 
-    public static Task<T> EnsureFound<T>(this T? obj, Func<T, Task<bool>> and, string? errorMsg = null)
+    public static Task<T> EnsureFound<T>(this T? obj, Func<T, Task<bool>> and, string errorMsg = PlatformValidateObjectExtension.DefaultNotFoundMessage)
     {
         return obj.ValidateFoundAsync(and, errorMsg).Then(p => p.WithNotFoundException().EnsureValid());
     }
 
-    public static async Task<T> EnsureFound<T>(this Task<T?> objectTask, Func<T, bool> and, string? errorMsg = null)
+    public static async Task<T> EnsureFound<T>(this Task<T?> objectTask, Func<T, bool> and, string errorMsg = PlatformValidateObjectExtension.DefaultNotFoundMessage)
     {
         var obj = await objectTask;
         return obj.EnsureFound(and, errorMsg);
     }
 
-    public static async Task<T> EnsureFound<T>(this Task<T?> objectTask, Func<T, Task<bool>> and, string? errorMsg = null)
+    public static async Task<T> EnsureFound<T>(
+        this Task<T?> objectTask,
+        Func<T, Task<bool>> and,
+        string errorMsg = PlatformValidateObjectExtension.DefaultNotFoundMessage)
     {
         var obj = await objectTask;
         return await obj.EnsureFound(and, errorMsg);
     }
 
-    public static async Task<IEnumerable<T>> EnsureFound<T>(this Task<IEnumerable<T>> objectsTask, string? errorMessage = null)
+    public static async Task<IEnumerable<T>> EnsureFound<T>(
+        this Task<IEnumerable<T>> objectsTask,
+        string errorMsg = PlatformValidateObjectExtension.DefaultNotFoundMessage)
     {
         var objects = await objectsTask;
-        return objects.EnsureFound(errorMessage);
+        return objects.EnsureFound(errorMsg);
     }
 
-    public static async Task<List<T>> EnsureFound<T>(this Task<List<T>> objectsTask, string? errorMessage = null)
+    public static async Task<List<T>> EnsureFound<T>(this Task<List<T>> objectsTask, string errorMsg = PlatformValidateObjectExtension.DefaultNotFoundMessage)
     {
         var objects = await objectsTask;
-        return objects.EnsureFound(errorMessage);
+        return objects.EnsureFound(errorMsg);
     }
 
     public static async Task<List<T>> EnsureFoundAll<T>(this Task<List<T>> objectsTask, List<T> mustFoundAllItems, Func<List<T>, string> errorMsg)
@@ -138,7 +146,19 @@ public static class EnsureThrowCommonExceptionExtension
         return objects.EnsureFoundAll(mustFoundAllItems, errorMsg);
     }
 
-    public static async Task<ICollection<T>> EnsureFound<T>(this Task<ICollection<T>> objectsTask, string? errorMessage = null)
+    public static async Task<List<T>> EnsureFoundAllBy<T, TFoundBy>(
+        this Task<List<T>> objectsTask,
+        Func<T, TFoundBy> foundBy,
+        List<TFoundBy> toFoundByObjects,
+        Func<List<TFoundBy>, string>? notFoundByObjectsToErrorMsg = null)
+    {
+        var objects = await objectsTask;
+        return objects.EnsureFoundAllBy(foundBy, toFoundByObjects, notFoundByObjectsToErrorMsg);
+    }
+
+    public static async Task<ICollection<T>> EnsureFound<T>(
+        this Task<ICollection<T>> objectsTask,
+        string errorMessage = PlatformValidateObjectExtension.DefaultNotFoundMessage)
     {
         var objects = await objectsTask;
         return objects.EnsureFound(errorMessage);

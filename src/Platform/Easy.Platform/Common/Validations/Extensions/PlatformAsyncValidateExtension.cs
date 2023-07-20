@@ -226,12 +226,16 @@ public static class PlatformAsyncValidateExtension
         return objectsTask.Then(p => p.ValidateFoundAllBy(foundBy, toFoundByObjects, notFoundByObjectsToErrorMsg));
     }
 
-    public static Task<PlatformValidationResult<T>> ThenValidateFoundAsync<T>(this Task<T?> objTask, string? errorMsg = null)
+    public static Task<PlatformValidationResult<T>> ThenValidateFoundAsync<T>(
+        this Task<T?> objTask,
+        string errorMsg = PlatformValidateObjectExtension.DefaultNotFoundMessage)
     {
         return objTask.Then(p => p.ValidateFound(errorMsg));
     }
 
-    public static Task<PlatformValidationResult<IEnumerable<T>>> ThenValidateFoundAsync<T>(this Task<IEnumerable<T>> objectsTask, string? errorMsg = null)
+    public static Task<PlatformValidationResult<IEnumerable<T>>> ThenValidateFoundAsync<T>(
+        this Task<IEnumerable<T>> objectsTask,
+        string errorMsg = PlatformValidateObjectExtension.DefaultNotFoundMessage)
     {
         return objectsTask.Then(p => p.ValidateFound(errorMsg));
     }

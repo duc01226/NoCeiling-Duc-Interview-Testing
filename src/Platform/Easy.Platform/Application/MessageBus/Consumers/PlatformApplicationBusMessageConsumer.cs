@@ -30,9 +30,9 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
     where TMessage : class, new()
 {
     protected readonly IPlatformInboxBusMessageRepository InboxBusMessageRepo;
-    protected readonly PlatformInboxConfig InboxConfig;
     protected readonly IServiceProvider ServiceProvider;
     protected readonly IUnitOfWorkManager UowManager;
+    protected readonly PlatformInboxConfig InboxConfig;
 
     protected PlatformApplicationMessageBusConsumer(
         ILoggerFactory loggerFactory,
@@ -55,7 +55,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                     nameof(PlatformCqrsEvent.RequestContext));
     }
 
-    public virtual bool AutoBeginUow => true;
+    public virtual bool AutoBeginUow => false;
     public bool IsInjectingUserContextAccessor { get; set; }
 
     public PlatformInboxBusMessage HandleDirectlyExistingInboxMessage { get; set; }

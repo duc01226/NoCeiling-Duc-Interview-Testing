@@ -30,6 +30,9 @@ public class AwsSendMailService : ISendMailService
     {
         logger.LogInformation(
             "Demo implemented AwsSendMailService directly in application module. " +
-            $"ToEmail: {toEmail}. Header: {mailHeader}. MailContent: {mailContent}");
+            "ToEmail: {ToEmail}. Header: {MailHeader}. MailContent: {MailContent}",
+            toEmail,
+            mailHeader,
+            mailContent);
     }
 }

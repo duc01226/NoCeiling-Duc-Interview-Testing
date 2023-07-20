@@ -73,7 +73,7 @@ public abstract class PlatformEntityDto<TEntity, TId> : IPlatformDto<PlatformEnt
 
     public virtual bool IsSubmitToUpdate()
     {
-        if (GetSubmittedId() == null || GetSubmittedId() == default) return false;
+        if (GetSubmittedId() is null or default(object?)) return false;
 
         return GetSubmittedId() switch
         {

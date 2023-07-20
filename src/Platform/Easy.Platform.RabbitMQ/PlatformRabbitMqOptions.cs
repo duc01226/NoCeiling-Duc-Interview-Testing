@@ -19,14 +19,21 @@ public class PlatformRabbitMqOptions
     /// <summary>
     /// Used to set RetryCount policy when tried to create rabbit mq channel <see cref="IModel" />
     /// </summary>
-    public int InitRabbitMqChannelRetryCount { get; set; } = 30;
+    public int InitRabbitMqChannelRetryCount { get; set; } = 20;
 
     /// <summary>
     /// Config the prefectCount. "defines the max number of unacknowledged deliveries that are permitted on a channel" to limit messages to prevent rabbit mq down
     /// Reference: https://www.rabbitmq.com/tutorials/tutorial-two-dotnet.html. Filter: BasicQos
     /// QueuePrefetchCount : https://www.cloudamqp.com/blog/part1-rabbitmq-best-practice.html#how-to-set-correct-prefetch-value
+    ///
+    /// Default value to one to distribute message equally for parallel processing.
+    /// If you have many consumers and/or long processing time, we recommend setting the prefetch count to one (1) so that messages are evenly distributed among all your workers.
     /// </summary>
     public ushort QueuePrefetchCount { get; set; } = 10;
+
+    public int NumberOfParallelConsumersPerCpu { get; set; } = 10;
+
+    public int MaxNumberOfParallelConsumers { get; set; } = 20;
 
     /// <summary>
     /// Used to set <see cref="ConnectionFactory.NetworkRecoveryInterval" />
@@ -42,6 +49,8 @@ public class PlatformRabbitMqOptions
     /// Used to set <see cref="ConnectionFactory.SocketReadTimeout" /> and <see cref="ConnectionFactory.SocketWriteTimeout" />
     /// </summary>
     public int SocketTimeoutSeconds { get; set; } = 120;
+
+    public ushort RequestedChannelMax { get; set; } = ushort.MaxValue;
 
     public double RequeueDelayTimeInSeconds { get; set; } = 60;
 
@@ -68,4 +77,9 @@ public class PlatformRabbitMqOptions
     /// For best practice, prevent queue too long in memory will store messages in the storage
     /// </summary>
     public int QueueMaxNumberMessagesInMemory { get; set; } = 100;
+
+    public int CalculateNumberOfParallelConsumers()
+    {
+        return Math.Min(Environment.ProcessorCount * NumberOfParallelConsumersPerCpu, MaxNumberOfParallelConsumers);
+    }
 }

@@ -9,8 +9,8 @@ public static class PlatformRequestContextHelper
     public static bool TryGetValue<T>(IDictionary<string, object> requestContext, string contextKey, out T item)
     {
         // contextKey.ToLower() to support search case-insensitive for some server auto normalize the header context key
-        var originalValue = requestContext.ContainsKey(contextKey)
-            ? requestContext[contextKey]
+        var originalValue = requestContext.TryGetValue(contextKey, out var fromOriginalContextKeyValue)
+            ? fromOriginalContextKeyValue
             : requestContext.TryGetValueOrDefault(contextKey.ToLower());
 
         if (originalValue != null)
@@ -22,7 +22,7 @@ public static class PlatformRequestContextHelper
                 return isParsedSuccess;
             }
 
-            item = (T)requestContext[contextKey];
+            item = (T)originalValue;
             return true;
         }
 

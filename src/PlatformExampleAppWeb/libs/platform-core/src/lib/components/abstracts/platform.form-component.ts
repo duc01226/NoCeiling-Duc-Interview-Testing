@@ -384,6 +384,17 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 export type PlatformFormConfig<TFormModel> = {
     controls: PlatformPartialFormGroupControlsConfig<TFormModel>;
     groupValidations?: (keyof TFormModel)[][];
+
+    /**
+     * Used to config that one control key validation is depended on other control values changes.
+     *
+     * Example:
+     * dependentValidations: {
+     *    dependentProp: ['dependedOnProp1', 'dependedOnProp2']
+     * }
+     *
+     * This mean that dependentProp will trigger validation when dependedOnProp1 or dependedOnProp2 changed
+     */
     dependentValidations?: Partial<Record<keyof TFormModel, (keyof TFormModel)[]>>;
     afterInit?: () => void;
     childForms?: () => (QueryList<IPlatformFormComponent<IPlatformVm>> | IPlatformFormComponent<IPlatformVm>)[];

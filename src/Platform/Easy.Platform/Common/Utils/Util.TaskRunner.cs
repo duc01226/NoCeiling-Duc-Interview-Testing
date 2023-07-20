@@ -716,13 +716,58 @@ public static partial class Util
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
         }
 
-        public static void TryWaitUntil(
+        public static async Task WaitUntilAsync(
+            Func<Task<bool>> condition,
+            double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
+            double waitIntervalSeconds = DefaultWaitIntervalSeconds,
+            string waitForMsg = null)
+        {
+            var startWaitTime = DateTime.UtcNow;
+            var maxWaitMilliseconds = maxWaitSeconds * 1000;
+
+            while (!await condition())
+                if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
+                    Thread.Sleep((int)(waitIntervalSeconds * 1000));
+                else
+                    throw new TimeoutException(
+                        $"WaitUntil is timed out (Max: {maxWaitSeconds} seconds)." +
+                        $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+        }
+
+        public static bool TryWaitUntil(
             Func<bool> condition,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
             double waitIntervalSeconds = DefaultWaitIntervalSeconds,
             string waitForMsg = null)
         {
-            CatchException(() => WaitUntil(condition, maxWaitSeconds, waitIntervalSeconds, waitForMsg));
+            try
+            {
+                WaitUntil(condition, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
+
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        public static async Task<bool> TryWaitUntilAsync(
+            Func<Task<bool>> condition,
+            double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
+            double waitIntervalSeconds = DefaultWaitIntervalSeconds,
+            string waitForMsg = null)
+        {
+            try
+            {
+                await WaitUntilAsync(condition, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
+
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         public static TResult WaitUntilGetValidResult<T, TResult>(

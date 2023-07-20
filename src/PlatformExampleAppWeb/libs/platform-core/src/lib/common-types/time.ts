@@ -31,12 +31,13 @@ export class Time implements ITime {
             : new Time(time.hour, time.minute, time.second);
     }
 
-    public static compareTime(from: Time, to: Time): boolean {
+    public static compareTime(from: Time, to: Time, isEqual: boolean = false): boolean {
         if (!from || !to) return false;
 
         const fromDate = this.setTimeIntoDate(new Date(), from) as Date;
         const toDate = this.setTimeIntoDate(new Date(), to) as Date;
-        return fromDate < toDate;
+        if (isEqual) return fromDate <= toDate;
+        else return fromDate < toDate;
     }
 
     public hour: number = 0;
@@ -115,5 +116,23 @@ export class Time implements ITime {
         newDate.setHours(time.hour, time.minute, time.second);
 
         return newDate;
+    }
+
+    public static isTimeInRange(
+        from: Time,
+        to: Time,
+        time: Time,
+        isIncludedFrom?: boolean,
+        isIncludedTo?: boolean
+    ): boolean {
+        if (!from || !to || !time) return false;
+
+        if (isIncludedFrom && isIncludedTo) {
+            return Time.compareTime(from, time, isIncludedFrom) && Time.compareTime(time, to, isIncludedTo);
+        } else if (isIncludedFrom) {
+            return Time.compareTime(from, time, isIncludedFrom) && Time.compareTime(time, to);
+        } else if (isIncludedTo) {
+            return Time.compareTime(from, time) && Time.compareTime(time, to, isIncludedTo);
+        } else return Time.compareTime(from, time) && Time.compareTime(time, to);
     }
 }

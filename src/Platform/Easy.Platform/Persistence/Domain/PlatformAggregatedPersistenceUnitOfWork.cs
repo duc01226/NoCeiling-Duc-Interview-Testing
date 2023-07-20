@@ -25,8 +25,9 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
     public PlatformAggregatedPersistenceUnitOfWork(List<IUnitOfWork> innerUnitOfWorks, IServiceScope associatedServiceScope)
     {
         InnerUnitOfWorks = innerUnitOfWorks?
-            .Select(innerUow => innerUow.With(_ => _.ParentUnitOfWork = this))
-            .ToList() ?? new List<IUnitOfWork>();
+                               .Select(innerUow => innerUow.With(_ => _.ParentUnitOfWork = this))
+                               .ToList() ??
+                           new List<IUnitOfWork>();
         this.associatedServiceScope = associatedServiceScope;
     }
 

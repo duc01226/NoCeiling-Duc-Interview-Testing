@@ -1,12 +1,11 @@
 using Easy.Platform.Application.BackgroundJob;
 using Easy.Platform.Application.MessageBus.Producers;
 using Easy.Platform.Common.Cqrs;
-using Easy.Platform.Common.Timing;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.BackgroundJob;
 using Microsoft.Extensions.Logging;
 using PlatformExampleApp.Shared.Application.MessageBus.FreeFormatMessages;
-using PlatformExampleApp.TextSnippet.Application.UseCaseCommands;
+using PlatformExampleApp.TextSnippet.Application.UseCaseCommands.OtherDemos;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
