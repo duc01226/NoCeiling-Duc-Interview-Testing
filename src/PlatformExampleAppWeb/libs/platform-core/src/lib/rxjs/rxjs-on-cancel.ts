@@ -1,13 +1,13 @@
 import { Observable } from 'rxjs';
 
 export function onCancel<T>(f: () => void): (source: Observable<T>) => Observable<T> {
-    return observable =>
+    return sourceObservable =>
         new Observable(observer => {
             let completed = false;
             let errored = false;
             let succeeded = false;
 
-            const subscription = observable.subscribe({
+            const subscription = sourceObservable.subscribe({
                 next: v => {
                     succeeded = true;
                     observer.next(v);

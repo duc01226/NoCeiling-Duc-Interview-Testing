@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ModuleWithProviders, NgModule, Provider, Type } from '@angular/core';
+import { ErrorHandler, ModuleWithProviders, NgModule, Provider, Type } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
@@ -12,6 +12,7 @@ import {
     PlatformHttpOptionsConfigService
 } from './api-services';
 import { PlatformAppUiStateData, PlatformAppUiStateStore } from './app-ui-state';
+import { PlatformCachingService, PlatformLocalStorageCachingService } from './caching';
 import {
     IPlatformEventManager,
     PlatformEvent,
@@ -21,6 +22,7 @@ import {
 } from './events';
 import { PlatformHighlightSearchTextPipe, PlatformPipe } from './pipes';
 import { PlatformCoreModuleConfig } from './platform-core.config';
+import { PlatformGlobalErrorHandler } from './platform-global-error-handler';
 import { PlatformTranslateConfig } from './translations';
 import { list_selectMany } from './utils';
 
@@ -46,6 +48,7 @@ export class PlatformCoreModule {
         httpOptionsConfigService?: Type<PlatformHttpOptionsConfigService>;
         translate?: { platformConfig?: PlatformTranslateConfig; config?: TranslateModuleConfig };
         toastConfig?: Partial<GlobalConfig>;
+        cachingServiceFactory?: () => PlatformCachingService;
     }): ModuleWithProviders<ForRootModules>[] {
         return [
             {
@@ -93,7 +96,15 @@ export class PlatformCoreModule {
                             config.translate?.platformConfig != null
                                 ? config.translate.platformConfig
                                 : PlatformTranslateConfig.defaultConfig()
-                    }
+                    },
+                    {
+                        provide: PlatformCachingService,
+                        useFactory: () =>
+                            config.cachingServiceFactory != null
+                                ? config.cachingServiceFactory()
+                                : new PlatformLocalStorageCachingService()
+                    },
+                    { provide: ErrorHandler, useClass: PlatformGlobalErrorHandler }
                 ]
             },
             {

@@ -28,7 +28,7 @@ export class Time implements ITime {
 
         return Number.isNaN(time.hour) || Number.isNaN(time.minute) || Number.isNaN(time.second)
             ? null
-            : new Time(time.hour, time.minute, time.second);
+            : new Time(time);
     }
 
     public static compareTime(from: Time, to: Time, isEqual: boolean = false): boolean {
@@ -44,10 +44,12 @@ export class Time implements ITime {
     public minute: number = 0;
     public second: number = 0;
 
-    constructor(hour: number = 0, minute: number = 0, second: number = 0) {
-        this.hour = hour;
-        this.minute = minute;
-        this.second = second;
+    constructor(data?: Partial<ITime>) {
+        if (data == undefined) return;
+
+        if (data.hour != undefined) this.hour = data.hour;
+        if (data.minute != undefined) this.minute = data.minute;
+        if (data.second != undefined) this.second = data.second;
     }
 
     public changeHour(step: number = 1) {

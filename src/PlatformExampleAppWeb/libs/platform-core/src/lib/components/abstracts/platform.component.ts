@@ -183,17 +183,27 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
 
             if (this.isForSetReloadingState(options)) this.setReloading(true, requestKey);
             else this.setLoading(true, requestKey);
+
             this.setErrorMsg(null, requestKey);
         };
 
         return (source: Observable<T>) => {
             return defer(() => {
+                const previousLoadingState = this.loadingState$.getValue();
+
                 setLoadingState();
 
                 return source.pipe(
                     onCancel(() => {
                         if (this.isForSetReloadingState(options)) this.setReloading(false, requestKey);
                         else this.setLoading(false, requestKey);
+
+                        if (
+                            this.loadingState$.getValue() == 'Loading' &&
+                            this.loadingRequestsCount() <= 0 &&
+                            previousLoadingState == 'Success'
+                        )
+                            this.loadingState$.next(LoadingState.Success);
                     }),
 
                     tapOnce({
@@ -215,8 +225,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                             if (
                                 this.loadingState$.value != LoadingState.Error &&
                                 this.loadingState$.value != LoadingState.Success &&
-                                this.loadingRequestsCount() <= 0 &&
-                                this.reloadingRequestsCount() <= 0
+                                this.loadingRequestsCount() <= 0
                             )
                                 this.loadingState$.next(LoadingState.Success);
                         },

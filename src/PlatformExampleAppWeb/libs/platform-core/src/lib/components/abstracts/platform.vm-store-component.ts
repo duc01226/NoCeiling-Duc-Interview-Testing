@@ -39,6 +39,7 @@ export abstract class PlatformVmStoreComponent<
         super.ngOnInit();
 
         if (
+            this.store.vmStateInitiated &&
             (this.store.currentState.isStateSuccess || this.store.currentState.isStateError) &&
             list_all(this.additionalStores, p => p.currentState.isStateSuccess || p.currentState.isStateError)
         )
@@ -152,7 +153,7 @@ export abstract class PlatformVmStoreComponent<
     }
 
     public reload(): void {
-        this.store.reload();
-        this.additionalStores.forEach(p => p.reload());
+        this.store.reloadOrInitData();
+        this.additionalStores.forEach(p => p.reloadOrInitData());
     }
 }

@@ -1,9 +1,11 @@
-import { Injectable, OnDestroy } from '@angular/core';
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { inject, Injectable, OnDestroy } from '@angular/core';
 import { ComponentStore, SelectConfig } from '@ngrx/component-store';
 import {
     asyncScheduler,
     defer,
+    filter,
     isObservable,
     Observable,
     of,
@@ -17,6 +19,7 @@ import {
 import { PartialDeep } from 'type-fest';
 
 import { PlatformApiServiceErrorResponse } from '../api-services';
+import { PlatformCachingService } from '../caching';
 import { onCancel, tapOnce } from '../rxjs';
 import { immutableUpdate, list_remove } from '../utils';
 import { PlatformVm } from './generic.view-model';
@@ -35,34 +38,63 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
     private cachedErrorMsg$: Dictionary<Observable<string | undefined | null>> = {};
     private cachedLoading$: Dictionary<Observable<boolean | undefined | null>> = {};
     private cachedReloading$: Dictionary<Observable<boolean | undefined | null>> = {};
-    private innerStore: ComponentStore<TViewModel>;
-    private onInitVmTriggered: boolean = false;
+    private cacheService = inject(PlatformCachingService);
+    private defaultState?: TViewModel;
 
     constructor(defaultState: TViewModel) {
-        this.innerStore = new ComponentStore(defaultState);
+        this.defaultState = defaultState;
+    }
+
+    public vmStateInitiating: boolean = false;
+    public vmStateInitiated: boolean = false;
+
+    private _innerStore?: ComponentStore<TViewModel>;
+    public get innerStore(): ComponentStore<TViewModel> {
+        if (this._innerStore == undefined) {
+            const cachedData = this.getCachedState();
+
+            if (cachedData?.isStateSuccess) {
+                this._innerStore = new ComponentStore(cachedData);
+
+                // Clear defaultState to free memory
+                this.defaultState = undefined;
+            } else {
+                this._innerStore = new ComponentStore(this.defaultState);
+            }
+        }
+
+        return this._innerStore;
     }
 
     private _vm$?: Observable<TViewModel>;
     public get vm$(): Observable<TViewModel> {
-        this._vm$ ??= this.select(s => s);
+        if (this._vm$ == undefined) {
+            this._vm$ = this.select(s => s);
+        }
 
         return this._vm$;
     }
 
-    public abstract onInitVm: () => Observable<unknown> | void;
+    protected abstract onInitVm: () => void;
+
+    public abstract vmConstructor(data?: Partial<TViewModel>): TViewModel;
+
+    protected abstract cachedStateKeyName(): string;
 
     /**
      * Triggers the onInitVm function and initializes the store's view model state.
      */
-    public triggerOnInitVm() {
-        if (!this.onInitVmTriggered) {
-            this.onInitVmTriggered = true;
+    public initVmState() {
+        if (!this.vmStateInitiating && !this.vmStateInitiated) {
+            this.vmStateInitiating = true;
 
-            // Process trigger call onInitVm
-            const onInitVmObservableOrVoid = this.onInitVm();
-            if (onInitVmObservableOrVoid instanceof Observable) {
-                this.storeAnonymousSubscription(onInitVmObservableOrVoid.subscribe());
-            }
+            this.subscribeCacheStateOnChanged();
+
+            this.onInitVm();
+
+            this.reloadOrInitData();
+
+            this.vmStateInitiated = true;
         }
     }
 
@@ -78,7 +110,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         return this.vm$;
     }
 
-    public abstract reload: () => void;
+    public abstract reloadOrInitData: () => void;
 
     public readonly defaultSelectConfig: PlatformStoreSelectConfig = {
         debounce: false,
@@ -130,6 +162,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
             try {
                 return immutableUpdate(state, partialStateOrUpdaterFn, 'deepCheck', assignDeepLevel);
             } catch (error) {
+                console.error(error);
                 return immutableUpdate(
                     state,
                     this.buildSetErrorPartialState(<Error>error),
@@ -209,44 +242,64 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         if (requestKey == undefined) requestKey = PlatformVm.requestStateDefaultKey;
 
         const setLoadingState = () => {
-            if (!this.isForSetReloadingState(options) && this.currentState.status != 'Loading')
+            if (!this.isForSetReloadingState(<string>requestKey, options) && this.currentState.status != 'Loading')
                 this.updateState(<Partial<TViewModel>>{
                     status: 'Loading'
                 });
 
-            if (this.isForSetReloadingState(options)) this.setReloading(true, requestKey);
+            if (this.isForSetReloadingState(<string>requestKey, options)) this.setReloading(true, requestKey);
             else this.setLoading(true, requestKey);
+
             this.setErrorMsg(null, requestKey);
 
-            if (options?.onShowLoading != null && !this.isForSetReloadingState(options)) options.onShowLoading();
+            if (options?.onShowLoading != null && !this.isForSetReloadingState(<string>requestKey, options))
+                options.onShowLoading();
         };
 
         return (source: Observable<T>) => {
             return defer(() => {
+                const previousStatus = this.currentState.status;
+
                 setLoadingState();
 
                 return source.pipe(
                     onCancel(() => {
-                        if (this.isForSetReloadingState(options)) this.setReloading(false, requestKey);
+                        if (this.isForSetReloadingState(<string>requestKey, options))
+                            this.setReloading(false, requestKey);
                         else this.setLoading(false, requestKey);
 
-                        if (options?.onHideLoading != null && !this.isForSetReloadingState(options))
+                        if (
+                            this.currentState.status == 'Loading' &&
+                            this.loadingRequestsCount() <= 0 &&
+                            previousStatus == 'Success'
+                        )
+                            this.updateState(<Partial<TViewModel>>{ status: 'Success' });
+
+                        if (options?.onHideLoading != null && !this.isForSetReloadingState(<string>requestKey, options))
                             options.onHideLoading();
                     }),
 
                     tapOnce({
                         next: result => {
-                            if (this.isForSetReloadingState(options)) this.setReloading(false, requestKey);
+                            if (this.isForSetReloadingState(<string>requestKey, options))
+                                this.setReloading(false, requestKey);
                             else this.setLoading(false, requestKey);
 
-                            if (options?.onHideLoading != null && !this.isForSetReloadingState(options))
+                            if (
+                                options?.onHideLoading != null &&
+                                !this.isForSetReloadingState(<string>requestKey, options)
+                            )
                                 options.onHideLoading();
                         },
                         error: (err: PlatformApiServiceErrorResponse | Error) => {
-                            if (this.isForSetReloadingState(options)) this.setReloading(false, requestKey);
+                            if (this.isForSetReloadingState(<string>requestKey, options))
+                                this.setReloading(false, requestKey);
                             else this.setLoading(false, requestKey);
 
-                            if (options?.onHideLoading != null && !this.isForSetReloadingState(options))
+                            if (
+                                options?.onHideLoading != null &&
+                                !this.isForSetReloadingState(<string>requestKey, options)
+                            )
                                 options.onHideLoading();
                         }
                     }),
@@ -255,8 +308,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                             if (
                                 this.currentState.status != 'Error' &&
                                 this.currentState.status != 'Success' &&
-                                this.loadingRequestsCount() <= 0 &&
-                                this.reloadingRequestsCount() <= 0
+                                this.loadingRequestsCount() <= 0
                             )
                                 this.updateState(<Partial<TViewModel>>{ status: 'Success' });
                         },
@@ -270,8 +322,8 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         };
     }
 
-    private isForSetReloadingState(options: PlatformVmObserverLoadingOptions | undefined) {
-        return options?.isReloading && !this.currentState.isStateError && !this.currentState.isStateLoading;
+    private isForSetReloadingState(requestKey: string, options: PlatformVmObserverLoadingOptions | undefined) {
+        return options?.isReloading && this.currentState.isStateSuccess;
     }
 
     /**
@@ -386,21 +438,26 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         projector: (s: TViewModel) => Result,
         config?: PlatformStoreSelectConfig
     ): Observable<Result> {
-        const selectConfig = config ?? this.defaultSelectConfig;
+        return defer(() => {
+            const selectConfig = config ?? this.defaultSelectConfig;
 
-        let selectResult$ = this.innerStore
-            .select(projector, selectConfig)
-            .pipe(tapOnce({ next: () => this.triggerOnInitVm() }));
+            let selectResult$ = this.innerStore
+                .select(projector, selectConfig)
+                .pipe(tapOnce({ next: () => this.initVmState() }));
 
-        // ThrottleTime explain: Delay to enhance performance
-        // { leading: true, trailing: true } <=> emit the first item to ensure not delay, but also ignore the sub-sequence,
-        // and still emit the latest item to ensure data is latest
-        if (selectConfig.throttleTimeDuration != undefined && selectConfig.throttleTimeDuration > 0)
-            selectResult$ = selectResult$.pipe(
-                throttleTime(selectConfig.throttleTimeDuration ?? 0, asyncScheduler, { leading: true, trailing: true })
-            );
+            // ThrottleTime explain: Delay to enhance performance
+            // { leading: true, trailing: true } <=> emit the first item to ensure not delay, but also ignore the sub-sequence,
+            // and still emit the latest item to ensure data is latest
+            if (selectConfig.throttleTimeDuration != undefined && selectConfig.throttleTimeDuration > 0)
+                selectResult$ = selectResult$.pipe(
+                    throttleTime(selectConfig.throttleTimeDuration ?? 0, asyncScheduler, {
+                        leading: true,
+                        trailing: true
+                    })
+                );
 
-        return selectResult$;
+            return selectResult$;
+        });
     }
 
     /**
@@ -543,6 +600,35 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
      */
     protected get(): TViewModel {
         return this.currentState;
+    }
+
+    protected subscribeCacheStateOnChanged() {
+        if (this.vm$ == undefined) return;
+
+        this.storeAnonymousSubscription(
+            this.vm$
+                .pipe(
+                    throttleTime(1000, asyncScheduler, { leading: true, trailing: true }),
+                    filter(x => !x.isStateLoading && !x.isAnyLoadingRequest() && !x.isAnyReloadingRequest())
+                )
+                .subscribe(vm => {
+                    setTimeout(() => {
+                        this.cacheService.set(this.getCachedStateKey(), vm);
+                    }, 0);
+                })
+        );
+    }
+
+    private getCachedStateKey(): string {
+        return 'PlatformViewModelState_' + this.cachedStateKeyName();
+    }
+
+    protected getCachedState() {
+        const cachedData = <TViewModel | undefined>(
+            this.cacheService.get(this.getCachedStateKey(), data => this.vmConstructor(data))
+        );
+
+        return cachedData;
     }
 }
 

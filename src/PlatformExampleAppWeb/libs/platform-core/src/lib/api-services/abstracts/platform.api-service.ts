@@ -1,11 +1,11 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams, HttpStatusCode } from '@angular/common/http';
-import { Injectable, Optional } from '@angular/core';
-import { concat, Observable, of, throwError } from 'rxjs';
-import { catchError, delay, switchMap, tap } from 'rxjs/operators';
+import { inject, Injectable, Optional } from '@angular/core';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError, switchMap, tap } from 'rxjs/operators';
 
+import { PlatformCachingService } from '../../caching';
 import { HttpClientOptions, PlatformHttpService } from '../../http-services';
 import { PlatformCoreModuleConfig } from '../../platform-core.config';
-import { distinctUntilObjectValuesChanged } from '../../rxjs';
 import { removeNullProps, toPlainObj } from '../../utils';
 import {
     IPlatformApiServiceErrorResponse,
@@ -20,6 +20,8 @@ const UNAUTHORIZATION_STATUSES: HttpStatusCode[] = [HttpStatusCode.Unauthorized,
 @Injectable()
 export abstract class PlatformApiService extends PlatformHttpService {
     public static DefaultHeaders: HttpHeaders = new HttpHeaders({ 'Content-Type': 'application/json; charset=utf-8' });
+
+    private readonly cacheService = inject(PlatformCachingService);
 
     public constructor(
         http: HttpClient,
@@ -44,20 +46,19 @@ export abstract class PlatformApiService extends PlatformHttpService {
         return 10;
     }
 
-    private cachedRequestDataDict: Dictionary<unknown> = {};
     private cachedRequestDataKeys: Set<string> = new Set();
-    private setCachedRequestData<T>(requestCacheKey: string, data: T) {
-        this.cachedRequestDataDict[requestCacheKey] = data;
+    private setCachedRequestData<T>(requestCacheKey: string, data: T | undefined) {
+        this.cacheService.set(requestCacheKey, data);
 
         this.cachedRequestDataKeys.add(requestCacheKey);
 
-        this.clearOldestCachedData<T>(requestCacheKey);
+        this.clearOldestCachedData(requestCacheKey);
     }
 
     /**
      * Process clear oldest cached data if over maxNumberOfCacheItemPerRequestPath
      */
-    private clearOldestCachedData<T>(requestCacheKey: string) {
+    private clearOldestCachedData(requestCacheKey: string) {
         const allRequestPathKeys = [...this.cachedRequestDataKeys].filter(key =>
             key.startsWith(this.getRequestPathFromCacheKey(requestCacheKey))
         );
@@ -65,7 +66,7 @@ export abstract class PlatformApiService extends PlatformHttpService {
         while (allRequestPathKeys.length > this.maxNumberOfCacheItemPerRequestPath()) {
             const oldestRequestKey = allRequestPathKeys.shift();
             if (oldestRequestKey != null) {
-                delete this.cachedRequestDataDict[oldestRequestKey];
+                this.cacheService.delete(requestCacheKey);
                 this.cachedRequestDataKeys.delete(oldestRequestKey);
             }
         }
@@ -77,17 +78,15 @@ export abstract class PlatformApiService extends PlatformHttpService {
         configureOptions?: (option: HttpClientOptions) => HttpClientOptions | void | undefined
     ): Observable<T> {
         const requestCacheKey = this.buildRequestCacheKey(path, params);
-        const cachedData = <T | null>this.cachedRequestDataDict[requestCacheKey];
 
-        if (cachedData == null) {
-            return this.getFromServer<T>(path, params, configureOptions);
-        } else {
-            // delay(1ms) a little to mimic the real async rxjs observable => the next will be async => the flow is corrected if before call api
-            // do update something in store
-            return concat(of(<T>cachedData).pipe(delay(1)), this.getFromServer<T>(path, params, configureOptions)).pipe(
-                distinctUntilObjectValuesChanged()
-            );
-        }
+        return this.cacheService.cacheImplicitReloadRequest(
+            requestCacheKey,
+            () => this.getFromServer<T>(path, params, configureOptions),
+            undefined,
+            (requestCacheKey, data) => {
+                this.setCachedRequestData(requestCacheKey, data);
+            }
+        );
     }
 
     private getFromServer<T>(
@@ -98,15 +97,11 @@ export abstract class PlatformApiService extends PlatformHttpService {
         const options = this.getHttpOptions(this.preprocessData(params));
         const configuredOptions =
             configureOptions != null ? <HttpClientOptions | undefined>configureOptions(options) : options;
-        const requestCacheKey = this.buildRequestCacheKey(path, params);
 
         return super.httpGet<T>(this.apiUrl + path, configuredOptions ?? options).pipe(
             tap({
-                next: result => {
-                    this.setCachedRequestData(requestCacheKey, result);
-                },
                 error: err => {
-                    this.setCachedRequestData(requestCacheKey, null);
+                    if (err instanceof Error) this.cacheService.clear();
                 }
             }),
             catchError(err => this.catchHttpError<T>(err))

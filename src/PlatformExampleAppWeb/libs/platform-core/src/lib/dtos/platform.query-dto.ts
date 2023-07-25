@@ -29,7 +29,7 @@ export class PlatformPagedQueryDto extends PlatformQueryDto implements IPlatform
     }
 
     public skipCount: number = 0;
-    public maxResultCount: number = -1;
+    public maxResultCount: number = 20;
 
     public withPageIndex(pageIndex: number): PlatformPagedQueryDto {
         const newSkipCount = pageIndex * this.maxResultCount;

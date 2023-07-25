@@ -66,6 +66,21 @@ export function keys<T extends object>(
     }
 }
 
+export function writableKeys<T extends object>(
+    source: T,
+    ignorePrivate: boolean = true,
+    excludeKeys?: (keyof T)[]
+): (keyof T & string)[] {
+    return keys(source, ignorePrivate, excludeKeys).filter(key => {
+        return isWritableKey<T>(source, key);
+    });
+}
+
+export function isWritableKey<T extends object>(source: T, key: string) {
+    const targetKeyPropertyDescriptor = getPropertyDescriptor(source, key);
+    return targetKeyPropertyDescriptor == null || targetKeyPropertyDescriptor?.writable == true;
+}
+
 export function dictionaryMapTo<TSource, TTarget>(
     source: Dictionary<TSource>,
     mapCallback: (item: TSource) => TTarget

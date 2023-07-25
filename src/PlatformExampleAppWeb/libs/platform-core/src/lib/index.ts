@@ -1,5 +1,6 @@
 export * from './api-services';
 export * from './app-ui-state';
+export * from './caching';
 export * from './common-types';
 export * from './common-values';
 export * from './components';
@@ -15,6 +16,8 @@ export * from './pipes';
 export * from './platform-core.config';
 export * from './platform-core.module';
 export * from './platform-domain.module';
+export * from './platform-global-error-handler';
+export * from './platform-service-worker';
 export * from './rxjs';
 export * from './translations';
 export * from './ui-services';
