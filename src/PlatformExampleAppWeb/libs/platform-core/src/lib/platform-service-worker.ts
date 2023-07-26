@@ -6,7 +6,7 @@ import { map, Observable, of, tap } from 'rxjs';
 import { PlatformCachingService } from './caching';
 import { date_timeDiff } from './utils';
 
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class PlatformServiceWorkerService {
     public static maxWaitingForAutoReloadNewVersionSeconds = 10;
     public static checkNewVersionInterval = 60000;
@@ -128,12 +128,12 @@ export class PlatformServiceWorkerService {
 
     public clearCache(cacheKeysRegex?: RegExp) {
         this.cacheService.clear();
-        return this.clearNgswCacheStorage(cacheKeysRegex ?? this.apiDataCacheKeysRegex);
+        return PlatformServiceWorkerService.clearNgswCacheStorage(cacheKeysRegex ?? this.apiDataCacheKeysRegex);
     }
 
     public allNgswCacheKeysRegex = /^ngsw:.*/;
     public apiDataCacheKeysRegex = /^ngsw:.*:data:/;
-    public async clearNgswCacheStorage(cacheKeysRegex: RegExp, name?: string): Promise<boolean[]> {
+    public static async clearNgswCacheStorage(cacheKeysRegex: RegExp, name?: string): Promise<boolean[]> {
         const allCacheKeys = await window.caches.keys();
         const ngswCacheKeys = allCacheKeys.filter(
             p => cacheKeysRegex.test(p) && (name == undefined || p.indexOf(name) > -1)

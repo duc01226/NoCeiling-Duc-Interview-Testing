@@ -1,8 +1,9 @@
-import { ErrorHandler } from '@angular/core';
+import { ErrorHandler, Injectable } from '@angular/core';
 
 import { PlatformCachingService } from './caching';
 import { PlatformServiceWorkerService } from './platform-service-worker';
 
+@Injectable()
 export class PlatformGlobalErrorHandler extends ErrorHandler {
     constructor(
         private readonly cacheService: PlatformCachingService,

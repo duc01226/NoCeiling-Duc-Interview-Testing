@@ -5,6 +5,7 @@ import { ComponentStore, SelectConfig } from '@ngrx/component-store';
 import {
     asyncScheduler,
     defer,
+    delay,
     filter,
     isObservable,
     Observable,
@@ -498,18 +499,26 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
             // ThrottleTime explain: Delay to enhance performance
             // { leading: true, trailing: true } <=> emit the first item to ensure not delay, but also ignore the sub-sequence,
             // and still emit the latest item to ensure data is latest
-            const newEffectSub: Subscription = generator(
-                <OriginType>(
-                    (<any>(
-                        observable$.pipe(
-                            throttleTime(defaultThrottleDuration, asyncScheduler, { leading: true, trailing: true })
-                        )
-                    ))
-                ),
-                isReloading
-            )
-                .pipe(takeUntil(this.innerStore.destroy$))
+            const newEffectSub: Subscription = of(null)
+                .pipe(
+                    delay(1), // (III)
+                    switchMap(() => {
+                        return generator(
+                            <OriginType>(<any>observable$.pipe(
+                                throttleTime(defaultThrottleDuration, asyncScheduler, {
+                                    leading: true,
+                                    trailing: true
+                                })
+                            )),
+                            isReloading
+                        ).pipe(takeUntil(this.innerStore.destroy$));
+                    })
+                )
                 .subscribe();
+
+            // (III)
+            // Delay to make the next api call asynchronous. When call an effect1 => loading. Call again => previousEffectSub.unsubscribe => cancel => back to success => call next api (async) => set loading again correctly.
+            // If not delay => call next api is sync => set loading is sync but previous cancel is not activated successfully yet, which status is not updated back to Success => which this new effect call skip set status to loading => but then the previous api cancel executing => update status to Success but actually it's loading => create incorrectly status
 
             this.storeAnonymousSubscription(newEffectSub);
             previousEffectSub = newEffectSub;

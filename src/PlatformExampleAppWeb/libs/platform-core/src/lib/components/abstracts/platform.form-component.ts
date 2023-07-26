@@ -286,10 +286,11 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
                         groupValidators.forEach(groupValidatorControlKey => {
                             this.formControls(groupValidatorControlKey).updateValueAndValidity({
                                 emitEvent: false,
-                                onlySelf: true
+                                onlySelf: false
                             });
                         });
                 });
+                this.detectChanges();
             }, 300)
         );
     }
@@ -309,11 +310,13 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
                 Object.keys(dependentValidationsConfig).forEach(dependentValidationControlKey => {
                     const dependedOnOtherControlKeys = (<any>dependentValidationsConfig)[dependentValidationControlKey];
 
-                    if (dependedOnOtherControlKeys.includes(formControlKey))
+                    if (dependedOnOtherControlKeys.includes(formControlKey)) {
                         this.formControls(<keyof TViewModel>dependentValidationControlKey).updateValueAndValidity({
                             emitEvent: false,
-                            onlySelf: true
+                            onlySelf: false
                         });
+                        this.detectChanges();
+                    }
                 });
             }, 300)
         );

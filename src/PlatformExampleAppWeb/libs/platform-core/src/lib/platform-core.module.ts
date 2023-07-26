@@ -23,6 +23,7 @@ import {
 import { PlatformHighlightSearchTextPipe, PlatformPipe } from './pipes';
 import { PlatformCoreModuleConfig } from './platform-core.config';
 import { PlatformGlobalErrorHandler } from './platform-global-error-handler';
+import { PlatformServiceWorkerService } from './platform-service-worker';
 import { PlatformTranslateConfig } from './translations';
 import { list_selectMany } from './utils';
 
@@ -104,6 +105,7 @@ export class PlatformCoreModule {
                                 ? config.cachingServiceFactory()
                                 : new PlatformLocalStorageCachingService()
                     },
+                    PlatformServiceWorkerService,
                     { provide: ErrorHandler, useClass: PlatformGlobalErrorHandler }
                 ]
             },
