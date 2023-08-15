@@ -28,58 +28,60 @@ export class PlatformServiceWorkerService {
         onNewAppVersionAvailableFn?: () => unknown,
         handleNewVersionMsgFn?: (msg: string) => void
     ) {
-        if (!this.swUpdate.isEnabled) return;
+        if (!this.swUpdate.isEnabled) {
+            PlatformServiceWorkerService.unregisterRegisteredServiceWorker();
+        } else {
+            this.swUpdate.versionUpdates
+                .pipe(
+                    map(e => {
+                        if (e.type != 'VERSION_READY') return;
 
-        this.swUpdate.versionUpdates
-            .pipe(
-                map(e => {
-                    if (e.type != 'VERSION_READY') return;
+                        this.ngZone.run(() => {
+                            console.log('New app version available.');
 
-                    this.ngZone.run(() => {
-                        console.log('New app version available.');
+                            this.clearCache();
 
-                        this.clearCache();
-
-                        if (onNewAppVersionAvailableFn != undefined) onNewAppVersionAvailableFn();
-                        if (
-                            date_timeDiff(new Date(), this.startCheckNewAppVersionTime) / 1000 <=
-                            PlatformServiceWorkerService.maxWaitingForAutoReloadNewVersionSeconds
-                        ) {
-                            console.log('Auto reload to get new version.');
-                            this.reloadPageWithNewVersion();
-                        } else {
-                            this.swUpdate.activateUpdate().then(() => {
-                                this.getTranslate('New version available. Load New Version?').subscribe(
-                                    (msg: string) => {
-                                        if (handleNewVersionMsgFn != undefined) {
-                                            handleNewVersionMsgFn(msg);
-                                        } else {
-                                            this.showReloadNewVersionAlert(msg);
+                            if (onNewAppVersionAvailableFn != undefined) onNewAppVersionAvailableFn();
+                            if (
+                                date_timeDiff(new Date(), this.startCheckNewAppVersionTime) / 1000 <=
+                                PlatformServiceWorkerService.maxWaitingForAutoReloadNewVersionSeconds
+                            ) {
+                                console.log('Auto reload to get new version.');
+                                this.reloadPageWithNewVersion();
+                            } else {
+                                this.swUpdate.activateUpdate().then(() => {
+                                    this.getTranslate('New version available. Load New Version?').subscribe(
+                                        (msg: string) => {
+                                            if (handleNewVersionMsgFn != undefined) {
+                                                handleNewVersionMsgFn(msg);
+                                            } else {
+                                                this.showReloadNewVersionAlert(msg);
+                                            }
                                         }
-                                    }
-                                );
-                            });
-                        }
-                    });
-                })
-            )
-            .subscribe();
-
-        this.swUpdate.unrecoverable
-            .pipe(
-                tap(e => {
-                    this.getTranslate('This current version is broken. Reload New Version?').subscribe(
-                        (msg: string) => {
-                            if (confirm(msg)) {
-                                this.clearCacheReload(this.allNgswCacheKeysRegex);
+                                    );
+                                });
                             }
-                        }
-                    );
-                })
-            )
-            .subscribe();
+                        });
+                    })
+                )
+                .subscribe();
 
-        this.startCheckAppVersionInterval();
+            this.swUpdate.unrecoverable
+                .pipe(
+                    tap(e => {
+                        this.getTranslate('This current version is broken. Reload New Version?').subscribe(
+                            (msg: string) => {
+                                if (confirm(msg)) {
+                                    this.clearCacheReload(PlatformServiceWorkerService.allNgswCacheKeysRegex);
+                                }
+                            }
+                        );
+                    })
+                )
+                .subscribe();
+
+            this.startCheckAppVersionInterval();
+        }
     }
 
     public startCheckAppVersionInterval() {
@@ -128,11 +130,13 @@ export class PlatformServiceWorkerService {
 
     public clearCache(cacheKeysRegex?: RegExp) {
         this.cacheService.clear();
-        return PlatformServiceWorkerService.clearNgswCacheStorage(cacheKeysRegex ?? this.apiDataCacheKeysRegex);
+        return PlatformServiceWorkerService.clearNgswCacheStorage(
+            cacheKeysRegex ?? PlatformServiceWorkerService.apiDataCacheKeysRegex
+        );
     }
 
-    public allNgswCacheKeysRegex = /^ngsw:.*/;
-    public apiDataCacheKeysRegex = /^ngsw:.*:data:/;
+    public static allNgswCacheKeysRegex = /^ngsw:.*/;
+    public static apiDataCacheKeysRegex = /^ngsw:.*:data:/;
     public static async clearNgswCacheStorage(cacheKeysRegex: RegExp, name?: string): Promise<boolean[]> {
         const allCacheKeys = await window.caches.keys();
         const ngswCacheKeys = allCacheKeys.filter(
@@ -147,5 +151,18 @@ export class PlatformServiceWorkerService {
                 return deleteResults.indexOf(false) < 0 && deleteResults.length == cacheKeys.length;
             })
         );
+    }
+
+    public static unregisterRegisteredServiceWorker() {
+        // Unregister service worker if already registered
+        if (navigator.serviceWorker) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for (const registration of registrations) {
+                    registration.unregister();
+                }
+            });
+
+            this.clearNgswCacheStorage(this.allNgswCacheKeysRegex);
+        }
     }
 }

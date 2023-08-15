@@ -35,7 +35,8 @@ public abstract class PlatformCqrsCommandEventBusMessageProducer<TCommand>
             identity: BuildPlatformEventBusMessageIdentity(),
             producerContext: ApplicationSettingContext.ApplicationName,
             messageGroup: PlatformCqrsCommandEvent.EventTypeValue,
-            messageAction: @event.EventAction);
+            messageAction: @event.EventAction,
+            requestContext: PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues());
     }
 }
 

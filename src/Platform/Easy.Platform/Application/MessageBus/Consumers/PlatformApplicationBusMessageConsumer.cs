@@ -30,9 +30,9 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
     where TMessage : class, new()
 {
     protected readonly IPlatformInboxBusMessageRepository InboxBusMessageRepo;
+    protected readonly PlatformInboxConfig InboxConfig;
     protected readonly IServiceProvider ServiceProvider;
     protected readonly IUnitOfWorkManager UowManager;
-    protected readonly PlatformInboxConfig InboxConfig;
 
     protected PlatformApplicationMessageBusConsumer(
         ILoggerFactory loggerFactory,
@@ -55,7 +55,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                     nameof(PlatformCqrsEvent.RequestContext));
     }
 
-    public virtual bool AutoBeginUow => false;
+    public virtual bool AutoBeginUow => true;
     public bool IsInjectingUserContextAccessor { get; set; }
 
     public PlatformInboxBusMessage HandleDirectlyExistingInboxMessage { get; set; }
@@ -65,6 +65,8 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
 
     protected override async Task ExecuteHandleLogicAsync(TMessage message, string routingKey)
     {
+        if (message is IPlatformTrackableBusMessage trackableBusMessage) PlatformApplicationGlobal.UserContext.Current.UpsertMany(trackableBusMessage.RequestContext);
+
         if (InboxBusMessageRepo != null && !IsInstanceExecutingFromInboxHelper)
         {
             await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
@@ -94,7 +96,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
         }
     }
 
-    public static ILogger CreateGlobalLogger()
+    public ILogger CreateGlobalLogger()
     {
         return CreateLogger(PlatformGlobal.LoggerFactory);
     }

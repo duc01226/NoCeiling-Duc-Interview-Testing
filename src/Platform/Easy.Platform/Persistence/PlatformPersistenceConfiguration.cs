@@ -31,6 +31,8 @@ public class PlatformPersistenceConfigurationBadQueryWarningConfig
 {
     public bool IsEnabled { get; set; }
 
+    public bool TotalItemsThresholdWarningEnabled { get; set; }
+
     /// <summary>
     /// The configuration for when count of total items data get from context into memory is equal or more than this value, the system will log warning
     /// </summary>

@@ -54,6 +54,10 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
                     throw;
             }
         }
+        finally
+        {
+            PlatformGlobal.MemoryCollector.CollectGarbageMemory();
+        }
     }
 
     protected virtual Task OnException(HttpContext context, Exception exception)

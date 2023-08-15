@@ -35,7 +35,8 @@ public abstract class PlatformCqrsDomainEventBusMessageProducer<TDomainEvent>
             identity: BuildPlatformEventBusMessageIdentity(),
             producerContext: ApplicationSettingContext.ApplicationName,
             messageGroup: PlatformCqrsDomainEvent.EventTypeValue,
-            messageAction: @event.EventAction);
+            messageAction: @event.EventAction,
+            requestContext: PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues());
     }
 }
 

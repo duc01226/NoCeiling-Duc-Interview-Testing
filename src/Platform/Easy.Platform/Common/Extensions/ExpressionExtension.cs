@@ -15,6 +15,39 @@ public static class ExpressionExtension
         return expression;
     }
 
+    public static async Task<Expression<Func<T, bool>>> AndAlsoIf<T>(
+        this Expression<Func<T, bool>> expression,
+        bool @if,
+        Func<Task<Expression<Func<T, bool>>>> andExpressionAsync)
+    {
+        if (@if)
+            return expression.AndAlso(await andExpressionAsync());
+
+        return expression;
+    }
+
+    public static async Task<Expression<Func<T, bool>>> AndAlsoIf<T>(
+        this Task<Expression<Func<T, bool>>> expressionTask,
+        bool @if,
+        Func<Task<Expression<Func<T, bool>>>> andExpressionAsync)
+    {
+        if (@if)
+            return await expressionTask.Then(async expression => expression.AndAlso(await andExpressionAsync()));
+
+        return await expressionTask;
+    }
+
+    public static async Task<Expression<Func<T, bool>>> AndAlsoIf<T>(
+        this Task<Expression<Func<T, bool>>> expressionTask,
+        bool @if,
+        Expression<Func<T, bool>> andExpression)
+    {
+        if (@if)
+            return await expressionTask.Then(expression => expression.AndAlso(andExpression));
+
+        return await expressionTask;
+    }
+
     public static Expression<Func<T, bool>> OrIf<T>(
         this Expression<Func<T, bool>> expression,
         bool @if,

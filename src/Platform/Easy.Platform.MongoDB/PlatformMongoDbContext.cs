@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Easy.Platform.Application;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Application.MessageBus.OutboxPattern;
@@ -28,10 +29,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     public const string PlatformDataMigrationHistoryCollectionName = "MigrationHistory";
 
     public readonly IMongoDatabase Database;
-    protected readonly IPlatformApplicationUserContextAccessor UserContextAccessor;
 
     protected readonly Lazy<Dictionary<Type, string>> EntityTypeToCollectionNameDictionary;
     protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
+    protected readonly IPlatformApplicationUserContextAccessor UserContextAccessor;
 
     public PlatformMongoDbContext(
         IOptions<PlatformMongoOptions<TDbContext>> options,
@@ -109,7 +110,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     public Task<int> CountAsync<TEntity>(Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default)
         where TEntity : class, IEntity
     {
-        return GetQuery<TEntity>().WhereIf(predicate != null, predicate).CountAsync(cancellationToken);
+        return GetCollection<TEntity>()
+            .CountDocumentsAsync(predicate != null ? Builders<TEntity>.Filter.Where(predicate) : Builders<TEntity>.Filter.Empty, cancellationToken: cancellationToken)
+            .Then(result => (int)result);
     }
 
     public Task<TResult> FirstOrDefaultAsync<TEntity, TResult>(
@@ -128,7 +131,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     public Task<bool> AnyAsync<TEntity>(Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default)
         where TEntity : class, IEntity
     {
-        return GetQuery<TEntity>().WhereIf(predicate != null, predicate).AnyAsync(cancellationToken);
+        return GetCollection<TEntity>()
+            .Find(predicate != null ? Builders<TEntity>.Filter.Where(predicate) : Builders<TEntity>.Filter.Empty)
+            .Limit(1)
+            .CountDocumentsAsync(cancellationToken)
+            .Then(result => result > 0);
     }
 
     public Task<bool> AnyAsync<T>(IQueryable<T> source, CancellationToken cancellationToken = default)
@@ -228,7 +235,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             },
             dismissSendEvent,
             sendEntityEventConfigure: sendEntityEventConfigure,
-            requestContext: () => PlatformGlobal.UserContext.Current.GetAllKeyValues(),
+            requestContext: () => PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues(),
             cancellationToken);
     }
 
@@ -397,7 +404,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         cancellationToken),
                 dismissSendEvent,
                 sendEntityEventConfigure: sendEntityEventConfigure,
-                requestContext: () => PlatformGlobal.UserContext.Current.GetAllKeyValues(),
+                requestContext: () => PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues(),
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -422,7 +429,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         cancellationToken),
                 dismissSendEvent,
                 sendEntityEventConfigure: sendEntityEventConfigure,
-                requestContext: () => PlatformGlobal.UserContext.Current.GetAllKeyValues(),
+                requestContext: () => PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues(),
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -560,11 +567,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         Builders<PlatformInboxBusMessage>.IndexKeys
                             .Ascending(p => p.ConsumeStatus)
                             .Ascending(p => p.NextRetryProcessAfter)
-                            .Ascending(p => p.LastConsumeDate)),
-                    new(
-                        Builders<PlatformInboxBusMessage>.IndexKeys
-                            .Descending(p => p.LastConsumeDate)
-                            .Ascending(p => p.ConsumeStatus))
+                            .Ascending(p => p.LastConsumeDate))
                 });
     }
 
@@ -584,9 +587,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                             .Ascending(p => p.LastSendDate)),
                     new(
                         Builders<PlatformOutboxBusMessage>.IndexKeys
-                            .Descending(p => p.LastSendDate)
-                            .Ascending(p => p.SendStatus)),
-                    new(Builders<PlatformOutboxBusMessage>.IndexKeys.Descending(p => p.NextRetryProcessAfter))
+                            .Ascending(p => p.SendStatus)
+                            .Ascending(p => p.NextRetryProcessAfter)
+                            .Ascending(p => p.LastSendDate))
                 });
     }
 
@@ -650,7 +653,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 entity => GetTable<TEntity>().InsertOneAsync(entity, null, cancellationToken).Then(() => entity),
                 dismissSendEvent,
                 sendEntityEventConfigure: sendEntityEventConfigure,
-                requestContext: () => PlatformGlobal.UserContext.Current.GetAllKeyValues(),
+                requestContext: () => PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues(),
                 cancellationToken);
         else
             await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
@@ -665,7 +668,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                     .Then(() => entity),
                 dismissSendEvent,
                 sendEntityEventConfigure: sendEntityEventConfigure,
-                requestContext: () => PlatformGlobal.UserContext.Current.GetAllKeyValues(),
+                requestContext: () => PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues(),
                 cancellationToken);
 
         return toBeCreatedEntity;

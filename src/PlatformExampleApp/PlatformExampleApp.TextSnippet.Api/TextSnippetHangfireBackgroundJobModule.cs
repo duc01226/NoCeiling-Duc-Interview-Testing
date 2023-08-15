@@ -1,5 +1,7 @@
 using Easy.Platform.HangfireBackgroundJob;
+using Hangfire;
 using Microsoft.Extensions.Configuration;
+using PlatformExampleApp.TextSnippet.Application;
 
 namespace PlatformExampleApp.TextSnippet.Api;
 
@@ -34,5 +36,11 @@ public class TextSnippetHangfireBackgroundJobModule : PlatformHangfireBackground
     {
         return base.UseMongoStorageOptions()
             .With(_ => _.DatabaseName = Configuration.GetSection("MongoDB:Database").Get<string>());
+    }
+
+    protected override BackgroundJobServerOptions BackgroundJobServerOptionsConfigure(IServiceProvider provider, BackgroundJobServerOptions options)
+    {
+        return base.BackgroundJobServerOptionsConfigure(provider, options)
+            .With(_ => _.WorkerCount = Configuration.GetValue<int?>("PostgreSql:WorkerCount") ?? TextSnippetApplicationConstants.DefaultBackgroundJobWorkerCount);
     }
 }

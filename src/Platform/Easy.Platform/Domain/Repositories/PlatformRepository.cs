@@ -309,6 +309,14 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
+    public abstract Task<List<TEntity>> CreateOrUpdateManyAsync(
+        IUnitOfWork uow,
+        List<TEntity> entities,
+        bool dismissSendEvent = false,
+        Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        CancellationToken cancellationToken = default);
+
     public abstract Task<TEntity> UpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
@@ -328,6 +336,13 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         CancellationToken cancellationToken = default);
 
     public abstract Task<List<TEntity>> CreateManyAsync(
+        List<TEntity> entities,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        CancellationToken cancellationToken = default);
+
+    public abstract Task<List<TEntity>> CreateManyAsync(
+        IUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
@@ -460,19 +475,6 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         }
 
         return await action(UnitOfWorkManager.CurrentActiveUow());
-    }
-
-    protected async Task ExecuteAutoOpenUowUsingOnceTimeForWrite(
-        Func<IUnitOfWork, Task> action)
-    {
-        await ExecuteAutoOpenUowUsingOnceTimeForWrite(async uow => ActionWithResult(uow));
-
-        async Task<object> ActionWithResult(IUnitOfWork unitOfWork)
-        {
-            await action(unitOfWork);
-
-            return null;
-        }
     }
 
     protected abstract bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IUnitOfWork uow);

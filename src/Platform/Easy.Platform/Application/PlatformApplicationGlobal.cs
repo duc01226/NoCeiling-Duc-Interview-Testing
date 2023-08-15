@@ -1,5 +1,6 @@
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Common;
+using Easy.Platform.Infrastructures.Caching;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Easy.Platform.Application;
@@ -23,7 +24,9 @@ namespace Easy.Platform.Application;
 /// </summary>
 public abstract class PlatformApplicationGlobal : PlatformGlobal
 {
-    public static IPlatformApplicationUserContextAccessor UserContextAccessor => ServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>();
+    public static IPlatformApplicationUserContextAccessor UserContext => ServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>();
 
-    public static IPlatformApplicationUserContext CurrentUserContext => UserContextAccessor.Current;
+    public static IPlatformApplicationUserContext CurrentUserContext => UserContext.Current;
+
+    public static IPlatformCacheRepositoryProvider CacheRepositoryProvider => ServiceProvider.GetRequiredService<IPlatformCacheRepositoryProvider>();
 }

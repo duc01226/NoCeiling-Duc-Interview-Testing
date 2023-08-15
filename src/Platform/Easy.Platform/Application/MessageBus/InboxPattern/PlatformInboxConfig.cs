@@ -26,13 +26,13 @@ public class PlatformInboxConfig
     /// <summary>
     /// To config maximum number messages is deleted in every process. Default is 100
     /// </summary>
-    public int NumberOfDeleteMessagesBatch { get; set; } = 100;
+    public int NumberOfDeleteMessagesBatch { get; set; } = 10;
 
     public double MessageCleanerTriggerIntervalInMinutes { get; set; } = 1;
 
     public int ProcessClearMessageRetryCount { get; set; } = 5;
 
-    public int NumberOfProcessConsumeInboxMessagesBatch { get; set; } = 100;
+    public int NumberOfProcessConsumeInboxMessagesBatch { get; set; } = 10;
 
     public int ProcessConsumeMessageRetryCount { get; set; } = 10;
 

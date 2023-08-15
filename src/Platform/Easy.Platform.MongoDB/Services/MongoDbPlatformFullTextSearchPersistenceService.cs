@@ -43,7 +43,7 @@ public class MongoDbPlatformFullTextSearchPersistenceService : PlatformFullTextS
         bool fullTextAccurateMatch)
     {
         return Builders<T>.Filter.Text(
-            fullTextAccurateMatch ? $"\"{searchText.Trim()}\"" : searchText.Trim(),
+            fullTextAccurateMatch ? $"{searchText.Trim().Split(' ').Select(word => $"\"{word}\"").JoinToString(" ")}" : searchText.Trim(),
             new TextSearchOptions
             {
                 CaseSensitive = false,

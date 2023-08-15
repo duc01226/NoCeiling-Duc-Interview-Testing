@@ -5,6 +5,8 @@ namespace Easy.Platform.Common.Hosting;
 
 public abstract class PlatformIntervalProcessHostedService : PlatformHostedService
 {
+    public const int DefaultProcessTriggerIntervalTimeMilliseconds = 60000;
+
     protected readonly SemaphoreSlim IntervalProcessLock = new(1, 1);
 
     public PlatformIntervalProcessHostedService(
@@ -13,12 +15,17 @@ public abstract class PlatformIntervalProcessHostedService : PlatformHostedServi
     {
     }
 
+    public virtual bool AutoCleanMemory => true;
+
     protected override async Task StartProcess(CancellationToken cancellationToken)
     {
         while (!ProcessStopped && !StoppingCts.IsCancellationRequested)
         {
             await TriggerIntervalProcessAsync(cancellationToken);
+
             await Task.Delay(ProcessTriggerIntervalTime(), cancellationToken);
+
+            if (AutoCleanMemory) PlatformGlobal.MemoryCollector.CollectGarbageMemory();
         }
     }
 
@@ -47,6 +54,6 @@ public abstract class PlatformIntervalProcessHostedService : PlatformHostedServi
     /// <returns>The configuration as <see cref="TimeSpan" /> type.</returns>
     protected virtual TimeSpan ProcessTriggerIntervalTime()
     {
-        return 1.Minutes();
+        return DefaultProcessTriggerIntervalTimeMilliseconds.Milliseconds();
     }
 }

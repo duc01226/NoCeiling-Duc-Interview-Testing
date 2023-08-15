@@ -16,6 +16,16 @@ public class AutomationTestSettings
     public int? PageLoadTimeoutSeconds { get; set; } = DefaultPageLoadTimeoutSeconds;
     public double RemoteWebDriverCommandTimeoutSeconds { get; set; } = 300;
 
+    /// <summary>
+    /// Arguments for web driver, eliminated by ";". Example: "no-sandbox;headless;window-size=1920,1080"
+    /// </summary>
+    public string? WebDriverOptionsArguments { get; set; }
+
+    public string[] GetWebDriverConfigArgumentsList()
+    {
+        return WebDriverOptionsArguments?.Split(";").Where(p => !p.IsNullOrWhiteSpace()).Select(p => p.Trim()).ToArray() ?? Array.Empty<string>();
+    }
+
     public enum WebDriverTypes
     {
         Chrome,

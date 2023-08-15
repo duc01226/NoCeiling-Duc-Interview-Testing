@@ -1,3 +1,4 @@
+using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Microsoft.Extensions.Logging;
@@ -90,6 +91,10 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
         {
             Logger.LogError(e, "[BackgroundJob] Job {BackgroundJobType_Name} execution was failed.", GetType().Name);
             throw;
+        }
+        finally
+        {
+            PlatformGlobal.MemoryCollector.CollectGarbageMemory();
         }
     }
 

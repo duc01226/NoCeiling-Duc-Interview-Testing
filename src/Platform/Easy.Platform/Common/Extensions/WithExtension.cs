@@ -80,6 +80,20 @@ public static class WithExtension
         return target;
     }
 
+    public static async Task<T> WithIfAsync<T>(this T target, bool when, params Func<T, Task<T>>[] actions)
+    {
+        if (when)
+            await actions.ForEachAsync(action => action(target));
+        return target;
+    }
+
+    public static async Task<T> WithIf<T>(this T target, Func<T, Task<bool>> when, params Func<T, Task<T>>[] actions)
+    {
+        if (await when(target))
+            await actions.ForEachAsync(action => action(target));
+        return target;
+    }
+
     public static T WithIf<T>(this T target, Func<T, bool> @if, params Action<T>[] actions)
     {
         if (@if(target))

@@ -49,7 +49,7 @@ public class WebDriverManager : IWebDriverManager
 
     public IWebDriver CreateRemoteWebDriver()
     {
-        return CreateRemoteWebDriver(driverOptions: BuildDefaultDriverOptions(Settings));
+        return CreateRemoteWebDriver(driverOptions: BuildDriverOptions(Settings));
     }
 
     public IWebDriver CreateRemoteWebDriver(DriverOptions driverOptions)
@@ -68,19 +68,36 @@ public class WebDriverManager : IWebDriverManager
     public IWebDriver CreateLocalMachineWebDriver(IDriverConfig config, string version = "Latest", Architecture architecture = Architecture.Auto)
     {
         new DriverManager().SetUpDriver(config, version, architecture);
-        return new ChromeDriver().Pipe(DefaultConfigDriver);
+        return new ChromeDriver(options: BuildChromeDriverOptions(Settings)).Pipe(DefaultConfigDriver);
     }
 
-    public DriverOptions BuildDefaultDriverOptions(AutomationTestSettings settings)
+    public DriverOptions BuildDriverOptions(AutomationTestSettings settings)
     {
         // AddArgument("no-sandbox") to fix https://stackoverflow.com/questions/22322596/selenium-error-the-http-request-to-the-remote-webdriver-timed-out-after-60-sec
         return settings.WebDriverType
             .WhenValue(
                 AutomationTestSettings.WebDriverTypes.Chrome,
-                then: _ => new ChromeOptions().Pipe(fn: _ => _.AddArgument(argument: "no-sandbox")).As<DriverOptions>())
-            .WhenValue(AutomationTestSettings.WebDriverTypes.Firefox, then: _ => new FirefoxOptions().As<DriverOptions>())
-            .WhenValue(AutomationTestSettings.WebDriverTypes.Edge, then: _ => new EdgeOptions().Pipe(fn: _ => _.AddArgument(argument: "no-sandbox")).As<DriverOptions>())
+                then: _ => BuildChromeDriverOptions(settings)
+                    .With(_ => _.AddArgument("no-sandbox"))
+                    .As<DriverOptions>())
+            .WhenValue(
+                AutomationTestSettings.WebDriverTypes.Firefox,
+                then: _ => new FirefoxOptions()
+                    .With(_ => _.AddArguments(settings.GetWebDriverConfigArgumentsList()))
+                    .As<DriverOptions>())
+            .WhenValue(
+                AutomationTestSettings.WebDriverTypes.Edge,
+                then: _ => new EdgeOptions()
+                    .With(_ => _.AddArgument("no-sandbox"))
+                    .With(_ => _.AddArguments(settings.GetWebDriverConfigArgumentsList()))
+                    .As<DriverOptions>())
             .Execute();
+    }
+
+    private static ChromeOptions BuildChromeDriverOptions(AutomationTestSettings settings)
+    {
+        return new ChromeOptions()
+            .With(_ => _.AddArguments(settings.GetWebDriverConfigArgumentsList()));
     }
 
     public static IDriverConfig BuildDefaultDriverConfig(AutomationTestSettings settings)

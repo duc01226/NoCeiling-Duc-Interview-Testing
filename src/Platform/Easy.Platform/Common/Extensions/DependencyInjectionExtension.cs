@@ -194,7 +194,7 @@ public static class DependencyInjectionExtension
     }
 
     /// <summary>
-    ///     <inheritdoc cref="RegisterAllForImplementation(IServiceCollection,Type,ServiceLifeTime,bool,CheckRegisteredStrategy)" />
+    /// <inheritdoc cref="RegisterAllForImplementation(IServiceCollection,Type,ServiceLifeTime,bool,CheckRegisteredStrategy)" />
     /// </summary>
     public static IServiceCollection RegisterAllForImplementation<TImplementation>(
         this IServiceCollection services,

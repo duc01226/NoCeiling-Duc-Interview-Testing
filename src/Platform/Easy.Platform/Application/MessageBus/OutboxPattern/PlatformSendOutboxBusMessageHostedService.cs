@@ -178,7 +178,6 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
                             p =>
                             {
                                 p.SendStatus = PlatformOutboxBusMessage.SendStatuses.Processing;
-                                p.LastSendDate = DateTime.UtcNow;
                             });
 
                         await outboxEventBusMessageRepo.UpdateManyAsync(

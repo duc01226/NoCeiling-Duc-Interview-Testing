@@ -39,8 +39,14 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
     }
 
     private doSaveCache = () => {
-        const cacheData = JSON.stringify(Array.from(this.cache.entries()));
-        localStorage.setItem(this.cacheKey, cacheData);
+        try {
+            const cacheData = JSON.stringify(Array.from(this.cache.entries()));
+            localStorage.setItem(this.cacheKey, cacheData);
+        } catch (error) {
+            console.log('Local Storage is full, Please empty data');
+            console.error(error);
+            this.clear();
+        }
     };
 
     private doSaveCacheDebounce = task_debounce(() => this.doSaveCache(), this.options.defaultDebounceSaveCacheMs);
@@ -109,8 +115,12 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
     }
 
     public override clear(): void {
-        this.cache.clear();
-        this.saveCache();
+        try {
+            this.cache.clear();
+            this.saveCache(false);
+        } catch (error) {
+            console.error(error);
+        }
     }
 
     protected findOldestKey() {

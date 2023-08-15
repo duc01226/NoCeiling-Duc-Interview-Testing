@@ -15,7 +15,7 @@ public interface IPlatformCacheRepositoryProvider
     /// <summary>
     /// Get cache repository by type
     /// </summary>
-    public IPlatformCacheRepository Get(PlatformCacheRepositoryType cacheRepositoryType);
+    public IPlatformCacheRepository Get(PlatformCacheRepositoryType cacheRepositoryType, bool fallbackMemoryCacheIfNotExist = true);
 
     /// <summary>
     /// Try Get cache repository by type. Return null if not existed
@@ -32,17 +32,16 @@ public interface IPlatformCacheRepositoryProvider
     /// Get collection cache repository by type
     /// </summary>
     public IPlatformCollectionCacheRepository<TCollectionCacheKeyProvider>
-        GetCollection<TCollectionCacheKeyProvider>(PlatformCacheRepositoryType cacheRepositoryType)
+        GetCollection<TCollectionCacheKeyProvider>(PlatformCacheRepositoryType cacheRepositoryType, bool fallbackMemoryCacheIfNotExist = true)
         where TCollectionCacheKeyProvider : PlatformCollectionCacheKeyProvider;
 }
 
 public class PlatformCacheRepositoryProvider : IPlatformCacheRepositoryProvider
 {
-    private readonly Dictionary<PlatformCacheRepositoryType, IPlatformCacheRepository>
-        registeredCacheRepositoriesDic;
+    private readonly List<IPlatformCacheRepository> registeredCacheRepositories;
+    private readonly Dictionary<PlatformCacheRepositoryType, IPlatformCacheRepository> registeredCacheRepositoriesDic;
 
     private readonly IServiceProvider serviceProvider;
-    private readonly List<IPlatformCacheRepository> registeredCacheRepositories;
 
     public PlatformCacheRepositoryProvider(
         IServiceProvider serviceProvider,
@@ -58,11 +57,12 @@ public class PlatformCacheRepositoryProvider : IPlatformCacheRepositoryProvider
         return registeredCacheRepositories.Last();
     }
 
-    public IPlatformCacheRepository Get(PlatformCacheRepositoryType cacheRepositoryType)
+    public IPlatformCacheRepository Get(PlatformCacheRepositoryType cacheRepositoryType, bool fallbackMemoryCacheIfNotExist = true)
     {
-        EnsureCacheRepositoryTypeRegistered(cacheRepositoryType);
+        if (fallbackMemoryCacheIfNotExist == false)
+            EnsureCacheRepositoryTypeRegistered(cacheRepositoryType);
 
-        return registeredCacheRepositoriesDic[cacheRepositoryType];
+        return registeredCacheRepositoriesDic.GetValueOrDefault(cacheRepositoryType) ?? registeredCacheRepositoriesDic[PlatformCacheRepositoryType.Memory];
     }
 
     public IPlatformCacheRepository TryGet(PlatformCacheRepositoryType cacheRepositoryType)
@@ -86,14 +86,18 @@ public class PlatformCacheRepositoryProvider : IPlatformCacheRepositoryProvider
     }
 
     public IPlatformCollectionCacheRepository<TCollectionCacheKeyProvider>
-        GetCollection<TCollectionCacheKeyProvider>(PlatformCacheRepositoryType cacheRepositoryType)
+        GetCollection<TCollectionCacheKeyProvider>(PlatformCacheRepositoryType cacheRepositoryType, bool fallbackMemoryCacheIfNotExist = true)
         where TCollectionCacheKeyProvider : PlatformCollectionCacheKeyProvider
     {
-        EnsureCacheRepositoryTypeRegistered(cacheRepositoryType);
+        if (fallbackMemoryCacheIfNotExist == false)
+            EnsureCacheRepositoryTypeRegistered(cacheRepositoryType);
 
         return serviceProvider
-            .GetServices<IPlatformCollectionCacheRepository<TCollectionCacheKeyProvider>>()
-            .Last(p => p.CacheRepositoryType() == cacheRepositoryType);
+                   .GetServices<IPlatformCollectionCacheRepository<TCollectionCacheKeyProvider>>()
+                   .LastOrDefault(p => p.CacheRepositoryType() == cacheRepositoryType) ??
+               serviceProvider
+                   .GetServices<IPlatformCollectionCacheRepository<TCollectionCacheKeyProvider>>()
+                   .LastOrDefault(p => p.CacheRepositoryType() == PlatformCacheRepositoryType.Memory);
     }
 
     private static Dictionary<PlatformCacheRepositoryType, IPlatformCacheRepository>

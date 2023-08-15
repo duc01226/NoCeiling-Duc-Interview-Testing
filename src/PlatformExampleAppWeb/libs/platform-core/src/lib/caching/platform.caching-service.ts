@@ -1,4 +1,5 @@
 import { concat, delay, Observable, of, tap } from 'rxjs';
+import { TapObserver } from 'rxjs/internal/operators/tap';
 
 import { distinctUntilObjectValuesChanged } from '../rxjs';
 
@@ -26,28 +27,36 @@ export abstract class PlatformCachingService {
         const cachedData = this.get<T>(requestCacheKey);
 
         if (cachedData == null) {
-            return request();
+            return request().pipe(
+                tap(this.tapCacheDataObserver<T>(customSetCachedRequestDataFn, requestCacheKey, options))
+            );
         } else {
             // delay(10ms) a little to mimic the real async rxjs observable => the next will be async => the flow is corrected if before call api
             // do update something in store
             return concat(
                 of(cachedData).pipe(delay(10)),
                 request().pipe(
-                    tap({
-                        next: result => {
-                            if (customSetCachedRequestDataFn != null)
-                                customSetCachedRequestDataFn(requestCacheKey, result);
-                            else this.set(requestCacheKey, result, options);
-                        },
-                        error: err => {
-                            if (customSetCachedRequestDataFn != null)
-                                customSetCachedRequestDataFn(requestCacheKey, undefined);
-                            else this.delete(requestCacheKey);
-                        }
-                    })
+                    tap(this.tapCacheDataObserver<T>(customSetCachedRequestDataFn, requestCacheKey, options))
                 )
             ).pipe(distinctUntilObjectValuesChanged());
         }
+    }
+
+    private tapCacheDataObserver<T>(
+        customSetCachedRequestDataFn: ((requestCacheKey: string, data: T | undefined) => unknown) | undefined,
+        requestCacheKey: string,
+        options: PlatformCachingServiceSetCacheOptions | undefined
+    ): Partial<TapObserver<T>> {
+        return {
+            next: result => {
+                if (customSetCachedRequestDataFn != null) customSetCachedRequestDataFn(requestCacheKey, result);
+                else this.set(requestCacheKey, result, options);
+            },
+            error: err => {
+                if (customSetCachedRequestDataFn != null) customSetCachedRequestDataFn(requestCacheKey, undefined);
+                else this.delete(requestCacheKey);
+            }
+        };
     }
 }
 

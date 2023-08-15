@@ -1,7 +1,7 @@
-using Easy.Platform.Common.Extensions;
 using Easy.Platform.MongoDB;
 using Easy.Platform.Persistence;
 using Microsoft.Extensions.Configuration;
+using PlatformExampleApp.TextSnippet.Application;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.Mongo;
 
@@ -17,6 +17,8 @@ public class TextSnippetMongoPersistenceModule : PlatformMongoDbPersistenceModul
     {
         options.ConnectionString = Configuration.GetSection("MongoDB:ConnectionString").Value;
         options.Database = Configuration.GetSection("MongoDB:Database").Value;
+        options.MinConnectionPoolSize =
+            Configuration.GetValue<int?>("MongoDB:MinConnectionPoolSize") ?? TextSnippetApplicationConstants.DefaultBackgroundJobWorkerCount + 2;
     }
 
     protected override bool EnableInboxBusMessage()
@@ -36,6 +38,7 @@ public class TextSnippetMongoPersistenceModule : PlatformMongoDbPersistenceModul
     {
         return base.ConfigurePersistenceConfiguration(config, configuration)
             .With(p => p.BadQueryWarning.IsEnabled = configuration.GetValue<bool>("PersistenceConfiguration:BadQueryWarning:IsEnabled"))
+            .With(p => p.BadQueryWarning.TotalItemsThresholdWarningEnabled = true)
             .With(
                 p => p.BadQueryWarning.TotalItemsThreshold =
                     configuration.GetValue<int>("PersistenceConfiguration:BadQueryWarning:TotalItemsThreshold")) // Demo warning for getting a lot of data in to memory

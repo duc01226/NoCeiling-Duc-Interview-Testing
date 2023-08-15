@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using Easy.Platform.Application.Context;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Infrastructures.Caching;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -19,7 +18,8 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         IServiceProvider serviceProvider,
         IOptions<RedisCacheOptions> optionsAccessor,
         IPlatformApplicationSettingContext applicationSettingContext,
-        ILoggerFactory loggerFactory) : base(serviceProvider, loggerFactory)
+        ILoggerFactory loggerFactory,
+        PlatformCacheSettings cacheSettings) : base(serviceProvider, loggerFactory, cacheSettings)
     {
         this.applicationSettingContext = applicationSettingContext;
         redisCache = new Lazy<Microsoft.Extensions.Caching.StackExchangeRedis.RedisCache>(
@@ -39,26 +39,31 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
 
     public override async Task<T> GetAsync<T>(PlatformCacheKey cacheKey, CancellationToken token = default)
     {
-        try
-        {
-            var result = await redisCache.Value.GetAsync(cacheKey, token);
+        return await CacheSettings.ExecuteWithSlowWarning(
+            async () =>
+            {
+                try
+                {
+                    var result = await redisCache.Value.GetAsync(cacheKey, token);
 
-            try
-            {
-                return result == null ? default : PlatformJsonSerializer.Deserialize<T>(result);
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(e, "GetAsync failed. CacheKey:{CacheKey}", cacheKey);
-                // WHY: If parse failed, the cached data could be obsolete. Then just clear the cache
-                await RemoveAsync(cacheKey, token);
-                return default;
-            }
-        }
-        catch (Exception e)
-        {
-            throw new Exception($"{GetType().Name} GetAsync failed. {e.Message}.", e);
-        }
+                    try
+                    {
+                        return result == null ? default : PlatformJsonSerializer.Deserialize<T>(result);
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.LogError(e, "GetAsync failed. CacheKey:{CacheKey}", cacheKey);
+                        // WHY: If parse failed, the cached data could be obsolete. Then just clear the cache
+                        await RemoveAsync(cacheKey, token);
+                        return default;
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new Exception($"{GetType().Name} GetAsync failed. {e.Message}.", e);
+                }
+            },
+            () => Logger);
     }
 
     public override void Set<T>(PlatformCacheKey cacheKey, T value, PlatformCacheEntryOptions cacheOptions = null)
@@ -72,34 +77,41 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         PlatformCacheEntryOptions cacheOptions = null,
         CancellationToken token = default)
     {
-        await SetToRedisCacheAsync(cacheKey, value, cacheOptions, token);
+        await CacheSettings.ExecuteWithSlowWarning(
+            async () =>
+            {
+                await SetToRedisCacheAsync(cacheKey, value, cacheOptions, token);
 
-        await UpdateGlobalCachedKeys(p => p.TryAdd(cacheKey, null));
+                await UpdateGlobalCachedKeys(p => p.TryAdd(cacheKey, null));
+            },
+            () => Logger,
+            true);
     }
 
     public override async Task RemoveAsync(PlatformCacheKey cacheKey, CancellationToken token = default)
     {
-        // Store stack trace before call redisCache.Value.GetAsync to keep the original stack trace to log
-        // after redisCache.Value.GetAsync will lose full stack trace (may because it connect async to other external service)
-        var fullStackTrace = Environment.StackTrace;
+        await CacheSettings.ExecuteWithSlowWarning(
+            async () =>
+            {
+                try
+                {
+                    await redisCache.Value.RemoveAsync(cacheKey, token);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(
+                        ex,
+                        "RemoveAsync failed. [[Exception:{Exception}]]. [CacheKey: {CacheKey}]",
+                        ex.ToString(),
+                        cacheKey);
 
-        try
-        {
-            await redisCache.Value.RemoveAsync(cacheKey, token);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(
-                ex,
-                "RemoveAsync failed. [[Exception:{Exception}]]. [CacheKey: {CacheKey}]. [[FullStackTrace:{FullStackTrace}]]",
-                ex.ToString(),
-                cacheKey,
-                $"{ex.StackTrace}{Environment.NewLine}FromFullStackTrace:{fullStackTrace}");
+                    throw new Exception($"{GetType().Name} RemoveAsync failed. {ex.Message}", ex);
+                }
 
-            throw new Exception($"{GetType().Name} RemoveAsync failed. {ex.Message}", ex);
-        }
-
-        await UpdateGlobalCachedKeys(p => p.TryRemove(cacheKey, out var _));
+                await UpdateGlobalCachedKeys(p => p.TryRemove(cacheKey, out var _));
+            },
+            () => Logger,
+            true);
     }
 
     public override async Task RemoveAsync(
@@ -158,10 +170,6 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         PlatformCacheEntryOptions cacheOptions = null,
         CancellationToken token = default)
     {
-        // Store stack trace before call redisCache.Value.SetAsync to keep the original stack trace to log
-        // after redisCache.Value.SetAsync will lose full stack trace (may because it connect async to other external service)
-        var fullStackTrace = Environment.StackTrace;
-
         try
         {
             await redisCache.Value.SetAsync(
@@ -174,10 +182,9 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         {
             Logger.LogError(
                 ex,
-                "SetToRedisCacheAsync failed. [[Exception:{Exception}]]. [CacheKey: {CacheKey}]. [[FullStackTrace:{FullStackTrace}]]",
+                "SetToRedisCacheAsync failed. [[Exception:{Exception}]]. [CacheKey: {CacheKey}]",
                 ex.ToString(),
-                cacheKey,
-                $"{ex.StackTrace}{Environment.NewLine}FromFullStackTrace:{fullStackTrace}");
+                cacheKey);
 
             throw new Exception($"{GetType().Name} SetToRedisCacheAsync failed. {ex.Message}", ex);
         }
@@ -196,20 +203,5 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
                 UnusedExpirationInSeconds = null,
                 AbsoluteExpirationInSeconds = null
             });
-    }
-
-    private DistributedCacheEntryOptions MapToDistributedCacheEntryOptions(PlatformCacheEntryOptions options)
-    {
-        var result = new DistributedCacheEntryOptions();
-
-        var absoluteExpirationRelativeToNow = options?.AbsoluteExpirationRelativeToNow();
-        if (absoluteExpirationRelativeToNow != null)
-            result.AbsoluteExpirationRelativeToNow = absoluteExpirationRelativeToNow;
-
-        var slidingExpiration = options?.SlidingExpiration();
-        if (slidingExpiration != null)
-            result.SlidingExpiration = slidingExpiration;
-
-        return result;
     }
 }

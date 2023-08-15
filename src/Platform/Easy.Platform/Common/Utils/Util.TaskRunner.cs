@@ -1213,5 +1213,40 @@ public static partial class Util
 
             return result;
         }
+
+        public class Throttler : IDisposable
+        {
+            private CancellationTokenSource cts;
+
+            public void Dispose()
+            {
+                Dispose(true);
+                GC.SuppressFinalize(this);
+            }
+
+            public static Func<Task> CreateThrottleExecutionFunc(Func<Task> function, TimeSpan throttleWindow)
+            {
+                var throttler = new Throttler();
+
+                return () => throttler.ThrottleExecuteAsync(function, throttleWindow);
+            }
+
+            public async Task ThrottleExecuteAsync(Func<Task> function, TimeSpan throttleWindow)
+            {
+                cts?.Cancel();
+
+                cts = new CancellationTokenSource();
+                var cancellationToken = cts.Token;
+
+                await Task.Delay(throttleWindow, cancellationToken);
+
+                if (!cancellationToken.IsCancellationRequested) await function();
+            }
+
+            protected virtual void Dispose(bool disposing)
+            {
+                if (disposing) cts?.Dispose();
+            }
+        }
     }
 }

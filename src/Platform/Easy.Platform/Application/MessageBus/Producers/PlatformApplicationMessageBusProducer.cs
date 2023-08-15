@@ -141,6 +141,8 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
             trackableBusMessage.TrackingId ??= Guid.NewGuid().ToString();
             trackableBusMessage.ProduceFrom ??= ApplicationSettingContext.ApplicationName;
             trackableBusMessage.CreatedUtcDate ??= DateTime.UtcNow;
+            if (trackableBusMessage.RequestContext == null || trackableBusMessage.RequestContext.IsEmpty())
+                trackableBusMessage.RequestContext = PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues();
         }
 
         if (autoSaveOutboxMessage && HasOutboxMessageSupport())
@@ -171,7 +173,8 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
             identity: BuildPlatformEventBusMessageIdentity(),
             producerContext: ApplicationSettingContext.ApplicationName,
             messageGroup: messageGroup,
-            messageAction: messageAction);
+            messageAction: messageAction,
+            requestContext: PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues());
     }
 
     public class PlatformPseudoMessageBusProducer : IPlatformMessageBusProducer

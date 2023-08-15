@@ -37,6 +37,8 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
 
     public virtual int FailedRetryCount => 0;
 
+    protected virtual bool AutoOpenUow => true;
+
     public virtual async Task<TResult> Handle(TCommand request, CancellationToken cancellationToken)
     {
         using (var activity = IPlatformCqrsCommandApplicationHandler.ActivitySource.StartActivity($"{nameof(IPlatformCqrsCommandApplicationHandler)}.{nameof(Handle)}"))
@@ -69,6 +71,8 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                     p => p.SetRequestContextValues(CurrentUser.GetAllKeyValues())),
                 cancellationToken);
 
+            PlatformGlobal.MemoryCollector.CollectGarbageMemory();
+
             return result;
         }
     }
@@ -79,26 +83,23 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
     {
         if (FailedRetryCount > 0)
             return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                () => ExecuteHandleAsync(UnitOfWorkManager.Begin(), request, cancellationToken),
+                () => DoExecuteHandleAsync(request, cancellationToken),
                 retryCount: FailedRetryCount);
-        return await ExecuteHandleAsync(UnitOfWorkManager.Begin(), request, cancellationToken);
+        return await DoExecuteHandleAsync(request, cancellationToken);
     }
 
-    protected virtual async Task<TResult> ExecuteHandleAsync(
-        IUnitOfWork usingUow,
-        TCommand request,
-        CancellationToken cancellationToken)
+    protected virtual async Task<TResult> DoExecuteHandleAsync(TCommand request, CancellationToken cancellationToken)
     {
-        TResult result;
+        if (AutoOpenUow == false) return await HandleAsync(request, cancellationToken);
 
-        using (usingUow)
+        using (var uow = UnitOfWorkManager.Begin())
         {
-            result = await HandleAsync(request, cancellationToken);
+            var result = await HandleAsync(request, cancellationToken);
 
-            await usingUow.CompleteAsync(cancellationToken);
+            await uow.CompleteAsync(cancellationToken);
+
+            return result;
         }
-
-        return result;
     }
 }
 

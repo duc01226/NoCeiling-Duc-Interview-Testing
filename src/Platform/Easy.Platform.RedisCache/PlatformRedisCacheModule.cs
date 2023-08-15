@@ -27,7 +27,8 @@ public abstract class PlatformRedisCacheModule : PlatformCachingModule
             serviceProvider,
             serviceProvider.GetRequiredService<IOptions<RedisCacheOptions>>(),
             serviceProvider.GetRequiredService<IPlatformApplicationSettingContext>(),
-            serviceProvider.GetRequiredService<ILoggerFactory>());
+            serviceProvider.GetRequiredService<ILoggerFactory>(),
+            serviceProvider.GetRequiredService<PlatformCacheSettings>());
     }
 
     protected override void InternalRegister(IServiceCollection serviceCollection)

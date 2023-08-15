@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Easy.Platform.Application;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Application.Persistence;
@@ -18,8 +19,8 @@ namespace Easy.Platform.EfCore;
 public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatformDbContext<TDbContext>
     where TDbContext : PlatformEfCoreDbContext<TDbContext>, IPlatformDbContext<TDbContext>
 {
-    protected readonly IPlatformApplicationUserContextAccessor UserContextAccessor;
     protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
+    protected readonly IPlatformApplicationUserContextAccessor UserContextAccessor;
 
     public PlatformEfCoreDbContext(
         DbContextOptions<TDbContext> options,
@@ -207,7 +208,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             },
             dismissSendEvent,
             sendEntityEventConfigure: sendEntityEventConfigure,
-            requestContext: () => PlatformGlobal.UserContext.Current.GetAllKeyValues(),
+            requestContext: () => PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues(),
             cancellationToken);
     }
 
@@ -259,7 +260,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             entity => GetTable<TEntity>().AddAsync(toBeCreatedEntity, cancellationToken).AsTask().Then(p => toBeCreatedEntity),
             dismissSendEvent,
             sendEntityEventConfigure: sendEntityEventConfigure,
-            requestContext: () => PlatformGlobal.UserContext.Current.GetAllKeyValues(),
+            requestContext: () => PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues(),
             cancellationToken);
 
         return result;
@@ -357,7 +358,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             },
             dismissSendEvent,
             sendEntityEventConfigure: sendEntityEventConfigure,
-            requestContext: () => PlatformGlobal.UserContext.Current.GetAllKeyValues(),
+            requestContext: () => PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues(),
             cancellationToken);
 
         return result;

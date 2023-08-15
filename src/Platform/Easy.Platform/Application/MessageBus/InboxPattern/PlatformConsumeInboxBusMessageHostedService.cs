@@ -4,6 +4,7 @@ using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Hosting;
 using Easy.Platform.Common.JsonSerialization;
+using Easy.Platform.Common.Timing;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Exceptions;
 using Easy.Platform.Domain.UnitOfWork;
@@ -211,7 +212,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                             p =>
                             {
                                 p.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Processing;
-                                p.LastConsumeDate = DateTime.UtcNow;
+                                p.LastConsumeDate = Clock.UtcNow;
                             });
 
                         await inboxEventBusMessageRepo.UpdateManyAsync(

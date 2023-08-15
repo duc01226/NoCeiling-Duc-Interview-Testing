@@ -1,3 +1,4 @@
+using Easy.Platform.Application;
 using Easy.Platform.Application.Cqrs.Events;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Logging;
@@ -25,7 +26,7 @@ internal sealed class ClearCacheOnTransferSnippetTextToMultiDbDemoEntityNameDoma
         var removeFilterRequestCacheKeyParts = SearchSnippetTextQuery.BuildCacheRequestKeyParts(request: null, userId: null, companyId: null);
 
         Util.TaskRunner.QueueIntervalAsyncActionInBackground(
-            token => PlatformGlobal.CacheRepositoryProvider
+            token => PlatformApplicationGlobal.CacheRepositoryProvider
                 .GetCollection<TextSnippetCollectionCacheKeyProvider>()
                 .RemoveAsync(cacheRequestKeyPartsPredicate: keyParts => keyParts[1] == removeFilterRequestCacheKeyParts[1], token),
             intervalTimeInSeconds: 5,

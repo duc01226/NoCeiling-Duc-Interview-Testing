@@ -31,13 +31,13 @@ public class PlatformOutboxConfig
     /// <summary>
     /// Default number messages is deleted in every process. Default is 100;
     /// </summary>
-    public int NumberOfDeleteMessagesBatch { get; set; } = 100;
+    public int NumberOfDeleteMessagesBatch { get; set; } = 10;
 
     public double MessageCleanerTriggerIntervalInMinutes { get; set; } = 1;
 
     public int ProcessClearMessageRetryCount { get; set; } = 5;
 
-    public int NumberOfProcessSendOutboxMessagesBatch { get; set; } = 100;
+    public int NumberOfProcessSendOutboxMessagesBatch { get; set; } = 10;
 
     public int ProcessSendMessageRetryCount { get; set; } = 10;
 

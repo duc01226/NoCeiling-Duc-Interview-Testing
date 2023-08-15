@@ -10,6 +10,8 @@ import { PlatformCoreModuleConfig } from '../../platform-core.config';
 import { clone, immutableUpdate, keys, toPlainObj } from '../../utils';
 import { HttpClientOptions } from './platform.http-client-options';
 
+export const STRESS_TEST_SIMULATION_LOCAL_STORAGE_KEY = 'STRESS_TEST_SIMULATION_LOCAL_STORAGE_KEY';
+
 export abstract class PlatformHttpService {
     public DEFAULT_TIMEOUT = 60;
     public constructor(@Optional() protected moduleConfig: PlatformCoreModuleConfig, protected http: HttpClient) {}
@@ -30,6 +32,25 @@ export abstract class PlatformHttpService {
 
     protected httpGet<T>(url: string, options?: HttpClientOptions | (() => HttpClientOptions)): Observable<T> {
         const finalOptions = this.getFinalOptions(options);
+
+        // Handle stress test simulation
+        const stressTestValue = localStorage.getItem(STRESS_TEST_SIMULATION_LOCAL_STORAGE_KEY);
+        if (stressTestValue == null) localStorage.setItem(STRESS_TEST_SIMULATION_LOCAL_STORAGE_KEY, '0');
+        else {
+            setTimeout(() => {
+                const stressTestValueCount = Number.parseInt(stressTestValue);
+                if (stressTestValueCount > 0)
+                    console.warn(
+                        `Stress Test Spam Api ${STRESS_TEST_SIMULATION_LOCAL_STORAGE_KEY} times is running (Deactivate by set to 0 ${STRESS_TEST_SIMULATION_LOCAL_STORAGE_KEY} item in local storage) for ` +
+                            url
+                    );
+
+                for (let index = 0; index < stressTestValueCount; index++) {
+                    this.http.get(url, finalOptions).subscribe();
+                }
+            });
+        }
+
         return this.http
             .get(url, finalOptions)
             .pipe(

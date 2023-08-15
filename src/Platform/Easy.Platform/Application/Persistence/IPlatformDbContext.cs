@@ -1,6 +1,5 @@
 #nullable enable
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
@@ -165,7 +164,9 @@ public interface IPlatformDbContext : IDisposable
         // after get data from database, it switched to I/O thread pool
         var loggingFullStackTrace = Environment.StackTrace;
 
-        if (typeof(TResult).IsAssignableToGenericType(typeof(IEnumerable<>)) && resultQuery != null)
+        if (persistenceConfiguration.BadQueryWarning.TotalItemsThresholdWarningEnabled &&
+            resultQuery != null &&
+            typeof(TResult).IsAssignableToGenericType(typeof(IEnumerable<>)))
             HandleLogTooMuchDataInMemoryBadQueryWarning(resultQuery, persistenceConfiguration, logger, loggingFullStackTrace, resultQueryStringBuilder);
 
         var result = await HandleLogSlowQueryBadQueryWarning(
@@ -179,11 +180,11 @@ public interface IPlatformDbContext : IDisposable
         return result;
 
         static void HandleLogTooMuchDataInMemoryBadQueryWarning(
-            [AllowNull] IEnumerable<TSource> resultQuery,
+            IEnumerable<TSource>? resultQuery,
             IPlatformPersistenceConfiguration persistenceConfiguration,
             ILogger logger,
             string loggingFullStackTrace,
-            [AllowNull] Func<string> resultQueryStringBuilder)
+            Func<string>? resultQueryStringBuilder)
         {
             var queryResultCount = resultQuery?.Count() ?? 0;
 
@@ -197,7 +198,7 @@ public interface IPlatformDbContext : IDisposable
             ILogger logger,
             string loggingFullStackTrace,
             bool forWriteQuery,
-            [AllowNull] Func<string> resultQueryStringBuilder)
+            Func<string>? resultQueryStringBuilder)
         {
             var startQueryTimeStamp = Stopwatch.GetTimestamp();
 
@@ -207,6 +208,7 @@ public interface IPlatformDbContext : IDisposable
 
             if (queryElapsedTime.TotalMilliseconds >= persistenceConfiguration.BadQueryWarning.GetSlowQueryMillisecondsThreshold(forWriteQuery))
                 LogSlowQueryBadQueryWarning(queryElapsedTime, logger, persistenceConfiguration, loggingFullStackTrace, resultQueryStringBuilder);
+
             return result;
         }
     }
@@ -216,7 +218,7 @@ public interface IPlatformDbContext : IDisposable
         ILogger logger,
         IPlatformPersistenceConfiguration persistenceConfiguration,
         string loggingStackTrace,
-        [AllowNull] Func<string> resultQueryStringBuilder)
+        Func<string>? resultQueryStringBuilder)
     {
         logger.Log(
             persistenceConfiguration.BadQueryWarning.IsLogWarningAsError ? LogLevel.Error : LogLevel.Warning,
@@ -235,7 +237,7 @@ public interface IPlatformDbContext : IDisposable
         ILogger logger,
         IPlatformPersistenceConfiguration persistenceConfiguration,
         string loggingStackTrace,
-        [AllowNull] Func<string> resultQueryStringBuilder)
+        Func<string>? resultQueryStringBuilder)
     {
         logger.Log(
             persistenceConfiguration.BadQueryWarning.IsLogWarningAsError ? LogLevel.Error : LogLevel.Warning,

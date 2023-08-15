@@ -61,6 +61,11 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
         return InnerUnitOfWorks.FirstOrDefault(p => p.Equals(uow))?.DoesSupportParallelQuery() == true;
     }
 
+    public override bool IsActive()
+    {
+        return base.IsActive() && InnerUnitOfWorks.Any(p => p.IsActive());
+    }
+
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);

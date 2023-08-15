@@ -15,7 +15,8 @@ public class PlatformMemoryCacheRepository : PlatformCacheRepository, IPlatformM
 
     public PlatformMemoryCacheRepository(
         ILoggerFactory loggerFactory,
-        IServiceProvider serviceProvider) : base(serviceProvider, loggerFactory)
+        IServiceProvider serviceProvider,
+        PlatformCacheSettings cacheSettings) : base(serviceProvider, loggerFactory, cacheSettings)
     {
         memoryDistributedCache = new MemoryDistributedCache(
             new OptionsWrapper<MemoryDistributedCacheOptions>(new MemoryDistributedCacheOptions()),
@@ -78,20 +79,5 @@ public class PlatformMemoryCacheRepository : PlatformCacheRepository, IPlatformM
     public override PlatformCacheKey GetGlobalAllRequestCachedKeysCacheKey()
     {
         return new PlatformCacheKey(collection: CachedKeysCollectionName);
-    }
-
-    private DistributedCacheEntryOptions MapToDistributedCacheEntryOptions(PlatformCacheEntryOptions options)
-    {
-        var result = new DistributedCacheEntryOptions();
-
-        var absoluteExpirationRelativeToNow = options?.AbsoluteExpirationRelativeToNow();
-        if (absoluteExpirationRelativeToNow != null)
-            result.AbsoluteExpirationRelativeToNow = absoluteExpirationRelativeToNow;
-
-        var slidingExpiration = options?.SlidingExpiration();
-        if (slidingExpiration != null)
-            result.SlidingExpiration = slidingExpiration;
-
-        return result;
     }
 }

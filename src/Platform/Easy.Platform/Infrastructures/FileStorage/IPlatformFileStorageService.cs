@@ -35,6 +35,16 @@ public interface IPlatformFileStorageService : IPlatformInfrastructureService
         };
     }
 
+    public static string GetPathOnlyFromFullFilePath(string fullFileUrl)
+    {
+        var trimmedSlashUrl = fullFileUrl.TrimStart('/');
+
+        if (trimmedSlashUrl.StartsWith(DefaultPrivateRootDirectoryName)) return trimmedSlashUrl.Substring(DefaultPrivateRootDirectoryName.Length).TrimStart('/');
+        if (trimmedSlashUrl.StartsWith(DefaultPublicRootDirectoryName)) return trimmedSlashUrl.Substring(DefaultPublicRootDirectoryName.Length).TrimStart('/');
+
+        return fullFileUrl;
+    }
+
     /// <summary>
     /// Upload FormFile to cloud.
     /// </summary>

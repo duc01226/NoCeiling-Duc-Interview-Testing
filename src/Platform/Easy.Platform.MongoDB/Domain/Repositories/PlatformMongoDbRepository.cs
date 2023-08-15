@@ -54,15 +54,13 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
 
         return await DoToListAsync(source, cancellationToken);
 
-        async Task<List<TSource>> DoToListAsync(
+        static async Task<List<TSource>> DoToListAsync(
             IEnumerable<TSource> source,
             CancellationToken cancellationToken = default)
         {
             if (source.As<IMongoQueryable<TSource>>() == null) return source.ToList();
 
-            // Use ToAsyncEnumerable behind the scene to support true enumerable like ef-core. Then can select anything and it will work.
-            // Default as Enumerable from IQueryable still like Queryable which cause error query could not be translated for free select using constructor map for example
-            return await ToAsyncEnumerable(source, cancellationToken).ToListAsync(cancellationToken).AsTask();
+            return await IAsyncCursorSourceExtensions.ToListAsync(source.As<IMongoQueryable<TSource>>(), cancellationToken);
         }
     }
 

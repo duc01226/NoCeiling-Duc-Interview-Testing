@@ -1,3 +1,4 @@
+using Easy.Platform.Application;
 using Easy.Platform.Application.Cqrs.Events;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.UnitOfWork;
@@ -42,7 +43,7 @@ internal sealed class ClearCacheOnSaveSnippetTextEntityEventHandler : PlatformCq
         // amount of time for fulltext index update
         // We also set executeOnceImmediately=true to clear cache immediately in case of some index is updated fast
         Util.TaskRunner.QueueIntervalAsyncActionInBackground(
-            token => PlatformGlobal.CacheRepositoryProvider
+            token => PlatformApplicationGlobal.CacheRepositoryProvider
                 .GetCollection<TextSnippetCollectionCacheKeyProvider>()
                 .RemoveAsync(cacheRequestKeyPartsPredicate: keyParts => keyParts[1] == removeFilterRequestCacheKeyParts[1], token),
             intervalTimeInSeconds: 5,

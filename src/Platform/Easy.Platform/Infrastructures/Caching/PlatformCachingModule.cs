@@ -6,7 +6,6 @@ using Easy.Platform.Common.Utils;
 using Easy.Platform.Infrastructures.Caching.BuiltInCacheRepositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Infrastructures.Caching;
 
@@ -36,29 +35,14 @@ public class PlatformCachingModule : PlatformInfrastructureModule
         return null;
     }
 
-    /// <summary>
-    /// Override this function provider to register IPlatformMemoryCacheRepository. Default return PlatformMemoryCacheRepository;
-    /// </summary>
-    protected virtual IPlatformMemoryCacheRepository MemoryCacheRepositoryProvider(
-        IServiceProvider serviceProvider,
-        IConfiguration configuration)
-    {
-        return new PlatformMemoryCacheRepository(serviceProvider.GetService<ILoggerFactory>(), serviceProvider);
-    }
-
-    /// <summary>
-    /// Override this method to config default PlatformCacheEntryOptions when save cache
-    /// </summary>
-    protected virtual PlatformCacheEntryOptions DefaultPlatformCacheEntryOptions(IServiceProvider serviceProvider)
-    {
-        return null;
-    }
-
     protected override void InternalRegister(IServiceCollection serviceCollection)
     {
         base.InternalRegister(serviceCollection);
 
-        serviceCollection.Register<IPlatformCacheRepositoryProvider, PlatformCacheRepositoryProvider>();
+        serviceCollection.Register<IPlatformCacheRepositoryProvider, PlatformCacheRepositoryProvider>(ServiceLifeTime.Singleton);
+        serviceCollection.Register(
+            typeof(PlatformCacheSettings),
+            sp => new PlatformCacheSettings().With(settings => ConfigCacheSettings(sp, settings)));
         RegisterDefaultPlatformCacheEntryOptions(serviceCollection);
 
         RegisterCacheItemsByScanAssemblies(
@@ -72,8 +56,9 @@ public class PlatformCachingModule : PlatformInfrastructureModule
                 .ToArray());
 
         // Register built-in default memory cache
-        serviceCollection.RegisterAllForImplementation(
-            provider => MemoryCacheRepositoryProvider(provider, Configuration),
+        serviceCollection.Register(
+            typeof(IPlatformCacheRepository),
+            typeof(PlatformMemoryCacheRepository),
             ServiceLifeTime.Singleton);
         serviceCollection.RegisterAllForImplementation(typeof(PlatformCollectionMemoryCacheRepository<>));
 
@@ -83,7 +68,8 @@ public class PlatformCachingModule : PlatformInfrastructureModule
         {
             tempCheckHasDistributedCacheInstance.Dispose();
 
-            serviceCollection.RegisterAllForImplementation(
+            serviceCollection.Register(
+                typeof(IPlatformCacheRepository),
                 provider => DistributedCacheRepositoryProvider(provider, Configuration),
                 ServiceLifeTime.Singleton);
 
@@ -91,17 +77,17 @@ public class PlatformCachingModule : PlatformInfrastructureModule
         }
     }
 
+    protected virtual void ConfigCacheSettings(IServiceProvider sp, PlatformCacheSettings cacheSettings)
+    {
+    }
+
     protected void RegisterDefaultPlatformCacheEntryOptions(IServiceCollection serviceCollection)
     {
-        if (DefaultPlatformCacheEntryOptions(ServiceProvider) != null)
-            serviceCollection.Register(
-                typeof(PlatformCacheEntryOptions),
-                DefaultPlatformCacheEntryOptions,
-                ServiceLifeTime.Transient,
-                replaceIfExist: true,
-                DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
-        else if (serviceCollection.All(p => p.ServiceType != typeof(PlatformCacheEntryOptions)))
-            serviceCollection.Register<PlatformCacheEntryOptions>();
+        serviceCollection.Register(
+            sp => sp.GetRequiredService<PlatformCacheSettings>().DefaultCacheEntryOptions,
+            ServiceLifeTime.Transient,
+            replaceIfExist: true,
+            DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
     }
 
     protected void RegisterCacheItemsByScanAssemblies(

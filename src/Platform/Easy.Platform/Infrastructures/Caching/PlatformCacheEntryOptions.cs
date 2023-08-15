@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 namespace Easy.Platform.Infrastructures.Caching;
 
 /// <summary>
-/// Provides the cache options for an entry in <see cref="IPlatformCacheRepository"/>.
+/// Provides the cache options for an entry in <see cref="IPlatformCacheRepository" />.
 /// </summary>
 public class PlatformCacheEntryOptions
 {

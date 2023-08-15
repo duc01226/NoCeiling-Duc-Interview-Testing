@@ -103,6 +103,14 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
         CancellationToken cancellationToken = default);
 
+    public Task<List<TEntity>> CreateOrUpdateManyAsync(
+        IUnitOfWork uow,
+        List<TEntity> entities,
+        bool dismissSendEvent = false,
+        Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        CancellationToken cancellationToken = default);
+
     public Task<TEntity> UpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
@@ -122,6 +130,13 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> CreateManyAsync(
+        List<TEntity> entities,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        CancellationToken cancellationToken = default);
+
+    public Task<List<TEntity>> CreateManyAsync(
+        IUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
@@ -375,6 +390,8 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
     /// var totalCount = await repository.CountAsync(fullItemsQueryBuilder, cancellationToken);
     /// </summary>
     public Func<IQueryable<TEntity>, IQueryable<TEntity>> GetQueryBuilder(Expression<Func<TEntity, bool>> predicate);
+
+    public Expression<Func<TEntity, bool>> GetQueryExpr(Expression<Func<TEntity, bool>> predicate) => predicate;
 }
 
 public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
@@ -427,7 +444,9 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                             cancellationToken: cancellationToken)
                         .ThenAction(items => items.ForEach(updateAction));
 
-                    await UpdateManyAsync(pagingUpdateItems, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
+                    await UpdateManyAsync(uow, pagingUpdateItems, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
+
+                    await uow.CompleteAsync(cancellationToken);
                 }
             },
             maxItemCount: await CountAsync(predicate, cancellationToken),
@@ -456,8 +475,6 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                         .ThenAction(items => items.ForEach(updateAction));
 
                     var updatedItems = await UpdateManyAsync(uow, pagingUpdateItems, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
-
-                    await uow.CompleteAsync(cancellationToken);
 
                     return updatedItems;
                 }

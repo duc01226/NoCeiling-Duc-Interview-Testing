@@ -18,14 +18,17 @@ public class PlatformMongoClient : IPlatformMongoClient
 {
     public PlatformMongoClient(IOptions<PlatformMongoOptions> options)
     {
-        var clientSettings = MongoClientSettings.FromUrl(MongoUrl.Create(options.Value.ConnectionString));
-        clientSettings.ClusterConfigurator = cb => cb.Subscribe(
-            new DiagnosticsActivityEventSubscriber(new InstrumentationOptions { CaptureCommandText = true }));
+        var clientSettings = MongoClientSettings.FromUrl(MongoUrl.Create(options.Value.ConnectionString))
+            .With(
+                settings => settings.ClusterConfigurator = cb => cb.Subscribe(
+                    new DiagnosticsActivityEventSubscriber(new InstrumentationOptions { CaptureCommandText = true })))
+            .With(settings => settings.MinConnectionPoolSize = options.Value.MinConnectionPoolSize)
+            .With(settings => settings.MaxConnectionPoolSize = options.Value.MaxConnectionPoolSize);
 
         MongoClient = new MongoClient(clientSettings);
     }
 
-    public MongoClient MongoClient { get; set; }
+    public MongoClient MongoClient { get; init; }
 }
 
 public class PlatformMongoClient<TDbContext>

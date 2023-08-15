@@ -1,6 +1,7 @@
 using Easy.Platform.Application.MessageBus.Consumers;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.Timing;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
@@ -308,7 +309,7 @@ public static class PlatformInboxMessageBusConsumerHelper
             async (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
             {
                 var toUpdateInboxMessage = existingInboxMessage
-                    .With(_ => _.LastConsumeDate = DateTime.UtcNow)
+                    .With(_ => _.LastConsumeDate = Clock.UtcNow)
                     .With(_ => _.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Processed);
 
                 await inboxBusMessageRepo.UpdateAsync(toUpdateInboxMessage, dismissSendEvent: true, sendEntityEventConfigure: null, cancellationToken);
@@ -451,7 +452,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         IPlatformInboxBusMessageRepository inboxBusMessageRepo)
     {
         existingInboxMessage.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Failed;
-        existingInboxMessage.LastConsumeDate = DateTime.UtcNow;
+        existingInboxMessage.LastConsumeDate = Clock.UtcNow;
         existingInboxMessage.LastConsumeError = PlatformInboxBusMessage.SerializeOneLevelExceptionForLastConsumeError(exception);
         existingInboxMessage.RetriedProcessCount = (existingInboxMessage.RetriedProcessCount ?? 0) + 1;
         existingInboxMessage.NextRetryProcessAfter = PlatformInboxBusMessage.CalculateNextRetryProcessAfter(

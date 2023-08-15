@@ -3,6 +3,7 @@ using Easy.Platform.EfCore.Services;
 using Easy.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Npgsql;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql;
 
@@ -34,9 +35,12 @@ public class TextSnippetPostgreSqlEfCorePersistenceModule : PlatformEfCorePersis
         IServiceProvider serviceProvider)
     {
         // UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery) for best practice increase performance
+        // With(conn => conn.Enlist = false); With(conn => conn.ReadBufferSize = 8192) https://www.npgsql.org/doc/performance.html
         return options => options
             .UseNpgsql(
-                Configuration.GetConnectionString("PostgreSqlConnection"),
+                new NpgsqlConnectionStringBuilder(Configuration.GetConnectionString("PostgreSqlConnection"))
+                    .With(conn => conn.Enlist = false)
+                    .ToString(),
                 options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
             .UseLazyLoadingProxies()
             .EnableDetailedErrors(detailedErrorsEnabled: PlatformEnvironment.IsDevelopment || Configuration.GetSection("SeedDummyData").Get<bool>());
@@ -49,6 +53,7 @@ public class TextSnippetPostgreSqlEfCorePersistenceModule : PlatformEfCorePersis
     {
         return base.ConfigurePersistenceConfiguration(config, configuration)
             .With(p => p.BadQueryWarning.IsEnabled = configuration.GetValue<bool>("PersistenceConfiguration:BadQueryWarning:IsEnabled"))
+            .With(p => p.BadQueryWarning.TotalItemsThresholdWarningEnabled = true)
             .With(
                 p => p.BadQueryWarning.TotalItemsThreshold =
                     configuration.GetValue<int>("PersistenceConfiguration:BadQueryWarning:TotalItemsThreshold")) // Demo warning for getting a lot of data in to memory

@@ -38,7 +38,7 @@ public class FullName : PlatformValueObject<FullName>
         return new FullName(firstName, middleName, lastName);
     }
 
-    public static FullName FromUSFormatString(string fullNameString)
+    public static FullName FromFirstMiddleLastFormatString(string fullNameString)
     {
         var parts = fullNameString.Split(" ");
 
@@ -57,7 +57,7 @@ public class FullName : PlatformValueObject<FullName>
         return new FullName(firstName, middleName, lastName);
     }
 
-    public static FullName FromAsianFormatString(string fullNameString)
+    public static FullName FromLastMiddleFirstFormatString(string fullNameString)
     {
         var parts = fullNameString.Split(" ");
 
@@ -89,10 +89,10 @@ public class FullName : PlatformValueObject<FullName>
 
     public override string ToString()
     {
-        return ToUSFormatString();
+        return ToFirstMiddleLastFormatString();
     }
 
-    public string ToUSFormatString()
+    public string ToFirstMiddleLastFormatString()
     {
         var joinedPartsString = $"{(FirstName.IsNullOrEmpty() ? "" : FirstName + " ")}" +
                                 $"{(MiddleName.IsNullOrEmpty() ? "" : MiddleName + " ")}" +
@@ -101,12 +101,12 @@ public class FullName : PlatformValueObject<FullName>
         return joinedPartsString.Trim();
     }
 
-    public static string ToUSFormatString(string firstName, string middleName, string lastName)
+    public static string ToFirstMiddleLastFormatString(string firstName, string middleName, string lastName)
     {
-        return new FullName(firstName, middleName, lastName).ToUSFormatString();
+        return new FullName(firstName, middleName, lastName).ToFirstMiddleLastFormatString();
     }
 
-    public string ToAsianFormatString()
+    public string ToLastMiddleFirstFormatString()
     {
         var joinedPartsString = $"{(LastName.IsNullOrEmpty() ? "" : LastName + " ")}" +
                                 $"{(MiddleName.IsNullOrEmpty() ? "" : MiddleName + " ")}" +
@@ -115,7 +115,15 @@ public class FullName : PlatformValueObject<FullName>
         return joinedPartsString.Trim();
     }
 
-    public static string ToAsianFormatString(string firstName, string middleName, string lastName)
+    public string ToLastFirstFormatString()
+    {
+        var joinedPartsString = $"{(LastName.IsNullOrEmpty() ? "" : LastName + " ")}" +
+                                $"{(FirstName.IsNullOrEmpty() ? "" : FirstName + " ")}";
+
+        return joinedPartsString.Trim();
+    }
+
+    public static string ToLastMiddleFirstFormatString(string firstName, string middleName, string lastName)
     {
         return new FullName(firstName, middleName, lastName).ToString();
     }

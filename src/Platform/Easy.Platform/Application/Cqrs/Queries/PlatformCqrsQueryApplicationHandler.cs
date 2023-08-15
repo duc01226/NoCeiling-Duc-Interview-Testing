@@ -43,7 +43,7 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
 
             await ValidateRequestAsync(request.Validate().Of<TQuery>(), cancellationToken).EnsureValidAsync();
 
-            return await Util.TaskRunner.CatchExceptionContinueThrowAsync(
+            var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
                 () => HandleAsync(request, cancellationToken),
                 onException: ex =>
                 {
@@ -58,6 +58,10 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
                             request.ToJson(),
                             CurrentUser.GetAllKeyValues().ToJson());
                 });
+
+            PlatformGlobal.MemoryCollector.CollectGarbageMemory();
+
+            return result;
         }
     }
 

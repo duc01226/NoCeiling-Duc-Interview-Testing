@@ -44,23 +44,27 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
         }
     }
 
-    protected abstract void ConfigureMongoOptions(TMongoOptions options);
+    protected abstract void ConfigureMongoOptions(PlatformMongoOptions<TDbContext> options);
+
+    protected void ExecuteConfigureMongoOptions(PlatformMongoOptions<TDbContext> options)
+    {
+        ConfigureMongoOptions(options);
+        if (ForCrossDbMigrationOnly) options.MinConnectionPoolSize = 0;
+    }
 
     protected override void InternalRegister(IServiceCollection serviceCollection)
     {
         base.InternalRegister(serviceCollection);
 
-        serviceCollection.Configure<TMongoOptions>(ConfigureMongoOptions);
-        serviceCollection.Configure<PlatformMongoOptions<TDbContext>>(
-            options => ConfigureMongoOptions(Activator.CreateInstance<TMongoOptions>()));
+        serviceCollection.Configure<TMongoOptions>(ExecuteConfigureMongoOptions);
+        serviceCollection.Configure<PlatformMongoOptions<TDbContext>>(ExecuteConfigureMongoOptions);
 
         serviceCollection.RegisterAllForImplementation<TClientContext>(ServiceLifeTime.Singleton);
-        serviceCollection.Register<IPlatformMongoClient<TDbContext>, TClientContext>(ServiceLifeTime.Singleton);
+        serviceCollection.Register<IPlatformMongoClient<TDbContext>>(sp => sp.GetRequiredService<TClientContext>(), ServiceLifeTime.Singleton);
 
         serviceCollection.Register<PlatformMongoDbContext<TDbContext>, TDbContext>();
 
-        if (!ForCrossDbMigrationOnly)
-            RegisterMongoDbUow(serviceCollection);
+        if (!ForCrossDbMigrationOnly) RegisterMongoDbUow(serviceCollection);
 
         BsonClassMapHelper.TryRegisterClassMapWithDefaultInitializer<PlatformDataMigrationHistory>();
         BsonClassMapHelper.TryRegisterClassMapWithDefaultInitializer<PlatformMongoMigrationHistory>();

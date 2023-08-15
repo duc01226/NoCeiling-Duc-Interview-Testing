@@ -82,7 +82,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 
                 this.storeAnonymousSubscription(
                     this.initiated$.pipe(filter(initiated => initiated)).subscribe(() => {
-                        this.initForm();
+                        this.initForm(true);
                     })
                 );
             }

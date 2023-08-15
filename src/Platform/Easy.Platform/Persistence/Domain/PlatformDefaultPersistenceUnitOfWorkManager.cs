@@ -18,31 +18,24 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
 
     public override IUnitOfWork CreateNewUow()
     {
-        try
-        {
-            CreateNewUowLock.WaitAsync();
+        // Doing create scope because IUnitOfWork resolve with DbContext, and DbContext lifetime is usually scoped to support resolve db context
+        // to use it directly in application layer in some project or cases without using repository.
+        // But we still want to support Uow create new like transient, each uow associated with new db context
+        // So that we can begin/destroy uow separately
 
-            // Doing create scope because IUnitOfWork resolve with DbContext, and DbContext lifetime is usually scoped to support resolve db context
-            // to use it directly in application layer in some project or cases without using repository.
-            // But we still want to support Uow create new like transient, each uow associated with new db context
-            // So that we can begin/destroy uow separately
+        var newScope = ServiceProvider.CreateScope();
 
-            var newScope = ServiceProvider.CreateScope();
+        var uow = new PlatformAggregatedPersistenceUnitOfWork(
+                newScope.ServiceProvider.GetServices<IUnitOfWork>()
+                    .Select(p => p.With(_ => _.CreatedByUnitOfWorkManager = this))
+                    .ToList(),
+                associatedServiceScope: newScope)
+            .With(uow => uow.CreatedByUnitOfWorkManager = this);
 
-            var uow = new PlatformAggregatedPersistenceUnitOfWork(
-                    newScope.ServiceProvider.GetServices<IUnitOfWork>()
-                        .Select(p => p.With(_ => _.CreatedByUnitOfWorkManager = this))
-                        .ToList(),
-                    associatedServiceScope: newScope)
-                .With(_ => _.CreatedByUnitOfWorkManager = this);
+        uow.OnDisposedActions.Add(async () => await Task.Run(() => uow.CreatedByUnitOfWorkManager.RemoveAllInactiveUow()));
 
-            FreeCreatedUnitOfWorks.Add(uow);
+        FreeCreatedUnitOfWorks.TryAdd(uow.Id, uow);
 
-            return uow;
-        }
-        finally
-        {
-            CreateNewUowLock.Release();
-        }
+        return uow;
     }
 }

@@ -21,11 +21,10 @@ public class TextSnippetRedisCacheModule : PlatformRedisCacheModule
         options.Configuration = Configuration["RedisCacheOptions:Connection"];
     }
 
-    protected override PlatformCacheEntryOptions DefaultPlatformCacheEntryOptions(IServiceProvider serviceProvider)
+    // Demo config PlatformCacheSettings
+    protected override void ConfigCacheSettings(IServiceProvider sp, PlatformCacheSettings cacheSettings)
     {
-        return new PlatformCacheEntryOptions
-        {
-            AbsoluteExpirationInSeconds = Configuration.GetSection("Caching:DefaultExpirationInSeconds").Get<int>()
-        };
+        cacheSettings.SlowWarning.IsEnabled = true;
+        cacheSettings.DefaultCacheEntryOptions.AbsoluteExpirationInSeconds = Configuration.GetSection("Caching:DefaultExpirationInSeconds").Get<int>();
     }
 }

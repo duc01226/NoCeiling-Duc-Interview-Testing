@@ -29,6 +29,7 @@ public interface IUnitOfWork : IDisposable
     public IUnitOfWork ParentUnitOfWork { get; set; }
 
     public List<Func<Task>> OnCompletedActions { get; set; }
+    public List<Func<Task>> OnDisposedActions { get; set; }
     public List<Func<UnitOfWorkFailedArgs, Task>> OnFailedActions { get; set; }
 
     /// <summary>
@@ -123,6 +124,7 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
     public IUnitOfWork ParentUnitOfWork { get; set; }
 
     public List<Func<Task>> OnCompletedActions { get; set; } = new();
+    public List<Func<Task>> OnDisposedActions { get; set; } = new();
     public List<Func<UnitOfWorkFailedArgs, Task>> OnFailedActions { get; set; } = new();
     public List<IUnitOfWork> InnerUnitOfWorks { get; protected set; } = new();
     public IUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
@@ -169,7 +171,7 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
         }
     }
 
-    public bool IsActive()
+    public virtual bool IsActive()
     {
         return !Completed && !Disposed;
     }
@@ -202,11 +204,15 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
     // Protected implementation of Dispose pattern.
     protected virtual void Dispose(bool disposing)
     {
+        if (Disposed) return;
+
         if (disposing)
             // Dispose managed state (managed objects).
             NotThreadSafeDbContextQueryLock.Dispose();
 
         Disposed = true;
+
+        OnDisposedActions.ForEachAsync(p => p.Invoke()).WaitResult();
     }
 
     protected virtual Task SaveChangesAsync(CancellationToken cancellationToken)

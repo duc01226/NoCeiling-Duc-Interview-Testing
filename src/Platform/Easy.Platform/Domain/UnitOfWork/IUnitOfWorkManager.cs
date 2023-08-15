@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
@@ -82,14 +83,20 @@ public interface IUnitOfWorkManager : IDisposable
     /// <param name="suppressCurrentUow">
     /// </param>
     public IUnitOfWork Begin(bool suppressCurrentUow = true);
+
+    /// <summary>
+    /// Remove all managed inactive uow to clear memory
+    /// </summary>
+    public void RemoveAllInactiveUow();
 }
 
 public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
 {
     protected readonly List<IUnitOfWork> CurrentUnitOfWorks = new();
-    protected readonly List<IUnitOfWork> FreeCreatedUnitOfWorks = new();
-    protected readonly SemaphoreSlim CreateNewUowLock = new(1, 1);
+    protected readonly ConcurrentDictionary<string, IUnitOfWork> FreeCreatedUnitOfWorks = new();
     protected readonly SemaphoreSlim RemoveAllInactiveUowLock = new(1, 1);
+    private bool disposed;
+    private bool disposing;
 
     private IUnitOfWork globalUow;
 
@@ -166,8 +173,9 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
 
     public TUnitOfWork CurrentActiveUowOfType<TUnitOfWork>() where TUnitOfWork : class, IUnitOfWork
     {
-        return CurrentUow()
-            .UowOfType<TUnitOfWork>()
+        var uowOfType = CurrentUow()?.UowOfType<TUnitOfWork>();
+
+        return uowOfType
             .Ensure(
                 must: currentUow => currentUow != null,
                 $"There's no current any uow of type {typeof(TUnitOfWork).FullName} has been begun.")
@@ -184,11 +192,29 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
         GC.SuppressFinalize(this);
     }
 
+    public void RemoveAllInactiveUow()
+    {
+        if (disposed || disposing) return;
+
+        try
+        {
+            RemoveAllInactiveUowLock.Wait();
+
+            CurrentUnitOfWorks.RemoveWhere(p => !p.IsActive(), out _);
+            FreeCreatedUnitOfWorks.Keys.Where(key => !FreeCreatedUnitOfWorks[key].IsActive())
+                .ForEach(inactivatedUowKey => FreeCreatedUnitOfWorks.TryRemove(inactivatedUowKey, out _));
+        }
+        finally
+        {
+            RemoveAllInactiveUowLock.Release();
+        }
+    }
+
     public virtual IUnitOfWork CurrentOrCreatedUow(string uowId)
     {
         RemoveAllInactiveUow();
 
-        return LastOrDefaultMatchedUowOfId(CurrentUnitOfWorks, uowId) ?? LastOrDefaultMatchedUowOfId(FreeCreatedUnitOfWorks, uowId);
+        return LastOrDefaultMatchedUowOfId(CurrentUnitOfWorks, uowId) ?? LastOrDefaultMatchedUowOfId(FreeCreatedUnitOfWorks.Values.ToList(), uowId);
 
         static IUnitOfWork LastOrDefaultMatchedUowOfId(List<IUnitOfWork> unitOfWorks, string uowId)
         {
@@ -216,36 +242,27 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
 
     protected virtual void Dispose(bool disposing)
     {
+        if (disposed) return;
+
+        this.disposing = true;
+
         if (disposing)
         {
-            // free managed resources
-            CurrentUnitOfWorks.ForEach(currentUnitOfWork => currentUnitOfWork?.Dispose());
+            // free managed resources. ToList to clone the list to dispose because dispose could cause trigger RemoveAllInactiveUow => modified the original list
+            CurrentUnitOfWorks.ToList().ForEach(currentUnitOfWork => currentUnitOfWork?.Dispose());
             CurrentUnitOfWorks.Clear();
 
-            FreeCreatedUnitOfWorks.ForEach(currentUnitOfWork => currentUnitOfWork?.Dispose());
+            // free managed resources. ToList to clone the list to dispose because dispose could cause trigger RemoveAllInactiveUow => modified the original list
+            FreeCreatedUnitOfWorks.ToList().ForEach(currentUnitOfWork => currentUnitOfWork.Value?.Dispose());
             FreeCreatedUnitOfWorks.Clear();
 
             globalUow?.Dispose();
 
-            CreateNewUowLock.Dispose();
             RemoveAllInactiveUowLock.Dispose();
         }
-    }
 
-    protected List<IUnitOfWork> RemoveAllInactiveUow()
-    {
-        try
-        {
-            RemoveAllInactiveUowLock.Wait();
-
-            CurrentUnitOfWorks.RemoveWhere(p => !p.IsActive(), out _);
-
-            return CurrentUnitOfWorks;
-        }
-        finally
-        {
-            RemoveAllInactiveUowLock.Release();
-        }
+        disposed = true;
+        this.disposing = false;
     }
 }
 

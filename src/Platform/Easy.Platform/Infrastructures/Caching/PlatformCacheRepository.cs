@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -7,6 +9,8 @@ namespace Easy.Platform.Infrastructures.Caching;
 
 public interface IPlatformCacheRepository
 {
+    public const string DefaultGlobalContext = "__DefaultGlobalCacheContext__";
+
     /// <summary>
     /// Gets a value with the given key.
     /// </summary>
@@ -115,7 +119,7 @@ public interface IPlatformCacheRepository
         CancellationToken token = default);
 
     /// <summary>
-    /// Return default cache entry options value. This could be config when register module, override <see cref="PlatformCachingModule.DefaultPlatformCacheEntryOptions" />
+    /// Return default cache entry options value. This could be config when register module, override <see cref="PlatformCachingModule.ConfigCacheSettings" />
     /// </summary>
     PlatformCacheEntryOptions GetDefaultCacheEntryOptions();
 }
@@ -123,13 +127,15 @@ public interface IPlatformCacheRepository
 public abstract class PlatformCacheRepository : IPlatformCacheRepository
 {
     public static readonly string CachedKeysCollectionName = "___PlatformGlobalCacheKeys___";
+    protected readonly PlatformCacheSettings CacheSettings;
     protected readonly ILogger Logger;
 
     private readonly IServiceProvider serviceProvider;
 
-    public PlatformCacheRepository(IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
+    public PlatformCacheRepository(IServiceProvider serviceProvider, ILoggerFactory loggerFactory, PlatformCacheSettings cacheSettings)
     {
         this.serviceProvider = serviceProvider;
+        CacheSettings = cacheSettings;
         Logger = loggerFactory.CreateLogger(typeof(PlatformCacheRepository));
     }
 
@@ -191,6 +197,8 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
     {
         var cachedData = await GetAsync<TData>(cacheKey, token);
 
+        PlatformGlobal.MemoryCollector.CollectGarbageMemory();
+
         return cachedData ?? await RequestAndCacheNewData();
 
         async Task<TData> RequestAndCacheNewData()
@@ -202,6 +210,8 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
                 requestedData,
                 cacheOptions,
                 token);
+
+            PlatformGlobal.MemoryCollector.CollectGarbageMemory();
 
             return requestedData;
         }
@@ -226,7 +236,7 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
 
     public PlatformCacheEntryOptions GetDefaultCacheEntryOptions()
     {
-        return serviceProvider.GetService<PlatformCacheEntryOptions>() ?? new PlatformCacheEntryOptions();
+        return serviceProvider.GetService<PlatformCacheEntryOptions>() ?? CacheSettings.DefaultCacheEntryOptions;
     }
 
     /// <summary>
@@ -250,5 +260,14 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
             Logger.LogError(e, "LoadGlobalCachedKeys failed. Fallback to empty default value.");
             return new ConcurrentDictionary<PlatformCacheKey, object>();
         }
+    }
+
+    protected DistributedCacheEntryOptions MapToDistributedCacheEntryOptions(PlatformCacheEntryOptions options)
+    {
+        return new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = options?.AbsoluteExpirationRelativeToNow() ?? CacheSettings.DefaultCacheEntryOptions.AbsoluteExpirationRelativeToNow(),
+            SlidingExpiration = options?.SlidingExpiration() ?? CacheSettings.DefaultCacheEntryOptions.SlidingExpiration()
+        };
     }
 }

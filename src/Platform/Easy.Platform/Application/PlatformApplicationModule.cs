@@ -6,6 +6,7 @@ using Easy.Platform.Application.Cqrs.Commands;
 using Easy.Platform.Application.Cqrs.Events;
 using Easy.Platform.Application.Cqrs.Queries;
 using Easy.Platform.Application.Domain;
+using Easy.Platform.Application.HostingBackgroundServices;
 using Easy.Platform.Application.MessageBus;
 using Easy.Platform.Application.MessageBus.Consumers;
 using Easy.Platform.Application.MessageBus.InboxPattern;
@@ -169,8 +170,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                 var distributedCacheRepository = cacheProvider?.TryGet(PlatformCacheRepositoryType.Distributed);
 
                 if (distributedCacheRepository != null)
-                    await distributedCacheRepository.RemoveAsync(
-                        p => options.AutoClearContexts.Contains(p.Context));
+                    await distributedCacheRepository.RemoveAsync(p => options.AutoClearContexts.Contains(p.Context));
             },
             retryAttempt => 10.Seconds(),
             retryCount: 10,
@@ -269,6 +269,8 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
 
         if (AutoRegisterDefaultCaching)
             RegisterRuntimeModuleDependencies<PlatformCachingModule>(serviceCollection);
+
+        serviceCollection.RegisterHostedService<PlatformAutoClearMemoryHostingBackgroundService>();
     }
 
     protected override async Task InternalInit(IServiceScope serviceScope)

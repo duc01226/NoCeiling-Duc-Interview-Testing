@@ -18,6 +18,13 @@ public static class DictionaryExtension
         return dictionary;
     }
 
+    public static TDic UpsertMany<TDic, TKey, TValue>(this TDic dictionary, IDictionary<TKey, TValue> values) where TDic : IDictionary<TKey, TValue>
+    {
+        values.ForEach(item => dictionary.Upsert(item.Key, item.Value));
+
+        return dictionary;
+    }
+
     /// <inheritdoc cref="Upsert{TDic,TKey,TValue}" />
     public static IDictionary<TKey, TValue> Upsert<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, TValue value)
     {

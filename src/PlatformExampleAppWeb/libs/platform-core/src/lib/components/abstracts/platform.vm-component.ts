@@ -33,23 +33,19 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
     public initVm(forceReinit: boolean = false) {
         if (forceReinit) this.cancelStoredSubscription('initVm');
 
-        const initialVmOrVm$ = this.onInitVm();
+        const initialVm$ = this.onInitVm();
 
-        if ((this.vm == undefined || forceReinit) && initialVmOrVm$ != undefined) {
-            if (initialVmOrVm$ instanceof Observable) {
+        if ((this.vm == undefined || forceReinit) && initialVm$ != undefined) {
+            if (initialVm$ instanceof Observable) {
                 this.storeSubscription(
                     'initVm',
-                    initialVmOrVm$.subscribe(initialOrPartialVm => {
-                        if (this._vm == undefined) {
-                            this._vm = <TViewModel>initialOrPartialVm;
-                            super.ngOnInit();
-                        } else {
-                            this.updateVm(initialOrPartialVm);
-                        }
+                    initialVm$.subscribe(initialVm => {
+                        this._vm = initialVm;
+                        super.ngOnInit();
                     })
                 );
             } else {
-                this._vm = initialVmOrVm$;
+                this._vm = initialVm$;
                 super.ngOnInit();
             }
         } else {
@@ -62,7 +58,7 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
         this.clearErrorMsg();
     }
 
-    protected abstract onInitVm: () => TViewModel | undefined | Observable<TViewModel | PartialDeep<TViewModel>>;
+    protected abstract onInitVm: () => TViewModel | undefined | Observable<TViewModel>;
 
     protected updateVm(
         partialStateOrUpdaterFn:

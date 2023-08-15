@@ -250,12 +250,9 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
     {
         EnsureJobExecutorTypeValid(jobExecutorType);
 
-        var cronExpressionValue = cronExpression?.Invoke() ?? PlatformRecurringJobAttribute.GetRecurringJobAttributeInfo(jobExecutorType)?.CronExpression;
-
-        if (cronExpressionValue == null)
-            throw new Exception(
-                "Either recurring job must have cron expression from PlatformRecurringJobAttribute or cronExpression param must be not null");
-
+        var cronExpressionValue =
+            (cronExpression?.Invoke() ?? PlatformRecurringJobAttribute.GetRecurringJobAttributeInfo(jobExecutorType)?.CronExpression) ??
+            throw new Exception("Either recurring job must have cron expression from PlatformRecurringJobAttribute or cronExpression param must be not null");
         return cronExpressionValue;
     }
 

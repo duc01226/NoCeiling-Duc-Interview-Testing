@@ -43,7 +43,7 @@ export abstract class PlatformApiService extends PlatformHttpService {
     }
 
     protected maxNumberOfCacheItemPerRequestPath(): number {
-        return 10;
+        return 5;
     }
 
     private cachedRequestDataKeys: Set<string> = new Set();
