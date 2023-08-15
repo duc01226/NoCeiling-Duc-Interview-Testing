@@ -30,7 +30,7 @@ public abstract class PlatformHangfireBackgroundJobModule : PlatformBackgroundJo
 
         serviceCollection.Register<IPlatformBackgroundJobProcessingService>(
             provider => new PlatformHangfireBackgroundJobProcessingService(
-                options: BackgroundJobServerOptionsConfigure(provider, new BackgroundJobServerOptions())),
+                options: BackgroundJobServerOptionsConfigure(provider, new BackgroundJobServerOptions().With(_ => _.WorkerCount = Environment.ProcessorCount * 2))),
             ServiceLifeTime.Singleton,
             replaceStrategy: DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
     }

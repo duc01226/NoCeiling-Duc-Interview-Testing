@@ -32,6 +32,8 @@ public abstract class PlatformApplicationBackgroundJobExecutor<TParam> : Platfor
             activity?.SetTag("Type", GetType().Name);
             activity?.SetTag("Param", param?.ToJson());
 
+            Logger.LogInformation("[PlatformApplicationBackgroundJobExecutor] {BackgroundJobName} STARTED", GetType().Name);
+
             if (AutoOpenUow)
                 using (var uow = UnitOfWorkManager.Begin())
                 {
@@ -41,6 +43,8 @@ public abstract class PlatformApplicationBackgroundJobExecutor<TParam> : Platfor
                 }
             else
                 await ProcessAsync(param);
+
+            Logger.LogInformation("[PlatformApplicationBackgroundJobExecutor] {BackgroundJobName} FINISHED", GetType().Name);
         }
     }
 }
