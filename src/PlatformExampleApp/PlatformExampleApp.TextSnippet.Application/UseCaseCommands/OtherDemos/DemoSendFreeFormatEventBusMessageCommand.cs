@@ -4,6 +4,7 @@ using Easy.Platform.Application.MessageBus.Producers;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Commands;
 using Easy.Platform.Domain.UnitOfWork;
+using Microsoft.Extensions.Logging;
 using PlatformExampleApp.TextSnippet.Application.MessageBus.FreeFormatMessages;
 
 namespace PlatformExampleApp.TextSnippet.Application.UseCaseCommands.OtherDemos;
@@ -27,7 +28,9 @@ internal sealed class DemoSendFreeFormatEventBusMessageCommandHandler
         IPlatformApplicationUserContextAccessor userContext,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
-        IPlatformApplicationBusMessageProducer busMessageProducer) : base(userContext, unitOfWorkManager, cqrs)
+        ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider,
+        IPlatformApplicationBusMessageProducer busMessageProducer) : base(userContext, unitOfWorkManager, cqrs, loggerFactory, rootServiceProvider)
     {
         this.busMessageProducer = busMessageProducer;
     }

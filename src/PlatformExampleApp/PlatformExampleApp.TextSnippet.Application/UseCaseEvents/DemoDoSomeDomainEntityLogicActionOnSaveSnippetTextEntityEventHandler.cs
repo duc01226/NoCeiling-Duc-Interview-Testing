@@ -11,10 +11,12 @@ internal sealed class DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEv
     public DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEventHandler(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
-        IServiceProvider serviceProvider) : base(
+        IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider) : base(
         loggerFactory,
         unitOfWorkManager,
-        serviceProvider)
+        serviceProvider,
+        rootServiceProvider)
     {
     }
 

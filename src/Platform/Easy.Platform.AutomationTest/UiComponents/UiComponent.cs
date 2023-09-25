@@ -354,7 +354,13 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
         return IUiComponent.FindChildElements(component: this, childElementSelector);
     }
 
-    public string SelectedOptionText()
+    public void SelectOptionByText(string optionText)
+    {
+        var selectElement = new SelectElement(RootElement);
+        selectElement.SelectByText(optionText);
+    }
+
+    public string GetSelectedOptionText()
     {
         var selectElement = new SelectElement(RootElement);
 

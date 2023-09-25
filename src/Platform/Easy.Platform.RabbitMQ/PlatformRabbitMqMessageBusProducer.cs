@@ -14,12 +14,11 @@ namespace Easy.Platform.RabbitMQ;
 /// </summary>
 public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
 {
-    public static readonly ActivitySource ActivitySource = new(nameof(PlatformRabbitMqMessageBusProducer));
     public static readonly TextMapPropagator TracingActivityPropagator = Propagators.DefaultTextMapPropagator;
-    protected readonly ILogger Logger;
 
-    protected readonly IPlatformRabbitMqExchangeProvider ExchangeProvider;
     protected readonly PlatformProducerRabbitMqChannelPool ChannelPool;
+    protected readonly IPlatformRabbitMqExchangeProvider ExchangeProvider;
+    protected readonly ILogger Logger;
     protected readonly PlatformRabbitMqOptions Options;
 
     public PlatformRabbitMqMessageBusProducer(
@@ -63,7 +62,9 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
 
     private void PublishMessageToQueue(string message, string routingKey)
     {
-        using (var activity = ActivitySource.StartActivity($"{nameof(PlatformRabbitMqMessageBusProducer)}.{nameof(PublishMessageToQueue)}", ActivityKind.Producer))
+        using (var activity = IPlatformMessageBusProducer.ActivitySource.StartActivity(
+            $"MessageBusProducer.{nameof(IPlatformMessageBusProducer.SendAsync)}",
+            ActivityKind.Producer))
         {
             activity?.AddTag("routingKey", routingKey);
             activity?.AddTag("message", message);
@@ -88,7 +89,7 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
             {
                 if (alreadyClosedException.ShutdownReason.ReplyCode == 404)
                     Logger.LogWarning(
-                        "Tried to send a message with routing key {RoutingKey} from {GetType().FullName} " +
+                        "Tried to send a message with routing key {RoutingKey} from {ProducerType} " +
                         "but exchange is not found. May be there is no consumer registered to consume this message." +
                         "If in source code has consumers for this message, this could be unexpected errors",
                         routingKey,

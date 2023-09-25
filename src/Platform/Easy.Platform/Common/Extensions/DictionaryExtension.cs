@@ -73,4 +73,16 @@ public static class DictionaryExtension
 
         return result;
     }
+
+    /// <summary>
+    /// Merge two dictionaries and return a new dictionary.
+    /// </summary>
+    public static Dictionary<TKey, TValue> Merge<TKey, TValue>(this IDictionary<TKey, TValue> firstDictionary, IDictionary<TKey, TValue> secondDictionary)
+    {
+        var clonedFirstDictionary = new Dictionary<TKey, TValue>(firstDictionary);
+
+        secondDictionary.ForEach(item => clonedFirstDictionary.TryAdd(item.Key, item.Value));
+
+        return clonedFirstDictionary;
+    }
 }

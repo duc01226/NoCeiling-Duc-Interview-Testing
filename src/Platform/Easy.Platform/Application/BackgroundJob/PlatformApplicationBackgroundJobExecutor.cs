@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.BackgroundJob;
@@ -18,7 +19,8 @@ public abstract class PlatformApplicationBackgroundJobExecutor<TParam> : Platfor
 
     public PlatformApplicationBackgroundJobExecutor(
         IUnitOfWorkManager unitOfWorkManager,
-        ILoggerFactory loggerFactory) : base(loggerFactory)
+        ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, rootServiceProvider)
     {
         UnitOfWorkManager = unitOfWorkManager;
     }
@@ -27,9 +29,9 @@ public abstract class PlatformApplicationBackgroundJobExecutor<TParam> : Platfor
 
     protected override async Task InternalExecuteAsync(TParam param = null)
     {
-        using (var activity = IPlatformApplicationBackgroundJobExecutor.ActivitySource.StartActivity())
+        using (var activity = IPlatformApplicationBackgroundJobExecutor.ActivitySource.StartActivity($"BackgroundJob.{nameof(InternalExecuteAsync)}"))
         {
-            activity?.SetTag("Type", GetType().Name);
+            activity?.SetTag("Type", GetType().FullName);
             activity?.SetTag("Param", param?.ToJson());
 
             Logger.LogInformation("[PlatformApplicationBackgroundJobExecutor] {BackgroundJobName} STARTED", GetType().Name);
@@ -53,7 +55,8 @@ public abstract class PlatformApplicationBackgroundJobExecutor : PlatformApplica
 {
     protected PlatformApplicationBackgroundJobExecutor(
         IUnitOfWorkManager unitOfWorkManager,
-        ILoggerFactory loggerFactory) : base(unitOfWorkManager, loggerFactory)
+        ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider) : base(unitOfWorkManager, loggerFactory, rootServiceProvider)
     {
     }
 }

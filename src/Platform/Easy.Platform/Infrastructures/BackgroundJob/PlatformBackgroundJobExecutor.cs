@@ -39,10 +39,13 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
 {
     protected readonly ILogger Logger;
 
-    public PlatformBackgroundJobExecutor(ILoggerFactory loggerFactory)
+    public PlatformBackgroundJobExecutor(ILoggerFactory loggerFactory, IPlatformRootServiceProvider rootServiceProvider)
     {
+        RootServiceProvider = rootServiceProvider;
         Logger = loggerFactory.CreateLogger(typeof(PlatformBackgroundJobExecutor));
     }
+
+    protected IPlatformRootServiceProvider RootServiceProvider { get; }
 
     /// <summary>
     /// Config the time in milliseconds to log warning if the process job time is over ProcessWarningTimeMilliseconds.
@@ -84,7 +87,11 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
             }
             else
             {
+                Logger.LogInformation("BackgroundJobExecutor invoking background job {GetTypeFullName} STARTED", GetType().FullName);
+
                 InternalExecuteAsync(param).WaitResult();
+
+                Logger.LogInformation("BackgroundJobExecutor invoking background job {GetTypeFullName} FINISHED", GetType().FullName);
             }
         }
         catch (Exception e)
@@ -94,7 +101,7 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
         }
         finally
         {
-            PlatformGlobal.MemoryCollector.CollectGarbageMemory();
+            Util.GarbageCollector.Collect(immediately: true);
         }
     }
 
@@ -116,7 +123,7 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
 /// </summary>
 public abstract class PlatformBackgroundJobExecutor : PlatformBackgroundJobExecutor<object>
 {
-    protected PlatformBackgroundJobExecutor(ILoggerFactory loggerFactory) : base(loggerFactory)
+    protected PlatformBackgroundJobExecutor(ILoggerFactory loggerFactory, IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, rootServiceProvider)
     {
     }
 }

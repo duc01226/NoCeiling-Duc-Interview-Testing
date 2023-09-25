@@ -3,6 +3,7 @@ using Easy.Platform.Application.Cqrs.Commands;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Commands;
 using Easy.Platform.Domain.UnitOfWork;
+using Microsoft.Extensions.Logging;
 using PlatformExampleApp.TextSnippet.Domain.Services;
 
 namespace PlatformExampleApp.TextSnippet.Application.UseCaseCommands.OtherDemos;
@@ -31,7 +32,9 @@ internal sealed class DemoUseDemoDomainServiceCommandHandler
         IPlatformApplicationUserContextAccessor userContext,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
-        TransferSnippetTextToMultiDbDemoEntityNameService transferSnippetTextToMultiDbDemoEntityNameService) : base(userContext, unitOfWorkManager, cqrs)
+        ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider,
+        TransferSnippetTextToMultiDbDemoEntityNameService transferSnippetTextToMultiDbDemoEntityNameService) : base(userContext, unitOfWorkManager, cqrs, loggerFactory, rootServiceProvider)
     {
         this.transferSnippetTextToMultiDbDemoEntityNameService = transferSnippetTextToMultiDbDemoEntityNameService;
     }

@@ -1,4 +1,5 @@
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Common.Hosting;
@@ -25,7 +26,7 @@ public abstract class PlatformIntervalProcessHostedService : PlatformHostedServi
 
             await Task.Delay(ProcessTriggerIntervalTime(), cancellationToken);
 
-            if (AutoCleanMemory) PlatformGlobal.MemoryCollector.CollectGarbageMemory();
+            if (AutoCleanMemory) Util.GarbageCollector.Collect(immediately: true);
         }
     }
 

@@ -1,5 +1,6 @@
 using System.Reflection;
 using Easy.Platform.Application.Persistence;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -59,6 +60,13 @@ public interface IPlatformDataMigrationExecutor<in TDbContext> : IPlatformDataMi
 public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataMigrationExecutor<TDbContext>
     where TDbContext : IPlatformDbContext
 {
+    protected PlatformDataMigrationExecutor(IPlatformRootServiceProvider rootServiceProvider)
+    {
+        RootServiceProvider = rootServiceProvider;
+    }
+
+    public IPlatformRootServiceProvider RootServiceProvider { get; }
+
     public abstract string Name { get; }
 
     public virtual DateTime? ExpirationDate => null;

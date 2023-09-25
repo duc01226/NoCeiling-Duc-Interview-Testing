@@ -1,6 +1,6 @@
-using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Hosting;
+using Easy.Platform.Common.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.HostingBackgroundServices;
@@ -15,12 +15,17 @@ internal sealed class PlatformAutoClearMemoryHostingBackgroundService : Platform
 
     protected override TimeSpan ProcessTriggerIntervalTime()
     {
-        return 10.Seconds();
+        return 3.Seconds();
     }
 
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
-        GC.Collect();
-        PlatformGlobal.MemoryCollector.CollectGarbageMemory(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
+        await Task.Run(
+            () =>
+            {
+                GC.Collect();
+                Util.GarbageCollector.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true, immediately: true);
+            },
+            cancellationToken);
     }
 }

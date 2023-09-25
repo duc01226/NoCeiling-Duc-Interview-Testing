@@ -18,7 +18,8 @@ internal sealed class TransferSnippetTextToMultiDbDemoEntityNameDomainEventConsu
     public TransferSnippetTextToMultiDbDemoEntityNameDomainEventConsumer(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager uowManager,
-        IServiceProvider serviceProvider) : base(loggerFactory, uowManager, serviceProvider)
+        IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, uowManager, serviceProvider, rootServiceProvider)
     {
     }
 

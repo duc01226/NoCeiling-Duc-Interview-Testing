@@ -17,7 +17,8 @@ public sealed class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDb
         ILoggerFactory loggerFactory,
         IPlatformCqrs cqrs,
         PlatformPersistenceConfiguration<TextSnippetDbContext> persistenceConfiguration,
-        IPlatformApplicationUserContextAccessor userContextAccessor) : base(options, loggerFactory, cqrs, persistenceConfiguration, userContextAccessor)
+        IPlatformApplicationUserContextAccessor userContextAccessor,
+        IPlatformRootServiceProvider rootServiceProvider) : base(options, loggerFactory, cqrs, persistenceConfiguration, userContextAccessor, rootServiceProvider)
     {
     }
 
@@ -38,7 +39,8 @@ public sealed class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDb
                 new LoggerFactory(),
                 null,
                 new PlatformPersistenceConfiguration<TextSnippetDbContext>(),
-                new PlatformDefaultApplicationUserContextAccessor());
+                new PlatformDefaultApplicationUserContextAccessor(),
+                new PlatformRootServiceProvider(null));
         }
     }
 

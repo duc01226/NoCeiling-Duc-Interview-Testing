@@ -15,12 +15,14 @@ public class TextSnippetEntityEventBusMessageProducer
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
         IPlatformApplicationUserContextAccessor userContextAccessor,
         IPlatformApplicationSettingContext applicationSettingContext) : base(
         loggerFactory,
         unitOfWorkManager,
         serviceProvider,
+        rootServiceProvider,
         applicationBusMessageProducer,
         userContextAccessor,
         applicationSettingContext)

@@ -39,10 +39,10 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
 
     protected override async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForWrite<TResult>(Func<IUnitOfWork, Task<TResult>> action)
     {
-        return await ExecuteWithBadQueryWarningHandling(_ => base.ExecuteAutoOpenUowUsingOnceTimeForWrite(action), null);
+        return await ExecuteWithBadQueryWarningForWriteHandling(_ => base.ExecuteAutoOpenUowUsingOnceTimeForWrite(action), null);
     }
 
-    protected async Task<TResult> ExecuteWithBadQueryWarningHandling<TResult>(Func<IUnitOfWork, Task<TResult>> action, IUnitOfWork uow)
+    protected async Task<TResult> ExecuteWithBadQueryWarningForWriteHandling<TResult>(Func<IUnitOfWork, Task<TResult>> action, IUnitOfWork uow)
     {
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling<TResult, TEntity>(
@@ -276,196 +276,363 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             loadRelatedEntities);
     }
 
-    public override Task<TEntity> CreateAsync(
+    public override async Task<TEntity> CreateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                activity?.AddTag("Entity", entity.ToJson());
+
+                return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+                    uow => GetUowDbContext(uow).CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken));
+            }
+
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+            uow => GetUowDbContext(uow).CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken));
     }
 
-    public override Task<TEntity> CreateOrUpdateAsync(
+    public override async Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                activity?.AddTag("Entity", entity.ToJson());
+
+                return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+                    uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken));
+            }
+
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+            uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken));
     }
 
-    public override Task<TEntity> CreateOrUpdateAsync(
+    public override async Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         Expression<Func<TEntity, bool>> customCheckExistingPredicate,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForWrite(
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                activity?.AddTag("Entity", entity.ToJson());
+
+                return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+                    uow => GetUowDbContext(uow)
+                        .CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, customCheckExistingPredicate, dismissSendEvent, eventCustomConfig, cancellationToken));
+            }
+
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow)
-                .CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, customCheckExistingPredicate, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
+                .CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, customCheckExistingPredicate, dismissSendEvent, eventCustomConfig, cancellationToken));
     }
 
-    public override Task<List<TEntity>> CreateOrUpdateManyAsync(
+    public override async Task<List<TEntity>> CreateOrUpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
         Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entities.IsEmpty()) return entities.ToTask();
+        if (entities.IsEmpty()) return entities;
 
-        return ExecuteAutoOpenUowUsingOnceTimeForWrite(
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateManyAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                activity?.AddTag("Entity", entities.ToJson());
+
+                return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+                    uow => GetUowDbContext(uow)
+                        .CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
+                            entities,
+                            customCheckExistingPredicateBuilder,
+                            dismissSendEvent,
+                            eventCustomConfig,
+                            cancellationToken));
+            }
+
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow)
                 .CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
                     entities,
                     customCheckExistingPredicateBuilder,
                     dismissSendEvent,
-                    sendEntityEventConfigure,
+                    eventCustomConfig,
                     cancellationToken));
     }
 
-    public override Task<List<TEntity>> CreateOrUpdateManyAsync(
+    public override async Task<List<TEntity>> CreateOrUpdateManyAsync(
         IUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
         Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entities.IsEmpty()) return entities.ToTask();
+        if (entities.IsEmpty()) return entities;
 
-        return ExecuteWithBadQueryWarningHandling(
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateManyAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                activity?.AddTag("Entity", entities.ToJson());
+
+                return await ExecuteWithBadQueryWarningForWriteHandling(
+                    uow => GetUowDbContext(uow)
+                        .CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
+                            entities,
+                            customCheckExistingPredicateBuilder,
+                            dismissSendEvent,
+                            eventCustomConfig,
+                            cancellationToken),
+                    uow);
+            }
+
+        return await ExecuteWithBadQueryWarningForWriteHandling(
             uow => GetUowDbContext(uow)
                 .CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
                     entities,
                     customCheckExistingPredicateBuilder,
                     dismissSendEvent,
-                    sendEntityEventConfigure,
+                    eventCustomConfig,
                     cancellationToken),
             uow);
     }
 
-    public override Task<TEntity> UpdateAsync(
+    public override async Task<TEntity> UpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(UpdateAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                activity?.AddTag("Entity", entity.ToJson());
+
+                return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+                    uow => GetUowDbContext(uow).UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken));
+            }
+
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+            uow => GetUowDbContext(uow).UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken));
     }
 
-    public override Task<TEntity> DeleteAsync(
+    public override async Task<TEntity> DeleteAsync(
         TPrimaryKey entityId,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).DeleteAsync(entityId, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                activity?.AddTag("EntityId", entityId);
+
+                return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+                    uow => GetUowDbContext(uow).DeleteAsync<TEntity, TPrimaryKey>(entityId, dismissSendEvent, eventCustomConfig, cancellationToken));
+            }
+
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+            uow => GetUowDbContext(uow).DeleteAsync<TEntity, TPrimaryKey>(entityId, dismissSendEvent, eventCustomConfig, cancellationToken));
     }
 
-    public override Task<TEntity> DeleteAsync(
+    public override async Task<TEntity> DeleteAsync(
         TEntity entity,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                activity?.AddTag("Entity", entity.ToJson());
+
+                return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+                    uow => GetUowDbContext(uow).DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken));
+            }
+
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+            uow => GetUowDbContext(uow).DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken));
     }
 
-    public override Task<List<TEntity>> CreateManyAsync(
+    public override async Task<List<TEntity>> CreateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entities.IsEmpty()) return entities.ToTask();
+        if (entities.IsEmpty()) return entities;
 
-        return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).CreateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateManyAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                activity?.AddTag("Entity", entities.ToJson());
+
+                return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+                    uow => GetUowDbContext(uow).CreateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));
+            }
+
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+            uow => GetUowDbContext(uow).CreateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));
     }
 
-    public override Task<List<TEntity>> CreateManyAsync(
+    public override async Task<List<TEntity>> CreateManyAsync(
         IUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entities.IsEmpty()) return entities.ToTask();
+        if (entities.IsEmpty()) return entities;
 
-        return ExecuteWithBadQueryWarningHandling(
-            uow => GetUowDbContext(uow).CreateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, sendEntityEventConfigure, cancellationToken),
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateManyAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                activity?.AddTag("Entity", entities.ToJson());
+
+                return await ExecuteWithBadQueryWarningForWriteHandling(
+                    uow => GetUowDbContext(uow).CreateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken),
+                    uow);
+            }
+
+        return await ExecuteWithBadQueryWarningForWriteHandling(
+            uow => GetUowDbContext(uow).CreateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken),
             uow);
     }
 
-    public override Task<List<TEntity>> UpdateManyAsync(
+    public override async Task<List<TEntity>> UpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entities.IsEmpty()) return entities.ToTask();
+        if (entities.IsEmpty()) return entities;
 
-        return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(UpdateManyAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                activity?.AddTag("Entity", entities.ToJson());
+
+                return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+                    uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));
+            }
+
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+            uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));
     }
 
-    public override Task<List<TEntity>> UpdateManyAsync(
+    public override async Task<List<TEntity>> UpdateManyAsync(
         IUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entities.IsEmpty()) return entities.ToTask();
+        if (entities.IsEmpty()) return entities;
 
-        return ExecuteWithBadQueryWarningHandling(
-            uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, sendEntityEventConfigure, cancellationToken),
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(UpdateManyAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                activity?.AddTag("Entity", entities.ToJson());
+
+                return await ExecuteWithBadQueryWarningForWriteHandling(
+                    uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken),
+                    uow);
+            }
+
+        return await ExecuteWithBadQueryWarningForWriteHandling(
+            uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken),
             uow);
     }
 
-    public override Task<List<TEntity>> DeleteManyAsync(
+    public override async Task<List<TEntity>> DeleteManyAsync(
         List<TPrimaryKey> entityIds,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entityIds.IsEmpty()) return Task.FromResult(new List<TEntity>());
+        if (entityIds.IsEmpty()) return new List<TEntity>();
 
-        return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).DeleteManyAsync(entityIds, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteManyAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                activity?.AddTag("Entity", entityIds.ToJson());
+
+                return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+                    uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entityIds, dismissSendEvent, eventCustomConfig, cancellationToken));
+            }
+
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+            uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entityIds, dismissSendEvent, eventCustomConfig, cancellationToken));
     }
 
-    public override Task<List<TEntity>> DeleteManyAsync(
+    public override async Task<List<TEntity>> DeleteManyAsync(
         IUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entities.IsEmpty()) return entities.ToTask();
+        if (entities.IsEmpty()) return entities;
 
-        return ExecuteWithBadQueryWarningHandling(
-            uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, sendEntityEventConfigure, cancellationToken),
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteManyAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                activity?.AddTag("Entity", entities.ToJson());
+
+                return await ExecuteWithBadQueryWarningForWriteHandling(
+                    uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken),
+                    uow);
+            }
+
+        return await ExecuteWithBadQueryWarningForWriteHandling(
+            uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken),
             uow);
     }
 
-    public override Task<List<TEntity>> DeleteManyAsync(
+    public override async Task<List<TEntity>> DeleteManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entities.IsEmpty()) return entities.ToTask();
+        if (entities.IsEmpty()) return entities;
 
-        return ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteManyAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                activity?.AddTag("Entity", entities.ToJson());
+
+                return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+                    uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));
+            }
+
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+            uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));
     }
 }
 

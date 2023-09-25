@@ -75,6 +75,8 @@ public class PlatformCachingModule : PlatformInfrastructureModule
 
             serviceCollection.RegisterAllForImplementation(typeof(PlatformCollectionDistributedCacheRepository<>));
         }
+
+        serviceCollection.RegisterHostedService<PlatformAutoClearDeprecatedGlobalRequestCachedKeysBackgroundService>();
     }
 
     protected virtual void ConfigCacheSettings(IServiceProvider sp, PlatformCacheSettings cacheSettings)

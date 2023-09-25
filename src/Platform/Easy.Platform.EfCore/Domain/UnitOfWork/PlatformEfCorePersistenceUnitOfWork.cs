@@ -17,9 +17,10 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
     : PlatformPersistenceUnitOfWork<TDbContext>, IPlatformEfCorePersistenceUnitOfWork<TDbContext> where TDbContext : PlatformEfCoreDbContext<TDbContext>
 {
     public PlatformEfCorePersistenceUnitOfWork(
+        IPlatformRootServiceProvider rootServiceProvider,
         TDbContext dbContext,
         PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
-        DbContextOptions<TDbContext> dbContextOptions) : base(dbContext)
+        DbContextOptions<TDbContext> dbContextOptions) : base(rootServiceProvider, dbContext)
     {
         PersistenceConfiguration = persistenceConfiguration;
         DbContextOptions = dbContextOptions;
@@ -31,8 +32,7 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
 
     public override async Task CompleteAsync(CancellationToken cancellationToken = default)
     {
-        if (Completed)
-            return;
+        if (Completed) return;
 
         // Store stack trace before save changes so that if something went wrong in save into db, stack trace could
         // be tracked. Because call to db if failed lose stack trace
@@ -50,7 +50,7 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
         }
         catch (DbUpdateConcurrencyException ex)
         {
-            PlatformGlobal.LoggerFactory.CreateLogger(GetType())
+            LoggerFactory.CreateLogger(GetType())
                 .LogWarning(
                     ex,
                     "Uow complete failed because of version conflict. [[Exception:{Exception}]]. FullStackTrace:{FullStackTrace}]]",

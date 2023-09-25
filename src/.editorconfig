@@ -402,97 +402,101 @@ end_of_line = crlf
 csharp_style_unused_value_expression_statement_preference = discard_variable:error
 csharp_style_unused_value_assignment_preference = discard_variable:none
 
-dotnet_diagnostic.IDE0003.severity = suggestion
+dotnet_diagnostic.IDE0003.severity = error
 dotnet_diagnostic.IDE0005.severity = error
-dotnet_diagnostic.IDE0010.severity = none
+dotnet_diagnostic.IDE0010.severity = suggestion
 dotnet_diagnostic.IDE0011.severity = none
-dotnet_diagnostic.IDE0039.severity = suggestion
+dotnet_diagnostic.IDE0039.severity = error
 dotnet_diagnostic.IDE0040.severity = error
-dotnet_diagnostic.IDE0044.severity = suggestion
-dotnet_diagnostic.IDE0050.severity = suggestion
+dotnet_diagnostic.IDE0044.severity = error
+dotnet_diagnostic.IDE0050.severity = error
 dotnet_diagnostic.IDE0051.severity = error
 dotnet_diagnostic.IDE0053.severity = none
 dotnet_diagnostic.IDE0056.severity = suggestion
-dotnet_diagnostic.IDE0057.severity = none
+dotnet_diagnostic.IDE0057.severity = suggestion
 dotnet_diagnostic.IDE0059.severity = error
 dotnet_diagnostic.IDE0060.severity = warning
-dotnet_diagnostic.IDE0061.severity = none
-dotnet_diagnostic.IDE0072.severity = warning
-dotnet_diagnostic.IDE0090.severity = none
-dotnet_diagnostic.IDE0037.severity = suggestion
-dotnet_diagnostic.IDE0106.severity = suggestion
+dotnet_diagnostic.IDE0061.severity = suggestion
+dotnet_diagnostic.IDE0072.severity = suggestion
+dotnet_diagnostic.IDE0090.severity = suggestion
+dotnet_diagnostic.IDE0037.severity = error
+dotnet_diagnostic.IDE0106.severity = error
 dotnet_diagnostic.IDE0160.severity = none
-dotnet_diagnostic.IDE0130.severity = none
+dotnet_diagnostic.IDE0130.severity = error
 dotnet_diagnostic.IDE0058.severity = none
-dotnet_diagnostic.IDE0078.severity = none
-dotnet_diagnostic.IDE0063.severity = none
+dotnet_diagnostic.IDE0078.severity = suggestion
+dotnet_diagnostic.IDE0063.severity = suggestion
 dotnet_diagnostic.IDE0022.severity = suggestion
 dotnet_diagnostic.IDE0052.severity = error
-dotnet_diagnostic.IDE0240.severity = none
-dotnet_diagnostic.IDE0074.severity = suggestion
+dotnet_diagnostic.IDE0240.severity = error
+dotnet_diagnostic.IDE0074.severity = error
 # IDE0200: Remove unnecessary lambda expression
-dotnet_diagnostic.IDE0200.severity = none
+dotnet_diagnostic.IDE0200.severity = suggestion
 dotnet_diagnostic.IDE0270.severity = suggestion
+dotnet_diagnostic.IDE0251.severity = none
 
-dotnet_diagnostic.SA1101.severity = suggestion
-dotnet_diagnostic.SA1413.severity = suggestion
-dotnet_diagnostic.SA1200.severity = suggestion
-dotnet_diagnostic.SA1208.severity = suggestion
-dotnet_diagnostic.SA1516.severity = suggestion
-dotnet_diagnostic.SA1402.severity = suggestion
-dotnet_diagnostic.SA1633.severity = suggestion
-dotnet_diagnostic.SA1005.severity = suggestion
-dotnet_diagnostic.SA1013.severity = suggestion
-dotnet_diagnostic.SA1012.severity = suggestion
-dotnet_diagnostic.SA1401.severity = suggestion
-dotnet_diagnostic.SA1515.severity = suggestion
-dotnet_diagnostic.SA1210.severity = suggestion
-dotnet_diagnostic.SA1649.severity = suggestion
-dotnet_diagnostic.SA1309.severity = suggestion
-dotnet_diagnostic.SA1127.severity = suggestion
+dotnet_diagnostic.SA1101.severity = error
+dotnet_diagnostic.SA1413.severity = error
+dotnet_diagnostic.SA1200.severity = error
+dotnet_diagnostic.SA1208.severity = error
+dotnet_diagnostic.SA1516.severity = error
+dotnet_diagnostic.SA1402.severity = error
+dotnet_diagnostic.SA1633.severity = error
+dotnet_diagnostic.SA1005.severity = error
+dotnet_diagnostic.SA1013.severity = error
+dotnet_diagnostic.SA1012.severity = error
+dotnet_diagnostic.SA1401.severity = error
+dotnet_diagnostic.SA1515.severity = error
+dotnet_diagnostic.SA1210.severity = error
+dotnet_diagnostic.SA1649.severity = error
+dotnet_diagnostic.SA1309.severity = error
+dotnet_diagnostic.SA1127.severity = error
 
-dotnet_diagnostic.CA1068.severity = none
-dotnet_diagnostic.CA1304.severity = none
-dotnet_diagnostic.CA1305.severity = none
-dotnet_diagnostic.CA1822.severity = none
-dotnet_diagnostic.CA2254.severity = none
-dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1068.severity = suggestion
+dotnet_diagnostic.CA1304.severity = suggestion
+dotnet_diagnostic.CA1305.severity = suggestion
+dotnet_diagnostic.CA1822.severity = suggestion
+dotnet_diagnostic.CA2254.severity = error
+dotnet_diagnostic.CA1848.severity = suggestion
 dotnet_diagnostic.CA1707.severity = none
 dotnet_diagnostic.CA2201.severity = none
-dotnet_diagnostic.CA1725.severity = none
+dotnet_diagnostic.CA1725.severity = error
 dotnet_diagnostic.CA1720.severity = suggestion
-dotnet_diagnostic.CA1716.severity = none
-dotnet_diagnostic.CA1310.severity = none
-dotnet_diagnostic.CA1051.severity = none
+dotnet_diagnostic.CA1716.severity = suggestion
+dotnet_diagnostic.CA1310.severity = suggestion
+dotnet_diagnostic.CA1051.severity = suggestion
 dotnet_diagnostic.CA1805.severity = none
-dotnet_diagnostic.CA1845.severity = suggestion
-dotnet_diagnostic.CA1847.severity = none
+dotnet_diagnostic.CA1845.severity = warning
+dotnet_diagnostic.CA1847.severity = error
 dotnet_diagnostic.CA2253.severity = error
-dotnet_diagnostic.CA1041.severity = suggestion
-dotnet_diagnostic.CA1309.severity = none
-dotnet_diagnostic.CA2208.severity = suggestion
-dotnet_diagnostic.CA1711.severity = none
+dotnet_diagnostic.CA1041.severity = warning
+dotnet_diagnostic.CA1309.severity = warning
+dotnet_diagnostic.CA2208.severity = error
+dotnet_diagnostic.CA1711.severity = suggestion
 dotnet_diagnostic.CA1727.severity = error
-dotnet_diagnostic.CA1000.severity = none
-dotnet_diagnostic.CA1806.severity = none
-dotnet_diagnostic.CA1826.severity = none
-dotnet_diagnostic.CA1842.severity = none
+dotnet_diagnostic.CA1000.severity = suggestion
+dotnet_diagnostic.CA1806.severity = error
+dotnet_diagnostic.CA1826.severity = suggestion
+dotnet_diagnostic.CA1842.severity = suggestion
 dotnet_diagnostic.CA1708.severity = suggestion
-dotnet_diagnostic.CA5350.severity = suggestion
-dotnet_diagnostic.CA1416.severity = suggestion
-dotnet_diagnostic.CA1846.severity = none
-dotnet_diagnostic.CA1710.severity = none
-dotnet_diagnostic.CA2200.severity = none
+dotnet_diagnostic.CA5350.severity = warning
+dotnet_diagnostic.CA1416.severity = error
+dotnet_diagnostic.CA1846.severity = error
+dotnet_diagnostic.CA1710.severity = suggestion
+dotnet_diagnostic.CA2200.severity = error
 dotnet_diagnostic.CA1852.severity = error
-dotnet_diagnostic.CA1311.severity = none
-dotnet_diagnostic.CA1854.severity = none
+dotnet_diagnostic.CA1311.severity = suggestion
+dotnet_diagnostic.CA1854.severity = suggestion
 
-dotnet_diagnostic.CS0628.severity = none
+dotnet_diagnostic.CS0628.severity = error
 dotnet_diagnostic.CS4014.severity = error
+dotnet_diagnostic.CS0108.severity = error
+dotnet_diagnostic.CS8524.severity = suggestion
+dotnet_diagnostic.CS8602.severity = error
 
-dotnet_diagnostic.CS1998.severity = none
+dotnet_diagnostic.CS1998.severity = suggestion
 
-dotnet_diagnostic.EF1001.severity = none
+dotnet_diagnostic.EF1001.severity = suggestion
 
 # SYSLIB1045: Convert to 'GeneratedRegexAttribute'.
 dotnet_diagnostic.SYSLIB1045.severity = none
@@ -557,7 +561,7 @@ dotnet_diagnostic.S1118.severity = none
 dotnet_diagnostic.S4136.severity = none
 
 # S2184: Results of integer division should not be assigned to floating point variables
-dotnet_diagnostic.S2184.severity = suggestion
+dotnet_diagnostic.S2184.severity = error
 
 # S1135: Track uses of "TODO" tags
 dotnet_diagnostic.S1135.severity = warning
@@ -578,10 +582,10 @@ dotnet_diagnostic.S125.severity = none
 dotnet_diagnostic.S1939.severity = none
 
 # S1117: Local variables should not shadow class fields
-dotnet_diagnostic.S1117.severity = suggestion
+dotnet_diagnostic.S1117.severity = warning
 
 # S2743: Static fields should not be used in generic types
-dotnet_diagnostic.S2743.severity = suggestion
+dotnet_diagnostic.S2743.severity = error
 
 # S3963: "static" fields should be initialized inline
 dotnet_diagnostic.S3963.severity = suggestion
@@ -605,7 +609,7 @@ dotnet_diagnostic.S2386.severity = none
 dotnet_diagnostic.S101.severity = none
 
 # S5547: Cipher algorithms should be robust
-dotnet_diagnostic.S5547.severity = suggestion
+dotnet_diagnostic.S5547.severity = warning
 
 # S1075: URIs should not be hardcoded
 dotnet_diagnostic.S1075.severity = none
@@ -635,10 +639,10 @@ dotnet_diagnostic.S1643.severity = none
 dotnet_diagnostic.S3260.severity = error
 
 # S1123: "Obsolete" attributes should include explanations
-dotnet_diagnostic.S1123.severity = suggestion
+dotnet_diagnostic.S1123.severity = warning
 
 # S1172: Unused method parameters should be removed
-dotnet_diagnostic.S1172.severity = warning
+dotnet_diagnostic.S1172.severity = error
 
 # S3267: Loops should be simplified with "LINQ" expressions
 dotnet_diagnostic.S3267.severity = none
@@ -653,10 +657,10 @@ dotnet_diagnostic.S1481.severity = error
 dotnet_diagnostic.S3220.severity = suggestion
 
 # S2234: Parameters to 'Compare' have the same names but not the same order as the method arguments
-dotnet_diagnostic.S2234.severity = suggestion
+dotnet_diagnostic.S2234.severity = error
 
 # S2328: "GetHashCode" should not reference mutable fields
-dotnet_diagnostic.S2328.severity = suggestion
+dotnet_diagnostic.S2328.severity = warning
 
 # S1206: "Equals(Object)" and "GetHashCode()" should be overridden in pairs
 dotnet_diagnostic.S1206.severity = none
@@ -702,6 +706,16 @@ dotnet_diagnostic.S1133.severity = warning
 
 # S1144: Remove unused internal class
 dotnet_diagnostic.S1144.severity = none
+
+dotnet_diagnostic.S6602.severity = suggestion
+dotnet_diagnostic.S6603.severity = suggestion
+dotnet_diagnostic.S6605.severity = suggestion
+dotnet_diagnostic.S6562.severity = suggestion
+dotnet_diagnostic.S6580.severity = suggestion
+dotnet_diagnostic.S6608.severity = suggestion
+dotnet_diagnostic.S2589.severity = suggestion
+dotnet_diagnostic.S6575.severity = suggestion
+dotnet_diagnostic.S2583.severity = suggestion
 
 # S3878: Remove array creation and simply pass element for params parameter
 dotnet_diagnostic.S3878.severity = suggestion

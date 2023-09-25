@@ -1,6 +1,7 @@
 using Easy.Platform.Application.Context;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Cqrs.Events;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Events;
@@ -33,31 +34,29 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
     where TMessage : class, new()
 {
     protected readonly IPlatformApplicationBusMessageProducer ApplicationBusMessageProducer;
+    protected readonly IPlatformApplicationUserContextAccessor UserContext;
 
     public PlatformCqrsEventBusMessageProducer(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
         IPlatformApplicationUserContextAccessor userContextAccessor,
-        IPlatformApplicationSettingContext applicationSettingContext) : base(loggerFactory, unitOfWorkManager, serviceProvider)
+        IPlatformApplicationSettingContext applicationSettingContext) : base(loggerFactory, unitOfWorkManager, serviceProvider, rootServiceProvider)
     {
         ApplicationBusMessageProducer = applicationBusMessageProducer;
-        UserContextAccessor = userContextAccessor;
         ApplicationSettingContext = applicationSettingContext;
+        UserContext = userContextAccessor;
     }
 
     public override bool EnableInboxEventBusMessage => false;
 
     protected override bool AutoOpenUow => false;
 
-    protected IPlatformApplicationUserContextAccessor UserContextAccessor { get; }
-
-    protected IPlatformApplicationUserContext CurrentUser => UserContextAccessor.Current;
+    protected override bool AllowUsingUserContextAccessor => true;
 
     protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
-
-    protected override bool AllowUsingUserContextAccessor => true;
 
     protected abstract TMessage BuildMessage(TEvent @event);
 

@@ -1,3 +1,4 @@
+using Easy.Platform.Common;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.UnitOfWork;
@@ -20,7 +21,8 @@ public abstract class PlatformCqrsEntityEventBusMessageConsumer<TMessage, TEntit
     protected PlatformCqrsEntityEventBusMessageConsumer(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager uowManager,
-        IServiceProvider serviceProvider) : base(loggerFactory, uowManager, serviceProvider)
+        IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, uowManager, serviceProvider, rootServiceProvider)
     {
     }
 }

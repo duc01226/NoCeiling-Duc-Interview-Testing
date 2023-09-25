@@ -261,7 +261,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
             invalid: err => Of<T>(default).ToTask());
     }
 
-    /// <inheritdoc cref="ThenAsync{T}(Func{Task{PlatformValidationResult{T}}})"/>
+    /// <inheritdoc cref="ThenAsync{T}(Func{Task{PlatformValidationResult{T}}})" />
     public Task<PlatformValidationResult<T>> ThenAsync<T>(
         Func<TValue, Task<PlatformValidationResult<T>>> nextVal)
     {
@@ -270,7 +270,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
             invalid: err => Of<T>(default).ToTask());
     }
 
-    /// <inheritdoc cref="ThenAsync{T}(Func{Task{PlatformValidationResult{T}}})"/>
+    /// <inheritdoc cref="ThenAsync{T}(Func{Task{PlatformValidationResult{T}}})" />
     public async Task<PlatformValidationResult<T>> ThenAsync<T>(
         Func<TValue, Task<T>> next)
     {
@@ -280,7 +280,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
     }
 
     /// <summary>
-    ///  Executes a specified function based on whether the validation result is valid or invalid.
+    /// Executes a specified function based on whether the validation result is valid or invalid.
     /// </summary>
     public PlatformValidationResult<T> Match<T>(
         Func<TValue, PlatformValidationResult<T>> valid,
@@ -563,7 +563,7 @@ public class PlatformValidationResult : PlatformValidationResult<object>
         params Func<PlatformValidationResult>[] validations)
     {
         return validations.Aggregate(
-            seed: Valid(validations.First()().Value),
+            seed: Valid(validations[0]().Value),
             (acc, validator) => acc.ThenValidate(p => validator()));
     }
 

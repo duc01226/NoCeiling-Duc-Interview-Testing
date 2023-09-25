@@ -21,7 +21,7 @@
     <PackageReference Include="Microsoft.Identity.Web" Version="1.25.9" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.17.0" />
     <PackageReference Include="Roslyn.Analyzers" Version="1.0.3.4" />
-    <PackageReference Include="SonarAnalyzer.CSharp" Version="8.54.0.64047">
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="9.9.0.77355">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

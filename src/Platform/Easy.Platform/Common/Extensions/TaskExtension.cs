@@ -92,6 +92,30 @@ public static class TaskExtension
         return targetValue;
     }
 
+    public static async Task<T> ThenActionIf<T>(
+        this Task<T> task,
+        bool actionIf,
+        Action<T> action)
+    {
+        var targetValue = await task;
+
+        if (actionIf) action(targetValue);
+
+        return targetValue;
+    }
+
+    public static async Task<T> ThenActionIfAsync<T>(
+        this Task<T> task,
+        bool actionIf,
+        Func<T, Task> nextTask)
+    {
+        var targetValue = await task;
+
+        if (actionIf) await nextTask(targetValue);
+
+        return targetValue;
+    }
+
     /// <summary>
     /// Side effect call other action, which will not affect the main action flow if error. Just a side effect action
     /// </summary>

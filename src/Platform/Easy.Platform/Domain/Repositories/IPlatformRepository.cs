@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Linq.Expressions;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
@@ -12,6 +13,8 @@ namespace Easy.Platform.Domain.Repositories;
 /// </summary>
 public interface IPlatformRepository
 {
+    public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformRepository)}");
+
     /// <summary>
     /// Return current active uow. May throw exception if not existing one.
     /// </summary>
@@ -70,7 +73,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
     public Task<TEntity> CreateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -78,13 +81,13 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
     /// </summary>
     /// <param name="entity"></param>
     /// <param name="dismissSendEvent"></param>
-    /// <param name="sendEntityEventConfigure"></param>
+    /// <param name="eventCustomConfig"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     public Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -93,14 +96,14 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
     /// <param name="entities"></param>
     /// <param name="dismissSendEvent"></param>
     /// <param name="customCheckExistingPredicateBuilder">Used to help to check entity existence to update by other props than default using Id. Example: toUpsertEntity => p => p.Name == toUpsertEntity.Name</param>
-    /// <param name="sendEntityEventConfigure"></param>
+    /// <param name="eventCustomConfig"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     public Task<List<TEntity>> CreateOrUpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
         Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> CreateOrUpdateManyAsync(
@@ -108,104 +111,104 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         List<TEntity> entities,
         bool dismissSendEvent = false,
         Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     public Task<TEntity> UpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     public Task<TEntity> DeleteAsync(
         TPrimaryKey entityId,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     public Task<TEntity> DeleteAsync(
         TEntity entity,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> CreateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> CreateManyAsync(
         IUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> UpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> UpdateManyAsync(
         IUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> UpdateManyAsync(
         Expression<Func<TEntity, bool>> predicate,
         Action<TEntity> updateAction,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> DeleteManyAsync(
         List<TPrimaryKey> entityIds,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> DeleteManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> DeleteManyAsync(
         IUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     public Task<List<TEntity>> DeleteManyAsync(
         Expression<Func<TEntity, bool>> predicate,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     public Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         Expression<Func<TEntity, bool>> customCheckExistingPredicate,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     public async Task<TEntity> CreateIfNotExistAsync(
         TEntity entity,
         Expression<Func<TEntity, bool>> predicate,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
         var isExisted = await AnyAsync(predicate, cancellationToken: cancellationToken);
         if (isExisted)
             return entity;
 
-        return await CreateAsync(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
+        return await CreateAsync(entity, dismissSendEvent, eventCustomConfig, cancellationToken);
     }
 }
 
@@ -391,7 +394,10 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
     /// </summary>
     public Func<IQueryable<TEntity>, IQueryable<TEntity>> GetQueryBuilder(Expression<Func<TEntity, bool>> predicate);
 
-    public Expression<Func<TEntity, bool>> GetQueryExpr(Expression<Func<TEntity, bool>> predicate) => predicate;
+    public Expression<Func<TEntity, bool>> GetQueryExpr(Expression<Func<TEntity, bool>> predicate)
+    {
+        return predicate;
+    }
 }
 
 public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
@@ -402,7 +408,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
         Expression<Func<TEntity, bool>> predicate,
         int pageSize,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
         await Util.Pager.ExecuteScrollingPagingAsync(
@@ -414,13 +420,14 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                         GetQuery(uow).Where(predicate).Take(pageSize),
                         cancellationToken: cancellationToken);
 
-                    await DeleteManyAsync(uow, pagingDeleteItems, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
+                    await DeleteManyAsync(uow, pagingDeleteItems, dismissSendEvent, eventCustomConfig, cancellationToken);
 
                     await uow.CompleteAsync(cancellationToken);
 
                     return pagingDeleteItems;
                 }
-            });
+            },
+            maxExecutionCount: await CountAsync(predicate, cancellationToken).Then(totalItemsCount => totalItemsCount / pageSize));
     }
 
     /// <summary>
@@ -431,7 +438,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
         Action<TEntity> updateAction,
         int pageSize,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
         await Util.Pager.ExecutePagingAsync(
@@ -444,7 +451,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                             cancellationToken: cancellationToken)
                         .ThenAction(items => items.ForEach(updateAction));
 
-                    await UpdateManyAsync(uow, pagingUpdateItems, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
+                    await UpdateManyAsync(uow, pagingUpdateItems, dismissSendEvent, eventCustomConfig, cancellationToken);
 
                     await uow.CompleteAsync(cancellationToken);
                 }
@@ -461,7 +468,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
         Action<TEntity> updateAction,
         int pageSize,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
         await Util.Pager.ExecuteScrollingPagingAsync(
@@ -474,10 +481,11 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                             cancellationToken: cancellationToken)
                         .ThenAction(items => items.ForEach(updateAction));
 
-                    var updatedItems = await UpdateManyAsync(uow, pagingUpdateItems, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
+                    var updatedItems = await UpdateManyAsync(uow, pagingUpdateItems, dismissSendEvent, eventCustomConfig, cancellationToken);
 
                     return updatedItems;
                 }
-            });
+            },
+            maxExecutionCount: await CountAsync(predicate, cancellationToken).Then(totalItemsCount => totalItemsCount / pageSize));
     }
 }

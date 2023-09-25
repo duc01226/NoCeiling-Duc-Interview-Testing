@@ -1,3 +1,4 @@
+using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs.Commands;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
@@ -17,7 +18,8 @@ public abstract class PlatformCqrsCommandEventBusMessageConsumer<TCommand>
     protected PlatformCqrsCommandEventBusMessageConsumer(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager uowManager,
-        IServiceProvider serviceProvider) : base(loggerFactory, uowManager, serviceProvider)
+        IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, uowManager, serviceProvider, rootServiceProvider)
     {
     }
 }

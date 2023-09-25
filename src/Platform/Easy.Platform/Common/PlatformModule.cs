@@ -20,6 +20,8 @@ public interface IPlatformModule
 {
     public const int DefaultMaxWaitModuleInitiatedSeconds = 86400 * 5;
 
+    public const string DefaultLogCategory = "Easy.Platform";
+
     /// <summary>
     /// Higher Priority value mean the module init will be executed before lower Priority value in the same level module dependencies
     /// <br />
@@ -30,7 +32,7 @@ public interface IPlatformModule
     public IServiceCollection ServiceCollection { get; }
     public IServiceProvider ServiceProvider { get; }
     public IConfiguration Configuration { get; }
-    public bool IsDependencyModule { get; set; }
+    public bool IsChildModule { get; set; }
     public bool IsRootModule => CheckIsRootModule(this);
 
     /// <summary>
@@ -43,33 +45,38 @@ public interface IPlatformModule
 
     public Action<TracerProviderBuilder> AdditionalTracingConfigure { get; }
 
-    public static void WaitAllModulesInitiated(Type moduleType, ILogger logger = null, string logSuffix = null)
+    public static ILogger CreateDefaultLogger(IServiceProvider serviceProvider)
     {
-        if (PlatformGlobal.ServiceProvider.GetServices(moduleType).Select(p => p.As<IPlatformModule>()).All(p => p.Initiated)) return;
+        return serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(DefaultLogCategory);
+    }
 
-        var useLogger = logger ?? PlatformGlobal.CreateDefaultLogger();
+    public static void WaitAllModulesInitiated(IServiceProvider serviceProvider, Type moduleType, ILogger logger = null, string logSuffix = null)
+    {
+        if (serviceProvider.GetServices(moduleType).Select(p => p.As<IPlatformModule>()).All(p => p.Initiated)) return;
+
+        var useLogger = logger ?? CreateDefaultLogger(serviceProvider);
 
         useLogger.LogInformation("[Platform] Start WaitAllModulesInitiated of type {ModuleType} {LogSuffix} STARTED", moduleType.Name, logSuffix);
 
         Util.TaskRunner.WaitUntil(
             () =>
             {
-                var modules = PlatformGlobal.ServiceProvider.GetServices(moduleType).Select(p => p.As<IPlatformModule>());
+                var modules = serviceProvider.GetServices(moduleType).Select(p => p.As<IPlatformModule>());
 
                 return modules.All(p => p.Initiated);
             },
-            maxWaitSeconds: PlatformGlobal.ServiceProvider.GetServices(moduleType).Count() * DefaultMaxWaitModuleInitiatedSeconds,
+            maxWaitSeconds: serviceProvider.GetServices(moduleType).Count() * DefaultMaxWaitModuleInitiatedSeconds,
             waitForMsg: $"Wait for all modules of type {moduleType.Name} get initiated",
             waitIntervalSeconds: 5);
 
         useLogger.LogInformation("[Platform] WaitAllModulesInitiated of type {ModuleType} {LogSuffix} FINISHED", moduleType.Name, logSuffix);
     }
 
-    public List<IPlatformModule> AllDependencyModules(IServiceCollection useServiceCollection = null);
+    public List<IPlatformModule> AllDependencyChildModules(IServiceCollection useServiceCollection = null, bool includeDeepChildModules = true);
 
     public static bool CheckIsRootModule(IPlatformModule module)
     {
-        return !module.IsDependencyModule;
+        return !module.IsChildModule;
     }
 
     public void RegisterServices(IServiceCollection serviceCollection);
@@ -114,10 +121,13 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
     {
         ServiceProvider = serviceProvider;
         Configuration = configuration;
+        LoggerFactory = serviceProvider?.GetService<ILoggerFactory>();
         Logger = serviceProvider?.GetService<ILoggerFactory>()?.Pipe(CreateLogger);
     }
 
     protected ILogger Logger { get; init; }
+
+    protected ILoggerFactory LoggerFactory { get; init; }
 
     protected virtual bool AutoScanAssemblyRegisterCqrs => false;
 
@@ -141,9 +151,9 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
     public IConfiguration Configuration { get; }
 
     /// <summary>
-    /// True if the module is in a dependency list of other module
+    /// True if the module is in a dependency list of other module, not a root module
     /// </summary>
-    public bool IsDependencyModule { get; set; }
+    public bool IsChildModule { get; set; }
 
     /// <summary>
     /// Current runtime module instance Assembly
@@ -166,7 +176,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
     public void RegisterRuntimeModuleDependencies<TModule>(
         IServiceCollection serviceCollection) where TModule : PlatformModule
     {
-        serviceCollection.RegisterModule<TModule>();
+        serviceCollection.RegisterModule<TModule>(true);
     }
 
     public void RegisterServices(IServiceCollection serviceCollection)
@@ -185,6 +195,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
             RegisterHelpers(serviceCollection);
             RegisterDistributedTracing(serviceCollection);
             InternalRegister(serviceCollection);
+            serviceCollection.Register<IPlatformRootServiceProvider, PlatformRootServiceProvider>(ServiceLifeTime.Singleton);
 
             RegisterServicesExecuted = true;
 
@@ -208,9 +219,6 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
             Logger.LogInformation("[PlatformModule] {Module} Init STARTED", GetType().Name);
 
-            // Because PlatformModule is singleton => ServiceProvider of it is the root ServiceProvider
-            PlatformGlobal.SetRootServiceProvider(ServiceProvider);
-
             await InitAllModuleDependencies();
 
             using (var scope = ServiceProvider.CreateScope())
@@ -228,7 +236,10 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
         }
     }
 
-    public List<IPlatformModule> AllDependencyModules(IServiceCollection useServiceCollection = null)
+    /// <summary>
+    /// Get all dependency modules, also init the value of <see cref="IsChildModule" />, which also affect <see cref="IsRootModule" />
+    /// </summary>
+    public List<IPlatformModule> AllDependencyChildModules(IServiceCollection useServiceCollection = null, bool includeDeepChildModules = true)
     {
         return ModuleTypeDependencies()
             .Select(
@@ -243,10 +254,13 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
                             dependModule => dependModule != null,
                             $"Module {GetType().Name} depend on {moduleType.Name} but Module {moduleType.Name} does not implement IPlatformModule");
 
-                    dependModule.IsDependencyModule = true;
+                    dependModule.IsChildModule = true;
 
-                    return dependModule;
+                    return includeDeepChildModules
+                        ? dependModule.AllDependencyChildModules(useServiceCollection).ConcatSingle(dependModule)
+                        : Util.ListBuilder.New(dependModule);
                 })
+            .Flatten()
             .ToList();
     }
 
@@ -277,21 +291,30 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
     {
         if (IsRootModule)
         {
-            var configOpenTelemetryTracing = ConfigDistributedTracing();
-            if (configOpenTelemetryTracing.Enabled)
+            var distributedTracingConfig = ConfigDistributedTracing();
+            if (distributedTracingConfig.Enabled)
             {
-                var allDependencyModules = AllDependencyModules(serviceCollection);
+                // Register only if enabled for other place to check is any distributed tracing config is enabled or not
+                serviceCollection.Register(
+                    typeof(DistributedTracingConfig),
+                    sp => distributedTracingConfig,
+                    ServiceLifeTime.Singleton,
+                    true,
+                    DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
+
+                // Setup OpenTelemetry
+                var allDependencyModules = AllDependencyChildModules(serviceCollection);
+
                 var allDependencyModulesTracingSources = allDependencyModules.SelectMany(p => p.TracingSources());
 
                 serviceCollection.AddOpenTelemetry()
                     .WithTracing(
                         builder => builder
-                            .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(configOpenTelemetryTracing.AppName ?? GetType().Assembly.GetName().Name!))
-                            .AddConsoleExporter()
+                            .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(distributedTracingConfig.AppName ?? GetType().Assembly.GetName().Name!))
                             .AddSource(TracingSources().Concat(allDependencyModulesTracingSources).ToArray())
                             .WithIf(AdditionalTracingConfigure != null, AdditionalTracingConfigure)
-                            .WithIf(configOpenTelemetryTracing.AdditionalTraceConfig != null, configOpenTelemetryTracing.AdditionalTraceConfig)
-                            .WithIf(configOpenTelemetryTracing.AddOtlpExporterConfig != null, _ => _.AddOtlpExporter(configOpenTelemetryTracing.AddOtlpExporterConfig))
+                            .WithIf(distributedTracingConfig.AdditionalTraceConfig != null, distributedTracingConfig.AdditionalTraceConfig)
+                            .WithIf(distributedTracingConfig.AddOtlpExporterConfig != null, _ => _.AddOtlpExporter(distributedTracingConfig.AddOtlpExporterConfig))
                             .WithIf(
                                 allDependencyModules.Any(),
                                 _ => allDependencyModules
@@ -339,7 +362,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
     protected async Task InitAllModuleDependencies()
     {
-        await AllDependencyModules()
+        await AllDependencyChildModules()
             .GroupBy(p => p.ExecuteInitPriority)
             .OrderByDescending(p => p.Key)
             .ForEachAsync(p => p.ParallelAsync(module => module.Init()));
@@ -359,7 +382,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
     {
         serviceCollection.RegisterIfServiceNotExist(typeof(ILoggerFactory), typeof(LoggerFactory));
         serviceCollection.RegisterIfServiceNotExist(typeof(ILogger<>), typeof(Logger<>));
-        serviceCollection.RegisterIfServiceNotExist(typeof(ILogger), PlatformGlobal.CreateDefaultLogger);
+        serviceCollection.RegisterIfServiceNotExist(typeof(ILogger), IPlatformModule.CreateDefaultLogger);
     }
 
     protected void RegisterCqrs(IServiceCollection serviceCollection)
@@ -381,7 +404,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
     {
         ModuleTypeDependencies()
             .Select(moduleTypeProvider => moduleTypeProvider(Configuration))
-            .ForEach(moduleType => serviceCollection.RegisterModule(moduleType));
+            .ForEach(moduleType => serviceCollection.RegisterModule(moduleType, true));
     }
 
     public class DistributedTracingConfig

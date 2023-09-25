@@ -15,12 +15,14 @@ public sealed class DemoMigrateDataCrossDbContext : PlatformMongoDbContext<DemoM
         IPlatformMongoClient<DemoMigrateDataCrossDbContext> client,
         ILoggerFactory loggerFactory,
         IPlatformApplicationUserContextAccessor userContextAccessor,
-        PlatformPersistenceConfiguration<DemoMigrateDataCrossDbContext> persistenceConfiguration) : base(
+        PlatformPersistenceConfiguration<DemoMigrateDataCrossDbContext> persistenceConfiguration,
+        IPlatformRootServiceProvider rootServiceProvider) : base(
         options,
         client,
         loggerFactory,
         userContextAccessor,
-        persistenceConfiguration)
+        persistenceConfiguration,
+        rootServiceProvider)
     {
     }
 

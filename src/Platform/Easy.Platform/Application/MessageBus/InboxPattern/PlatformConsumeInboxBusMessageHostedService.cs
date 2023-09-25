@@ -1,6 +1,5 @@
 using Easy.Platform.Application.Context;
 using Easy.Platform.Application.MessageBus.Consumers;
-using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Hosting;
 using Easy.Platform.Common.JsonSerialization;
@@ -41,7 +40,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         ConsumerByNameToTypeDic = messageBusScanner
             .ScanAllDefinedConsumerTypes()
             .ToDictionary(PlatformInboxBusMessage.GetConsumerByValue);
-        InvokeConsumerLogger = PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformMessageBusConsumer));
+        InvokeConsumerLogger = loggerFactory.CreateLogger(typeof(PlatformMessageBusConsumer));
     }
 
     protected Dictionary<string, Type> ConsumerByNameToTypeDic { get; }
@@ -218,7 +217,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                         await inboxEventBusMessageRepo.UpdateManyAsync(
                             toHandleMessages,
                             dismissSendEvent: true,
-                            sendEntityEventConfigure: null,
+                            eventCustomConfig: null,
                             cancellationToken);
 
                         await uow.CompleteAsync(cancellationToken);

@@ -1,5 +1,4 @@
 using Easy.Platform.Application.Context.UserContext;
-using Easy.Platform.Common.Utils;
 using Easy.Platform.MongoDB;
 using Easy.Platform.Persistence;
 using Microsoft.Extensions.Logging;
@@ -16,12 +15,14 @@ public sealed class TextSnippetMultiDbDemoDbContext : PlatformMongoDbContext<Tex
         IPlatformMongoClient<TextSnippetMultiDbDemoDbContext> client,
         ILoggerFactory loggerFactory,
         IPlatformApplicationUserContextAccessor userContextAccessor,
-        PlatformPersistenceConfiguration<TextSnippetMultiDbDemoDbContext> persistenceConfiguration) : base(
+        PlatformPersistenceConfiguration<TextSnippetMultiDbDemoDbContext> persistenceConfiguration,
+        IPlatformRootServiceProvider rootServiceProvider) : base(
         options,
         client,
         loggerFactory,
         userContextAccessor,
-        persistenceConfiguration)
+        persistenceConfiguration,
+        rootServiceProvider)
     {
     }
 

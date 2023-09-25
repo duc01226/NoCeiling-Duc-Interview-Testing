@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
-using Easy.Platform.Common;
+using System.Diagnostics;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.Utils;
+using Easy.Platform.Common.Validations;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -10,6 +12,7 @@ namespace Easy.Platform.Infrastructures.Caching;
 public interface IPlatformCacheRepository
 {
     public const string DefaultGlobalContext = "__DefaultGlobalCacheContext__";
+    public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformCacheRepository)}");
 
     /// <summary>
     /// Gets a value with the given key.
@@ -122,6 +125,8 @@ public interface IPlatformCacheRepository
     /// Return default cache entry options value. This could be config when register module, override <see cref="PlatformCachingModule.ConfigCacheSettings" />
     /// </summary>
     PlatformCacheEntryOptions GetDefaultCacheEntryOptions();
+
+    Task ProcessClearDeprecatedGlobalRequestCachedKeys();
 }
 
 public abstract class PlatformCacheRepository : IPlatformCacheRepository
@@ -195,23 +200,25 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
         PlatformCacheEntryOptions cacheOptions = null,
         CancellationToken token = default)
     {
-        var cachedData = await GetAsync<TData>(cacheKey, token);
+        var cachedDataResult = await TryGetAsync<TData>(cacheKey, token);
 
-        PlatformGlobal.MemoryCollector.CollectGarbageMemory();
-
-        return cachedData ?? await RequestAndCacheNewData();
+        return cachedDataResult.IsValid && cachedDataResult.Value != null ? cachedDataResult.Value : await RequestAndCacheNewData();
 
         async Task<TData> RequestAndCacheNewData()
         {
             var requestedData = await request();
 
-            await SetAsync(
-                cacheKey,
-                requestedData,
-                cacheOptions,
-                token);
-
-            PlatformGlobal.MemoryCollector.CollectGarbageMemory();
+            Util.TaskRunner.QueueActionInBackground(
+                async () =>
+                {
+                    await TrySetAsync(
+                        cacheKey,
+                        requestedData,
+                        cacheOptions,
+                        token);
+                },
+                () => Logger,
+                cancellationToken: token);
 
             return requestedData;
         }
@@ -239,6 +246,38 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
         return serviceProvider.GetService<PlatformCacheEntryOptions>() ?? CacheSettings.DefaultCacheEntryOptions;
     }
 
+    public abstract Task ProcessClearDeprecatedGlobalRequestCachedKeys();
+
+    protected async Task<PlatformValidationResult<T>> TryGetAsync<T>(PlatformCacheKey cacheKey, CancellationToken token = default)
+    {
+        try
+        {
+            return await GetAsync<T>(cacheKey, token).Then(data => PlatformValidationResult<T>.Valid(data));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Try get data from cache failed. CacheKey:{CacheKey}", cacheKey.ToString());
+
+            return PlatformValidationResult<T>.Invalid(default, ex.Message);
+        }
+    }
+
+    protected async Task TrySetAsync<T>(
+        PlatformCacheKey cacheKey,
+        T value,
+        PlatformCacheEntryOptions cacheOptions = null,
+        CancellationToken token = default)
+    {
+        try
+        {
+            await SetAsync(cacheKey, value, cacheOptions, token);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Try set data to cache failed. CacheKey:{CacheKey}", cacheKey.ToString());
+        }
+    }
+
     /// <summary>
     /// Used to build a unique cache key to store list of all request cached keys
     /// </summary>
@@ -249,11 +288,11 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
         try
         {
             return await GetAsync<List<PlatformCacheKey>>(cacheKey: GetGlobalAllRequestCachedKeysCacheKey())
-                .Then(_ => _ ?? new List<PlatformCacheKey>())
+                .Then(keys => keys ?? new List<PlatformCacheKey>())
                 .Then(
                     globalRequestCacheKeys => globalRequestCacheKeys
                         .Select(p => new KeyValuePair<PlatformCacheKey, object>(p, null))
-                        .Pipe(_ => new ConcurrentDictionary<PlatformCacheKey, object>(_)));
+                        .Pipe(items => new ConcurrentDictionary<PlatformCacheKey, object>(items)));
         }
         catch (Exception e)
         {

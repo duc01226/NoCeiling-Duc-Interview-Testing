@@ -7,6 +7,7 @@ using Easy.Platform.Application.MessageBus.Producers;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
@@ -45,7 +46,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     public PlatformCqrsEventApplicationHandler(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
-        IServiceProvider serviceProvider) : base(loggerFactory)
+        IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, rootServiceProvider)
     {
         UnitOfWorkManager = unitOfWorkManager;
         ServiceProvider = serviceProvider;
@@ -57,9 +59,14 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     protected virtual bool AutoOpenUow => false;
 
+    protected IPlatformApplicationUserContextAccessor UserContextAccessor =>
+        ServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>();
+
+    protected IPlatformApplicationUserContext CurrentUser => UserContextAccessor.Current;
+
     public bool IsInjectingUserContextAccessor { get; }
 
-    protected bool IsInjectingApplicationBusMessageProducer { get; }
+    public bool IsInjectingApplicationBusMessageProducer { get; }
 
     public virtual bool AutoDeleteProcessedInboxEventMessage => true;
 
@@ -87,23 +94,28 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     public override async Task Handle(TEvent notification, CancellationToken cancellationToken)
     {
-        if (IsInjectingUserContextAccessor && !AllowUsingUserContextAccessor)
-            CreateLogger(LoggerFactory)
-                .LogError(
-                    "{EventHandlerType} is injecting and using {IPlatformApplicationUserContextAccessor}, which will make the event handler could not run in background thread. " +
-                    "The event sender must wait the handler to be finished. Should use the {RequestContext} info in the event instead.",
-                    GetType().Name,
-                    nameof(IPlatformApplicationUserContextAccessor),
-                    nameof(PlatformCqrsEvent.RequestContext));
+        try
+        {
+            if (IsInjectingUserContextAccessor && !AllowUsingUserContextAccessor)
+                CreateLogger(LoggerFactory)
+                    .LogError(
+                        "{EventHandlerType} is injecting and using {IPlatformApplicationUserContextAccessor}, which will make the event handler could not run in background thread. " +
+                        "The event sender must wait the handler to be finished. Should use the {RequestContext} info in the event instead.",
+                        GetType().Name,
+                        nameof(IPlatformApplicationUserContextAccessor),
+                        nameof(PlatformCqrsEvent.RequestContext));
 
-        await DoHandle(notification, cancellationToken, !IsInjectingUserContextAccessor);
-
-        PlatformGlobal.MemoryCollector.CollectGarbageMemory();
+            await DoHandle(notification, cancellationToken, !IsInjectingUserContextAccessor);
+        }
+        finally
+        {
+            Util.GarbageCollector.Collect(immediately: false);
+        }
     }
 
     public override async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
     {
-        await DoExecuteHandleAsync(@event, cancellationToken);
+        await ExecuteHandleWithTracingAsync(@event, () => DoExecuteHandleAsync(@event, cancellationToken));
     }
 
     public virtual bool CanExecuteHandlingEventUsingInboxConsumer(bool hasInboxMessageSupport, TEvent @event)
@@ -132,14 +144,14 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                !IsInjectingUserContextAccessor;
     }
 
-    private static bool HasInboxMessageSupport()
+    private bool HasInboxMessageSupport()
     {
-        return PlatformGlobal.ServiceProvider.CheckHasRegisteredScopedService<IPlatformInboxBusMessageRepository>();
+        return RootServiceProvider.CheckHasRegisteredScopedService<IPlatformInboxBusMessageRepository>();
     }
 
-    protected static bool HasOutboxMessageSupport()
+    protected bool HasOutboxMessageSupport()
     {
-        return PlatformGlobal.ServiceProvider.CheckHasRegisteredScopedService<IPlatformOutboxBusMessageRepository>();
+        return RootServiceProvider.CheckHasRegisteredScopedService<IPlatformOutboxBusMessageRepository>();
     }
 
     protected override void CopyPropertiesToNewInstanceBeforeExecution(
@@ -158,12 +170,12 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     protected override async Task DoHandle(TEvent @event, CancellationToken cancellationToken, bool couldRunInBackgroundThread)
     {
         if (@event.RequestContext == null || @event.RequestContext.IsEmpty())
-            @event.SetRequestContextValues(PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues());
+            @event.SetRequestContextValues(UserContextAccessor.Current.GetAllKeyValues());
 
         if (!HandleWhen(@event)) return;
 
         var eventSourceUow = TryGetEventCurrentActiveSourceUow(@event);
-        var hasInboxMessageRepository = PlatformGlobal.ServiceProvider.CheckHasRegisteredScopedService<IPlatformInboxBusMessageRepository>();
+        var hasInboxMessageRepository = RootServiceProvider.CheckHasRegisteredScopedService<IPlatformInboxBusMessageRepository>();
 
         if (eventSourceUow != null &&
             !eventSourceUow.IsPseudoTransactionUow() &&
@@ -177,9 +189,9 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     protected virtual async Task DoExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
     {
         if (AllowHandleInBackgroundThread(@event) && @event.RequestContext != null)
-            PlatformApplicationGlobal.UserContext.Current.SetValues(@event.RequestContext);
+            UserContextAccessor.Current.SetValues(@event.RequestContext);
 
-        var hasInboxMessageRepository = PlatformGlobal.ServiceProvider.CheckHasRegisteredScopedService<IPlatformInboxBusMessageRepository>();
+        var hasInboxMessageRepository = RootServiceProvider.CheckHasRegisteredScopedService<IPlatformInboxBusMessageRepository>();
 
         if (CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository, @event) &&
             !IsCurrentInstanceCalledFromInboxBusMessageConsumer &&
@@ -188,7 +200,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         {
             var eventSourceUow = TryGetEventCurrentActiveSourceUow(@event);
             var currentBusMessageIdentity =
-                BuildCurrentBusMessageIdentity(PlatformApplicationGlobal.UserContext);
+                BuildCurrentBusMessageIdentity(UserContextAccessor);
 
             if (@event is IPlatformUowEvent && eventSourceUow != null && !eventSourceUow.IsPseudoTransactionUow())
             {
@@ -197,6 +209,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                 var inboxConfig = ServiceProvider.GetRequiredService<PlatformInboxConfig>();
 
                 await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
+                    rootServiceProvider: RootServiceProvider,
                     serviceProvider: ServiceProvider,
                     consumer: consumerInstance,
                     inboxBusMessageRepository: ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>(),
@@ -213,7 +226,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             }
             else
             {
-                await PlatformGlobal.ServiceProvider.ExecuteInjectScopedAsync(
+                await RootServiceProvider.ExecuteInjectScopedAsync(
                     async (
                         IServiceProvider serviceProvider,
                         IPlatformInboxBusMessageRepository inboxMessageRepository,
@@ -223,6 +236,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                         var inboxConfig = serviceProvider.GetRequiredService<PlatformInboxConfig>();
 
                         await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
+                            rootServiceProvider: RootServiceProvider,
                             serviceProvider: serviceProvider,
                             consumer: consumerInstance,
                             inboxBusMessageRepository: inboxMessageRepository,
@@ -253,7 +267,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                         await uow.CompleteAsync(cancellationToken);
                     }
                 else
-                    using (var newScope = PlatformGlobal.ServiceProvider.CreateScope())
+                    using (var newScope = RootServiceProvider.CreateScope())
                     {
                         using (var uow = newScope.ServiceProvider.GetRequiredService<IUnitOfWorkManager>().Begin())
                         {
@@ -286,7 +300,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             producerContext: applicationSettingContext.ApplicationName,
             messageGroup: nameof(PlatformCqrsEvent),
             messageAction: @event.EventAction,
-            requestContext: PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues());
+            requestContext: UserContextAccessor.Current.GetAllKeyValues());
     }
 
     protected IUnitOfWork TryGetEventCurrentActiveSourceUow(TEvent notification)
@@ -306,8 +320,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         };
     }
 
-    public static ILogger CreateGlobalLogger()
+    public ILogger CreateGlobalLogger()
     {
-        return CreateLogger(PlatformGlobal.LoggerFactory);
+        return CreateLogger(RootServiceProvider.GetRequiredService<ILoggerFactory>());
     }
 }

@@ -15,10 +15,10 @@ public abstract class BaseStartup
 
     public static readonly Lazy<IServiceProvider> GlobalLazyDiServiceProvider = new(valueFactory: () => GlobalDiServices!.BuildServiceProvider());
     public static IServiceProvider GlobalDiServiceProvider => GlobalLazyDiServiceProvider.Value;
-
     public static IServiceCollection GlobalDiServices { get; private set; } = new ServiceCollection();
 
     public IServiceCollection Services { get; private set; } = new ServiceCollection();
+    public IConfiguration Configuration => GlobalDiServiceProvider.GetRequiredService<IConfiguration>();
 
     /// <summary>
     /// Populate all startup services might created from host builder, return ServiceCollection contain all services generated from the start-up
@@ -33,15 +33,14 @@ public abstract class BaseStartup
         var startUp = startupFactory();
 
         startUp.ConfigureHostConfiguration(hostBuilder);
-        hostBuilder.ConfigureServices(configureDelegate: services => startUp.ConfigureServices(services));
+        hostBuilder.ConfigureServices(services => startUp.ConfigureServices(services));
+        hostBuilder.ConfigureServices(services => services.Register<IPlatformRootServiceProvider, PlatformRootServiceProvider>(ServiceLifeTime.Singleton));
 
         // Populate ServiceCollection to ExposeServiceCollectionFactory through UseServiceProviderFactory
         // and hostBuilder.Build() => trigger CreateBuilder => expose ServiceCollection
         var factory = new ExposeServiceCollectionFactory();
         hostBuilder.UseServiceProviderFactory(factory);
         hostBuilder.Build();
-
-        PlatformGlobal.SetRootServiceProvider(factory.ServiceCollection.BuildServiceProvider());
 
         startUp.Services = factory.ServiceCollection;
         GlobalDiServices = factory.ServiceCollection;

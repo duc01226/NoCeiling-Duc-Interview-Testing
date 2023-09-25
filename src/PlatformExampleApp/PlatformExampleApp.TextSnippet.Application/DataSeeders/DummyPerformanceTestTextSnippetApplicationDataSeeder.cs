@@ -1,6 +1,7 @@
 using Easy.Platform.Application;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
@@ -14,7 +15,9 @@ public sealed class DummyPerformanceTestTextSnippetApplicationDataSeeder : Platf
         IUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IConfiguration configuration,
-        ITextSnippetRootRepository<TextSnippetEntity> textSnippetRepository) : base(unitOfWorkManager, serviceProvider, configuration)
+        ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider,
+        ITextSnippetRootRepository<TextSnippetEntity> textSnippetRepository) : base(unitOfWorkManager, serviceProvider, configuration, loggerFactory, rootServiceProvider)
     {
         this.textSnippetRepository = textSnippetRepository;
     }

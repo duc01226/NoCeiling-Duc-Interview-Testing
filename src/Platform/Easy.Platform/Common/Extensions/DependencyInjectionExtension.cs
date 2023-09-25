@@ -1050,23 +1050,10 @@ public static class DependencyInjectionExtension
                         method,
                         manuallyParams: Util.ListBuilder.NewArray<object>(skipCount, pageSize).Concat(manuallyParams).ToArray()),
                     retryCount: maxRetryCount,
-                    sleepDurationProvider: retryAttempt => retrySleepMilliseconds.Milliseconds());
+                    sleepDurationProvider: _ => retrySleepMilliseconds.Milliseconds());
             },
             maxItemCount: maxItemCount,
             pageSize: pageSize);
-    }
-
-    /// <summary>
-    /// Support ExecuteInjectScopedAsync scrolling paging. <br />
-    /// Then the "manuallyParams" for the method. And the last will be the object you want to be dependency injected
-    /// </summary>
-    public static Task ExecuteInjectScopedScrollingPagingAsync<TItem>(
-        this IServiceProvider serviceProvider,
-        Delegate method,
-        params object[] manuallyParams)
-    {
-        return Util.Pager.ExecuteScrollingPagingAsync(
-            () => serviceProvider.ExecuteInjectScopedAsync<List<TItem>>(method, manuallyParams: manuallyParams));
     }
 
     /// <summary>
@@ -1080,8 +1067,8 @@ public static class DependencyInjectionExtension
         params object[] manuallyParams)
     {
         return Util.Pager.ExecuteScrollingPagingAsync(
-            () => serviceProvider.ExecuteInjectScopedAsync<List<TItem>>(method, manuallyParams: manuallyParams),
-            maxExecutionCount: maxExecutionCount);
+            () => serviceProvider.ExecuteInjectScopedAsync<List<TItem>>(method, manuallyParams),
+            maxExecutionCount);
     }
 
     public enum CheckRegisteredStrategy

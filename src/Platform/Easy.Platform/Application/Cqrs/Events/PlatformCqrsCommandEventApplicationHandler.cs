@@ -1,3 +1,4 @@
+using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs.Commands;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Logging;
@@ -10,10 +11,12 @@ public abstract class PlatformCqrsCommandEventApplicationHandler<TCommand> : Pla
     protected PlatformCqrsCommandEventApplicationHandler(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
-        IServiceProvider serviceProvider) : base(
+        IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider) : base(
         loggerFactory,
         unitOfWorkManager,
-        serviceProvider)
+        serviceProvider,
+        rootServiceProvider)
     {
     }
 

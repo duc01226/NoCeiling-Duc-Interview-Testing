@@ -28,7 +28,9 @@ public interface IPlatformDbContext : IDisposable
 
     public Task InsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity);
 
-    public async Task MigrateApplicationDataAsync<TDbContext>(IServiceProvider serviceProvider) where TDbContext : class, IPlatformDbContext<TDbContext>
+    public async Task MigrateApplicationDataAsync<TDbContext>(
+        IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider) where TDbContext : class, IPlatformDbContext<TDbContext>
     {
         PlatformDataMigrationExecutor<TDbContext>
             .EnsureAllDataMigrationExecutorsHasUniqueName(GetType().Assembly, serviceProvider);
@@ -41,7 +43,7 @@ public interface IPlatformDbContext : IDisposable
                     try
                     {
                         if (migrationExecution.AllowRunInBackgroundThread)
-                            ExecuteDataMigrationInBackgroundThread(migrationExecution, GetType(), Logger);
+                            ExecuteDataMigrationInBackgroundThread(rootServiceProvider, migrationExecution, GetType(), Logger);
                         else
                             await ExecuteDataMigrationExecutor(migrationExecution);
 
@@ -57,6 +59,7 @@ public interface IPlatformDbContext : IDisposable
     }
 
     public static void ExecuteDataMigrationInBackgroundThread<TDbContext>(
+        IPlatformRootServiceProvider rootServiceProvider,
         PlatformDataMigrationExecutor<TDbContext> migrationExecution,
         Type dbContextType,
         ILogger logger) where TDbContext : class, IPlatformDbContext<TDbContext>
@@ -69,7 +72,7 @@ public interface IPlatformDbContext : IDisposable
         Util.TaskRunner.QueueActionInBackground(
             async () =>
             {
-                var currentDbContextPersistenceModule = PlatformGlobal.ServiceProvider
+                var currentDbContextPersistenceModule = rootServiceProvider
                     .GetRequiredService(dbContextType.Assembly.GetTypes().First(p => p.IsAssignableTo(typeof(PlatformPersistenceModule<TDbContext>))))
                     .As<PlatformPersistenceModule<TDbContext>>();
 
@@ -78,16 +81,17 @@ public interface IPlatformDbContext : IDisposable
                     await currentDbContextPersistenceModule.BackgroundThreadDataMigrationLock.WaitAsync();
 
                     await ExecuteDataMigrationExecutorInNewScope<TDbContext>(
+                        rootServiceProvider,
                         migrationExecutionName,
                         migrationExecutionType,
-                        () => PlatformGlobal.LoggerFactory.CreateLogger(dbContextType));
+                        () => rootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(dbContextType));
                 }
                 finally
                 {
                     currentDbContextPersistenceModule.BackgroundThreadDataMigrationLock.Release();
                 }
             },
-            () => PlatformGlobal.LoggerFactory.CreateLogger(dbContextType));
+            () => rootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(dbContextType));
     }
 
     public static void LogDataMigrationFailedError(ILogger logger, Exception ex, string migrationExecutionName)
@@ -100,6 +104,7 @@ public interface IPlatformDbContext : IDisposable
     }
 
     public static async Task ExecuteDataMigrationExecutorInNewScope<TDbContext>(
+        IPlatformRootServiceProvider rootServiceProvider,
         string migrationExecutionName,
         Type migrationExecutionType,
         Func<ILogger> loggerFactory)
@@ -107,13 +112,13 @@ public interface IPlatformDbContext : IDisposable
     {
         try
         {
-            await PlatformGlobal.ServiceProvider.ExecuteInjectScopedAsync(
+            await rootServiceProvider.ExecuteInjectScopedAsync(
                 async (IServiceProvider sp) =>
                 {
                     var dbContext = sp.GetRequiredService(typeof(TDbContext)).As<TDbContext>();
 
                     await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                        () => PlatformGlobal.ServiceProvider.ExecuteInjectScopedAsync(
+                        () => rootServiceProvider.ExecuteInjectScopedAsync(
                             async (IServiceProvider sp) =>
                             {
                                 await dbContext.ExecuteDataMigrationExecutor(
@@ -298,80 +303,80 @@ public interface IPlatformDbContext : IDisposable
     public Task<List<TEntity>> CreateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public async Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
         Expression<Func<TEntity, bool>> predicate,
         Action<TEntity> updateAction,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var toUpdateEntities = await GetAllAsync<TEntity, TEntity>(query => query.Where(predicate), cancellationToken)
             .ThenAction(items => items.ForEach(updateAction));
 
-        return await UpdateManyAsync<TEntity, TPrimaryKey>(toUpdateEntities, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
+        return await UpdateManyAsync<TEntity, TPrimaryKey>(toUpdateEntities, dismissSendEvent, eventCustomConfig, cancellationToken);
     }
 
     public Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
         TPrimaryKey entityId,
         bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
         List<TPrimaryKey> entityIds,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
         Expression<Func<TEntity, bool>> predicate,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var toDeleteEntities = await GetAllAsync(GetQuery<TEntity>().Where(predicate), cancellationToken);
 
-        return await DeleteManyAsync<TEntity, TPrimaryKey>(toDeleteEntities, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
+        return await DeleteManyAsync<TEntity, TPrimaryKey>(toDeleteEntities, dismissSendEvent, eventCustomConfig, cancellationToken);
     }
 
     public Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public Task<TEntity> CreateOrUpdateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         Expression<Func<TEntity, bool>>? customCheckExistingPredicate = null,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     /// <summary>
@@ -382,7 +387,7 @@ public interface IPlatformDbContext : IDisposable
         List<TEntity> entities,
         Func<TEntity, Expression<Func<TEntity, bool>>>? customCheckExistingPredicateBuilder = null,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>>? sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public async Task EnsureEntitiesValid<TEntity, TPrimaryKey>(List<TEntity> entities, CancellationToken cancellationToken)

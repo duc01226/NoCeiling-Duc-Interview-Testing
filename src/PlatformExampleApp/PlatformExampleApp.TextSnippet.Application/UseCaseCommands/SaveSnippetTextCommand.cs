@@ -68,10 +68,12 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
         IPlatformApplicationUserContextAccessor userContext,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
+        ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider,
         ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository,
         ITextSnippetRootRepository<MultiDbDemoEntity> multiDbDemoEntityRepository,
         ISendMailService sendMailService,
-        ILogger<SaveSnippetTextCommandHandler> logger) : base(userContext, unitOfWorkManager, cqrs)
+        ILogger<SaveSnippetTextCommandHandler> logger) : base(userContext, unitOfWorkManager, cqrs, loggerFactory, rootServiceProvider)
     {
         this.textSnippetEntityRepository = textSnippetEntityRepository;
         this.multiDbDemoEntityRepository = multiDbDemoEntityRepository;
@@ -368,13 +370,13 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
         // Sometime you could want to wait for handler done
         var savedDataWaitClearCacheDone = await textSnippetEntityRepository.CreateOrUpdateAsync(
             validToSaveEntity,
-            sendEntityEventConfigure: p => p.SetWaitHandlerExecutionFinishedImmediately(
+            eventCustomConfig: p => p.SetWaitHandlerExecutionFinishedImmediately(
                 typeof(ClearCacheOnSaveSnippetTextEntityEventHandler),
                 typeof(DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEventHandler)),
             cancellationToken: cancellationToken);
         var savedDataWaitClearCacheDone1 = await textSnippetEntityRepository.CreateOrUpdateAsync(
             validToSaveEntity,
-            sendEntityEventConfigure: p => p.SetForceWaitEventHandlerFinished<ClearCacheOnSaveSnippetTextEntityEventHandler>(),
+            eventCustomConfig: p => p.SetForceWaitEventHandlerFinished<ClearCacheOnSaveSnippetTextEntityEventHandler>(),
             cancellationToken: cancellationToken);
 
         if (request.Data.IsSubmitToUpdate())

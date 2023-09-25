@@ -25,7 +25,7 @@ public class RegisterModel : PageModel
     }
 
     [BindProperty]
-    public RegisterViewModel RegisterViewModel { get; set; } = new RegisterViewModel();
+    public RegisterViewModel RegisterViewModel { get; set; } = new();
 
     public void OnGet()
     {
@@ -66,7 +66,7 @@ public class RegisterModel : PageModel
                 var confirmationToken = await userManager.GenerateEmailConfirmationTokenAsync(user);
 
                 var confirmationLink = Url.PageLink(
-                    pageName: "/Account/ConfirmEmail",
+                    "/Account/ConfirmEmail",
                     values: new
                     {
                         userId = user.Id,
@@ -74,16 +74,16 @@ public class RegisterModel : PageModel
                     })!;
 
                 var confirmEmailMessage = new MailMessage(
-                    from: smtpSetting.Value.User, // The sender
-                    to: user.Email!,
-                    subject: "Please confirm your email",
-                    body: $"Please click on this link to confirm your email address: {confirmationLink}");
+                    smtpSetting.Value.User, // The sender
+                    user.Email!,
+                    "Please confirm your email",
+                    $"Please click on this link to confirm your email address: {confirmationLink}");
 
                 try
                 {
                     await emailService.SendAsync(confirmEmailMessage);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // Support auto confirm if can not send email. only for testing if you could find an email provider
                     return Redirect(confirmationLink);
@@ -92,12 +92,13 @@ public class RegisterModel : PageModel
                 return RedirectToPage("/Account/Login");
             }
 
-            createUserResult.Errors.ToList().ForEach(error =>
-            {
-                // The name "Register" doesn't matter because we are not associated with any model field
-                // Need to set asp-validation-summary="All" to display this errors (Not Just ModelOnly)
-                ModelState.AddModelError("Register", error.Description);
-            });
+            createUserResult.Errors.ToList().ForEach(
+                error =>
+                {
+                    // The name "Register" doesn't matter because we are not associated with any model field
+                    // Need to set asp-validation-summary="All" to display this errors (Not Just ModelOnly)
+                    ModelState.AddModelError("Register", error.Description);
+                });
         }
 
         return Page();

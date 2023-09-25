@@ -114,31 +114,26 @@ public static class PlatformRequestContextHelper
         {
             var listItemType = firstValueListInterface.GetGenericArguments()[0];
 
-            var isParsedAllItemSuccess = true;
-
             var parsedItemList = matchedClaimStringValues
                 .Select(
                     matchedClaimStringValue =>
                     {
                         if (listItemType == typeof(string))
-                            return matchedClaimStringValue;
+                            return new { itemDeserializedValue = (object)matchedClaimStringValue, isParsedItemSucceeded = true };
 
-                        var parsedItemResult = PlatformJsonSerializer.TryDeserialize(
+                        var isParsedItemSucceeded = PlatformJsonSerializer.TryDeserialize(
                             matchedClaimStringValue,
                             listItemType,
                             out var itemDeserializedValue);
 
-                        if (parsedItemResult == false)
-                            isParsedAllItemSuccess = false;
-
-                        return itemDeserializedValue;
+                        return new { itemDeserializedValue, isParsedItemSucceeded };
                     })
                 .ToList();
 
-            if (isParsedAllItemSuccess)
+            if (parsedItemList.All(p => p.isParsedItemSucceeded))
             {
                 // Serialize then Deserialize to type T so ensure parse matchedClaimStringValues to type T successfully
-                foundValue = PlatformJsonSerializer.Deserialize<T>(parsedItemList.ToJson());
+                foundValue = PlatformJsonSerializer.Deserialize<T>(parsedItemList.Select(p => p.itemDeserializedValue).ToJson());
                 return true;
             }
         }

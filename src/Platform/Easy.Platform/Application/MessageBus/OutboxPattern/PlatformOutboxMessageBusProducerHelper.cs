@@ -15,17 +15,20 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
     public const int DefaultResilientRetiredDelayMilliseconds = 200;
 
     private readonly IPlatformMessageBusProducer messageBusProducer;
-    private readonly IServiceProvider serviceProvider;
     private readonly PlatformOutboxConfig outboxConfig;
+    private readonly IPlatformRootServiceProvider rootServiceProvider;
+    private readonly IServiceProvider serviceProvider;
 
     public PlatformOutboxMessageBusProducerHelper(
         PlatformOutboxConfig outboxConfig,
         IPlatformMessageBusProducer messageBusProducer,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider)
     {
         this.outboxConfig = outboxConfig;
         this.messageBusProducer = messageBusProducer;
         this.serviceProvider = serviceProvider;
+        this.rootServiceProvider = rootServiceProvider;
     }
 
     public async Task HandleSendingOutboxMessageAsync<TMessage>(
@@ -112,7 +115,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 outboxBusMessageRepository);
     }
 
-    public static async Task SendExistingOutboxMessageAsync<TMessage>(
+    public async Task SendExistingOutboxMessageAsync<TMessage>(
         PlatformOutboxBusMessage existingOutboxMessage,
         TMessage message,
         string routingKey,
@@ -146,7 +149,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         }
     }
 
-    public static async Task SendExistingOutboxMessageInNewUowAsync<TMessage>(
+    public async Task SendExistingOutboxMessageInNewUowAsync<TMessage>(
         PlatformOutboxBusMessage existingOutboxMessage,
         TMessage message,
         string routingKey,
@@ -187,13 +190,13 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 existingOutboxMessage.LastSendDate = DateTime.UtcNow;
                 existingOutboxMessage.SendStatus = PlatformOutboxBusMessage.SendStatuses.Processed;
 
-                await outboxBusMessageRepository.UpdateAsync(existingOutboxMessage, dismissSendEvent: true, sendEntityEventConfigure: null, cancellationToken);
+                await outboxBusMessageRepository.UpdateAsync(existingOutboxMessage, dismissSendEvent: true, eventCustomConfig: null, cancellationToken);
             },
             sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
             retryCount: DefaultResilientRetiredCount);
     }
 
-    public static async Task UpdateExistingOutboxMessageFailedInNewScopeAsync(
+    public async Task UpdateExistingOutboxMessageFailedInNewScopeAsync(
         PlatformOutboxBusMessage existingOutboxMessage,
         Exception exception,
         double retryProcessFailedMessageInSecondsUnit,
@@ -205,7 +208,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                 async () =>
                 {
-                    await PlatformGlobal.ServiceProvider.ExecuteInjectScopedAsync(
+                    await rootServiceProvider.ExecuteInjectScopedAsync(
                         async (IPlatformOutboxBusMessageRepository outboxBusMessageRepository) =>
                         {
                             var latestCurrentExistingOutboxMessage = await outboxBusMessageRepository.FirstOrDefaultAsync(p => p.Id == existingOutboxMessage.Id);
@@ -253,7 +256,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             existingOutboxMessage.RetriedProcessCount,
             retryProcessFailedMessageInSecondsUnit);
 
-        await outboxBusMessageRepository.CreateOrUpdateAsync(existingOutboxMessage, dismissSendEvent: true, sendEntityEventConfigure: null, cancellationToken);
+        await outboxBusMessageRepository.CreateOrUpdateAsync(existingOutboxMessage, dismissSendEvent: true, eventCustomConfig: null, cancellationToken);
 
         LogSendOutboxMessageFailed(exception, existingOutboxMessage, logger);
     }
@@ -288,7 +291,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                             routingKey,
                             PlatformOutboxBusMessage.SendStatuses.Processing),
                         dismissSendEvent: true,
-                        sendEntityEventConfigure: null,
+                        eventCustomConfig: null,
                         cancellationToken)
                     : null;
 
@@ -302,7 +305,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                     // Can execute it immediately without waiting for uow to complete
                     if (currentActiveUow == null || currentActiveUow.IsPseudoTransactionUow())
                         Util.TaskRunner.QueueActionInBackground(
-                            async () => await PlatformGlobal.ServiceProvider.ExecuteInjectScopedAsync(
+                            async () => await rootServiceProvider.ExecuteInjectScopedAsync(
                                 SendExistingOutboxMessageAsync<TMessage>,
                                 toProcessInboxMessage,
                                 message,
@@ -319,7 +322,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                                 // Try to process sending newProcessingOutboxMessage first time immediately after task completed
                                 // WHY: we can wait for the background process handle the message but try to do it
                                 // immediately if possible is better instead of waiting for the background process
-                                await PlatformGlobal.ServiceProvider.ExecuteInjectScopedAsync(
+                                await rootServiceProvider.ExecuteInjectScopedAsync(
                                     SendExistingOutboxMessageInNewUowAsync<TMessage>,
                                     toProcessInboxMessage,
                                     message,
@@ -334,9 +337,9 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             retryCount: DefaultResilientRetiredCount);
     }
 
-    protected static ILogger CreateLogger()
+    protected ILogger CreateLogger()
     {
-        return PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformOutboxMessageBusProducerHelper));
+        return rootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(PlatformOutboxMessageBusProducerHelper));
     }
 
     protected static void LogSendOutboxMessageFailed(Exception exception, PlatformOutboxBusMessage existingOutboxMessage, ILogger logger)

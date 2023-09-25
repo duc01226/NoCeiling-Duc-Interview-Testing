@@ -165,4 +165,21 @@ export class PlatformServiceWorkerService {
             this.clearNgswCacheStorage(this.allNgswCacheKeysRegex);
         }
     }
+
+    public static registerServiceWorker(ngswWorkerEnabled: boolean, ngSwFilePath: string = '/ngsw-worker.js') {
+        return new Promise(resolve => {
+            try {
+                if (navigator.serviceWorker && ngswWorkerEnabled) {
+                    navigator.serviceWorker.register(ngSwFilePath);
+                } else if (navigator.serviceWorker && !ngswWorkerEnabled) {
+                    this.unregisterRegisteredServiceWorker();
+                }
+
+                resolve({});
+            } catch (error) {
+                console.error(error);
+                resolve({});
+            }
+        });
+    }
 }

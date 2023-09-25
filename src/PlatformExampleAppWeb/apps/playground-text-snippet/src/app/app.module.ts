@@ -22,44 +22,44 @@ import { RepositoryErrorEventHandler } from './events';
 import { AppTextSnippetDetailComponent } from './smart-components';
 
 export function TranslateHttpLoaderFactory(http: HttpClient) {
-    return new TranslateHttpLoader(http, './assets/i18n/', '.json');
+  return new TranslateHttpLoader(http, './assets/i18n/', '.json');
 }
 
 @NgModule({
-    declarations: [AppComponent, AppTextSnippetDetailComponent],
-    imports: [
-        BrowserModule,
-        BrowserAnimationsModule,
-        PlatformCoreModule.forRoot({
-            moduleConfig: {
-                type: AppModuleConfig,
-                configFactory: () => new AppModuleConfig({ isDevelopment: !environment.production })
-            },
-            appRootUiState: AppUiStateStore,
-            translate: {
-                platformConfig: new PlatformTranslateConfig({ defaultLanguage: 'vi', slowRequestBreakpoint: 500 }),
-                config: {
-                    loader: {
-                        provide: TranslateLoader,
-                        useFactory: TranslateHttpLoaderFactory,
-                        deps: [HttpClient]
-                    }
-                }
-            }
-        }),
-        AppsTextSnippetDomainModule.forRoot({
-            moduleConfigFactory: () =>
-                new AppsTextSnippetDomainModuleConfig({ textSnippetApiHost: environment.textSnippetApiHost }),
-            appRepositoryErrorEventHandlers: [RepositoryErrorEventHandler]
-        }),
-        MatTableModule,
-        MatInputModule,
-        MatPaginatorModule,
-        MatProgressSpinnerModule,
-        MatButtonModule,
-        MatIconModule,
-        MatDialogModule
-    ],
-    bootstrap: [AppComponent]
+  declarations: [AppComponent, AppTextSnippetDetailComponent],
+  imports: [
+    BrowserModule,
+    BrowserAnimationsModule,
+    PlatformCoreModule.forRoot({
+      moduleConfig: {
+        type: AppModuleConfig,
+        configFactory: () => new AppModuleConfig({ isDevelopment: !environment.production })
+      },
+      appRootUiState: AppUiStateStore,
+      translate: {
+        platformConfig: new PlatformTranslateConfig({ defaultLanguage: 'vi', slowRequestBreakpoint: 500 }),
+        config: {
+          loader: {
+            provide: TranslateLoader,
+            useFactory: TranslateHttpLoaderFactory,
+            deps: [HttpClient]
+          }
+        }
+      }
+    }),
+    AppsTextSnippetDomainModule.forRoot({
+      moduleConfigFactory: () =>
+        new AppsTextSnippetDomainModuleConfig({ textSnippetApiHost: environment.textSnippetApiHost }),
+      appRepositoryErrorEventHandlers: [RepositoryErrorEventHandler]
+    }),
+    MatTableModule,
+    MatInputModule,
+    MatPaginatorModule,
+    MatProgressSpinnerModule,
+    MatButtonModule,
+    MatIconModule,
+    MatDialogModule
+  ],
+  bootstrap: [AppComponent]
 })
 export class AppModule {}

@@ -76,6 +76,9 @@ public class TextSnippetSqlEfCorePersistenceModule : PlatformEfCorePersistenceMo
             .UseSqlServer(
                 new SqlConnectionStringBuilder(Configuration.GetConnectionString("DefaultConnection"))
                     .With(conn => conn.Enlist = false)
+                    .With(conn => conn.Pooling = true)
+                    .With(conn => conn.MinPoolSize = 5) // Always available connection to serve request, reduce latency
+                    .With(conn => conn.MaxPoolSize = 40) // Setup max pool size depend on the database maximum connections available
                     .ToString(),
                 options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
             .UseLazyLoadingProxies()

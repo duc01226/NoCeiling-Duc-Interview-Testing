@@ -13,10 +13,15 @@ namespace Easy.Platform.Application.Cqrs.Events.InboxSupport;
 
 public class PlatformCqrsEventInboxBusMessageConsumer : PlatformApplicationMessageBusConsumer<PlatformBusMessage<PlatformCqrsEventBusMessagePayload>>
 {
-    public PlatformCqrsEventInboxBusMessageConsumer(ILoggerFactory loggerFactory, IUnitOfWorkManager uowManager, IServiceProvider serviceProvider) : base(
+    public PlatformCqrsEventInboxBusMessageConsumer(
+        ILoggerFactory loggerFactory,
+        IUnitOfWorkManager uowManager,
+        IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider) : base(
         loggerFactory,
         uowManager,
-        serviceProvider)
+        serviceProvider,
+        rootServiceProvider)
     {
     }
 

@@ -39,31 +39,36 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
 
     public override async Task<T> GetAsync<T>(PlatformCacheKey cacheKey, CancellationToken token = default)
     {
-        return await CacheSettings.ExecuteWithSlowWarning(
-            async () =>
-            {
-                try
-                {
-                    var result = await redisCache.Value.GetAsync(cacheKey, token);
+        using (var activity = IPlatformCacheRepository.ActivitySource.StartActivity($"DistributedCache.{nameof(GetAsync)}"))
+        {
+            activity?.AddTag("cacheKey", cacheKey);
 
+            return await CacheSettings.ExecuteWithSlowWarning(
+                async () =>
+                {
                     try
                     {
-                        return result == null ? default : PlatformJsonSerializer.Deserialize<T>(result);
+                        var result = await redisCache.Value.GetAsync(cacheKey, token);
+
+                        try
+                        {
+                            return result == null ? default : PlatformJsonSerializer.Deserialize<T>(result);
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.LogError(e, "GetAsync failed. CacheKey:{CacheKey}", cacheKey);
+                            // WHY: If parse failed, the cached data could be obsolete. Then just clear the cache
+                            await RemoveAsync(cacheKey, token);
+                            return default;
+                        }
                     }
                     catch (Exception e)
                     {
-                        Logger.LogError(e, "GetAsync failed. CacheKey:{CacheKey}", cacheKey);
-                        // WHY: If parse failed, the cached data could be obsolete. Then just clear the cache
-                        await RemoveAsync(cacheKey, token);
-                        return default;
+                        throw new Exception($"{GetType().Name} GetAsync failed. {e.Message}.", e);
                     }
-                }
-                catch (Exception e)
-                {
-                    throw new Exception($"{GetType().Name} GetAsync failed. {e.Message}.", e);
-                }
-            },
-            () => Logger);
+                },
+                () => Logger);
+        }
     }
 
     public override void Set<T>(PlatformCacheKey cacheKey, T value, PlatformCacheEntryOptions cacheOptions = null)
@@ -77,15 +82,20 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         PlatformCacheEntryOptions cacheOptions = null,
         CancellationToken token = default)
     {
-        await CacheSettings.ExecuteWithSlowWarning(
-            async () =>
-            {
-                await SetToRedisCacheAsync(cacheKey, value, cacheOptions, token);
+        using (var activity = IPlatformCacheRepository.ActivitySource.StartActivity($"DistributedCache.{nameof(SetAsync)}"))
+        {
+            activity?.AddTag("cacheKey", cacheKey);
 
-                await UpdateGlobalCachedKeys(p => p.TryAdd(cacheKey, null));
-            },
-            () => Logger,
-            true);
+            await CacheSettings.ExecuteWithSlowWarning(
+                async () =>
+                {
+                    await Util.TaskRunner.WhenAll(
+                        SetToRedisCacheAsync(cacheKey, value, cacheOptions, token),
+                        UpdateGlobalCachedKeys(p => p.TryAdd(cacheKey, null)));
+                },
+                () => Logger,
+                true);
+        }
     }
 
     public override async Task RemoveAsync(PlatformCacheKey cacheKey, CancellationToken token = default)
@@ -135,6 +145,19 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
 
             await SetGlobalCachedKeysAsync(allCachedKeys);
         }
+    }
+
+    public override async Task ProcessClearDeprecatedGlobalRequestCachedKeys()
+    {
+        var toUpdateRequestCachedKeys = await LoadGlobalAllRequestCachedKeys();
+
+        await toUpdateRequestCachedKeys.SelectList(p => p.Key).ForEachAsync(
+            async key =>
+            {
+                if (await redisCache.Value.GetAsync(key) == null) toUpdateRequestCachedKeys.Remove(key, out _);
+            });
+
+        await SetGlobalCachedKeysAsync(toUpdateRequestCachedKeys);
     }
 
     public override PlatformCacheKey GetGlobalAllRequestCachedKeysCacheKey()

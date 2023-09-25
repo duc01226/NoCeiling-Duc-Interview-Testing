@@ -4,6 +4,7 @@ using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Commands;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.BackgroundJob;
+using Microsoft.Extensions.Logging;
 using PlatformExampleApp.TextSnippet.Application.BackgroundJob;
 
 namespace PlatformExampleApp.TextSnippet.Application.UseCaseCommands.OtherDemos;
@@ -30,7 +31,9 @@ internal sealed class DemoScheduleBackgroundJobManuallyCommandHandler
         IPlatformApplicationUserContextAccessor userContext,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
-        IPlatformBackgroundJobScheduler backgroundJobScheduler) : base(userContext, unitOfWorkManager, cqrs)
+        ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider,
+        IPlatformBackgroundJobScheduler backgroundJobScheduler) : base(userContext, unitOfWorkManager, cqrs, loggerFactory, rootServiceProvider)
     {
         this.backgroundJobScheduler = backgroundJobScheduler;
     }

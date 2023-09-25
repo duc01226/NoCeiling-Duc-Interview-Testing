@@ -9,7 +9,8 @@ internal sealed class DemoMigrateDataCrossDb : PlatformDataMigrationExecutor<Tex
 {
     private readonly DemoMigrateDataCrossDbContext demoMigrateDataCrossDbContext;
 
-    public DemoMigrateDataCrossDb(DemoMigrateDataCrossDbContext demoMigrateDataCrossDbContext)
+    public DemoMigrateDataCrossDb(IPlatformRootServiceProvider rootServiceProvider, DemoMigrateDataCrossDbContext demoMigrateDataCrossDbContext) : base(
+        rootServiceProvider)
     {
         this.demoMigrateDataCrossDbContext = demoMigrateDataCrossDbContext;
     }

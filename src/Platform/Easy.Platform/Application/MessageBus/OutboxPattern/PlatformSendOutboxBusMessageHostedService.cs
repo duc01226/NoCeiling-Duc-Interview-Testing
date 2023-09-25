@@ -145,7 +145,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
                 }
                 else
                 {
-                    await PlatformOutboxMessageBusProducerHelper.UpdateExistingOutboxMessageFailedInNewScopeAsync(
+                    await outboxEventBusProducerHelper.UpdateExistingOutboxMessageFailedInNewScopeAsync(
                         toHandleOutboxMessage,
                         new Exception(
                             $"[{GetType().Name}] Error resolve outbox message type " +

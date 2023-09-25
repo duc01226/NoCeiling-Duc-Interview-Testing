@@ -1,3 +1,4 @@
+using System.IO;
 using System.Reflection;
 using Easy.Platform.AutomationTest.Pages;
 using OpenQA.Selenium;
@@ -298,5 +299,48 @@ public static class WebDriverExtension
             },
             retryCount: retryCount,
             sleepDurationProvider: _ => DefaultWaitRetryRefreshPageDelaySeconds.Seconds());
+    }
+
+    /// <summary>
+    /// SendKeys. Key Is value from <see cref="Keys"/>
+    /// </summary>
+    public static void SendKeys(this IWebDriver webDriver, string key)
+    {
+        var action = new Actions(webDriver);
+        action.SendKeys(key).Perform();
+    }
+
+    public static bool CheckDownloadedFileExisted(this IWebDriver webDriver, string fileName)
+    {
+        var flag = false;
+        var dirPath = Environment.GetEnvironmentVariable("USERPROFILE") + @"\" + "Downloads";
+
+        var dir = new DirectoryInfo(dirPath);
+        var files = dir.GetFiles();
+
+        if (files.Length == 0)
+        {
+            Console.WriteLine("The directory is empty");
+            flag = false;
+        }
+        else
+        {
+            foreach (var file in files)
+            {
+                if (file.Name.Contains(fileName))
+                {
+                    Console.WriteLine(fileName + " is present");
+                    flag = true;
+                    break;
+                }
+            }
+        }
+
+        return flag;
+    }
+
+    public static void SwitchToLastTab(this IWebDriver webDriver)
+    {
+        webDriver.SwitchTo().Window(webDriver.WindowHandles.Last());
     }
 }

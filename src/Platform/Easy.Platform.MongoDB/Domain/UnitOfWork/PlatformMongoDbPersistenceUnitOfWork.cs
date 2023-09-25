@@ -1,3 +1,4 @@
+using Easy.Platform.Common;
 using Easy.Platform.Persistence.Domain;
 
 namespace Easy.Platform.MongoDB.Domain.UnitOfWork;
@@ -10,7 +11,7 @@ public interface IPlatformMongoDbPersistenceUnitOfWork<out TDbContext> : IPlatfo
 public class PlatformMongoDbPersistenceUnitOfWork<TDbContext>
     : PlatformPersistenceUnitOfWork<TDbContext>, IPlatformMongoDbPersistenceUnitOfWork<TDbContext> where TDbContext : PlatformMongoDbContext<TDbContext>
 {
-    public PlatformMongoDbPersistenceUnitOfWork(TDbContext dbContext) : base(dbContext)
+    public PlatformMongoDbPersistenceUnitOfWork(IPlatformRootServiceProvider rootServiceProvider, TDbContext dbContext) : base(rootServiceProvider, dbContext)
     {
     }
 

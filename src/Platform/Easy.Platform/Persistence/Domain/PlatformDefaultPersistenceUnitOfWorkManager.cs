@@ -1,3 +1,4 @@
+using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
@@ -11,7 +12,8 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
 
     public PlatformDefaultPersistenceUnitOfWorkManager(
         IPlatformCqrs cqrs,
-        IServiceProvider serviceProvider) : base(cqrs)
+        IPlatformRootServiceProvider rootServiceProvider,
+        IServiceProvider serviceProvider) : base(cqrs, rootServiceProvider)
     {
         ServiceProvider = serviceProvider;
     }
@@ -26,6 +28,7 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
         var newScope = ServiceProvider.CreateScope();
 
         var uow = new PlatformAggregatedPersistenceUnitOfWork(
+                RootServiceProvider,
                 newScope.ServiceProvider.GetServices<IUnitOfWork>()
                     .Select(p => p.With(_ => _.CreatedByUnitOfWorkManager = this))
                     .ToList(),

@@ -3,6 +3,7 @@ using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using PlatformExampleApp.TextSnippet.Application.EntityDtos;
 using PlatformExampleApp.TextSnippet.Application.UseCaseCommands;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
@@ -18,7 +19,9 @@ public sealed class DemoSeedDataUseCommandSolutionDataSeeder : PlatformApplicati
     public DemoSeedDataUseCommandSolutionDataSeeder(
         IUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
-        IConfiguration configuration) : base(unitOfWorkManager, serviceProvider, configuration)
+        IConfiguration configuration,
+        ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider) : base(unitOfWorkManager, serviceProvider, configuration, loggerFactory, rootServiceProvider)
     {
     }
 

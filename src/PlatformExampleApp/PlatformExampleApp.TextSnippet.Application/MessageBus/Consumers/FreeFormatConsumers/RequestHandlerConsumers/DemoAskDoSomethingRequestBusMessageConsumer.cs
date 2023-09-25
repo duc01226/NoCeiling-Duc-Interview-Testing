@@ -10,11 +10,8 @@ namespace PlatformExampleApp.TextSnippet.Application.MessageBus.Consumers.FreeFo
 /// Other feature services can ask this common service to do something, then the bus message act like a request
 /// The request receiver is the LEADER, control the request schema and logic.
 /// Other services just use them
-///
 /// The naming convention rule is: [LEADER-SERVICE-NAME (The consumer service handle request)] + XXX + RequestBusMessage
-///
 /// Example: EmailServiceSendEmailRequestBusMessage
-///
 /// This is example the LEADER-SERVICE listen to an request message from other to do serve the request
 /// </summary>
 internal sealed class DemoAskDoSomethingRequestBusMessageConsumer : PlatformApplicationMessageBusConsumer<DemoAskDoSomethingRequestBusMessage>
@@ -22,7 +19,8 @@ internal sealed class DemoAskDoSomethingRequestBusMessageConsumer : PlatformAppl
     public DemoAskDoSomethingRequestBusMessageConsumer(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager uowManager,
-        IServiceProvider serviceProvider) : base(loggerFactory, uowManager, serviceProvider)
+        IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, uowManager, serviceProvider, rootServiceProvider)
     {
     }
 

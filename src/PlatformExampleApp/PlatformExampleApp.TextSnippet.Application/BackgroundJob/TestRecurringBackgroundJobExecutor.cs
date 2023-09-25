@@ -21,9 +21,10 @@ public sealed class TestRecurringBackgroundJobExecutor : PlatformApplicationBack
     public TestRecurringBackgroundJobExecutor(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
+        IPlatformRootServiceProvider rootServiceProvider,
         ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository,
         IPlatformCqrs cqrs,
-        IPlatformApplicationBusMessageProducer busMessageProducer) : base(unitOfWorkManager, loggerFactory)
+        IPlatformApplicationBusMessageProducer busMessageProducer) : base(unitOfWorkManager, loggerFactory, rootServiceProvider)
     {
         this.textSnippetEntityRepository = textSnippetEntityRepository;
         this.cqrs = cqrs;

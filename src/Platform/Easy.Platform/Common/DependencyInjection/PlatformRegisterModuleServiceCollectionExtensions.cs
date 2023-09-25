@@ -9,9 +9,10 @@ public static class PlatformRegisterModuleServiceCollectionExtensions
     /// Registers a platform module of type 'TModule' into the services collection.
     /// </summary>
     public static IServiceCollection RegisterModule<TModule>(
-        this IServiceCollection services) where TModule : PlatformModule
+        this IServiceCollection services,
+        bool isChildModule = false) where TModule : PlatformModule
     {
-        return RegisterModule(services, typeof(TModule));
+        return RegisterModule(services, typeof(TModule), isChildModule);
     }
 
     /// <summary>
@@ -19,7 +20,8 @@ public static class PlatformRegisterModuleServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection RegisterModule(
         this IServiceCollection services,
-        Type moduleType)
+        Type moduleType,
+        bool isChildModule = false)
     {
         if (!moduleType.IsAssignableTo(typeof(PlatformModule)))
             throw new ArgumentException("ModuleType parameter is invalid. It must be inherit from PlatformModule");
@@ -35,7 +37,7 @@ public static class PlatformRegisterModuleServiceCollectionExtensions
 
         var serviceProvider = services.BuildServiceProvider();
 
-        var newRegisterModule = (PlatformModule)serviceProvider.GetRequiredService(moduleType);
+        var newRegisterModule = serviceProvider.GetRequiredService(moduleType).As<PlatformModule>().With(_ => _.IsChildModule = isChildModule);
 
         newRegisterModule.RegisterServices(services);
 

@@ -1,5 +1,4 @@
 using System.Linq.Expressions;
-using Easy.Platform.Application;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Application.MessageBus.OutboxPattern;
@@ -32,6 +31,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     protected readonly Lazy<Dictionary<Type, string>> EntityTypeToCollectionNameDictionary;
     protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
+    protected readonly IPlatformRootServiceProvider RootServiceProvider;
     protected readonly IPlatformApplicationUserContextAccessor UserContextAccessor;
 
     public PlatformMongoDbContext(
@@ -39,10 +39,12 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         IPlatformMongoClient<TDbContext> client,
         ILoggerFactory loggerFactory,
         IPlatformApplicationUserContextAccessor userContextAccessor,
-        PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration)
+        PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
+        IPlatformRootServiceProvider rootServiceProvider)
     {
         UserContextAccessor = userContextAccessor;
         PersistenceConfiguration = persistenceConfiguration;
+        RootServiceProvider = rootServiceProvider;
         Database = client.MongoClient.GetDatabase(options.Value.Database);
         EntityTypeToCollectionNameDictionary = new Lazy<Dictionary<Type, string>>(BuildEntityTypeToCollectionNameDictionary);
         Logger = CreateLogger(loggerFactory);
@@ -161,167 +163,6 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         return queryBuilder(GetQuery<TEntity>()).ToListAsync(cancellationToken);
     }
 
-    public Task<List<TEntity>> CreateManyAsync<TEntity, TPrimaryKey>(
-        List<TEntity> entities,
-        bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
-        CancellationToken cancellationToken = default)
-        where TEntity : class, IEntity<TPrimaryKey>, new()
-    {
-        return Util.Pager.ExecutePagingAsync(
-                (skipCount, pageSize) => entities.Skip(skipCount)
-                    .Take(pageSize)
-                    .SelectAsync(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken)),
-                maxItemCount: entities.Count,
-                IPlatformDbContext.DefaultPageSize)
-            .Then(result => result.SelectMany(p => p).ToList());
-    }
-
-    public Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
-        TEntity entity,
-        bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
-        CancellationToken cancellationToken = default)
-        where TEntity : class, IEntity<TPrimaryKey>, new()
-    {
-        return UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
-    }
-
-    public Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
-        List<TEntity> entities,
-        bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
-        CancellationToken cancellationToken = default)
-        where TEntity : class, IEntity<TPrimaryKey>, new()
-    {
-        return Util.Pager.ExecutePagingAsync(
-                (skipCount, pageSize) => entities.Skip(skipCount)
-                    .Take(pageSize)
-                    .SelectAsync(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken)),
-                maxItemCount: entities.Count,
-                IPlatformDbContext.DefaultPageSize)
-            .Then(result => result.SelectMany(p => p).ToList());
-    }
-
-    public async Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
-        TPrimaryKey entityId,
-        bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
-        CancellationToken cancellationToken = default)
-        where TEntity : class, IEntity<TPrimaryKey>, new()
-    {
-        var entity = GetQuery<TEntity>().FirstOrDefault(p => p.Id.Equals(entityId));
-
-        if (entity != null) await DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
-
-        return entity;
-    }
-
-    public async Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
-        TEntity entity,
-        bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
-        CancellationToken cancellationToken = default)
-        where TEntity : class, IEntity<TPrimaryKey>, new()
-    {
-        return await PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TEntity>(
-            MappedUnitOfWork,
-            entity,
-            async entity =>
-            {
-                await GetTable<TEntity>().DeleteOneAsync(p => p.Id.Equals(entity.Id), null, cancellationToken);
-
-                return entity;
-            },
-            dismissSendEvent,
-            sendEntityEventConfigure: sendEntityEventConfigure,
-            requestContext: () => PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues(),
-            cancellationToken);
-    }
-
-    public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
-        List<TPrimaryKey> entityIds,
-        bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
-        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
-    {
-        var entities = await GetQuery<TEntity>().Where(p => entityIds.Contains(p.Id)).ToListAsync(cancellationToken);
-
-        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
-    }
-
-    public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
-        List<TEntity> entities,
-        bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
-        CancellationToken cancellationToken = default)
-        where TEntity : class, IEntity<TPrimaryKey>, new()
-    {
-        return await Util.Pager.ExecutePagingAsync(
-                (skipCount, pageSize) => entities.Skip(skipCount)
-                    .Take(pageSize)
-                    .SelectAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken)),
-                maxItemCount: entities.Count,
-                IPlatformDbContext.DefaultPageSize)
-            .Then(_ => _.Flatten().ToList());
-    }
-
-    public Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(
-        TEntity entity,
-        bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
-        CancellationToken cancellationToken = default)
-        where TEntity : class, IEntity<TPrimaryKey>, new()
-    {
-        return CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, upsert: false, sendEntityEventConfigure, cancellationToken);
-    }
-
-    public async Task<TEntity> CreateOrUpdateAsync<TEntity, TPrimaryKey>(
-        TEntity entity,
-        Expression<Func<TEntity, bool>> customCheckExistingPredicate = null,
-        bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
-        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
-    {
-        var existingEntity = await GetQuery<TEntity>()
-            .When(_ => customCheckExistingPredicate != null, _ => _.Where(customCheckExistingPredicate!))
-            .Else(_ => _.Where(p => p.Id.Equals(entity.Id)))
-            .Execute()
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (existingEntity != null)
-            return await UpdateAsync<TEntity, TPrimaryKey>(
-                entity.WithIf(!entity.Id.Equals(existingEntity.Id), entity => entity.Id = existingEntity.Id),
-                existingEntity,
-                dismissSendEvent,
-                sendEntityEventConfigure,
-                cancellationToken);
-
-        return await CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, upsert: true, sendEntityEventConfigure, cancellationToken);
-    }
-
-    public Task<List<TEntity>> CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
-        List<TEntity> entities,
-        Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
-        bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
-        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
-    {
-        return Util.Pager.ExecutePagingAsync(
-                (skipCount, pageSize) => entities.Skip(skipCount)
-                    .Take(pageSize)
-                    .SelectAsync(
-                        entity => CreateOrUpdateAsync<TEntity, TPrimaryKey>(
-                            entity,
-                            customCheckExistingPredicateBuilder?.Invoke(entity),
-                            dismissSendEvent,
-                            sendEntityEventConfigure,
-                            cancellationToken)),
-                maxItemCount: entities.Count,
-                IPlatformDbContext.DefaultPageSize)
-            .Then(result => result.SelectMany(p => p).ToList());
-    }
-
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         // Not support real transaction tracking. No need to do anything
@@ -339,13 +180,222 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     public Task MigrateApplicationDataAsync(IServiceProvider serviceProvider)
     {
-        return this.As<IPlatformDbContext>().MigrateApplicationDataAsync<TDbContext>(serviceProvider);
+        return this.As<IPlatformDbContext>().MigrateApplicationDataAsync<TDbContext>(serviceProvider, RootServiceProvider);
     }
 
     public void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
+    }
+
+    public Task<List<TEntity>> CreateManyAsync<TEntity, TPrimaryKey>(
+        List<TEntity> entities,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        return Util.Pager.ExecutePagingAsync(
+                (skipCount, pageSize) => entities.Skip(skipCount)
+                    .Take(pageSize)
+                    .SelectAsync(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken)),
+                maxItemCount: entities.Count,
+                IPlatformDbContext.DefaultPageSize)
+            .Then(result => result.SelectMany(p => p).ToList())
+            .ThenActionIfAsync(
+                !dismissSendEvent,
+                entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Created, eventCustomConfig, cancellationToken));
+    }
+
+    public Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
+        TEntity entity,
+        bool dismissSendEvent,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        return UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken);
+    }
+
+    public Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
+        List<TEntity> entities,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        return Util.Pager.ExecutePagingAsync(
+                (skipCount, pageSize) => entities.Skip(skipCount)
+                    .Take(pageSize)
+                    .SelectAsync(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken)),
+                maxItemCount: entities.Count,
+                IPlatformDbContext.DefaultPageSize)
+            .Then(result => result.SelectMany(p => p).ToList())
+            .ThenActionIfAsync(
+                !dismissSendEvent,
+                entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Updated, eventCustomConfig, cancellationToken));
+    }
+
+    public async Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
+        TPrimaryKey entityId,
+        bool dismissSendEvent,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        var entity = GetQuery<TEntity>().FirstOrDefault(p => p.Id.Equals(entityId));
+
+        if (entity != null) await DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken);
+
+        return entity;
+    }
+
+    public async Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
+        TEntity entity,
+        bool dismissSendEvent,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        return await PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TEntity>(
+            RootServiceProvider,
+            MappedUnitOfWork,
+            entity,
+            async entity =>
+            {
+                await GetTable<TEntity>().DeleteOneAsync(p => p.Id.Equals(entity.Id), null, cancellationToken);
+
+                return entity;
+            },
+            dismissSendEvent,
+            eventCustomConfig: eventCustomConfig,
+            requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
+            cancellationToken);
+    }
+
+    public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
+        List<TPrimaryKey> entityIds,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        var entities = await GetQuery<TEntity>().Where(p => entityIds.Contains(p.Id)).ToListAsync(cancellationToken);
+
+        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken);
+    }
+
+    public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
+        List<TEntity> entities,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        return await entities.SelectAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken))
+            .ThenActionIfAsync(
+                !dismissSendEvent,
+                entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Deleted, eventCustomConfig, cancellationToken));
+    }
+
+    public Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(
+        TEntity entity,
+        bool dismissSendEvent,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        return CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, upsert: false, eventCustomConfig, cancellationToken);
+    }
+
+    public async Task<TEntity> CreateOrUpdateAsync<TEntity, TPrimaryKey>(
+        TEntity entity,
+        Expression<Func<TEntity, bool>> customCheckExistingPredicate = null,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        var existingEntity = await GetQuery<TEntity>()
+            .PipeIf(customCheckExistingPredicate != null, query => query.Where(customCheckExistingPredicate!))
+            .PipeIf(customCheckExistingPredicate == null, query => query.Where(p => p.Id.Equals(entity.Id)))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (existingEntity != null)
+            return await UpdateAsync<TEntity, TPrimaryKey>(
+                entity.WithIf(!entity.Id.Equals(existingEntity.Id), entity => entity.Id = existingEntity.Id),
+                existingEntity,
+                dismissSendEvent,
+                eventCustomConfig,
+                cancellationToken);
+
+        return await CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, upsert: true, eventCustomConfig, cancellationToken);
+    }
+
+    public async Task<List<TEntity>> CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
+        List<TEntity> entities,
+        Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        if (entities.Any())
+        {
+            var entityIds = entities.Select(p => p.Id);
+
+            var existingEntitiesQuery = GetQuery<TEntity>()
+                .PipeIf(
+                    customCheckExistingPredicateBuilder != null,
+                    query => query.Where(
+                        entities.Select(entity => customCheckExistingPredicateBuilder!(entity)).Aggregate((currentExpr, nextExpr) => currentExpr.Or(nextExpr))))
+                .PipeIf(customCheckExistingPredicateBuilder == null, query => query.Where(p => entityIds.Contains(p.Id)));
+
+            // Only need to check by entityIds if no custom check condition
+            if (customCheckExistingPredicateBuilder == null)
+            {
+                var existingEntityIds = await existingEntitiesQuery.Select(p => p.Id).ToListAsync(cancellationToken).Then(items => items.ToHashSet());
+
+                await Util.TaskRunner.WhenAll(
+                    CreateManyAsync<TEntity, TPrimaryKey>(
+                        entities.Where(p => !existingEntityIds.Contains(p.Id)).ToList(),
+                        dismissSendEvent,
+                        eventCustomConfig,
+                        cancellationToken),
+                    UpdateManyAsync<TEntity, TPrimaryKey>(
+                        entities.Where(p => existingEntityIds.Contains(p.Id)).ToList(),
+                        dismissSendEvent,
+                        eventCustomConfig,
+                        cancellationToken));
+            }
+            else
+            {
+                var existingEntities = await existingEntitiesQuery.ToListAsync(cancellationToken);
+
+                var toUpsertEntityToExistingEntityPairs = entities.SelectList(
+                    toUpsertEntity =>
+                    {
+                        var matchedExistingEntity = existingEntities.FirstOrDefault(p => customCheckExistingPredicateBuilder(toUpsertEntity).Compile()(p));
+
+                        // Update to correct the id of toUpdateEntity to the matched existing entity Id
+                        if (matchedExistingEntity != null) toUpsertEntity.Id = matchedExistingEntity.Id;
+
+                        return new { toUpsertEntity, matchedExistingEntity };
+                    });
+
+                await Util.TaskRunner.WhenAll(
+                    CreateManyAsync<TEntity, TPrimaryKey>(
+                        toUpsertEntityToExistingEntityPairs.Where(p => p.matchedExistingEntity == null).Select(p => p.toUpsertEntity).ToList(),
+                        dismissSendEvent,
+                        eventCustomConfig,
+                        cancellationToken),
+                    UpdateManyAsync<TEntity, TPrimaryKey>(
+                        toUpsertEntityToExistingEntityPairs.Where(p => p.matchedExistingEntity != null).Select(p => p.toUpsertEntity).ToList(),
+                        dismissSendEvent,
+                        eventCustomConfig,
+                        cancellationToken));
+            }
+        }
+
+        return entities;
     }
 
     public ILogger CreateLogger(ILoggerFactory loggerFactory)
@@ -357,7 +407,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         TEntity entity,
         TEntity existingEntity,
         bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
@@ -390,6 +440,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             toBeUpdatedRowVersionEntity.ConcurrencyUpdateToken = newUpdateConcurrencyUpdateToken;
 
             var result = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, ReplaceOneResult>(
+                RootServiceProvider,
                 MappedUnitOfWork,
                 toBeUpdatedEntity,
                 existingEntity,
@@ -403,8 +454,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         new ReplaceOptions { IsUpsert = false },
                         cancellationToken),
                 dismissSendEvent,
-                sendEntityEventConfigure: sendEntityEventConfigure,
-                requestContext: () => PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues(),
+                eventCustomConfig: eventCustomConfig,
+                requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -418,6 +469,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         else
         {
             var result = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, ReplaceOneResult>(
+                RootServiceProvider,
                 MappedUnitOfWork,
                 toBeUpdatedEntity,
                 existingEntity,
@@ -428,8 +480,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         new ReplaceOptions { IsUpsert = false },
                         cancellationToken),
                 dismissSendEvent,
-                sendEntityEventConfigure: sendEntityEventConfigure,
-                requestContext: () => PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues(),
+                eventCustomConfig: eventCustomConfig,
+                requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -618,7 +670,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     protected bool HasSupportOutboxEvent()
     {
-        return PlatformGlobal.ServiceProvider.CheckHasRegisteredScopedService<IPlatformOutboxBusMessageRepository>();
+        return RootServiceProvider.CheckHasRegisteredScopedService<IPlatformOutboxBusMessageRepository>();
     }
 
     protected bool IsEnsureIndexesMigrationExecuted()
@@ -630,7 +682,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         TEntity entity,
         bool dismissSendEvent,
         bool upsert = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
@@ -648,15 +700,17 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
         if (upsert == false)
             await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
+                RootServiceProvider,
                 MappedUnitOfWork,
                 toBeCreatedEntity,
                 entity => GetTable<TEntity>().InsertOneAsync(entity, null, cancellationToken).Then(() => entity),
                 dismissSendEvent,
-                sendEntityEventConfigure: sendEntityEventConfigure,
-                requestContext: () => PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues(),
+                eventCustomConfig: eventCustomConfig,
+                requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
                 cancellationToken);
         else
             await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
+                RootServiceProvider,
                 MappedUnitOfWork,
                 toBeCreatedEntity,
                 entity => GetTable<TEntity>()
@@ -667,8 +721,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         cancellationToken)
                     .Then(() => entity),
                 dismissSendEvent,
-                sendEntityEventConfigure: sendEntityEventConfigure,
-                requestContext: () => PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues(),
+                eventCustomConfig: eventCustomConfig,
+                requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
                 cancellationToken);
 
         return toBeCreatedEntity;
@@ -678,7 +732,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     {
     }
 
-    private List<PlatformMongoMigrationExecutor<TDbContext>> ScanAllMigrationExecutors()
+    protected List<PlatformMongoMigrationExecutor<TDbContext>> ScanAllMigrationExecutors()
     {
         var results = GetType()
             .Assembly.GetTypes()
@@ -689,7 +743,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         return results;
     }
 
-    private void EnsureAllMigrationExecutorsHasUniqueName()
+    protected void EnsureAllMigrationExecutorsHasUniqueName()
     {
         var duplicatedMigrationNames = ScanAllMigrationExecutors()
             .GroupBy(p => p.Name)
@@ -701,7 +755,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             throw new Exception($"Mongo Migration Executor Names is duplicated. Duplicated name: {duplicatedMigrationNames.First()}");
     }
 
-    private List<PlatformMongoMigrationExecutor<TDbContext>> NotExecutedMigrationExecutors()
+    protected List<PlatformMongoMigrationExecutor<TDbContext>> NotExecutedMigrationExecutors()
     {
         var executedMigrationNames = MigrationHistoryCollection.AsQueryable().Select(p => p.Name).ToHashSet();
 
@@ -712,13 +766,13 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             .FindAll(me => !executedMigrationNames.Contains(me.Name));
     }
 
-    private Dictionary<Type, string> BuildEntityTypeToCollectionNameDictionary()
+    protected Dictionary<Type, string> BuildEntityTypeToCollectionNameDictionary()
     {
         var entityTypeToCollectionNameMaps = EntityTypeToCollectionNameMaps();
         return entityTypeToCollectionNameMaps != null ? new Dictionary<Type, string>(entityTypeToCollectionNameMaps) : null;
     }
 
-    private static string GetPlatformEntityCollectionName<TEntity>()
+    protected static string GetPlatformEntityCollectionName<TEntity>()
     {
         if (typeof(TEntity).IsAssignableTo(typeof(PlatformInboxBusMessage)))
             return PlatformInboxBusMessageCollectionName;
@@ -730,5 +784,23 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             return PlatformDataMigrationHistoryCollectionName;
 
         return null;
+    }
+
+    protected async Task SendBulkEntitiesEvent<TEntity, TPrimaryKey>(
+        List<TEntity> entities,
+        PlatformCqrsEntityEventCrudAction crudAction,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        if (entities.IsEmpty()) return;
+
+        await PlatformCqrsEntityEvent.SendBulkEntitiesEvent<TEntity, TPrimaryKey>(
+            RootServiceProvider,
+            MappedUnitOfWork,
+            entities,
+            crudAction,
+            eventCustomConfig,
+            requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
+            cancellationToken);
     }
 }

@@ -1,7 +1,11 @@
+using System.Diagnostics;
+
 namespace Easy.Platform.Infrastructures.MessageBus;
 
 public interface IPlatformMessageBusProducer
 {
+    public static readonly ActivitySource ActivitySource = new(nameof(IPlatformMessageBusProducer));
+
     /// <summary>
     /// Send a message to bus with a routingKey
     /// </summary>

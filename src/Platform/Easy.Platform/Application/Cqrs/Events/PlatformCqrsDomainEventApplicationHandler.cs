@@ -1,3 +1,4 @@
+using Easy.Platform.Common;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Logging;
@@ -10,10 +11,12 @@ public abstract class PlatformCqrsDomainEventApplicationHandler<TEvent> : Platfo
     protected PlatformCqrsDomainEventApplicationHandler(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
-        IServiceProvider serviceProvider) : base(
+        IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider) : base(
         loggerFactory,
         unitOfWorkManager,
-        serviceProvider)
+        serviceProvider,
+        rootServiceProvider)
     {
     }
 }

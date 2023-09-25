@@ -21,6 +21,8 @@ public class PlatformDefaultEfCoreOutboxBusMessageRepository<TDbContext>
     {
     }
 
+    protected override bool IsDistributedTracingEnabled => false;
+
     protected override bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IUnitOfWork uow)
     {
         return false;

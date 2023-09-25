@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Reflection.Metadata;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Exceptions.Extensions;
 using Easy.Platform.Common;
@@ -10,13 +9,14 @@ using Easy.Platform.Common.Utils;
 using Easy.Platform.Common.Validations.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.Cqrs.Commands;
 
 public interface IPlatformCqrsCommandApplicationHandler
 {
-    public static readonly ActivitySource ActivitySource = new($"{nameof(Handle)}{nameof(IPlatformCqrsCommand)}");
+    public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformCqrsCommandApplicationHandler)}");
 }
 
 public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> : PlatformCqrsRequestApplicationHandler<TCommand>, IRequestHandler<TCommand, TResult>
@@ -29,11 +29,16 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
     public PlatformCqrsCommandApplicationHandler(
         IPlatformApplicationUserContextAccessor userContext,
         IUnitOfWorkManager unitOfWorkManager,
-        IPlatformCqrs cqrs) : base(userContext)
+        IPlatformCqrs cqrs,
+        ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider) : base(userContext, loggerFactory, rootServiceProvider)
     {
         UnitOfWorkManager = unitOfWorkManager;
         Cqrs = cqrs;
+        IsDistributedTracingEnabled = rootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled == true;
     }
+
+    protected bool IsDistributedTracingEnabled { get; }
 
     public virtual int FailedRetryCount => 0;
 
@@ -41,40 +46,56 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
 
     public virtual async Task<TResult> Handle(TCommand request, CancellationToken cancellationToken)
     {
-        using (var activity = IPlatformCqrsCommandApplicationHandler.ActivitySource.StartActivity($"{nameof(IPlatformCqrsCommandApplicationHandler)}.{nameof(Handle)}"))
+        try
         {
-            activity?.SetTag("RequestType", request.GetType().Name);
-            activity?.SetTag("Request", request.ToJson());
-
-            request.SetAuditInfo<TCommand>(BuildRequestAuditInfo(request));
-
-            await ValidateRequestAsync(request.Validate().Of<TCommand>(), cancellationToken).EnsureValidAsync();
-
-            var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
-                () => ExecuteHandleAsync(request, cancellationToken),
-                onException: ex =>
+            return await HandleWithTracing(
+                request,
+                async () =>
                 {
-                    PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformCqrsCommandApplicationHandler<>))
-                        .Log(
-                            ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
-                            ex,
-                            "[{Tag1}] Command:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. UserContext:{UserContext}",
-                            ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
-                            request.GetType().Name,
-                            request.AuditInfo.AuditTrackId,
-                            request.ToJson(),
-                            CurrentUser.GetAllKeyValues().ToJson());
+                    await ValidateRequestAsync(request.Validate().Of<TCommand>(), cancellationToken).EnsureValidAsync();
+
+                    var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
+                        () => ExecuteHandleAsync(request, cancellationToken),
+                        onException: ex =>
+                        {
+                            LoggerFactory.CreateLogger(typeof(PlatformCqrsCommandApplicationHandler<>))
+                                .Log(
+                                    ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
+                                    ex,
+                                    "[{Tag1}] Command:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. UserContext:{UserContext}",
+                                    ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
+                                    request.GetType().Name,
+                                    request.AuditInfo.AuditTrackId,
+                                    request.ToJson(),
+                                    CurrentUser.GetAllKeyValues().ToJson());
+                        });
+
+                    await Cqrs.SendEvent(
+                        new PlatformCqrsCommandEvent<TCommand>(request, PlatformCqrsCommandEventAction.Executed).With(
+                            p => p.SetRequestContextValues(CurrentUser.GetAllKeyValues())),
+                        cancellationToken);
+
+                    return result;
                 });
-
-            await Cqrs.SendEvent(
-                new PlatformCqrsCommandEvent<TCommand>(request, PlatformCqrsCommandEventAction.Executed).With(
-                    p => p.SetRequestContextValues(CurrentUser.GetAllKeyValues())),
-                cancellationToken);
-
-            PlatformGlobal.MemoryCollector.CollectGarbageMemory();
-
-            return result;
         }
+        finally
+        {
+            Util.GarbageCollector.Collect(immediately: false);
+        }
+    }
+
+    protected async Task<TResult> HandleWithTracing(TCommand request, Func<Task<TResult>> handleFunc)
+    {
+        if (IsDistributedTracingEnabled)
+            using (var activity =
+                IPlatformCqrsCommandApplicationHandler.ActivitySource.StartActivity($"CommandApplicationHandler.{nameof(Handle)}"))
+            {
+                activity?.SetTag("RequestType", request.GetType().Name);
+                activity?.SetTag("Request", request.ToJson());
+
+                return await handleFunc();
+            }
+        else return await handleFunc();
     }
 
     protected abstract Task<TResult> HandleAsync(TCommand request, CancellationToken cancellationToken);
@@ -109,7 +130,9 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand> : Platform
     public PlatformCqrsCommandApplicationHandler(
         IPlatformApplicationUserContextAccessor userContext,
         IUnitOfWorkManager unitOfWorkManager,
-        IPlatformCqrs cqrs) : base(userContext, unitOfWorkManager, cqrs)
+        IPlatformCqrs cqrs,
+        ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider) : base(userContext, unitOfWorkManager, cqrs, loggerFactory, rootServiceProvider)
     {
     }
 

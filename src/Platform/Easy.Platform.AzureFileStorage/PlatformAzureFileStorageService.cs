@@ -150,7 +150,15 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
 
     public Task<Stream> GetStreamAsync(string fullFilePath, CancellationToken cancellationToken = default)
     {
+        // Note: Files were stored in the public/ container before
+        // After that, they were stored in the privite/ container which requires a security thing to read
+        // Now, we have to generate SAS security to read any files in the container
+
         var blobClient = GetBlobClient(fullFilePath);
+        var sharedAccessUri = CreateBlobSharedAccessUri(
+            blobClient,
+            fileStorageConfiguration.DefaultSharedPrivateFileUriAccessTimeMinutes.Minutes());
+        blobClient = new BlobClient(sharedAccessUri);
 
         return blobClient.OpenReadAsync(cancellationToken: cancellationToken);
     }

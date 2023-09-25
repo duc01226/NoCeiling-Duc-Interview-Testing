@@ -10,11 +10,8 @@ namespace PlatformExampleApp.TextSnippet.Application.MessageBus.Consumers.FreeFo
 /// Other feature services can ask this common service to do something, then the bus message act like a request
 /// The request receiver is the LEADER, control the request schema and logic.
 /// Other services just use them
-///
 /// The naming convention rule is: [LEADER-SERVICE-NAME (The producer service produce event)] + XXX + EventBusMessage
-///
 /// Example: AccountServiceUserCreatedEventBusMessage
-///
 /// This is example one other feature services want to listen to an event from LEADER-SERVICE to do their own logic
 /// </summary>
 internal sealed class DemoSomethingHappenedEventBusMessageConsumer : PlatformApplicationMessageBusConsumer<DemoSomethingHappenedEventBusMessage>
@@ -22,7 +19,8 @@ internal sealed class DemoSomethingHappenedEventBusMessageConsumer : PlatformApp
     public DemoSomethingHappenedEventBusMessageConsumer(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager uowManager,
-        IServiceProvider serviceProvider) : base(loggerFactory, uowManager, serviceProvider)
+        IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, uowManager, serviceProvider, rootServiceProvider)
     {
     }
 

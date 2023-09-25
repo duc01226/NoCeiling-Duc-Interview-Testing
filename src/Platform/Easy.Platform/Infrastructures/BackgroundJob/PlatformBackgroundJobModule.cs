@@ -68,7 +68,7 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
                 onRetry: (exception, timeSpan, currentRetry, ctx) =>
                 {
                     if (currentRetry >= MinimumRetryTimesToWarning)
-                        PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformBackgroundJobModule))
+                        LoggerFactory.CreateLogger(typeof(PlatformBackgroundJobModule))
                             .LogWarning(
                                 exception,
                                 "[StartBackgroundJobProcessing] Exception {ExceptionType} detected on attempt StartBackgroundJobProcessing {Retry} of {Retries}",
@@ -81,7 +81,7 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
     public async Task ExecuteOnStartUpRecurringBackgroundJobImmediately()
     {
         await Task.Run(
-            () => IPlatformModule.WaitAllModulesInitiated(typeof(IPlatformModule), Logger, "execute on start-up recurring background job"));
+            () => IPlatformModule.WaitAllModulesInitiated(ServiceProvider, typeof(IPlatformModule), Logger, "execute on start-up recurring background job"));
 
         await ServiceProvider.ExecuteInjectScopedAsync(
             (IPlatformBackgroundJobScheduler backgroundJobScheduler, IServiceProvider serviceProvider) =>
@@ -114,7 +114,7 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
             onRetry: (exception, timeSpan, currentRetry, ctx) =>
             {
                 if (currentRetry >= MinimumRetryTimesToWarning)
-                    PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformBackgroundJobModule))
+                    LoggerFactory.CreateLogger(typeof(PlatformBackgroundJobModule))
                         .LogWarning(
                             exception,
                             "[Init][ReplaceAllLatestRecurringBackgroundJobs] Exception {ExceptionType} detected on attempt ReplaceAllLatestRecurringBackgroundJobs {Retry} of {Retries}",

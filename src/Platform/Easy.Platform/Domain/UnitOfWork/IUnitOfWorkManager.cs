@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
 
@@ -11,6 +13,8 @@ namespace Easy.Platform.Domain.UnitOfWork;
 /// </summary>
 public interface IUnitOfWorkManager : IDisposable
 {
+    public static readonly ActivitySource ActivitySource = new($"{nameof(IUnitOfWorkManager)}");
+
     /// <summary>
     /// A single separated global uow in current scoped is used by repository for read data using query, usually when need to return data
     /// as enumerable to help download data like streaming data (not load all big data into ram) <br />
@@ -95,14 +99,16 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
     protected readonly List<IUnitOfWork> CurrentUnitOfWorks = new();
     protected readonly ConcurrentDictionary<string, IUnitOfWork> FreeCreatedUnitOfWorks = new();
     protected readonly SemaphoreSlim RemoveAllInactiveUowLock = new(1, 1);
+    protected readonly IPlatformRootServiceProvider RootServiceProvider;
     private bool disposed;
     private bool disposing;
 
     private IUnitOfWork globalUow;
 
-    protected PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCqrs)
+    protected PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCqrs, IPlatformRootServiceProvider rootServiceProvider)
     {
         CurrentSameScopeCqrs = currentSameScopeCqrs;
+        RootServiceProvider = rootServiceProvider;
     }
 
     public IPlatformCqrs CurrentSameScopeCqrs { get; }

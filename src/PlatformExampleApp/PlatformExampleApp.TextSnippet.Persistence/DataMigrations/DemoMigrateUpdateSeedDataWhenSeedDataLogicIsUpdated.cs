@@ -7,7 +7,9 @@ internal sealed class DemoMigrateUpdateSeedDataWhenSeedDataLogicIsUpdated : Plat
 {
     private readonly DemoSeedDataUseCommandSolutionDataSeeder demoSeedDataUseCommandSolutionDataSeeder;
 
-    public DemoMigrateUpdateSeedDataWhenSeedDataLogicIsUpdated(DemoSeedDataUseCommandSolutionDataSeeder demoSeedDataUseCommandSolutionDataSeeder)
+    public DemoMigrateUpdateSeedDataWhenSeedDataLogicIsUpdated(
+        IPlatformRootServiceProvider rootServiceProvider,
+        DemoSeedDataUseCommandSolutionDataSeeder demoSeedDataUseCommandSolutionDataSeeder) : base(rootServiceProvider)
     {
         this.demoSeedDataUseCommandSolutionDataSeeder = demoSeedDataUseCommandSolutionDataSeeder;
     }

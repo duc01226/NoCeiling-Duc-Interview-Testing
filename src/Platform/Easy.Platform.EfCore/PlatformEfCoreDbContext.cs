@@ -1,5 +1,4 @@
 using System.Linq.Expressions;
-using Easy.Platform.Application;
 using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Application.Persistence;
@@ -20,6 +19,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     where TDbContext : PlatformEfCoreDbContext<TDbContext>, IPlatformDbContext<TDbContext>
 {
     protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
+    protected readonly IPlatformRootServiceProvider RootServiceProvider;
     protected readonly IPlatformApplicationUserContextAccessor UserContextAccessor;
 
     public PlatformEfCoreDbContext(
@@ -27,10 +27,12 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         ILoggerFactory loggerFactory,
         IPlatformCqrs cqrs,
         PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
-        IPlatformApplicationUserContextAccessor userContextAccessor) : base(options)
+        IPlatformApplicationUserContextAccessor userContextAccessor,
+        IPlatformRootServiceProvider rootServiceProvider) : base(options)
     {
         PersistenceConfiguration = persistenceConfiguration;
         UserContextAccessor = userContextAccessor;
+        RootServiceProvider = rootServiceProvider;
         Logger = CreateLogger(loggerFactory);
     }
 
@@ -38,7 +40,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     public Task MigrateApplicationDataAsync(IServiceProvider serviceProvider)
     {
-        return this.As<IPlatformDbContext>().MigrateApplicationDataAsync<TDbContext>(serviceProvider);
+        return this.As<IPlatformDbContext>().MigrateApplicationDataAsync<TDbContext>(serviceProvider, RootServiceProvider);
     }
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryDbSet.AsQueryable();
@@ -149,42 +151,48 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     public Task<List<TEntity>> CreateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return entities.SelectAsync(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
+        return entities.SelectAsync(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken))
+            .ThenActionIfAsync(
+                !dismissSendEvent,
+                entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Created, eventCustomConfig, cancellationToken));
     }
 
     public Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
+        return UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken);
     }
 
     public Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return entities.SelectAsync(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
+        return entities.SelectAsync(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken))
+            .ThenActionIfAsync(
+                !dismissSendEvent,
+                entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Updated, eventCustomConfig, cancellationToken));
     }
 
     public async Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
         TPrimaryKey entityId,
         bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var entity = GetQuery<TEntity>().FirstOrDefault(p => p.Id.Equals(entityId));
 
-        if (entity != null) await DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
+        if (entity != null) await DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken);
 
         return entity;
     }
@@ -192,12 +200,13 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     public async Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(entity);
 
         return await PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TEntity>(
+            RootServiceProvider,
             MappedUnitOfWork,
             entity,
             async entity =>
@@ -207,37 +216,40 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 return entity;
             },
             dismissSendEvent,
-            sendEntityEventConfigure: sendEntityEventConfigure,
-            requestContext: () => PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues(),
+            eventCustomConfig: eventCustomConfig,
+            requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
             cancellationToken);
     }
 
     public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
         List<TPrimaryKey> entityIds,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var entities = await GetQuery<TEntity>().Where(p => entityIds.Contains(p.Id)).ToListAsync(cancellationToken);
 
-        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
+        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken);
     }
 
     public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return await entities.SelectAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken));
+        return await entities.SelectAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken))
+            .ThenActionIfAsync(
+                !dismissSendEvent,
+                entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Deleted, eventCustomConfig, cancellationToken));
     }
 
     public async Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
@@ -255,12 +267,13 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 entity => entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = Guid.NewGuid());
 
         var result = await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
+            RootServiceProvider,
             MappedUnitOfWork,
             toBeCreatedEntity,
             entity => GetTable<TEntity>().AddAsync(toBeCreatedEntity, cancellationToken).AsTask().Then(p => toBeCreatedEntity),
             dismissSendEvent,
-            sendEntityEventConfigure: sendEntityEventConfigure,
-            requestContext: () => PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues(),
+            eventCustomConfig: eventCustomConfig,
+            requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
             cancellationToken);
 
         return result;
@@ -270,14 +283,13 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         TEntity entity,
         Expression<Func<TEntity, bool>> customCheckExistingPredicate = null,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var existingEntity = await GetQuery<TEntity>()
             .AsNoTracking()
-            .When(_ => customCheckExistingPredicate != null, _ => _.Where(customCheckExistingPredicate!))
-            .Else(_ => _.Where(p => p.Id.Equals(entity.Id)))
-            .Execute()
+            .PipeIf(customCheckExistingPredicate != null, query => query.Where(customCheckExistingPredicate!))
+            .PipeIf(customCheckExistingPredicate == null, query => query.Where(p => p.Id.Equals(entity.Id)))
             .FirstOrDefaultAsync(cancellationToken);
 
         if (existingEntity != null)
@@ -285,26 +297,77 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 entity.WithIf(!entity.Id.Equals(existingEntity.Id), entity => entity.Id = existingEntity.Id),
                 existingEntity,
                 dismissSendEvent,
-                sendEntityEventConfigure,
+                eventCustomConfig,
                 cancellationToken);
 
-        return await CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, sendEntityEventConfigure, cancellationToken);
+        return await CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken);
     }
 
-    public Task<List<TEntity>> CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
+    public async Task<List<TEntity>> CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
         bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return entities.SelectAsync(
-            entity => CreateOrUpdateAsync<TEntity, TPrimaryKey>(
-                entity,
-                customCheckExistingPredicateBuilder?.Invoke(entity),
-                dismissSendEvent,
-                sendEntityEventConfigure,
-                cancellationToken));
+        if (entities.Any())
+        {
+            var entityIds = entities.Select(p => p.Id);
+
+            var existingEntitiesQuery = GetQuery<TEntity>()
+                .PipeIf(
+                    customCheckExistingPredicateBuilder != null,
+                    query => query.Where(
+                        entities.Select(entity => customCheckExistingPredicateBuilder!(entity)).Aggregate((currentExpr, nextExpr) => currentExpr.Or(nextExpr))))
+                .PipeIf(customCheckExistingPredicateBuilder == null, query => query.Where(p => entityIds.Contains(p.Id)));
+
+            // Only need to check by entityIds if no custom check condition
+            if (customCheckExistingPredicateBuilder == null)
+            {
+                var existingEntityIds = await existingEntitiesQuery.Select(p => p.Id).ToListAsync(cancellationToken).Then(items => items.ToHashSet());
+
+                // Ef core is not thread safe so that couldn't use when all
+                await CreateManyAsync<TEntity, TPrimaryKey>(
+                    entities.Where(p => !existingEntityIds.Contains(p.Id)).ToList(),
+                    dismissSendEvent,
+                    eventCustomConfig,
+                    cancellationToken);
+                await UpdateManyAsync<TEntity, TPrimaryKey>(
+                    entities.Where(p => existingEntityIds.Contains(p.Id)).ToList(),
+                    dismissSendEvent,
+                    eventCustomConfig,
+                    cancellationToken);
+            }
+            else
+            {
+                var existingEntities = await existingEntitiesQuery.ToListAsync(cancellationToken);
+
+                var toUpsertEntityToExistingEntityPairs = entities.SelectList(
+                    toUpsertEntity =>
+                    {
+                        var matchedExistingEntity = existingEntities.FirstOrDefault(p => customCheckExistingPredicateBuilder(toUpsertEntity).Compile()(p));
+
+                        // Update to correct the id of toUpdateEntity to the matched existing entity Id
+                        if (matchedExistingEntity != null) toUpsertEntity.Id = matchedExistingEntity.Id;
+
+                        return new { toUpsertEntity, matchedExistingEntity };
+                    });
+
+                await Util.TaskRunner.WhenAll(
+                    CreateManyAsync<TEntity, TPrimaryKey>(
+                        toUpsertEntityToExistingEntityPairs.Where(p => p.matchedExistingEntity == null).Select(p => p.toUpsertEntity).ToList(),
+                        dismissSendEvent,
+                        eventCustomConfig,
+                        cancellationToken),
+                    UpdateManyAsync<TEntity, TPrimaryKey>(
+                        toUpsertEntityToExistingEntityPairs.Where(p => p.matchedExistingEntity != null).Select(p => p.toUpsertEntity).ToList(),
+                        dismissSendEvent,
+                        eventCustomConfig,
+                        cancellationToken));
+            }
+        }
+
+        return entities;
     }
 
     public ILogger CreateLogger(ILoggerFactory loggerFactory)
@@ -314,14 +377,14 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     protected bool HasSupportOutboxEvent()
     {
-        return PlatformGlobal.ServiceProvider.CheckHasRegisteredScopedService<IPlatformOutboxBusMessageRepository>();
+        return RootServiceProvider.CheckHasRegisteredScopedService<IPlatformOutboxBusMessageRepository>();
     }
 
     public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         TEntity existingEntity,
         bool dismissSendEvent,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
@@ -346,6 +409,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                     .As<TEntity>());
 
         var result = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, TEntity>(
+            RootServiceProvider,
             MappedUnitOfWork,
             toBeUpdatedEntity,
             existingEntity,
@@ -357,14 +421,14 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                     .PipeIf(entity is IRowVersionEntity, p => p.As<IRowVersionEntity>().With(_ => _.ConcurrencyUpdateToken = Guid.NewGuid()).As<TEntity>());
             },
             dismissSendEvent,
-            sendEntityEventConfigure: sendEntityEventConfigure,
-            requestContext: () => PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues(),
+            eventCustomConfig: eventCustomConfig,
+            requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
             cancellationToken);
 
         return result;
     }
 
-    private TEntity DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(TEntity entity) where TEntity : class, IEntity<TPrimaryKey>, new()
+    protected TEntity DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(TEntity entity) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var local = GetTable<TEntity>().Local.FirstOrDefault(entry => entry.Id.Equals(entity.Id));
 
@@ -376,6 +440,24 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     public DbSet<TEntity> GetTable<TEntity>() where TEntity : class, IEntity, new()
     {
         return Set<TEntity>();
+    }
+
+    protected async Task SendBulkEntitiesEvent<TEntity, TPrimaryKey>(
+        List<TEntity> entities,
+        PlatformCqrsEntityEventCrudAction crudAction,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        if (entities.IsEmpty()) return;
+
+        await PlatformCqrsEntityEvent.SendBulkEntitiesEvent<TEntity, TPrimaryKey>(
+            RootServiceProvider,
+            MappedUnitOfWork,
+            entities,
+            crudAction,
+            eventCustomConfig,
+            requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
+            cancellationToken);
     }
 
     protected bool IsEntityTracked<TEntity>(TEntity entity) where TEntity : class, IEntity, new()
@@ -394,7 +476,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         base.OnModelCreating(modelBuilder);
     }
 
-    private void ApplyEntityConfigurationsFromAssembly(ModelBuilder modelBuilder)
+    protected void ApplyEntityConfigurationsFromAssembly(ModelBuilder modelBuilder)
     {
         // Auto apply configuration by convention for the current dbcontext (usually persistence layer) assembly.
         var applyForLimitedEntityTypes = ApplyForLimitedEntityTypes();

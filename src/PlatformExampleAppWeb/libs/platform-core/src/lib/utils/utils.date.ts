@@ -279,3 +279,7 @@ export function date_getHourAndMinute(date: Date): string {
 
     return `${hours < 10 ? '0' + hours : hours}:${minutes < 10 ? '0' + minutes : minutes}`;
 }
+
+export function date_toUTCTime(date: Date): Date {
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+}

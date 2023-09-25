@@ -1,11 +1,11 @@
 export interface IAppsTextSnippetDomainModuleConfig {
-    textSnippetApiHost: string;
+  textSnippetApiHost: string;
 }
 
 export class AppsTextSnippetDomainModuleConfig implements IAppsTextSnippetDomainModuleConfig {
-    public constructor(data?: Partial<IAppsTextSnippetDomainModuleConfig>) {
-        this.textSnippetApiHost = data?.textSnippetApiHost ?? '';
-    }
+  public constructor(data?: Partial<IAppsTextSnippetDomainModuleConfig>) {
+    this.textSnippetApiHost = data?.textSnippetApiHost ?? '';
+  }
 
-    public textSnippetApiHost: string;
+  public textSnippetApiHost: string;
 }

@@ -76,6 +76,34 @@ public static partial class F
 
 public static class Validation
 {
+    public class ValidationException : Exception
+    {
+        public ValidationException()
+        {
+            Messages = new List<string>();
+        }
+
+        public ValidationException(string message) : base(message)
+        {
+            Messages = new List<string>
+            {
+                message
+            };
+        }
+
+        public ValidationException(IEnumerable<string> messages)
+        {
+            Messages = messages.ToList();
+        }
+
+        public ValidationException(IEnumerable<Error> messages)
+        {
+            Messages = messages.Select(p => p.Message).ToList();
+        }
+
+        public List<string> Messages { get; set; }
+    }
+
     public static List<Error> Errors<T>(this Validation<T> opt)
     {
         return opt.Match(errors => errors, _ => F.List<Error>());
@@ -292,7 +320,7 @@ public readonly struct Validation<T>
     {
         return IsValid
             ? $"Valid({Value})"
-            : $"Invalid([{Errors.JoinToString(", ")}])";
+            : $"Invalid: {Errors.JoinToString(", ")}.";
     }
 
     public override bool Equals(object obj)
@@ -309,6 +337,6 @@ public readonly struct Validation<T>
 
     public T EnsureValid()
     {
-        return IsValid ? Value : throw new Exception(ToString());
+        return IsValid ? Value : throw new Validation.ValidationException(Errors);
     }
 }

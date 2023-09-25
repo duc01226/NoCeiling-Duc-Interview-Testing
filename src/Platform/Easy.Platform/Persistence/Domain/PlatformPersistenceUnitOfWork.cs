@@ -1,4 +1,5 @@
 using Easy.Platform.Application.Persistence;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 
@@ -13,7 +14,7 @@ public interface IPlatformPersistenceUnitOfWork<out TDbContext> : IUnitOfWork
 public abstract class PlatformPersistenceUnitOfWork<TDbContext> : PlatformUnitOfWork, IPlatformPersistenceUnitOfWork<TDbContext>
     where TDbContext : IPlatformDbContext
 {
-    public PlatformPersistenceUnitOfWork(TDbContext dbContext)
+    public PlatformPersistenceUnitOfWork(IPlatformRootServiceProvider rootServiceProvider, TDbContext dbContext) : base(rootServiceProvider)
     {
         DbContext = dbContext.With(_ => _.MappedUnitOfWork = this);
     }

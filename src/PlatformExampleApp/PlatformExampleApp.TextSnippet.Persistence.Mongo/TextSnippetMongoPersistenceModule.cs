@@ -18,7 +18,10 @@ public class TextSnippetMongoPersistenceModule : PlatformMongoDbPersistenceModul
         options.ConnectionString = Configuration.GetSection("MongoDB:ConnectionString").Value;
         options.Database = Configuration.GetSection("MongoDB:Database").Value;
         options.MinConnectionPoolSize =
-            Configuration.GetValue<int?>("MongoDB:MinConnectionPoolSize") ?? TextSnippetApplicationConstants.DefaultBackgroundJobWorkerCount + 2;
+            Configuration.GetValue<int?>("MongoDB:MinConnectionPoolSize") ??
+            TextSnippetApplicationConstants.DefaultBackgroundJobWorkerCount + 2; // Always available connection to serve request, reduce latency
+        options.MaxConnectionPoolSize =
+            Configuration.GetValue<int?>("MongoDB:MaxConnectionPoolSize") ?? 50; // Setup max pool size depend on the database maximum connections available
     }
 
     protected override bool EnableInboxBusMessage()

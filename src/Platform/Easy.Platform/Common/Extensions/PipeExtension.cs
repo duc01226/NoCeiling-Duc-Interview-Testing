@@ -7,6 +7,13 @@ public static class PipeExtension
         return fn(target);
     }
 
+    public static TTarget PipeAction<TTarget, TResult>(this TTarget target, Func<TTarget, TResult> fn)
+    {
+        fn(target);
+
+        return target;
+    }
+
     public static TTarget Pipe<TTarget>(this TTarget target, Action<TTarget> fn)
     {
         fn(target);

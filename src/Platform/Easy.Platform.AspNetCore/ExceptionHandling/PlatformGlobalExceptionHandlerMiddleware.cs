@@ -56,7 +56,7 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
         }
         finally
         {
-            PlatformGlobal.MemoryCollector.CollectGarbageMemory();
+            Util.GarbageCollector.Collect(immediately: false);
         }
     }
 

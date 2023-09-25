@@ -10,12 +10,12 @@ public static class SendPlatformCqrsEntityEventExtension
         this IPlatformCqrs cqrs,
         TEntity entity,
         PlatformCqrsEntityEventCrudAction crudAction,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity, new()
     {
         await cqrs.SendEvent(
-            new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(_ => sendEntityEventConfigure?.Invoke(_)),
+            new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(_ => eventCustomConfig?.Invoke(_)),
             cancellationToken);
     }
 
@@ -23,12 +23,12 @@ public static class SendPlatformCqrsEntityEventExtension
         this IPlatformCqrs cqrs,
         IList<TEntity> entities,
         PlatformCqrsEntityEventCrudAction crudAction,
-        Action<PlatformCqrsEntityEvent<TEntity>> sendEntityEventConfigure = null,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity, new()
     {
         await cqrs.SendEvents(
-            entities.SelectList(entity => new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(_ => sendEntityEventConfigure?.Invoke(_))),
+            entities.SelectList(entity => new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(_ => eventCustomConfig?.Invoke(_))),
             cancellationToken);
     }
 }

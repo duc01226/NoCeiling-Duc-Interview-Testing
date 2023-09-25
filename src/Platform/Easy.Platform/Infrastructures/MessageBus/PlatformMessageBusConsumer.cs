@@ -1,6 +1,5 @@
 #nullable enable
 using System.Text.Json;
-using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Microsoft.Extensions.Logging;
@@ -184,9 +183,11 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
     where TMessage : class, new()
 {
     protected readonly ILogger Logger;
+    protected readonly ILoggerFactory LoggerFactory;
 
     public PlatformMessageBusConsumer(ILoggerFactory loggerFactory)
     {
+        LoggerFactory = loggerFactory;
         Logger = CreateLogger(loggerFactory);
     }
 
@@ -224,6 +225,10 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
             IPlatformMessageBusConsumer.LogError(Logger, GetType(), message, routingKey, e);
             throw;
         }
+        finally
+        {
+            Util.GarbageCollector.Collect(immediately: true);
+        }
     }
 
     public abstract Task HandleLogicAsync(TMessage message, string routingKey);
@@ -238,13 +243,13 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
         return true;
     }
 
-    public static ILogger CreateLogger(ILoggerFactory? loggerFactory)
+    public static ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
-        return (loggerFactory ?? PlatformGlobal.LoggerFactory).CreateLogger(typeof(PlatformMessageBusConsumer));
+        return loggerFactory.CreateLogger(typeof(PlatformMessageBusConsumer));
     }
 
-    public static ILogger CreateLogger()
+    public ILogger CreateLogger()
     {
-        return CreateLogger(null);
+        return CreateLogger(LoggerFactory);
     }
 }

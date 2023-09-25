@@ -1,4 +1,3 @@
-using Easy.Platform.Common;
 using Easy.Platform.Infrastructures.BackgroundJob;
 using Hangfire;
 using Microsoft.Extensions.Logging;
@@ -13,10 +12,10 @@ public class PlatformHangfireBackgroundJobProcessingService : IPlatformBackgroun
 
     private BackgroundJobServer currentBackgroundJobServer;
 
-    public PlatformHangfireBackgroundJobProcessingService(BackgroundJobServerOptions options)
+    public PlatformHangfireBackgroundJobProcessingService(BackgroundJobServerOptions options, ILoggerFactory loggerFactory)
     {
         this.options = options;
-        Logger = CreateLogger();
+        Logger = loggerFactory.CreateLogger(GetType());
     }
 
     protected ILogger Logger { get; }
@@ -50,11 +49,6 @@ public class PlatformHangfireBackgroundJobProcessingService : IPlatformBackgroun
             currentBackgroundJobServer.Dispose();
             currentBackgroundJobServer = null;
         }
-    }
-
-    public static ILogger CreateLogger()
-    {
-        return PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformHangfireBackgroundJobProcessingService));
     }
 
     protected virtual void Dispose(bool disposing)

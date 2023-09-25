@@ -142,4 +142,18 @@ public static class StringExtension
     {
         return string.Concat(str1, otherStrings.Aggregate((current, next) => string.Concat(current.AsSpan(), next.AsSpan())).AsSpan());
     }
+
+    /// <summary>
+    /// Get Initials of string
+    /// Ex: "Nguyen Thanh Phong" => "NTP"
+    /// </summary>
+    public static string GetAcronym(this string? str, bool upperCase = false)
+    {
+        if (str.IsNullOrEmpty()) return string.Empty;
+
+        return new string(
+            str?.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Select(word => upperCase ? char.ToUpper(word[0]) : word[0])
+                .ToArray());
+    }
 }

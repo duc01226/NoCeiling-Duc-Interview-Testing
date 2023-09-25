@@ -98,6 +98,26 @@ public static class ListExtension
         items.Add(item);
     }
 
+    public static void UpsertBy<T>(this IList<T> items, Func<T, object?> upsertByFn, params T[] upsertItems)
+    {
+        var groupedByUpsertValueItems =
+            items.Select((item, index) => new { item, index }).GroupBy(p => upsertByFn(p.item) ?? "").ToDictionary(p => p.Key, p => p.First());
+
+        foreach (var upsertItem in upsertItems)
+        {
+            var upsertItemByValue = upsertByFn(upsertItem) ?? "";
+
+            if (groupedByUpsertValueItems.TryGetValue(upsertItemByValue, out var toUpdateItemInfo))
+            {
+                items[toUpdateItemInfo.index] = upsertItem;
+            }
+            else
+            {
+                items.Add(upsertItem);
+            }
+        }
+    }
+
     public static IEnumerable<T> ConcatSingle<T>(this IEnumerable<T> items, T item)
     {
         return items.Concat(
@@ -141,12 +161,12 @@ public static class ListExtension
             : items.ToList();
     }
 
-    public static bool ContainsAll<T>(this IList<T> items, IList<T> containAllItems)
+    public static bool ContainsAll<T>(this IEnumerable<T> items, IList<T> containAllItems)
     {
         return items.Intersect(containAllItems).Count() >= containAllItems.Count;
     }
 
-    public static bool ContainsAny<T>(this IList<T> items, IList<T> containAllItems)
+    public static bool ContainsAny<T>(this IEnumerable<T> items, IList<T> containAllItems)
     {
         return items.Intersect(containAllItems).Any();
     }

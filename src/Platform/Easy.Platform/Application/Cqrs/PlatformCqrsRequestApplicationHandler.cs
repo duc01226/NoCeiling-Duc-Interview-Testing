@@ -9,12 +9,19 @@ namespace Easy.Platform.Application.Cqrs;
 public abstract class PlatformCqrsRequestApplicationHandler<TRequest> : PlatformCqrsRequestHandler<TRequest>
     where TRequest : IPlatformCqrsRequest
 {
+    protected readonly ILoggerFactory LoggerFactory;
+    protected readonly IPlatformRootServiceProvider RootServiceProvider;
     protected readonly IPlatformApplicationUserContextAccessor UserContext;
 
-    public PlatformCqrsRequestApplicationHandler(IPlatformApplicationUserContextAccessor userContext)
+    public PlatformCqrsRequestApplicationHandler(
+        IPlatformApplicationUserContextAccessor userContext,
+        ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider)
     {
         UserContext = userContext;
-        Logger = PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformCqrsRequestApplicationHandler<>));
+        LoggerFactory = loggerFactory;
+        RootServiceProvider = rootServiceProvider;
+        Logger = loggerFactory.CreateLogger(typeof(PlatformCqrsRequestApplicationHandler<>));
     }
 
     public IPlatformApplicationUserContext CurrentUser => UserContext.Current;

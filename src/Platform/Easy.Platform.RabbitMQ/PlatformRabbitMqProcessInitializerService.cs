@@ -41,6 +41,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
     private readonly IPlatformMessageBusScanner messageBusScanner;
     private readonly PlatformRabbitMqOptions options;
     private readonly PlatformOutboxBusMessageCleanerHostedService outboxBusMessageCleanerHostedService;
+    private readonly IPlatformRootServiceProvider rootServiceProvider;
 
     private readonly ConcurrentDictionary<string, List<Type>> routingKeyToCanProcessConsumerTypesCacheMap = new();
     private readonly PlatformSendOutboxBusMessageHostedService sendOutboxBusMessageHostedService;
@@ -64,7 +65,9 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         PlatformSendOutboxBusMessageHostedService sendOutboxBusMessageHostedService,
         PlatformOutboxBusMessageCleanerHostedService outboxBusMessageCleanerHostedService,
         PlatformConsumeInboxBusMessageHostedService consumeInboxBusMessageHostedService,
-        PlatformInboxBusMessageCleanerHostedService inboxBusMessageCleanerHostedService)
+        PlatformInboxBusMessageCleanerHostedService inboxBusMessageCleanerHostedService,
+        ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider)
     {
         this.applicationSettingContext = applicationSettingContext;
         this.exchangeProvider = exchangeProvider;
@@ -76,8 +79,9 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         this.outboxBusMessageCleanerHostedService = outboxBusMessageCleanerHostedService;
         this.consumeInboxBusMessageHostedService = consumeInboxBusMessageHostedService;
         this.inboxBusMessageCleanerHostedService = inboxBusMessageCleanerHostedService;
-        Logger = PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformRabbitMqProcessInitializerService));
-        InvokeConsumerLogger = PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformMessageBusConsumer));
+        this.rootServiceProvider = rootServiceProvider;
+        Logger = loggerFactory.CreateLogger(typeof(PlatformRabbitMqProcessInitializerService));
+        InvokeConsumerLogger = loggerFactory.CreateLogger(typeof(PlatformMessageBusConsumer));
     }
 
     protected ILogger Logger { get; }
@@ -161,7 +165,11 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         try
         {
             await Task.Run(
-                () => IPlatformModule.WaitAllModulesInitiated(typeof(IPlatformPersistenceModule), Logger, "to start connect all consumers to rabbitmq queue"),
+                () => IPlatformModule.WaitAllModulesInitiated(
+                    rootServiceProvider,
+                    typeof(IPlatformPersistenceModule),
+                    Logger,
+                    "to start connect all consumers to rabbitmq queue"),
                 currentStartProcessCancellationToken);
 
             Logger.LogInformation("Start connect all consumers to rabbitmq queue STARTED");
@@ -242,11 +250,11 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                             ExtractTraceContextFromBasicProperties);
 
                         using (var activity = ActivitySource.StartActivity(
-                            nameof(ExecuteConsumer),
+                            $"MessageBus.{nameof(ExecuteConsumer)}",
                             ActivityKind.Consumer,
                             parentContext.ActivityContext))
                         {
-                            using (var scope = PlatformGlobal.ServiceProvider.CreateScope())
+                            using (var scope = rootServiceProvider.CreateScope())
                             {
                                 var consumer = scope.ServiceProvider.GetService(consumerType).Cast<IPlatformMessageBusConsumer>();
 
@@ -343,7 +351,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                 consumerType => new
                 {
                     ConsumerType = consumerType,
-                    ConsumerExecuteOrder = PlatformGlobal.ServiceProvider.ExecuteScoped(
+                    ConsumerExecuteOrder = rootServiceProvider.ExecuteScoped(
                         scope => scope.ServiceProvider.GetService(consumerType).Cast<IPlatformMessageBusConsumer>().ExecuteOrder())
                 })
             .OrderBy(p => p.ConsumerExecuteOrder)

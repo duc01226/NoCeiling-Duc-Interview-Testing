@@ -1,6 +1,7 @@
 using Easy.Platform.Application;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
@@ -15,8 +16,15 @@ public sealed class TextSnippetApplicationDataSeeder : PlatformApplicationDataSe
         IUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IConfiguration configuration,
+        ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider,
         ITextSnippetRootRepository<TextSnippetEntity> textSnippetRepository,
-        ITextSnippetRootRepository<MultiDbDemoEntity> multiDbDemoEntityRepository) : base(unitOfWorkManager, serviceProvider, configuration)
+        ITextSnippetRootRepository<MultiDbDemoEntity> multiDbDemoEntityRepository) : base(
+        unitOfWorkManager,
+        serviceProvider,
+        configuration,
+        loggerFactory,
+        rootServiceProvider)
     {
         this.textSnippetRepository = textSnippetRepository;
         this.multiDbDemoEntityRepository = multiDbDemoEntityRepository;

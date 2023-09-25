@@ -1,14 +1,18 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Exceptions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Domain.UnitOfWork;
 
 public interface IUnitOfWork : IDisposable
 {
+    public static readonly ActivitySource ActivitySource = new($"{nameof(IUnitOfWork)}");
+
     /// <summary>
     /// Generated Unique Uow Id
     /// </summary>
@@ -114,10 +118,16 @@ public class UnitOfWorkFailedArgs
 
 public abstract class PlatformUnitOfWork : IUnitOfWork
 {
+    protected PlatformUnitOfWork(IPlatformRootServiceProvider rootServiceProvider)
+    {
+        LoggerFactory = rootServiceProvider.GetRequiredService<ILoggerFactory>();
+    }
+
     public bool Completed { get; protected set; }
     public bool Disposed { get; protected set; }
 
     protected SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(1, 1);
+    protected ILoggerFactory LoggerFactory { get; }
 
     public string Id { get; set; } = Guid.NewGuid().ToString();
 
@@ -149,7 +159,7 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
         }
         catch (PlatformDomainRowVersionConflictException ex)
         {
-            PlatformGlobal.LoggerFactory.CreateLogger(GetType())
+            LoggerFactory.CreateLogger(GetType())
                 .LogWarning(
                     ex,
                     "{TargetName} complete failed because of version conflict. [[Exception:{Exception}]]. FullStackTrace:{FullStackTrace}]]",
@@ -231,7 +241,7 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
 
                 OnCompletedActions.Clear();
             },
-            () => PlatformGlobal.LoggerFactory.CreateLogger(GetType()));
+            () => LoggerFactory.CreateLogger(GetType()));
     }
 
     protected async Task InvokeOnFailedActions(UnitOfWorkFailedArgs e)

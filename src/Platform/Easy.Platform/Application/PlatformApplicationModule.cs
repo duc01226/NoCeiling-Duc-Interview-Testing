@@ -16,6 +16,7 @@ using Easy.Platform.Application.MessageBus.Producers.CqrsEventProducers;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Application.Services;
 using Easy.Platform.Common;
+using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
@@ -62,6 +63,13 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
     /// </summary>
     protected virtual bool AutoSeedApplicationDataOnInit => true;
 
+    /// <summary>
+    /// Set min thread pool then default to increase and fix some performance issues. Article:
+    /// https://medium.com/@jaiadityarathore/dotnet-core-threadpool-bef2f5a37888
+    /// https://github.com/StackExchange/StackExchange.Redis/issues/2332
+    /// </summary>
+    protected virtual int MinThreadPool => 100;
+
     public async Task SeedData(IServiceScope serviceScope)
     {
         //if the db server is not initiated, SeedData could fail.
@@ -87,7 +95,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
 
                             Util.TaskRunner.QueueActionInBackground(
                                 async () => await ExecuteSeedingWithNewScopeInBackground(seeder.GetType(), Logger),
-                                () => CreateLogger(PlatformGlobal.LoggerFactory),
+                                () => CreateLogger(LoggerFactory),
                                 delayTimeSeconds: seeder.DelaySeedingInBackgroundBySeconds);
                         }
                         else
@@ -110,14 +118,14 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
 
         // Need to execute in background with service instance new scope
         // if not, the scope will be disposed, which lead to the seed data will be failed
-        static async Task ExecuteSeedingWithNewScopeInBackground(Type seederType, ILogger logger)
+        async Task ExecuteSeedingWithNewScopeInBackground(Type seederType, ILogger logger)
         {
             try
             {
                 await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                     async () =>
                     {
-                        using (var newScope = PlatformGlobal.ServiceProvider.CreateScope())
+                        using (var newScope = ServiceProvider.CreateScope())
                         {
                             var dataSeeder = newScope.ServiceProvider
                                 .GetServices<IPlatformApplicationDataSeeder>()
@@ -190,7 +198,8 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         return Util.ListBuilder.NewArray(
             IPlatformCqrsCommandApplicationHandler.ActivitySource.Name,
             IPlatformCqrsQueryApplicationHandler.ActivitySource.Name,
-            IPlatformApplicationBackgroundJobExecutor.ActivitySource.Name);
+            IPlatformApplicationBackgroundJobExecutor.ActivitySource.Name,
+            IPlatformCqrsEventHandler.ActivitySource.Name);
     }
 
     /// <summary>
@@ -275,6 +284,8 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
 
     protected override async Task InternalInit(IServiceScope serviceScope)
     {
+        ThreadPool.SetMinThreads(MinThreadPool, MinThreadPool);
+
         await IPlatformPersistenceModule.ExecuteDependencyPersistenceModuleMigrateApplicationData(
             moduleTypeDependencies: ModuleTypeDependencies().Select(moduleTypeProvider => moduleTypeProvider(Configuration)).ToList(),
             ServiceProvider);

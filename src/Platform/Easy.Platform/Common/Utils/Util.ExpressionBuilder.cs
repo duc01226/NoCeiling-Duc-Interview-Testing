@@ -8,7 +8,7 @@ public static partial class Util
     public static class ExpressionBuilder
     {
         /// <summary>
-        /// Return a contains <see cref="containStringValue"/> expression on string property by <see cref="propertyName"/> of instance type of <see cref="T"/>
+        /// Return a contains <see cref="containStringValue" /> expression on string property by <see cref="propertyName" /> of instance type of <see cref="T" />
         /// Example: BuildStringContainsExpression("Search", "abc") equal to p => p.Search.Contains("abc")
         /// </summary>
         public static Expression<Func<T, bool>> BuildStringContainsExpression<T>(
@@ -32,10 +32,10 @@ public static partial class Util
         }
 
         /// <summary>
-        /// Return a chain method called expression on a property by <see cref="propertyName"/> of instance type of <see cref="TChainTarget"/>
+        /// Return a chain method called expression on a property by <see cref="propertyName" /> of instance type of <see cref="TChainTarget" />
         /// Example: BuildChainExpression("Search", new (string, object[])[] { ("ToLower", null), ("Contains", new[] { "abc" }) } ) equal to p => p.Search.ToLower().Contains("abc")
         /// </summary>
-        /// <param name="propertyName">Selected property name of type <see cref="TChainTarget"/></param>
+        /// <param name="propertyName">Selected property name of type <see cref="TChainTarget" /></param>
         /// <param name="chainMethods">List of (MethodName, MethodParams, MethodReturnType)</param>
         public static Expression<Func<TChainTarget, bool>> BuildChainExpression<TChainTarget>(
             string propertyName,
@@ -49,7 +49,7 @@ public static partial class Util
             var chainTargetPropertyExpr = Expression.Property(chainTargetParameterExpr, propertyName);
 
             // Chain from [(A0),(A1, ["a1Param01", "a1Param02"])] equals to x.A0().A1("a1Param01", "a1Param02") equal to A1(A0(x), "a1Param01", "a1Param02").
-            var (firstChainMethodName, firstChainMethodParams) = chainMethods.First();
+            var (firstChainMethodName, firstChainMethodParams) = chainMethods[0];
             var firstChainMethodCallExpr = BuildMethodCallExpr(
                 chainTargetPropertyExpr,
                 ((PropertyInfo)chainTargetPropertyExpr.Member).PropertyType,

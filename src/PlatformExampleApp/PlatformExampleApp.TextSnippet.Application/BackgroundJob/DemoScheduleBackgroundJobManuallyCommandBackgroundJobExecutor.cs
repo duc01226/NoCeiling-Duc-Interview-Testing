@@ -14,9 +14,11 @@ public sealed class DemoScheduleBackgroundJobManuallyCommandBackgroundJobExecuto
     public DemoScheduleBackgroundJobManuallyCommandBackgroundJobExecutor(
         IUnitOfWorkManager unitOfWorkManager,
         ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider,
         ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository) : base(
         unitOfWorkManager,
-        loggerFactory)
+        loggerFactory,
+        rootServiceProvider)
     {
         this.textSnippetEntityRepository = textSnippetEntityRepository;
     }

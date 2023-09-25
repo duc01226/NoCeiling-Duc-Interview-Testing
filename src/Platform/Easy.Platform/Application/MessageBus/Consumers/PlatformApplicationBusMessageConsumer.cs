@@ -31,18 +31,21 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
 {
     protected readonly IPlatformInboxBusMessageRepository InboxBusMessageRepo;
     protected readonly PlatformInboxConfig InboxConfig;
+    protected readonly IPlatformRootServiceProvider RootServiceProvider;
     protected readonly IServiceProvider ServiceProvider;
     protected readonly IUnitOfWorkManager UowManager;
 
     protected PlatformApplicationMessageBusConsumer(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager uowManager,
-        IServiceProvider serviceProvider) : base(loggerFactory)
+        IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory)
     {
         UowManager = uowManager;
         InboxBusMessageRepo = serviceProvider.GetService<IPlatformInboxBusMessageRepository>();
         InboxConfig = serviceProvider.GetRequiredService<PlatformInboxConfig>();
         ServiceProvider = serviceProvider;
+        RootServiceProvider = rootServiceProvider;
 
         IsInjectingUserContextAccessor = GetType().IsUsingGivenTypeViaConstructor<IPlatformApplicationUserContextAccessor>();
         if (IsInjectingUserContextAccessor)
@@ -58,6 +61,9 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
     public virtual bool AutoBeginUow => true;
     public bool IsInjectingUserContextAccessor { get; set; }
 
+    protected IPlatformApplicationUserContextAccessor UserContextAccessor =>
+        ServiceProvider.GetRequiredService<IPlatformApplicationUserContextAccessor>();
+
     public PlatformInboxBusMessage HandleDirectlyExistingInboxMessage { get; set; }
     public bool AutoDeleteProcessedInboxEventMessage { get; set; }
     public bool IsInstanceExecutingFromInboxHelper { get; set; }
@@ -65,11 +71,12 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
 
     protected override async Task ExecuteHandleLogicAsync(TMessage message, string routingKey)
     {
-        if (message is IPlatformTrackableBusMessage trackableBusMessage) PlatformApplicationGlobal.UserContext.Current.UpsertMany(trackableBusMessage.RequestContext);
+        if (message is IPlatformTrackableBusMessage trackableBusMessage) UserContextAccessor.Current.UpsertMany(trackableBusMessage.RequestContext);
 
         if (InboxBusMessageRepo != null && !IsInstanceExecutingFromInboxHelper)
         {
             await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
+                RootServiceProvider,
                 ServiceProvider,
                 consumer: this,
                 inboxBusMessageRepository: InboxBusMessageRepo,
@@ -98,6 +105,6 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
 
     public ILogger CreateGlobalLogger()
     {
-        return CreateLogger(PlatformGlobal.LoggerFactory);
+        return CreateLogger(RootServiceProvider.GetRequiredService<ILoggerFactory>());
     }
 }

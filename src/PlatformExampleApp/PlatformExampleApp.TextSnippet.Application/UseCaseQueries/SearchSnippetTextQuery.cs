@@ -6,6 +6,7 @@ using Easy.Platform.Common.Cqrs.Queries;
 using Easy.Platform.Common.Dtos;
 using Easy.Platform.Infrastructures.Caching;
 using Easy.Platform.Persistence.Services;
+using Microsoft.Extensions.Logging;
 using PlatformExampleApp.TextSnippet.Application.EntityDtos;
 using PlatformExampleApp.TextSnippet.Application.Helpers;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
@@ -57,10 +58,12 @@ internal sealed class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicati
 
     public SearchSnippetTextQueryHandler(
         IPlatformApplicationUserContextAccessor userContext,
+        ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider,
         IPlatformCacheRepositoryProvider cacheRepositoryProvider,
         ITextSnippetRepository<TextSnippetEntity> repository,
         IPlatformFullTextSearchPersistenceService fullTextSearchPersistenceService,
-        ExampleHelper exampleHelper) : base(userContext, cacheRepositoryProvider)
+        ExampleHelper exampleHelper) : base(userContext, loggerFactory, rootServiceProvider, cacheRepositoryProvider)
     {
         this.repository = repository;
         this.fullTextSearchPersistenceService = fullTextSearchPersistenceService;

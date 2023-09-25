@@ -7,7 +7,47 @@ using MediatR;
 
 namespace Easy.Platform.Common.Cqrs.Events;
 
-public abstract class PlatformCqrsEvent : INotification
+public interface IPlatformCqrsEvent : INotification
+{
+    string AuditTrackId { get; set; }
+    DateTime CreatedDate { get; }
+    string CreatedBy { get; set; }
+    string EventType { get; }
+    string EventName { get; }
+    string EventAction { get; }
+    string Id { get; }
+
+    /// <summary>
+    /// This is used to store the context of the request which generate the event, for example the CurrentUserContext
+    /// </summary>
+    ConcurrentDictionary<string, object> RequestContext { get; set; }
+
+    /// <summary>
+    /// Add handler type fullname If you want to force wait handler execution immediately successfully to continue. By default, handlers for entity event executing
+    /// in background thread and you dont need to wait for it. The command will return immediately. <br />
+    /// Sometime you could want to wait for handler done
+    /// </summary>
+    HashSet<string> WaitHandlerExecutionFinishedImmediatelyFullNames { get; set; }
+
+    /// <summary>
+    /// Set handler type fullname If you want to force wait handler to be handling successfully to continue. By default, handlers for entity event executing
+    /// in background thread and you dont need to wait for it. The command will return immediately. <br />
+    /// Sometime you could want to wait for handler done
+    /// </summary>
+    PlatformCqrsEvent SetWaitHandlerExecutionFinishedImmediately(params Type[] eventHandlerTypes);
+
+    /// <inheritdoc cref="PlatformCqrsEvent.SetWaitHandlerExecutionFinishedImmediately" />
+    PlatformCqrsEvent SetWaitHandlerExecutionFinishedImmediately<THandler, TEvent>()
+        where THandler : IPlatformCqrsEventHandler<TEvent>
+        where TEvent : PlatformCqrsEvent, new();
+
+    bool MustWaitHandlerExecutionFinishedImmediately(Type eventHandlerType);
+    T GetRequestContextValue<T>(string contextKey);
+    PlatformCqrsEvent SetRequestContextValues(IDictionary<string, object> values);
+    PlatformCqrsEvent SetRequestContextValue<TValue>(string key, TValue value);
+}
+
+public abstract class PlatformCqrsEvent : INotification, IPlatformCqrsEvent
 {
     private readonly object initRequestContext = new();
 

@@ -3,6 +3,7 @@ using Easy.Platform.Application.Cqrs.Commands;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Commands;
 using Easy.Platform.Domain.UnitOfWork;
+using Microsoft.Extensions.Logging;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
@@ -25,7 +26,9 @@ internal sealed class DemoUseCreateOrUpdateManyCommandHandler
         IPlatformApplicationUserContextAccessor userContext,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
-        ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository) : base(userContext, unitOfWorkManager, cqrs)
+        ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider,
+        ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository) : base(userContext, unitOfWorkManager, cqrs, loggerFactory, rootServiceProvider)
     {
         this.textSnippetEntityRepository = textSnippetEntityRepository;
     }

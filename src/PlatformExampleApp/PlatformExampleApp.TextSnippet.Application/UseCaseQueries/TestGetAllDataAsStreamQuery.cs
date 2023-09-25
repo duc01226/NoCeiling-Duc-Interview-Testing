@@ -3,6 +3,7 @@ using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Cqrs.Queries;
 using Easy.Platform.Common.Cqrs.Queries;
 using Easy.Platform.Infrastructures.Caching;
+using Microsoft.Extensions.Logging;
 using PlatformExampleApp.TextSnippet.Application.EntityDtos;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
@@ -29,8 +30,10 @@ internal sealed class TestGetAllDataAsStreamQueryHandler : PlatformCqrsQueryAppl
 
     public TestGetAllDataAsStreamQueryHandler(
         IPlatformApplicationUserContextAccessor userContext,
+        ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider,
         IPlatformCacheRepositoryProvider cacheRepositoryProvider,
-        ITextSnippetRepository<TextSnippetEntity> textSnippetRepository) : base(userContext, cacheRepositoryProvider)
+        ITextSnippetRepository<TextSnippetEntity> textSnippetRepository) : base(userContext, loggerFactory, rootServiceProvider, cacheRepositoryProvider)
     {
         this.textSnippetRepository = textSnippetRepository;
     }

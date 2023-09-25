@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using MediatR;
@@ -8,23 +9,30 @@ namespace Easy.Platform.Common.Cqrs.Events;
 
 public interface IPlatformCqrsEventHandler
 {
+    public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformCqrsEventHandler)}");
+
     public bool ForceCurrentInstanceHandleInCurrentThread { get; set; }
 }
 
 public interface IPlatformCqrsEventHandler<in TEvent> : INotificationHandler<TEvent>, IPlatformCqrsEventHandler
-    where TEvent : PlatformCqrsEvent, new()
+    where TEvent : IPlatformCqrsEvent, new()
 {
 }
 
 public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandler<TEvent>
-    where TEvent : PlatformCqrsEvent, new()
+    where TEvent : IPlatformCqrsEvent, new()
 {
     protected readonly ILoggerFactory LoggerFactory;
+    protected readonly IPlatformRootServiceProvider RootServiceProvider;
 
-    protected PlatformCqrsEventHandler(ILoggerFactory loggerFactory)
+    protected PlatformCqrsEventHandler(ILoggerFactory loggerFactory, IPlatformRootServiceProvider rootServiceProvider)
     {
         LoggerFactory = loggerFactory;
+        RootServiceProvider = rootServiceProvider;
+        IsDistributedTracingEnabled = rootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled == true;
     }
+
+    protected bool IsDistributedTracingEnabled { get; }
 
     public virtual int RetryOnFailedTimes => 5;
 
@@ -49,7 +57,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
             couldRunInBackgroundThread)
             Util.TaskRunner.QueueActionInBackground(
                 async () => await DoExecuteInstanceInNewScope(@event),
-                () => PlatformGlobal.LoggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>)),
+                () => LoggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>)),
                 cancellationToken: default);
         else
             await ExecuteRetryHandleAsync(this, @event);
@@ -67,7 +75,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
     protected async Task DoExecuteInstanceInNewScope(
         TEvent notification)
     {
-        await PlatformGlobal.ServiceProvider.ExecuteInjectScopedAsync(
+        await RootServiceProvider.ExecuteInjectScopedAsync(
             async (IServiceProvider sp) =>
             {
                 var thisHandlerNewInstance = sp.GetRequiredService(GetType())
@@ -95,7 +103,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         }
         catch (Exception e)
         {
-            handlerNewInstance.LogError(notification, e, PlatformGlobal.LoggerFactory);
+            handlerNewInstance.LogError(notification, e, LoggerFactory);
         }
     }
 
@@ -106,9 +114,23 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         newInstance.ForceCurrentInstanceHandleInCurrentThread = previousInstance.ForceCurrentInstanceHandleInCurrentThread;
     }
 
-    public virtual Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
+    public virtual async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
     {
-        return HandleAsync(@event, cancellationToken);
+        await ExecuteHandleWithTracingAsync(@event, () => HandleAsync(@event, cancellationToken));
+    }
+
+    protected async Task ExecuteHandleWithTracingAsync(TEvent @event, Func<Task> handleAsync)
+    {
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformCqrsEventHandler.ActivitySource.StartActivity($"EventHandler.{nameof(ExecuteHandleAsync)}"))
+            {
+                activity?.AddTag("Type", GetType().FullName);
+                activity?.AddTag("EventType", typeof(TEvent).FullName);
+                activity?.AddTag("Event", @event.ToJson());
+
+                await handleAsync();
+            }
+        else await handleAsync();
     }
 
     public virtual void LogError(TEvent notification, Exception exception, ILoggerFactory loggerFactory)

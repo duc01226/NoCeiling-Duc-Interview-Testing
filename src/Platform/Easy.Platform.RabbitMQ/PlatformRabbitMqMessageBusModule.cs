@@ -18,7 +18,7 @@ public abstract class PlatformRabbitMqMessageBusModule : PlatformMessageBusModul
     public override string[] TracingSources()
     {
         return Util.ListBuilder.NewArray(
-            PlatformRabbitMqMessageBusProducer.ActivitySource.Name,
+            IPlatformMessageBusProducer.ActivitySource.Name,
             PlatformRabbitMqProcessInitializerService.ActivitySource.Name);
     }
 

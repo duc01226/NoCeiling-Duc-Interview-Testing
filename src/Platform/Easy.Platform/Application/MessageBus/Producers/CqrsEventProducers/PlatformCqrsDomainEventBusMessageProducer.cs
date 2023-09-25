@@ -1,5 +1,6 @@
 using Easy.Platform.Application.Context;
 using Easy.Platform.Application.Context.UserContext;
+using Easy.Platform.Common;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
@@ -15,12 +16,14 @@ public abstract class PlatformCqrsDomainEventBusMessageProducer<TDomainEvent>
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
         IPlatformApplicationUserContextAccessor userContextAccessor,
         IPlatformApplicationSettingContext applicationSettingContext) : base(
         loggerFactory,
         unitOfWorkManager,
         serviceProvider,
+        rootServiceProvider,
         applicationBusMessageProducer,
         userContextAccessor,
         applicationSettingContext)
@@ -36,7 +39,7 @@ public abstract class PlatformCqrsDomainEventBusMessageProducer<TDomainEvent>
             producerContext: ApplicationSettingContext.ApplicationName,
             messageGroup: PlatformCqrsDomainEvent.EventTypeValue,
             messageAction: @event.EventAction,
-            requestContext: PlatformApplicationGlobal.UserContext.Current.GetAllKeyValues());
+            requestContext: UserContextAccessor.Current.GetAllKeyValues());
     }
 }
 

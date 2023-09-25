@@ -64,7 +64,7 @@ public static partial class Util
         /// </summary>
         public static Task ExecuteScrollingPagingAsync<TItem>(
             Func<Task<IEnumerable<TItem>>> executeFn,
-            int maxExecutionCount = int.MaxValue)
+            int maxExecutionCount)
         {
             return ExecuteScrollingPagingAsync(executeFn: () => executeFn().Then(_ => _.ToList()), maxExecutionCount);
         }
@@ -74,12 +74,12 @@ public static partial class Util
         /// </summary>
         public static async Task ExecuteScrollingPagingAsync<TItem>(
             Func<Task<List<TItem>>> executeFn,
-            int maxExecutionCount = int.MaxValue)
+            int maxExecutionCount)
         {
-            var totalExecutionCount = 0;
             var executionItemsResult = await executeFn();
+            var totalExecutionCount = 1;
 
-            while (totalExecutionCount < maxExecutionCount && executionItemsResult.Any())
+            while (totalExecutionCount <= maxExecutionCount && executionItemsResult.Any())
             {
                 executionItemsResult = await executeFn();
                 totalExecutionCount += 1;

@@ -1,3 +1,4 @@
+using Easy.Platform.Common;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.UnitOfWork;
@@ -11,10 +12,12 @@ public abstract class PlatformCqrsEntityEventApplicationHandler<TEntity> : Platf
     protected PlatformCqrsEntityEventApplicationHandler(
         ILoggerFactory loggerFactory,
         IUnitOfWorkManager unitOfWorkManager,
-        IServiceProvider serviceProvider) : base(
+        IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider) : base(
         loggerFactory,
         unitOfWorkManager,
-        serviceProvider)
+        serviceProvider,
+        rootServiceProvider)
     {
     }
 }

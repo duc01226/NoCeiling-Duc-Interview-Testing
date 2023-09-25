@@ -2,106 +2,106 @@
 @import 'mixins';
 
 platform-example-web-root {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    padding: calculateRem(40px);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: calculateRem(40px);
 }
 
 %app_container {
-    padding: calculateRem(20px);
+  padding: calculateRem(20px);
 
-    @include flex-layout-media(lt-md) {
-        padding: calculateRem(10px);
-    }
+  @include flex-layout-media(lt-md) {
+    padding: calculateRem(10px);
+  }
 }
 
 .app {
-    &__errors {
-        display: flex;
-        align-items: center;
+  &__errors {
+    display: flex;
+    align-items: center;
+  }
+  &__errors-content {
+    flex-grow: 1;
+    vertical-align: middle;
+  }
+  &__header {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  &__main {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: row;
+  }
+  &__side-bar {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    max-width: calculateRem(500px);
+    @extend %app_container;
+  }
+  &__search-input {
+    width: calculateRem(300px);
+    min-width: calculateRem(100px);
+    max-width: 100%;
+  }
+  &__text-snippet-items-grid {
+    min-width: calculateRem(300px);
+    max-width: 100%;
+    > table {
+      width: 100%;
+      max-width: 100%;
+      border: calculateRem(1px) solid gray;
+      .mat-cell {
+        padding: 0 calculateRem(10px);
+      }
     }
-    &__errors-content {
-        flex-grow: 1;
-        vertical-align: middle;
+  }
+  &__text-snippet-items-grid-row {
+    cursor: pointer;
+    &:hover {
+      background-color: #f5f5f5;
     }
-    &__header {
-        flex-shrink: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+    &.-selected {
+      font-weight: bold;
     }
-    &__main {
-        flex-grow: 1;
-        display: flex;
-        flex-direction: row;
-    }
-    &__side-bar {
-        flex-shrink: 0;
-        display: flex;
-        flex-direction: column;
-        max-width: calculateRem(500px);
-        @extend %app_container;
-    }
-    &__search-input {
-        width: calculateRem(300px);
-        min-width: calculateRem(100px);
-        max-width: 100%;
-    }
-    &__text-snippet-items-grid {
-        min-width: calculateRem(300px);
-        max-width: 100%;
-        > table {
-            width: 100%;
-            max-width: 100%;
-            border: calculateRem(1px) solid gray;
-            .mat-cell {
-                padding: 0 calculateRem(10px);
-            }
-        }
-    }
-    &__text-snippet-items-grid-row {
-        cursor: pointer;
-        &:hover {
-            background-color: #f5f5f5;
-        }
-        &.-selected {
-            font-weight: bold;
-        }
-    }
-    &__text-snippet-items-grid-cell {
-        text-overflow: ellipsis;
-        white-space: normal;
-        overflow: hidden;
-        word-break: break-word;
-        min-width: calculateRem(100px);
-    }
-    &__detail {
-        flex-grow: 1;
-        display: flex;
-        flex-direction: column;
-        @extend %app_container;
-    }
+  }
+  &__text-snippet-items-grid-cell {
+    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: hidden;
+    word-break: break-word;
+    min-width: calculateRem(100px);
+  }
+  &__detail {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    @extend %app_container;
+  }
 
-    &__loading-text-snippet-items-error + * {
-        margin-top: calculateRem(10px);
-    }
+  &__loading-text-snippet-items-error + * {
+    margin-top: calculateRem(10px);
+  }
 }
 
 @include flex-layout-media('lt-md') {
-    .app {
-        &__main {
-            flex-direction: column;
-        }
-        &__text-snippet-items-grid {
-            max-height: calculateRem(300px);
-            overflow: auto;
-        }
-        &__header {
-            align-items: flex-start;
-        }
-        &__side-bar {
-            max-width: 100%;
-        }
+  .app {
+    &__main {
+      flex-direction: column;
     }
+    &__text-snippet-items-grid {
+      max-height: calculateRem(300px);
+      overflow: auto;
+    }
+    &__header {
+      align-items: flex-start;
+    }
+    &__side-bar {
+      max-width: 100%;
+    }
+  }
 }

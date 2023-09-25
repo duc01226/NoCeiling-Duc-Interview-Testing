@@ -1,6 +1,7 @@
 using Easy.Platform.Common;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application;
 
@@ -31,14 +32,23 @@ public interface IPlatformApplicationDataSeeder
 public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSeeder
 {
     protected readonly IConfiguration Configuration;
+    protected readonly ILoggerFactory LoggerFactory;
+    protected readonly IPlatformRootServiceProvider RootServiceProvider;
     protected readonly IServiceProvider ServiceProvider;
     protected readonly IUnitOfWorkManager UnitOfWorkManager;
 
-    public PlatformApplicationDataSeeder(IUnitOfWorkManager unitOfWorkManager, IServiceProvider serviceProvider, IConfiguration configuration)
+    public PlatformApplicationDataSeeder(
+        IUnitOfWorkManager unitOfWorkManager,
+        IServiceProvider serviceProvider,
+        IConfiguration configuration,
+        ILoggerFactory loggerFactory,
+        IPlatformRootServiceProvider rootServiceProvider)
     {
         UnitOfWorkManager = unitOfWorkManager;
         ServiceProvider = serviceProvider;
         Configuration = configuration;
+        LoggerFactory = loggerFactory;
+        RootServiceProvider = rootServiceProvider;
     }
 
     public static int DefaultSeedingMinimumDummyItemsCount => PlatformEnvironment.IsDevelopment ? 100 : 10000;
@@ -49,10 +59,6 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
     /// Could update it to change the configuration key.
     /// </summary>
     public static string SeedingMinimumDummyItemsCountConfigurationKey { get; set; } = "SeedingMinimumDummyItemsCount";
-
-    public static int SeedingMinimumDummyItemsCount =>
-        PlatformGlobal.Configuration.GetValue<int?>(SeedingMinimumDummyItemsCountConfigurationKey) ??
-        DefaultSeedingMinimumDummyItemsCount;
 
     public static int DefaultActiveDelaySeedingInBackgroundBySeconds => 5;
     public static int DefaultDelayRetryCheckSeedDataBySeconds => 5;
@@ -79,6 +85,12 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
     public virtual int SeedOrder => 0;
 
     public virtual int DelaySeedingInBackgroundBySeconds => 0;
+
+    public static int SeedingMinimumDummyItemsCount(IConfiguration configuration)
+    {
+        return configuration.GetValue<int?>(SeedingMinimumDummyItemsCountConfigurationKey) ??
+               DefaultSeedingMinimumDummyItemsCount;
+    }
 
     protected abstract Task InternalSeedData(bool isReplaceNewSeed = false);
 }

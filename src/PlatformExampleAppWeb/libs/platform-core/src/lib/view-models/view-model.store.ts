@@ -54,7 +54,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         if (this._innerStore == undefined) {
             const cachedData = this.getCachedState();
 
-            if (cachedData?.isStateSuccess) {
+            if (cachedData?.isStateSuccess || cachedData?.isStatePending) {
                 this._innerStore = new ComponentStore(cachedData);
 
                 // Clear defaultState to free memory

@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Easy.Platform.Application.Context;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Hosting;
@@ -113,11 +114,15 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
     private async Task ProcessCleanMessageByMaxStoreProcessedMessageCount(int totalProcessedMessages, CancellationToken cancellationToken)
     {
         await ServiceProvider.ExecuteInjectScopedScrollingPagingAsync<PlatformOutboxBusMessage>(
+            maxExecutionCount: await ServiceProvider.ExecuteScopedAsync(
+                p => p.ServiceProvider.GetRequiredService<IPlatformOutboxBusMessageRepository>()
+                    .CountAsync(CleanMessagePredicate(), cancellationToken: cancellationToken)
+                    .Then(total => total / NumberOfDeleteMessagesBatch())),
             async (IPlatformOutboxBusMessageRepository outboxEventBusMessageRepo) =>
             {
                 var toDeleteMessages = await outboxEventBusMessageRepo.GetAllAsync(
                     queryBuilder: query => query
-                        .Where(p => p.SendStatus == PlatformOutboxBusMessage.SendStatuses.Processed)
+                        .Where(CleanMessagePredicate())
                         .OrderByDescending(p => p.LastSendDate)
                         .Skip(OutboxConfig.MaxStoreProcessedMessageCount)
                         .Take(NumberOfDeleteMessagesBatch()),
@@ -127,7 +132,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
                     await outboxEventBusMessageRepo.DeleteManyAsync(
                         toDeleteMessages,
                         dismissSendEvent: true,
-                        sendEntityEventConfigure: null,
+                        eventCustomConfig: null,
                         cancellationToken);
 
                 return toDeleteMessages;
@@ -136,6 +141,11 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
         Logger.LogInformation(
             "CleanOutboxEventBusMessage success. Number of deleted messages: {DeletedMessageCount}",
             totalProcessedMessages - OutboxConfig.MaxStoreProcessedMessageCount);
+
+        static Expression<Func<PlatformOutboxBusMessage, bool>> CleanMessagePredicate()
+        {
+            return p => p.SendStatus == PlatformOutboxBusMessage.SendStatuses.Processed;
+        }
     }
 
     private async Task ProcessCleanMessageByExpiredTime(CancellationToken cancellationToken)
@@ -149,6 +159,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
         if (toCleanMessageCount > 0)
         {
             await ServiceProvider.ExecuteInjectScopedScrollingPagingAsync<PlatformOutboxBusMessage>(
+                maxExecutionCount: toCleanMessageCount / NumberOfDeleteMessagesBatch(),
                 async (IUnitOfWorkManager uowManager, IPlatformOutboxBusMessageRepository outboxEventBusMessageRepo) =>
                 {
                     using (var uow = uowManager!.Begin())
@@ -168,7 +179,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
                             await outboxEventBusMessageRepo.DeleteManyAsync(
                                 expiredMessages,
                                 dismissSendEvent: true,
-                                sendEntityEventConfigure: null,
+                                eventCustomConfig: null,
                                 cancellationToken);
 
                             await uow.CompleteAsync(cancellationToken);

@@ -286,7 +286,7 @@ public interface IPage : IUiComponent
 
     public static Uri BuildFullUrl(string baseUrl, string? queryParams = null)
     {
-        var queryParamsPart = queryParams?.StartsWith(value: "?") == true
+        var queryParamsPart = queryParams?.StartsWith('?') == true
             ? queryParams.Substring(startIndex: 1)
             : queryParams;
         return new Uri(uriString: $"{baseUrl}{(!queryParamsPart.IsNullOrEmpty() ? "?" + queryParamsPart : "")}");

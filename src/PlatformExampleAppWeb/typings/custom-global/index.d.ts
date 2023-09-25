@@ -2,9 +2,9 @@
 declare let module: NodeModule;
 
 interface NodeModule {
-    id: string;
+  id: string;
 }
 
 declare interface Dictionary<T> {
-    [index: string | number | symbol]: T;
+  [index: string | number | symbol]: T;
 }

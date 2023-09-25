@@ -9,10 +9,12 @@ public abstract class PlatformCqrsCommandHandler<TCommand, TResult>
     where TResult : PlatformCqrsCommandResult, new()
 {
     protected readonly IPlatformCqrs Cqrs;
+    protected readonly IPlatformRootServiceProvider RootServiceProvider;
 
-    public PlatformCqrsCommandHandler(IPlatformCqrs cqrs)
+    public PlatformCqrsCommandHandler(IPlatformCqrs cqrs, IPlatformRootServiceProvider rootServiceProvider)
     {
         Cqrs = cqrs;
+        RootServiceProvider = rootServiceProvider;
     }
 
     public virtual async Task<TResult> Handle(TCommand request, CancellationToken cancellationToken)
@@ -42,7 +44,8 @@ public abstract class PlatformCqrsCommandHandler<TCommand> : PlatformCqrsCommand
     where TCommand : PlatformCqrsCommand<PlatformCqrsCommandResult>, IPlatformCqrsRequest, new()
 {
     public PlatformCqrsCommandHandler(
-        IPlatformCqrs cqrs) : base(cqrs)
+        IPlatformCqrs cqrs,
+        IPlatformRootServiceProvider rootServiceProvider) : base(cqrs, rootServiceProvider)
     {
     }
 

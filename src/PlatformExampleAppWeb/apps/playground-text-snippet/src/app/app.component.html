@@ -1,70 +1,70 @@
 <header class="app__header">
-    <h1>Welcome to {{ title }}!</h1>
+  <h1>Welcome to {{ title }}!</h1>
 </header>
 <div *ngIf="vm.appErrorMsg" class="app__errors">
-    <mat-error class="app__errors-content">{{ vm.appErrorMsg }}</mat-error>
+  <mat-error class="app__errors-content">{{ vm.appErrorMsg }}</mat-error>
 
-    <button (click)="appUiStateStore.clearAppGlobalError()" mat-icon-button>
-        <mat-icon>close</mat-icon>
-    </button>
+  <button (click)="appUiStateStore.clearAppGlobalError()" mat-icon-button>
+    <mat-icon>close</mat-icon>
+  </button>
 </div>
 <main class="app__main">
-    <div class="app__side-bar">
-        <mat-form-field class="app__search-input" appearance="fill">
-            <mat-label>{{ 'Search text snippet' | translate }}</mat-label>
-            <input
-                [ngModel]="vm.searchText"
-                (ngModelChange)="onSearchTextChange($event)"
-                matInput
-                (keyup.enter)="loadSnippetTextItems()"
-            />
-        </mat-form-field>
+  <div class="app__side-bar">
+    <mat-form-field class="app__search-input" appearance="fill">
+      <mat-label>{{ 'Search text snippet' | translate }}</mat-label>
+      <input
+        [ngModel]="vm.searchText"
+        (ngModelChange)="onSearchTextChange($event)"
+        matInput
+        (keyup.enter)="loadSnippetTextItems()"
+      />
+    </mat-form-field>
 
-        <mat-error *ngIf="vm.loadTextSnippetItemsErrorMsg" class="app__loading-text-snippet-items-error">{{
-            vm.loadTextSnippetItemsErrorMsg
-        }}</mat-error>
+    <mat-error *ngIf="vm.loadTextSnippetItemsErrorMsg" class="app__loading-text-snippet-items-error">{{
+      vm.loadTextSnippetItemsErrorMsg
+    }}</mat-error>
 
-        <div *ngIf="vm.textSnippetItems" class="app__text-snippet-items-grid">
-            <table [dataSource]="vm.textSnippetItems" mat-table>
-                <ng-container matColumnDef="SnippetText">
-                    <th *matHeaderCellDef mat-header-cell>SnippetText</th>
-                    <td
-                        *matCellDef="let element"
-                        [ngClass]="'app__text-snippet-items-grid-cell'"
-                        [innerHtml]="element.data.snippetText | platformHighlight: vm.searchText"
-                        [noWrap]="true"
-                        mat-cell
-                    ></td>
-                </ng-container>
+    <div *ngIf="vm.textSnippetItems" class="app__text-snippet-items-grid">
+      <table [dataSource]="vm.textSnippetItems" mat-table>
+        <ng-container matColumnDef="SnippetText">
+          <th *matHeaderCellDef mat-header-cell>SnippetText</th>
+          <td
+            *matCellDef="let element"
+            [ngClass]="'app__text-snippet-items-grid-cell'"
+            [innerHtml]="element.data.snippetText | platformHighlight: vm.searchText"
+            [noWrap]="true"
+            mat-cell
+          ></td>
+        </ng-container>
 
-                <ng-container matColumnDef="FullText">
-                    <th *matHeaderCellDef mat-header-cell>FullText (Click on row to see detail)</th>
-                    <td *matCellDef="let element" [ngClass]="'app__text-snippet-items-grid-cell'" mat-cell>
-                        {{ element.data.fullText }}
-                    </td>
-                </ng-container>
+        <ng-container matColumnDef="FullText">
+          <th *matHeaderCellDef mat-header-cell>FullText (Click on row to see detail)</th>
+          <td *matCellDef="let element" [ngClass]="'app__text-snippet-items-grid-cell'" mat-cell>
+            {{ element.data.fullText }}
+          </td>
+        </ng-container>
 
-                <tr *matHeaderRowDef="textSnippetsItemGridDisplayedColumns" mat-header-row></tr>
-                <tr
-                    *matRowDef="let row; columns: textSnippetsItemGridDisplayedColumns"
-                    class="app__text-snippet-items-grid-row"
-                    [ngClass]="{ '-selected': row.data.id == vm.selectedSnippetTextId }"
-                    (click)="toggleSelectTextSnippedGridRow(row)"
-                    mat-row
-                ></tr>
-            </table>
-            <mat-paginator
-                [length]="vm.totalTextSnippetItems"
-                [pageIndex]="vm.currentTextSnippetItemsPageNumber"
-                [pageSize]="vm.textSnippetItemsPageSize()"
-                (page)="onTextSnippetGridChangePage($event)"
-            ></mat-paginator>
-        </div>
+        <tr *matHeaderRowDef="textSnippetsItemGridDisplayedColumns" mat-header-row></tr>
+        <tr
+          *matRowDef="let row; columns: textSnippetsItemGridDisplayedColumns"
+          class="app__text-snippet-items-grid-row"
+          [ngClass]="{ '-selected': row.data.id == vm.selectedSnippetTextId }"
+          (click)="toggleSelectTextSnippedGridRow(row)"
+          mat-row
+        ></tr>
+      </table>
+      <mat-paginator
+        [length]="vm.totalTextSnippetItems"
+        [pageIndex]="vm.currentTextSnippetItemsPageNumber"
+        [pageSize]="vm.textSnippetItemsPageSize()"
+        (page)="onTextSnippetGridChangePage($event)"
+      ></mat-paginator>
     </div>
-    <div class="app__detail">
-        <platform-example-web-text-snippet-detail></platform-example-web-text-snippet-detail>
-    </div>
+  </div>
+  <div class="app__detail">
+    <platform-example-web-text-snippet-detail></platform-example-web-text-snippet-detail>
+  </div>
 </main>
 <div *ngIf="getLoading('loadSnippetTextItems')" class="platform-mat-mdc-spinner -with-backdrop">
-    <mat-spinner></mat-spinner>
+  <mat-spinner></mat-spinner>
 </div>

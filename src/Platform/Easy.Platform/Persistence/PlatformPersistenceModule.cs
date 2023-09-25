@@ -64,6 +64,14 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
 
     public static int DefaultDbInitAndMigrationRetryCount => PlatformEnvironment.IsDevelopment ? 5 : 10;
 
+    public override string[] TracingSources()
+    {
+        return Util.ListBuilder.NewArray(
+            IPlatformRepository.ActivitySource.Name,
+            IUnitOfWork.ActivitySource.Name,
+            IUnitOfWorkManager.ActivitySource.Name);
+    }
+
     public virtual bool ForCrossDbMigrationOnly => false;
 
     public virtual bool DisableDbInitializingAndMigration => false;
