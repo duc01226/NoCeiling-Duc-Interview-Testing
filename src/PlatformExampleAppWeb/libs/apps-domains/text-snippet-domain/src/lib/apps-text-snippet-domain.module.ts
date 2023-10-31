@@ -7,26 +7,26 @@ import { AppsTextSnippetDomainModuleConfig } from './apps-text-snippet-domain.co
 import { TextSnippetRepository } from './repositories';
 
 @NgModule({
-  imports: []
+    imports: []
 })
 export class AppsTextSnippetDomainModule {
-  public static forRoot(config: {
-    moduleConfigFactory: () => AppsTextSnippetDomainModuleConfig;
-    appRepositoryErrorEventHandlers?: Type<PlatformRepositoryErrorEventHandler>[];
-  }): ModuleWithProviders<PlatformDomainModule>[] {
-    return [
-      ...PlatformDomainModule.forRoot({
-        appRepositoryContext: TextSnippetRepositoryContext,
-        appRepositories: [TextSnippetRepository],
-        appApis: [TextSnippetApi],
-        appRepositoryErrorEventHandlers: config.appRepositoryErrorEventHandlers,
-        additionalProviders: [
-          {
-            provide: AppsTextSnippetDomainModuleConfig,
-            useFactory: () => config.moduleConfigFactory()
-          }
-        ]
-      })
-    ];
-  }
+    public static forRoot(config: {
+        moduleConfigFactory: () => AppsTextSnippetDomainModuleConfig;
+        appRepositoryErrorEventHandlers?: Type<PlatformRepositoryErrorEventHandler>[];
+    }): ModuleWithProviders<PlatformDomainModule>[] {
+        return [
+            ...PlatformDomainModule.forRoot({
+                appRepositoryContext: TextSnippetRepositoryContext,
+                appRepositories: [TextSnippetRepository],
+                appApis: [TextSnippetApi],
+                appRepositoryErrorEventHandlers: config.appRepositoryErrorEventHandlers,
+                additionalProviders: [
+                    {
+                        provide: AppsTextSnippetDomainModuleConfig,
+                        useFactory: () => config.moduleConfigFactory()
+                    }
+                ]
+            })
+        ];
+    }
 }
