@@ -76,34 +76,6 @@ public static partial class F
 
 public static class Validation
 {
-    public class ValidationException : Exception
-    {
-        public ValidationException()
-        {
-            Messages = new List<string>();
-        }
-
-        public ValidationException(string message) : base(message)
-        {
-            Messages = new List<string>
-            {
-                message
-            };
-        }
-
-        public ValidationException(IEnumerable<string> messages)
-        {
-            Messages = messages.ToList();
-        }
-
-        public ValidationException(IEnumerable<Error> messages)
-        {
-            Messages = messages.Select(p => p.Message).ToList();
-        }
-
-        public List<string> Messages { get; set; }
-    }
-
     public static List<Error> Errors<T>(this Validation<T> opt)
     {
         return opt.Match(errors => errors, _ => F.List<Error>());
@@ -178,7 +150,7 @@ public static class Validation
         Func<T, Task<Validation<TR>>> f)
     {
         return await val.Match(
-            reasons => F.Invalid<TR>(reasons).ToTask(),
+            reasons => F.Invalid<TR>(reasons).BoxedInTask(),
             f);
     }
 
@@ -187,7 +159,7 @@ public static class Validation
         Func<T, Task<TR>> func)
     {
         return await @this.Match(
-            reasons => F.Invalid<TR>(reasons).ToTask(),
+            reasons => F.Invalid<TR>(reasons).BoxedInTask(),
             t => func(t).Then(F.Valid));
     }
 
@@ -217,6 +189,34 @@ public static class Validation
         Func<T, Validation<TR>> f)
     {
         return await valTask.Then(valT => valT.And(f));
+    }
+
+    public class ValidationException : Exception
+    {
+        public ValidationException()
+        {
+            Messages = new List<string>();
+        }
+
+        public ValidationException(string message) : base(message)
+        {
+            Messages = new List<string>
+            {
+                message
+            };
+        }
+
+        public ValidationException(IEnumerable<string> messages)
+        {
+            Messages = messages.ToList();
+        }
+
+        public ValidationException(IEnumerable<Error> messages)
+        {
+            Messages = messages.Select(p => p.Message).ToList();
+        }
+
+        public List<string> Messages { get; set; }
     }
 
     public struct Invalid

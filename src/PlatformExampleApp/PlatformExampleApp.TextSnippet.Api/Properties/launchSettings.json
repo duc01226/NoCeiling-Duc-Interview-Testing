@@ -4,7 +4,7 @@
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iisExpress": {
-      "applicationUrl": "http://localhost:5001",
+      "applicationUrl": "https://localhost:5000",
       "sslPort": 0
     }
   },
@@ -17,7 +17,7 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "http://localhost:5001"
+      "applicationUrl": "https://localhost:5000"
     },
     "PlatformExampleApp.TextSnippet.Api.UsePostgres": {
       "commandName": "Project",
@@ -27,7 +27,7 @@
         "ASPNETCORE_ENVIRONMENT": "Development.UsePostgres"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "http://localhost:5001"
+      "applicationUrl": "https://localhost:5000"
     },
     "PlatformExampleApp.TextSnippet.Api.UseSql": {
       "commandName": "Project",
@@ -37,7 +37,7 @@
         "ASPNETCORE_ENVIRONMENT": "Development.UseSql"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "http://localhost:5001"
+      "applicationUrl": "https://localhost:5000"
     },
     "PlatformExampleApp.TextSnippet.Api.UseMongoDb": {
       "commandName": "Project",
@@ -47,15 +47,15 @@
         "ASPNETCORE_ENVIRONMENT": "Development.UseMongoDb"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "http://localhost:5001"
+      "applicationUrl": "https://localhost:5000"
     },
     "WSL": {
       "commandName": "WSL2",
       "launchBrowser": true,
-      "launchUrl": "http://localhost:5001/swagger",
+      "launchUrl": "https://localhost:5000/swagger",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": "http://localhost:5001"
+        "ASPNETCORE_URLS": "https://localhost:5000"
       },
       "distributionName": ""
     },

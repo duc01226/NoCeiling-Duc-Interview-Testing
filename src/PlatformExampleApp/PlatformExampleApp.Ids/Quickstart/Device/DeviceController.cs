@@ -16,8 +16,9 @@ using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using PlatformExampleApp.Ids.Quickstart.Consent;
 
-namespace IdentityServerHost.Quickstart.UI;
+namespace PlatformExampleApp.Ids.Quickstart.Device;
 
 [Authorize]
 [SecurityHeaders]

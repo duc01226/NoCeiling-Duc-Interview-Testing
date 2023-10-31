@@ -265,10 +265,13 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     public formControlsError(
         controlKey: keyof TViewModel,
         errorKey: string,
-        onlyWhenTouchedOrDirty: boolean = false
+        onlyWhenTouchedOrDirty: boolean = false,
+        formToFind?: FormGroup
     ): IPlatformFormValidationError | null {
         if (onlyWhenTouchedOrDirty && this.form.touched == false && this.form.dirty == false) return null;
-        return this.formControls(controlKey)?.errors?.[errorKey];
+        const form = formToFind ? formToFind.get(<string>controlKey) : this.formControls(controlKey);
+
+        return form?.errors?.[errorKey];
     }
 
     public processGroupValidation(formControlKey: keyof TViewModel) {

@@ -23,18 +23,10 @@ public class PlatformInboxEventBusMessageEntityConfiguration : PlatformEntityCon
         builder.Property(p => p.ConsumeStatus)
             .HasConversion(new EnumToStringConverter<PlatformInboxBusMessage.ConsumeStatuses>());
 
-        builder.HasIndex(p => p.RoutingKey);
         builder.HasIndex(
             p => new
             {
                 p.ConsumeStatus,
-                p.LastConsumeDate
-            });
-        builder.HasIndex(
-            p => new
-            {
-                p.ConsumeStatus,
-                p.NextRetryProcessAfter,
                 p.LastConsumeDate
             });
     }

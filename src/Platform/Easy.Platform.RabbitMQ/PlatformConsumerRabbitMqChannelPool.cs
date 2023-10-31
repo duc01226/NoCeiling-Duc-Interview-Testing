@@ -3,10 +3,8 @@ namespace Easy.Platform.RabbitMQ;
 public class PlatformConsumerRabbitMqChannelPool : PlatformRabbitMqChannelPool
 {
     public PlatformConsumerRabbitMqChannelPool(
-        PlatformRabbitMqChannelPoolPolicy channelPoolPolicy,
-        PlatformRabbitMqOptions rabbitMqOptions) : base(
-        channelPoolPolicy)
+        PlatformRabbitMqOptions options) : base(new PlatformRabbitMqChannelPoolPolicy(options.CalculateNumberOfParallelConsumers(), options))
     {
-        MaximumRetained = rabbitMqOptions.CalculateNumberOfParallelConsumers();
+        MaximumRetained = options.CalculateNumberOfParallelConsumers();
     }
 }

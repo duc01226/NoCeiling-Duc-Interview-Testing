@@ -258,7 +258,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
     {
         return MatchAsync(
             valid: value => nextVal(),
-            invalid: err => Of<T>(default).ToTask());
+            invalid: err => Of<T>(default).BoxedInTask());
     }
 
     /// <inheritdoc cref="ThenAsync{T}(Func{Task{PlatformValidationResult{T}}})" />
@@ -267,7 +267,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
     {
         return MatchAsync(
             valid: value => nextVal(Value),
-            invalid: err => Of<T>(default).ToTask());
+            invalid: err => Of<T>(default).BoxedInTask());
     }
 
     /// <inheritdoc cref="ThenAsync{T}(Func{Task{PlatformValidationResult{T}}})" />
@@ -276,7 +276,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
     {
         return await MatchAsync(
             valid: async value => new PlatformValidationResult<T>(await next(value), null),
-            invalid: err => Of<T>(default).ToTask());
+            invalid: err => Of<T>(default).BoxedInTask());
     }
 
     /// <summary>

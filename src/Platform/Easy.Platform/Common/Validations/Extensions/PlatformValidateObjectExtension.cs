@@ -190,7 +190,16 @@ public static class PlatformValidateObjectExtension
 
     public static PlatformValidationResult<T> ValidateFound<T>(this T? obj, string errorMsg = DefaultNotFoundMessage)
     {
-        return obj != null ? PlatformValidationResult.Valid(obj) : PlatformValidationResult.Invalid(obj!, errorMsg);
+        return obj != null
+            ? PlatformValidationResult.Valid(obj)
+            : PlatformValidationResult.Invalid(obj!, errorMsg == DefaultNotFoundMessage ? BuildDefaultNotFoundErrorMsg<T>(errorMsg) : errorMsg);
+    }
+
+    private static string BuildDefaultNotFoundErrorMsg<T>(string errorMsg)
+    {
+        if (typeof(T) == typeof(string) || typeof(T).IsPrimitive || typeof(T) == typeof(DateTime)) return errorMsg;
+
+        return $"{errorMsg} {typeof(T).GetNameOrGenericTypeName()}";
     }
 
     public static PlatformValidationResult<T[]> ValidateFound<T>(this T[]? objects, string errorMsg = DefaultNotFoundMessage)
@@ -199,7 +208,7 @@ public static class PlatformValidateObjectExtension
 
         return objectsList?.Any() == true
             ? PlatformValidationResult.Valid(objectsList.As<T[]>())
-            : PlatformValidationResult.Invalid(objectsList.As<T[]>(), errorMsg);
+            : PlatformValidationResult.Invalid(objectsList.As<T[]>(), errorMsg == DefaultNotFoundMessage ? BuildDefaultNotFoundErrorMsg<T>(errorMsg) : errorMsg);
     }
 
     public static PlatformValidationResult<List<T>> ValidateFound<T>(this List<T>? objects, string errorMsg = DefaultNotFoundMessage)
@@ -208,7 +217,7 @@ public static class PlatformValidateObjectExtension
 
         return objectsList?.Any() == true
             ? PlatformValidationResult.Valid(objectsList.As<List<T>>())
-            : PlatformValidationResult.Invalid(objectsList.As<List<T>>(), errorMsg);
+            : PlatformValidationResult.Invalid(objectsList.As<List<T>>(), errorMsg == DefaultNotFoundMessage ? BuildDefaultNotFoundErrorMsg<T>(errorMsg) : errorMsg);
     }
 
     public static PlatformValidationResult<IEnumerable<T>> ValidateFound<T>(this IEnumerable<T>? objects, string errorMsg = DefaultNotFoundMessage)
@@ -217,7 +226,9 @@ public static class PlatformValidateObjectExtension
 
         return objectsList?.Any() == true
             ? PlatformValidationResult.Valid(objectsList.As<IEnumerable<T>>())
-            : PlatformValidationResult.Invalid(objectsList.As<IEnumerable<T>>(), errorMsg);
+            : PlatformValidationResult.Invalid(
+                objectsList.As<IEnumerable<T>>(),
+                errorMsg == DefaultNotFoundMessage ? BuildDefaultNotFoundErrorMsg<T>(errorMsg) : errorMsg);
     }
 
     public static PlatformValidationResult<List<T>?> ValidateFoundAll<T>(
@@ -239,30 +250,32 @@ public static class PlatformValidateObjectExtension
         var notFoundByObjects = toFoundByObjects.Except(objects.Select(foundBy)).ToList();
 
         return notFoundByObjects.Any()
-            ? PlatformValidationResult.Invalid(objects, notFoundByObjectsToErrorMsg?.Invoke(notFoundByObjects) ?? DefaultNotFoundMessage)
+            ? PlatformValidationResult.Invalid(objects, notFoundByObjectsToErrorMsg?.Invoke(notFoundByObjects) ?? $"{DefaultNotFoundMessage} {typeof(T).Name}")
             : PlatformValidationResult.Valid(objects);
     }
 
     public static PlatformValidationResult<T> ValidateFound<T>(this T? obj, Func<T, bool> and, string errorMsg = DefaultNotFoundMessage)
     {
-        return obj != null && and(obj) ? PlatformValidationResult.Valid(obj) : PlatformValidationResult.Invalid(obj!, errorMsg);
+        return obj != null && and(obj)
+            ? PlatformValidationResult.Valid(obj)
+            : PlatformValidationResult.Invalid(obj!, errorMsg == DefaultNotFoundMessage ? BuildDefaultNotFoundErrorMsg<T>(errorMsg) : errorMsg);
     }
 
     public static PlatformValidationResult<T> ValidateFound<T>(this T? obj, Func<T, Task<bool>> and, string errorMsg = DefaultNotFoundMessage)
     {
-        return obj.ValidateFound(p => and(p).GetResult(), errorMsg);
+        return obj.ValidateFound(p => and(p).GetResult(), errorMsg == DefaultNotFoundMessage ? BuildDefaultNotFoundErrorMsg<T>(errorMsg) : errorMsg);
     }
 
     public static async Task<PlatformValidationResult<T>> ValidateFoundAsync<T>(this T? obj, Func<T, Task<bool>> and, string errorMsg = DefaultNotFoundMessage)
     {
         var andResultCondition = obj != null && await and(obj);
 
-        return obj.ValidateFound(p => andResultCondition, errorMsg);
+        return obj.ValidateFound(p => andResultCondition, errorMsg == DefaultNotFoundMessage ? BuildDefaultNotFoundErrorMsg<T>(errorMsg) : errorMsg);
     }
 
     public static Task<PlatformValidationResult<List<T>>> ValidateFoundAsync<T>(this Task<List<T>>? listTask, string errorMsg = DefaultNotFoundMessage)
     {
-        return listTask.Then(items => items.ValidateFound(errorMsg));
+        return listTask.Then(items => items.ValidateFound(errorMsg == DefaultNotFoundMessage ? BuildDefaultNotFoundErrorMsg<T>(errorMsg) : errorMsg));
     }
 
     public static PlatformValidationResult<IQueryable<T>> ValidateFoundAny<T>(
@@ -270,7 +283,9 @@ public static class PlatformValidateObjectExtension
         Expression<Func<T, bool>> any,
         string errorMsg = DefaultNotFoundMessage)
     {
-        return query.Any(any) ? PlatformValidationResult.Valid(query) : PlatformValidationResult.Invalid(query, errorMsg);
+        return query.Any(any)
+            ? PlatformValidationResult.Valid(query)
+            : PlatformValidationResult.Invalid(query, errorMsg == DefaultNotFoundMessage ? BuildDefaultNotFoundErrorMsg<T>(errorMsg) : errorMsg);
     }
 
     #endregion

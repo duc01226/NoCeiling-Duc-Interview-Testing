@@ -29,7 +29,6 @@ public abstract class PlatformRabbitMqMessageBusModule : PlatformMessageBusModul
         // PlatformRabbitMqChannelPool hold rabbitmq connection which should be singleton
         serviceCollection.Register<PlatformProducerRabbitMqChannelPool>(ServiceLifeTime.Singleton);
         serviceCollection.Register<PlatformConsumerRabbitMqChannelPool>(ServiceLifeTime.Singleton);
-        serviceCollection.Register<PlatformRabbitMqChannelPoolPolicy>();
 
         serviceCollection.Register<IPlatformRabbitMqExchangeProvider, PlatformRabbitMqExchangeProvider>();
         serviceCollection.Register(RabbitMqOptionsFactory);

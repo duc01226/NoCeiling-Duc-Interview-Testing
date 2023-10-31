@@ -165,7 +165,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         params Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (_, query) => queryBuilder(query).FirstOrDefault().ToTask(),
+            (_, query) => queryBuilder(query).FirstOrDefault().BoxedInTask(),
             loadRelatedEntities);
     }
 
@@ -459,7 +459,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
         async Task<TResult> ReadDataFnAsync(IUnitOfWork unitOfWork, IQueryable<TEntity> entities)
         {
-            return await readDataFn(unitOfWork, entities).ToTask();
+            return await readDataFn(unitOfWork, entities).BoxedInTask();
         }
     }
 

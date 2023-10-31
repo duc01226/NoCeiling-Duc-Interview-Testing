@@ -36,6 +36,21 @@ public static class ObjectGeneralExtension
         return (T)obj;
     }
 
+    public static bool TryCast<T>(this object obj, out T castResult)
+    {
+        try
+        {
+            castResult = (T)obj;
+
+            return true;
+        }
+        catch (Exception)
+        {
+            castResult = default;
+            return false;
+        }
+    }
+
     public static T[] BoxedInArray<T>(this T obj)
     {
         return new[]
@@ -52,6 +67,11 @@ public static class ObjectGeneralExtension
     public static string ToJson<T>(this T obj, bool forceUseRuntimeType = false)
     {
         return PlatformJsonSerializer.Serialize(obj, forceUseRuntimeType: forceUseRuntimeType);
+    }
+
+    public static T JsonDeserialize<T>(this string jsonStr)
+    {
+        return PlatformJsonSerializer.Deserialize<T>(jsonStr);
     }
 
     public static string ToFormattedJson<T>(this T obj, bool forceUseRuntimeType = false)

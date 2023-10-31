@@ -137,10 +137,11 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
         base.RegisterInboxEventBusMessageRepository(serviceCollection);
 
         // Register Default InboxBusMessageRepository if not existed custom inherited IPlatformInboxBusMessageRepository in assembly
-        if (serviceCollection.All(p => p.ServiceType != typeof(IPlatformInboxBusMessageRepository)))
-            serviceCollection.Register(
-                typeof(IPlatformInboxBusMessageRepository),
-                typeof(PlatformDefaultMongoDbInboxBusMessageRepository<TDbContext>));
+        if (serviceCollection.All(p => p.ServiceType != typeof(IPlatformInboxBusMessageRepository<TDbContext>)))
+        {
+            serviceCollection.RegisterAllForImplementation<PlatformDefaultMongoDbInboxBusMessageRepository<TDbContext>>();
+            serviceCollection.Register<IPlatformInboxBusMessageRepository, PlatformDefaultMongoDbInboxBusMessageRepository<TDbContext>>();
+        }
 
         // Register Default MongoInboxBusMessageClassMapping if not existed custom inherited PlatformMongoInboxBusMessageClassMapping in assembly
         if (!AllClassMapTypes().Any(p => p.IsAssignableTo(typeof(PlatformMongoInboxBusMessageClassMapping))))
@@ -155,10 +156,11 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
         base.RegisterOutboxEventBusMessageRepository(serviceCollection);
 
         // Register Default OutboxEventBusMessageRepository if not existed custom inherited IPlatformOutboxEventBusMessageRepository in assembly
-        if (serviceCollection.All(p => p.ServiceType != typeof(IPlatformOutboxBusMessageRepository)))
-            serviceCollection.Register(
-                typeof(IPlatformOutboxBusMessageRepository),
-                typeof(PlatformDefaultMongoDbOutboxBusMessageRepository<TDbContext>));
+        if (serviceCollection.All(p => p.ServiceType != typeof(IPlatformOutboxBusMessageRepository<TDbContext>)))
+        {
+            serviceCollection.RegisterAllForImplementation<PlatformDefaultMongoDbOutboxBusMessageRepository<TDbContext>>();
+            serviceCollection.Register<IPlatformOutboxBusMessageRepository, PlatformDefaultMongoDbOutboxBusMessageRepository<TDbContext>>();
+        }
 
         // Register Default MongoOutboxBusMessageClassMapping if not existed custom inherited PlatformMongoOutboxBusMessageClassMapping in assembly
         if (!AllClassMapTypes().Any(p => p.IsAssignableTo(typeof(PlatformMongoOutboxBusMessageClassMapping))))
@@ -175,11 +177,7 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
 
     private void RegisterMongoDbUow(IServiceCollection serviceCollection)
     {
-        serviceCollection.RegisterAllFromType<IPlatformMongoDbPersistenceUnitOfWork<TDbContext>>(
-            Assembly,
-            ServiceLifeTime.Transient,
-            replaceIfExist: true,
-            DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
+        serviceCollection.RegisterAllFromType<IPlatformMongoDbPersistenceUnitOfWork<TDbContext>>(Assembly);
         // Register default PlatformMongoDbUnitOfWork if not exist implementation in the concrete inherit persistence module
         if (serviceCollection.NotExist(p => p.ServiceType == typeof(IPlatformMongoDbPersistenceUnitOfWork<TDbContext>)))
             serviceCollection.RegisterAllForImplementation<PlatformMongoDbPersistenceUnitOfWork<TDbContext>>();

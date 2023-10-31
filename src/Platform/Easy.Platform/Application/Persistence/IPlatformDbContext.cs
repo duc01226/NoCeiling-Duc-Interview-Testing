@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Linq.Expressions;
 using Easy.Platform.Common;
+using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Entities;
@@ -18,7 +19,8 @@ namespace Easy.Platform.Application.Persistence;
 public interface IPlatformDbContext : IDisposable
 {
     public const int DefaultPageSize = 10;
-    public const int DefaultRunDataMigrationInBackgroundRetryCount = 10;
+    public const int DefaultRunDataMigrationInBackgroundRetryCount = 12;
+    public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformDbContext)}");
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery { get; }
 
@@ -125,14 +127,10 @@ public interface IPlatformDbContext : IDisposable
                                     PlatformDataMigrationExecutor<TDbContext>.CreateNewInstance(sp, migrationExecutionType));
                             }),
                         retryCount: DefaultRunDataMigrationInBackgroundRetryCount,
-                        sleepDurationProvider: retryAttempt => 10.Seconds(),
+                        sleepDurationProvider: retryAttempt => 5.Seconds(),
                         onRetry: (ex, timeSpan, currentRetry, ctx) =>
                         {
-                            dbContext.Logger.LogWarning(
-                                ex,
-                                "Retry Execute DataMigration {MigrationExecutionType.Name} {CurrentRetry} time(s).",
-                                migrationExecutionType.Name,
-                                currentRetry);
+                            LogDataMigrationFailedError(loggerFactory(), ex, migrationExecutionName);
                         });
                 });
         }
@@ -145,15 +143,20 @@ public interface IPlatformDbContext : IDisposable
     public async Task ExecuteDataMigrationExecutor<TDbContext>(PlatformDataMigrationExecutor<TDbContext> migrationExecution)
         where TDbContext : class, IPlatformDbContext
     {
-        Logger.LogInformation("DataMigration {MigrationExecutionName} STARTED.", migrationExecution.Name);
+        using (var activity = IPlatformCqrsEventHandler.ActivitySource.StartActivity($"{nameof(IPlatformDbContext)}.{nameof(ExecuteDataMigrationExecutor)}"))
+        {
+            activity?.AddTag("MigrationName", migrationExecution.Name);
 
-        await migrationExecution.Execute(this.As<TDbContext>());
+            Logger.LogInformation("DataMigration {MigrationExecutionName} STARTED.", migrationExecution.Name);
 
-        await InsertOneDataMigrationHistoryAsync(new PlatformDataMigrationHistory(migrationExecution.Name));
+            await migrationExecution.Execute(this.As<TDbContext>());
 
-        await this.As<TDbContext>().SaveChangesAsync();
+            await InsertOneDataMigrationHistoryAsync(new PlatformDataMigrationHistory(migrationExecution.Name));
 
-        this.As<TDbContext>().Logger.LogInformation("DataMigration {MigrationExecutionName} FINISHED.", migrationExecution.Name);
+            await this.As<TDbContext>().SaveChangesAsync();
+
+            this.As<TDbContext>().Logger.LogInformation("DataMigration {MigrationExecutionName} FINISHED.", migrationExecution.Name);
+        }
     }
 
     public static async Task<TResult> ExecuteWithBadQueryWarningHandling<TResult, TSource>(

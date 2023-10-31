@@ -10,7 +10,9 @@ public static class PlatformLoggerConfigurationExtensions
 {
     public static LoggerConfiguration EnrichDefaultPlatformEnrichers(this LoggerConfiguration loggerConfiguration)
     {
-        return loggerConfiguration.Enrich.With(new PlatformBackgroundThreadFullStackTraceEnricher());
+        return loggerConfiguration.Enrich.With(
+            new PlatformBackgroundThreadFullStackTraceEnricher(),
+            new PlatformActivityTracingEnricher());
     }
 
     public static LoggerConfiguration WithExceptionDetails(this LoggerConfiguration loggerConfiguration, Action<DestructuringOptionsBuilder> configDestructurers = null)

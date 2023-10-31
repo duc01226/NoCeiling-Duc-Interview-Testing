@@ -10,16 +10,32 @@ export function date_setToEndOfDay(date: Date): Date {
     return new Date(new Date(date).setHours(23, 59, 59, 0));
 }
 
+export function date_setToEndOfDayUTC(date: Date): Date {
+    return date_toUTCTime(date_setToEndOfDay(date));
+}
+
 export function date_getStartOfMonth(date: Date): Date {
     return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+export function date_getStartOfMonthUTC(date: Date): Date {
+    return date_toUTCTime(date_getStartOfMonth(date));
 }
 
 export function date_getEndOfMonth(date: Date): Date {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0);
 }
 
+export function date_getEndOfMonthUTC(date: Date): Date {
+    return date_toUTCTime(date_getEndOfMonth(date));
+}
+
 export function date_setToStartOfDay(date: Date): Date {
     return new Date(new Date(date).setHours(0, 0, 0, 0));
+}
+
+export function date_setToStartOfDayUTC(date: Date): Date {
+    return date_toUTCTime(date_setToStartOfDay(date));
 }
 
 export function date_getEndOfYear(date: Date): Date {
@@ -174,14 +190,26 @@ export function date_now(): Date {
     return new Date();
 }
 
+export function date_UTCNow(): Date {
+    return date_toUTCTime(date_now());
+}
+
 export function date_startOfToday(): Date {
     const now = date_now();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
 }
 
+export function date_startOfTodayUTC(): Date {
+    return date_toUTCTime(date_startOfToday());
+}
+
 export function date_endOfToday(): Date {
     const now = date_now();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+}
+
+export function date_endOfTodayUTC(): Date {
+    return date_toUTCTime(date_endOfToday());
 }
 
 export function date_startOfYear(year?: number): Date {
@@ -191,6 +219,10 @@ export function date_startOfYear(year?: number): Date {
     return new Date(year, 0, 1, 0, 0, 0, 0);
 }
 
+export function date_startOfYearUTC(year?: number): Date {
+    return date_toUTCTime(date_startOfYear(year));
+}
+
 export function date_endOfYear(year?: number): Date {
     if (year == null) {
         return new Date(date_now().getFullYear(), 11, 31, 23, 59, 59);
@@ -198,12 +230,24 @@ export function date_endOfYear(year?: number): Date {
     return new Date(year, 11, 31, 23, 59, 59);
 }
 
+export function date_endOfYearUTC(year?: number): Date {
+    return date_toUTCTime(date_endOfYear(year));
+}
+
 export function date_endOfMonth(date: Date): Date {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59);
 }
 
+export function date_endOfMonthUTC(date: Date): Date {
+    return date_toUTCTime(date_endOfMonth(date));
+}
+
 export function date_startOfMonth(date: Date): Date {
     return new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0);
+}
+
+export function date_startOfMonthUTC(date: Date): Date {
+    return date_toUTCTime(date_startOfMonth(date));
 }
 
 export function date_MondayOfWeek(date: Date): Date {
@@ -228,16 +272,32 @@ export function date_startOfQuarter(date: Date): Date {
     return moment(date).startOf('quarter').toDate();
 }
 
+export function date_startOfQuarterUTC(date: Date): Date {
+    return date_toUTCTime(date_startOfQuarter(date));
+}
+
 export function date_endOfQuarter(date: Date): Date {
     return moment(date).endOf('quarter').toDate();
+}
+
+export function date_endOfQuarterUTC(date: Date): Date {
+    return date_toUTCTime(date_endOfQuarter(date));
 }
 
 export function date_startOfWeek(date: Date): Date {
     return moment(date).startOf('isoWeek').toDate();
 }
 
+export function date_startOfWeekUTC(date: Date): Date {
+    return date_toUTCTime(date_startOfWeek(date));
+}
+
 export function date_endOfWeek(date: Date): Date {
     return moment(date).endOf('isoWeek').toDate();
+}
+
+export function date_endOfWeekUTC(date: Date): Date {
+    return date_toUTCTime(date_endOfWeek(date));
 }
 
 export function date_addQuarters(currentDate: Date, numberOfQuarters: number): Date {

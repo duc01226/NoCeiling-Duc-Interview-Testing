@@ -12,87 +12,86 @@ using IdentityServer4.Stores;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace IdentityServerHost.Quickstart.UI
+namespace PlatformExampleApp.Ids.Quickstart.Grants;
+
+/// <summary>
+/// This sample controller allows a user to revoke grants given to clients
+/// </summary>
+[SecurityHeaders]
+[Authorize]
+public class GrantsController : Controller
 {
-    /// <summary>
-    /// This sample controller allows a user to revoke grants given to clients
-    /// </summary>
-    [SecurityHeaders]
-    [Authorize]
-    public class GrantsController : Controller
+    private readonly IClientStore clients;
+    private readonly IEventService events;
+    private readonly IIdentityServerInteractionService interaction;
+    private readonly IResourceStore resourcesStore;
+
+    public GrantsController(
+        IIdentityServerInteractionService interaction,
+        IClientStore clients,
+        IResourceStore resourcesStore,
+        IEventService events)
     {
-        private readonly IClientStore clients;
-        private readonly IEventService events;
-        private readonly IIdentityServerInteractionService interaction;
-        private readonly IResourceStore resourcesStore;
+        this.interaction = interaction;
+        this.clients = clients;
+        this.resourcesStore = resourcesStore;
+        this.events = events;
+    }
 
-        public GrantsController(
-            IIdentityServerInteractionService interaction,
-            IClientStore clients,
-            IResourceStore resourcesStore,
-            IEventService events)
+    /// <summary>
+    /// Show list of grants
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Index()
+    {
+        return View("Index", await BuildViewModelAsync());
+    }
+
+    /// <summary>
+    /// Handle postback to revoke a client
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Revoke(string clientId)
+    {
+        await interaction.RevokeUserConsentAsync(clientId);
+        await events.RaiseAsync(new GrantsRevokedEvent(User.GetSubjectId(), clientId));
+
+        return RedirectToAction("Index");
+    }
+
+    private async Task<GrantsViewModel> BuildViewModelAsync()
+    {
+        var grants = await interaction.GetAllUserGrantsAsync();
+
+        var list = new List<GrantViewModel>();
+        foreach (var grant in grants)
         {
-            this.interaction = interaction;
-            this.clients = clients;
-            this.resourcesStore = resourcesStore;
-            this.events = events;
-        }
-
-        /// <summary>
-        /// Show list of grants
-        /// </summary>
-        [HttpGet]
-        public async Task<IActionResult> Index()
-        {
-            return View("Index", await BuildViewModelAsync());
-        }
-
-        /// <summary>
-        /// Handle postback to revoke a client
-        /// </summary>
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Revoke(string clientId)
-        {
-            await interaction.RevokeUserConsentAsync(clientId);
-            await events.RaiseAsync(new GrantsRevokedEvent(User.GetSubjectId(), clientId));
-
-            return RedirectToAction("Index");
-        }
-
-        private async Task<GrantsViewModel> BuildViewModelAsync()
-        {
-            var grants = await interaction.GetAllUserGrantsAsync();
-
-            var list = new List<GrantViewModel>();
-            foreach (var grant in grants)
+            var client = await clients.FindClientByIdAsync(grant.ClientId);
+            if (client != null)
             {
-                var client = await clients.FindClientByIdAsync(grant.ClientId);
-                if (client != null)
+                var resources = await resourcesStore.FindResourcesByScopeAsync(grant.Scopes);
+
+                var item = new GrantViewModel
                 {
-                    var resources = await resourcesStore.FindResourcesByScopeAsync(grant.Scopes);
+                    ClientId = client.ClientId,
+                    ClientName = client.ClientName ?? client.ClientId,
+                    ClientLogoUrl = client.LogoUri,
+                    ClientUrl = client.ClientUri,
+                    Description = grant.Description,
+                    Created = grant.CreationTime,
+                    Expires = grant.Expiration,
+                    IdentityGrantNames = resources.IdentityResources.Select(x => x.DisplayName ?? x.Name).ToArray(),
+                    ApiGrantNames = resources.ApiScopes.Select(x => x.DisplayName ?? x.Name).ToArray()
+                };
 
-                    var item = new GrantViewModel
-                    {
-                        ClientId = client.ClientId,
-                        ClientName = client.ClientName ?? client.ClientId,
-                        ClientLogoUrl = client.LogoUri,
-                        ClientUrl = client.ClientUri,
-                        Description = grant.Description,
-                        Created = grant.CreationTime,
-                        Expires = grant.Expiration,
-                        IdentityGrantNames = resources.IdentityResources.Select(x => x.DisplayName ?? x.Name).ToArray(),
-                        ApiGrantNames = resources.ApiScopes.Select(x => x.DisplayName ?? x.Name).ToArray()
-                    };
-
-                    list.Add(item);
-                }
+                list.Add(item);
             }
-
-            return new GrantsViewModel
-            {
-                Grants = list
-            };
         }
+
+        return new GrantsViewModel
+        {
+            Grants = list
+        };
     }
 }

@@ -70,7 +70,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
     {
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
-                () => source.As<IQueryable<TSource>>()?.ToListAsync(cancellationToken) ?? source.ToList().ToTask(),
+                () => source.As<IQueryable<TSource>>()?.ToListAsync(cancellationToken) ?? source.ToList().BoxedInTask(),
                 Logger,
                 PersistenceConfiguration,
                 forWriteQuery: false,
@@ -78,7 +78,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
                 resultQueryStringBuilder: source.As<IQueryable<TSource>>()
                     ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
 
-        return await (source.As<IQueryable<TSource>>()?.ToListAsync(cancellationToken) ?? source.ToList().ToTask());
+        return await (source.As<IQueryable<TSource>>()?.ToListAsync(cancellationToken) ?? source.ToList().BoxedInTask());
     }
 
     public override IAsyncEnumerable<TSource> ToAsyncEnumerable<TSource>(IEnumerable<TSource> source, CancellationToken cancellationToken = default)

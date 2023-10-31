@@ -128,7 +128,7 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
             {
                 if (applicationDataMigrationExecutionNames.Contains(dataMigrationExecutor.Name))
                     throw new Exception(
-                        $"Application Data Migration Executor Names is duplicated. Duplicated name: {dataMigrationExecutor.Name}");
+                        $"Application DataMigration Executor Names is duplicated. Duplicated name: {dataMigrationExecutor.Name}");
 
                 applicationDataMigrationExecutionNames.Add(dataMigrationExecutor.Name);
 

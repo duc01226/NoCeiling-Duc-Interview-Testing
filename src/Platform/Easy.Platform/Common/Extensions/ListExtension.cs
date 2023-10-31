@@ -108,13 +108,9 @@ public static class ListExtension
             var upsertItemByValue = upsertByFn(upsertItem) ?? "";
 
             if (groupedByUpsertValueItems.TryGetValue(upsertItemByValue, out var toUpdateItemInfo))
-            {
                 items[toUpdateItemInfo.index] = upsertItem;
-            }
             else
-            {
                 items.Add(upsertItem);
-            }
         }
     }
 
@@ -125,6 +121,15 @@ public static class ListExtension
             {
                 item
             });
+    }
+
+    public static List<T> ConcatSingle<T>(this List<T> items, T item)
+    {
+        return items.Concat(
+            new List<T>
+            {
+                item
+            }).ToList();
     }
 
     public static bool IsEmpty<T>(this IEnumerable<T> items)
@@ -169,6 +174,11 @@ public static class ListExtension
     public static bool ContainsAny<T>(this IEnumerable<T> items, IList<T> containAllItems)
     {
         return items.Intersect(containAllItems).Any();
+    }
+
+    public static bool ContainsAny<T>(this IEnumerable<T> items, params T[] containAllItems)
+    {
+        return items.ContainsAny(containAllItems.ToList());
     }
 
     public static bool ItemsMatch<T, T1>(this IList<T> items, IList<T1> matchedWithItems, Func<T, T1, bool> mustMatch)
@@ -264,6 +274,11 @@ public static class ListExtension
     public static void ForEach<T>(this IEnumerable<T> items, Action<T> action)
     {
         items.ForEach((item, index) => action(item));
+    }
+
+    public static void CloneForEach<T>(this IEnumerable<T> items, Action<T> action)
+    {
+        items.ToList().ForEach((item, index) => action(item));
     }
 
     /// <inheritdoc cref="ForEach{T}(IEnumerable{T},Action{T,int})" />
@@ -431,7 +446,7 @@ public static class ListExtension
 
     public static IEnumerable<TSource> ConcatIf<TSource>(this IEnumerable<TSource> source, bool @if, params TSource[] second)
     {
-        return ConcatIf(source, @if, (IEnumerable<TSource>)second);
+        return ConcatIf(source, @if, second.ToList());
     }
 
     public static IEnumerable<TSource> ConcatIf<TSource>(
@@ -576,5 +591,20 @@ public static class ListExtension
             });
 
         return (matchedFilterResult, remainingFilterResult);
+    }
+
+    public static bool IsHasItemsCollections(this object source)
+    {
+        return (source is IEnumerable<object> objectList && objectList.Any()) ||
+               (source is IEnumerable<int> intList && intList.Any()) ||
+               (source is IEnumerable<float> floatList && floatList.Any()) ||
+               (source is IEnumerable<double> doubleList && doubleList.Any()) ||
+               (source is IEnumerable<string> stringList && stringList.Any()) ||
+               (source is IEnumerable<DateTime> dateList && dateList.Any());
+    }
+
+    public static bool PartOf<T>(this IList<T> list1, IEnumerable<T> list2)
+    {
+        return list2.ContainsAll(list1);
     }
 }

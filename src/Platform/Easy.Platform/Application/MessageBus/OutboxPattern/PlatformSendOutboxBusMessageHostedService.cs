@@ -102,6 +102,8 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalProcess
                                     e.Message,
                                     toHandleOutboxMessage.Id,
                                     toHandleOutboxMessage.ToJson());
+
+                                throw;
                             }
                         }
                     });

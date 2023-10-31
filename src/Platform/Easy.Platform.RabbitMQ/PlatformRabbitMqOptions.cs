@@ -31,9 +31,9 @@ public class PlatformRabbitMqOptions
     /// </summary>
     public ushort QueuePrefetchCount { get; set; } = 10;
 
-    public int NumberOfParallelConsumersPerCpu { get; set; } = PlatformEnvironment.IsDevelopment ? 1 : 5;
+    public int NumberOfParallelConsumersPerCpu { get; set; } = PlatformEnvironment.IsDevelopment ? 1 : 2;
 
-    public int MaxNumberOfParallelConsumers { get; set; } = 20;
+    public int MaxNumberOfParallelConsumers { get; set; } = PlatformEnvironment.IsDevelopment ? 4 : 20;
 
     /// <summary>
     /// Used to set <see cref="ConnectionFactory.NetworkRecoveryInterval" />
@@ -77,6 +77,8 @@ public class PlatformRabbitMqOptions
     /// For best practice, prevent queue too long in memory will store messages in the storage
     /// </summary>
     public int QueueMaxNumberMessagesInMemory { get; set; } = 100;
+
+    public int ProducerConnectionPoolSize { get; set; } = Environment.ProcessorCount * 2;
 
     public int CalculateNumberOfParallelConsumers()
     {

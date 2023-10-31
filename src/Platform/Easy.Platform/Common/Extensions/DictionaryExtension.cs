@@ -85,4 +85,9 @@ public static class DictionaryExtension
 
         return clonedFirstDictionary;
     }
+
+    public static T GetValueOrKey<T>(this IReadOnlyDictionary<T, T> dictionary, T key)
+    {
+        return dictionary.ContainsKey(key) ? dictionary[key] : key;
+    }
 }

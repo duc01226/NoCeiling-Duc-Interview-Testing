@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
-namespace IdentityServerHost.Quickstart.UI;
+namespace PlatformExampleApp.Ids.Quickstart.Account;
 
 [SecurityHeaders]
 [AllowAnonymous]

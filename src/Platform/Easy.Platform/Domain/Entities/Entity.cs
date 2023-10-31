@@ -97,7 +97,7 @@ public interface IValidatableEntity<TEntity, TPrimaryKey> : IValidatableEntity<T
 }
 
 public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity, TPrimaryKey>, ISupportDomainEventsEntity<TEntity>
-    where TEntity : Entity<TEntity, TPrimaryKey>, new()
+    where TEntity : class, IEntity<TPrimaryKey>, ISupportDomainEventsEntity<TEntity>, new()
 {
     protected readonly List<KeyValuePair<string, ISupportDomainEventsEntity.DomainEvent>> DomainEvents = new();
 
@@ -111,29 +111,29 @@ public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity,
         return AddDomainEvent(domainEvent, customDomainEventName);
     }
 
-    public TEntity AddDomainEvent<TEvent>(TEvent eventActionPayload, string customDomainEventName = null)
+    public virtual TEntity AddDomainEvent<TEvent>(TEvent eventActionPayload, string customDomainEventName = null)
         where TEvent : ISupportDomainEventsEntity.DomainEvent
     {
         DomainEvents.Add(
             new KeyValuePair<string, ISupportDomainEventsEntity.DomainEvent>(
                 customDomainEventName ?? ISupportDomainEventsEntity.DomainEvent.GetDefaultEventName<TEvent>(),
                 eventActionPayload));
-        return (TEntity)this;
+        return this.As<TEntity>();
     }
 
 
     public virtual TPrimaryKey Id { get; set; }
 
     /// <summary>
-    /// Help to validate entity create/update must be unique. <br/>
-    /// Example: <br/>
+    /// Help to validate entity create/update must be unique. <br />
+    /// Example: <br />
     /// public override PlatformCheckUniqueValidator[EmployeeRemainingAttendance] CheckUniqueValidator()
     /// {
-    ///    return new PlatformCheckUniqueValidator[EmployeeRemainingAttendance](
-    ///       targetItem: this,
-    ///       findOtherDuplicatedItemExpr: otherItem =>
-    ///            !otherItem.Id.Equals(Id) && otherItem.EmployeeId == EmployeeId && otherItem.AttendanceTypeId == AttendanceTypeId && otherItem.CompanyId == CompanyId,
-    ///       "EmployeeRemainingAttendance must be unique");
+    /// return new PlatformCheckUniqueValidator[EmployeeRemainingAttendance](
+    /// targetItem: this,
+    /// findOtherDuplicatedItemExpr: otherItem =>
+    /// !otherItem.Id.Equals(Id) && otherItem.EmployeeId == EmployeeId && otherItem.AttendanceTypeId == AttendanceTypeId && otherItem.CompanyId == CompanyId,
+    /// "EmployeeRemainingAttendance must be unique");
     /// }
     /// </summary>
     public virtual PlatformCheckUniqueValidator<TEntity> CheckUniqueValidator()
@@ -145,7 +145,7 @@ public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity,
     {
         var validator = GetValidator();
 
-        return validator != null ? validator.Validate((TEntity)this) : PlatformValidationResult.Valid((TEntity)this);
+        return validator != null ? validator.Validate(this.As<TEntity>()) : PlatformValidationResult.Valid(this.As<TEntity>());
     }
 
     PlatformValidationResult IValidatableEntity.Validate()
@@ -155,12 +155,12 @@ public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity,
 
     public TEntity AddFieldUpdatedEvent<TValue>(string propertyName, TValue originalValue, TValue newValue)
     {
-        return this.As<TEntity>().AddFieldUpdatedEvent<TEntity, TValue>(propertyName, originalValue, newValue);
+        return this.As<TEntity>().AddFieldUpdatedEvent(propertyName, originalValue, newValue);
     }
 
     public TEntity AddFieldUpdatedEvent<TValue>(Expression<Func<TEntity, TValue>> property, TValue originalValue, TValue newValue)
     {
-        return this.As<TEntity>().AddFieldUpdatedEvent<TEntity, TValue>(property, originalValue, newValue);
+        return this.As<TEntity>().AddFieldUpdatedEvent(property, originalValue, newValue);
     }
 
     public List<TEvent> FindDomainEvents<TEvent>()

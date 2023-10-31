@@ -23,18 +23,10 @@ public class PlatformOutboxEventBusMessageEntityConfiguration : PlatformEntityCo
         builder.Property(p => p.SendStatus)
             .HasConversion(new EnumToStringConverter<PlatformOutboxBusMessage.SendStatuses>());
 
-        builder.HasIndex(p => p.RoutingKey);
         builder.HasIndex(
             p => new
             {
                 p.SendStatus,
-                p.LastSendDate
-            });
-        builder.HasIndex(
-            p => new
-            {
-                p.SendStatus,
-                p.NextRetryProcessAfter,
                 p.LastSendDate
             });
     }

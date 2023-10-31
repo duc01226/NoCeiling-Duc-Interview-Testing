@@ -9,15 +9,15 @@ namespace Easy.Platform.Common.Hosting;
 /// </summary>
 public abstract class PlatformHostedService : IHostedService, IDisposable
 {
-    protected readonly ILogger Logger;
-    protected readonly IServiceProvider ServiceProvider;
     protected readonly SemaphoreSlim AsyncStartProcessLock = new(1, 1);
     protected readonly SemaphoreSlim AsyncStopProcessLock = new(1, 1);
+    protected readonly ILogger Logger;
+    protected readonly IServiceProvider ServiceProvider;
+    protected Task ExecuteTask;
 
     protected bool ProcessStarted;
     protected bool ProcessStopped;
     protected CancellationTokenSource StoppingCts;
-    protected Task ExecuteTask;
 
     public PlatformHostedService(IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
     {
@@ -106,6 +106,6 @@ public abstract class PlatformHostedService : IHostedService, IDisposable
 
     public ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
-        return loggerFactory.CreateLogger(GetType());
+        return loggerFactory.CreateLogger(typeof(PlatformHostedService));
     }
 }

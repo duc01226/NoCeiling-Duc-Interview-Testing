@@ -1,6 +1,5 @@
 using System.Linq.Expressions;
 using Easy.Platform.Application.Context.UserContext;
-using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
@@ -373,11 +372,6 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     public ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
         return loggerFactory.CreateLogger(typeof(IPlatformDbContext));
-    }
-
-    protected bool HasSupportOutboxEvent()
-    {
-        return RootServiceProvider.CheckHasRegisteredScopedService<IPlatformOutboxBusMessageRepository>();
     }
 
     public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(

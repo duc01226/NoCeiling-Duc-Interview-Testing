@@ -16,7 +16,6 @@ using Easy.Platform.Application.MessageBus.Producers.CqrsEventProducers;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Application.Services;
 using Easy.Platform.Common;
-using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
@@ -77,43 +76,29 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
             async () =>
             {
-                var dataSeeders = serviceScope.ServiceProvider
-                    .GetServices<IPlatformApplicationDataSeeder>()
-                    .DistinctBy(p => p.GetType())
-                    .OrderBy(p => p.DelaySeedingInBackgroundBySeconds)
-                    .ThenBy(p => p.SeedOrder);
+                await ExecuteDataSeeders(
+                    serviceScope.ServiceProvider
+                        .GetServices<IPlatformApplicationDataSeeder>()
+                        .DistinctBy(p => p.GetType())
+                        .Where(p => p.DelaySeedingInBackgroundBySeconds == 0)
+                        .OrderBy(p => p.SeedOrder));
 
-                await dataSeeders.ForEachAsync(
-                    async seeder =>
-                    {
-                        if (seeder.DelaySeedingInBackgroundBySeconds > 0)
-                        {
-                            Logger.LogInformation(
-                                "[SeedData] {Seeder} is scheduled running in background after {DelaySeedingInBackgroundBySeconds} seconds.",
-                                seeder.GetType().Name,
-                                seeder.DelaySeedingInBackgroundBySeconds);
-
-                            Util.TaskRunner.QueueActionInBackground(
-                                async () => await ExecuteSeedingWithNewScopeInBackground(seeder.GetType(), Logger),
-                                () => CreateLogger(LoggerFactory),
-                                delayTimeSeconds: seeder.DelaySeedingInBackgroundBySeconds);
-                        }
-                        else
-                        {
-                            await ExecuteDataSeederWithLog(seeder, Logger);
-                        }
-                    });
+                await ExecuteDataSeeders(
+                    serviceScope.ServiceProvider
+                        .GetServices<IPlatformApplicationDataSeeder>()
+                        .DistinctBy(p => p.GetType())
+                        .Where(p => p.DelaySeedingInBackgroundBySeconds > 0)
+                        .OrderBy(p => p.SeedOrder));
             },
             retryAttempt => 10.Seconds(),
-            retryCount: 10,
+            10,
             onRetry: (exception, timeSpan, retry, ctx) =>
             {
-                if (retry >= MinimumRetryTimesToWarning)
-                    Logger.LogWarning(
-                        exception,
-                        "Exception {ExceptionType} detected on attempt SeedData {Retry}",
-                        exception.GetType().Name,
-                        retry);
+                Logger.LogError(
+                    exception,
+                    "Exception {ExceptionType} detected on attempt SeedData {Retry}",
+                    exception.GetType().Name,
+                    retry);
             });
 
         // Need to execute in background with service instance new scope
@@ -135,14 +120,13 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                         }
                     },
                     retryAttempt => 15.Seconds(),
-                    retryCount: 20,
+                    20,
                     onRetry: (ex, timeSpan, currentRetry, context) =>
                     {
-                        if (currentRetry >= MinimumRetryTimesToWarning)
-                            logger.LogWarning(
-                                ex,
-                                "[SeedData] Retry seed data in background {SeederTypeName}.",
-                                seederType.Name);
+                        logger.LogError(
+                            ex,
+                            "[SeedData] Retry seed data in background {SeederTypeName}.",
+                            seederType.Name);
                     });
             }
             catch (Exception ex)
@@ -161,6 +145,30 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             await dataSeeder.SeedData();
 
             logger.LogInformation("[SeedData] {DataSeeder} FINISHED.", dataSeeder.GetType().Name);
+        }
+
+        async Task ExecuteDataSeeders(IOrderedEnumerable<IPlatformApplicationDataSeeder> dataSeeders)
+        {
+            await dataSeeders.ForEachAsync(
+                async seeder =>
+                {
+                    if (seeder.DelaySeedingInBackgroundBySeconds > 0)
+                    {
+                        Logger.LogInformation(
+                            "[SeedData] {Seeder} is scheduled running in background after {DelaySeedingInBackgroundBySeconds} seconds.",
+                            seeder.GetType().Name,
+                            seeder.DelaySeedingInBackgroundBySeconds);
+
+                        Util.TaskRunner.QueueActionInBackground(
+                            async () => await ExecuteSeedingWithNewScopeInBackground(seeder.GetType(), Logger),
+                            () => CreateLogger(LoggerFactory),
+                            seeder.DelaySeedingInBackgroundBySeconds);
+                    }
+                    else
+                    {
+                        await ExecuteDataSeederWithLog(seeder, Logger);
+                    }
+                });
         }
     }
 
@@ -181,15 +189,14 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                     await distributedCacheRepository.RemoveAsync(p => options.AutoClearContexts.Contains(p.Context));
             },
             retryAttempt => 10.Seconds(),
-            retryCount: 10,
+            10,
             onRetry: (exception, timeSpan, retry, ctx) =>
             {
-                if (retry >= MinimumRetryTimesToWarning)
-                    Logger.LogWarning(
-                        exception,
-                        "Exception {ExceptionType} detected on attempt ClearDistributedCache {Retry}",
-                        exception.GetType().Name,
-                        retry);
+                Logger.LogError(
+                    exception,
+                    "Exception {ExceptionType} detected on attempt ClearDistributedCache {Retry}",
+                    exception.GetType().Name,
+                    retry);
             });
     }
 
@@ -199,7 +206,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             IPlatformCqrsCommandApplicationHandler.ActivitySource.Name,
             IPlatformCqrsQueryApplicationHandler.ActivitySource.Name,
             IPlatformApplicationBackgroundJobExecutor.ActivitySource.Name,
-            IPlatformCqrsEventHandler.ActivitySource.Name);
+            IPlatformDbContext.ActivitySource.Name);
     }
 
     /// <summary>
@@ -242,7 +249,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
     public async Task ExecuteDependencyApplicationModuleSeedData()
     {
         await ExecuteDependencyApplicationModuleSeedData(
-            moduleTypeDependencies: ModuleTypeDependencies().Select(moduleTypeProvider => moduleTypeProvider(Configuration)).ToList(),
+            ModuleTypeDependencies().Select(moduleTypeProvider => moduleTypeProvider(Configuration)).ToList(),
             ServiceProvider);
     }
 
@@ -287,7 +294,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         ThreadPool.SetMinThreads(MinThreadPool, MinThreadPool);
 
         await IPlatformPersistenceModule.ExecuteDependencyPersistenceModuleMigrateApplicationData(
-            moduleTypeDependencies: ModuleTypeDependencies().Select(moduleTypeProvider => moduleTypeProvider(Configuration)).ToList(),
+            ModuleTypeDependencies().Select(moduleTypeProvider => moduleTypeProvider(Configuration)).ToList(),
             ServiceProvider);
 
         if (IsRootModule && AutoSeedApplicationDataOnInit)
@@ -335,7 +342,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                 typeof(IPlatformApplicationUserContextAccessor),
                 typeof(PlatformDefaultApplicationUserContextAccessor),
                 ServiceLifeTime.Singleton,
-                replaceIfExist: true,
+                true,
                 DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
     }
 
@@ -367,19 +374,19 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         serviceCollection.RegisterHostedService<PlatformInboxBusMessageCleanerHostedService>();
         serviceCollection.RegisterHostedService<PlatformConsumeInboxBusMessageHostedService>();
         serviceCollection.Register(
-            serviceType: typeof(PlatformInboxConfig),
+            typeof(PlatformInboxConfig),
             InboxConfigProvider,
             ServiceLifeTime.Transient,
-            replaceIfExist: true,
+            true,
             DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
 
         serviceCollection.RegisterHostedService<PlatformOutboxBusMessageCleanerHostedService>();
         serviceCollection.RegisterHostedService<PlatformSendOutboxBusMessageHostedService>();
         serviceCollection.Register(
-            serviceType: typeof(PlatformOutboxConfig),
+            typeof(PlatformOutboxConfig),
             OutboxConfigProvider,
             ServiceLifeTime.Transient,
-            replaceIfExist: true,
+            true,
             DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
     }
 }

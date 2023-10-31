@@ -13,9 +13,11 @@ internal sealed class PlatformAutoClearMemoryHostingBackgroundService : Platform
 
     public override bool AutoCleanMemory => false;
 
+    public override bool LogIntervalProcessInformation => false;
+
     protected override TimeSpan ProcessTriggerIntervalTime()
     {
-        return 3.Seconds();
+        return 5.Seconds();
     }
 
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)

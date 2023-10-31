@@ -610,15 +610,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             await InboxBusMessageCollection.Indexes.CreateManyAsync(
                 new List<CreateIndexModel<PlatformInboxBusMessage>>
                 {
-                    new(Builders<PlatformInboxBusMessage>.IndexKeys.Ascending(p => p.RoutingKey)),
                     new(
                         Builders<PlatformInboxBusMessage>.IndexKeys
                             .Ascending(p => p.ConsumeStatus)
-                            .Ascending(p => p.LastConsumeDate)),
-                    new(
-                        Builders<PlatformInboxBusMessage>.IndexKeys
-                            .Ascending(p => p.ConsumeStatus)
-                            .Ascending(p => p.NextRetryProcessAfter)
                             .Ascending(p => p.LastConsumeDate))
                 });
     }
@@ -632,15 +626,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             await OutboxBusMessageCollection.Indexes.CreateManyAsync(
                 new List<CreateIndexModel<PlatformOutboxBusMessage>>
                 {
-                    new(Builders<PlatformOutboxBusMessage>.IndexKeys.Ascending(p => p.RoutingKey)),
                     new(
                         Builders<PlatformOutboxBusMessage>.IndexKeys
                             .Ascending(p => p.SendStatus)
-                            .Ascending(p => p.LastSendDate)),
-                    new(
-                        Builders<PlatformOutboxBusMessage>.IndexKeys
-                            .Ascending(p => p.SendStatus)
-                            .Ascending(p => p.NextRetryProcessAfter)
                             .Ascending(p => p.LastSendDate))
                 });
     }
@@ -666,11 +654,6 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         }
 
         return EntityTypeToCollectionNameDictionary.Value.TryGetValue(typeof(TEntity), out collectionName);
-    }
-
-    protected bool HasSupportOutboxEvent()
-    {
-        return RootServiceProvider.CheckHasRegisteredScopedService<IPlatformOutboxBusMessageRepository>();
     }
 
     protected bool IsEnsureIndexesMigrationExecuted()

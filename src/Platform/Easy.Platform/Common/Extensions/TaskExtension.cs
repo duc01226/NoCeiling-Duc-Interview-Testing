@@ -267,7 +267,7 @@ public static class TaskExtension
                 : t.GetResult());
     }
 
-    public static async Task<T> ToTask<T>(this T t)
+    public static async Task<T> BoxedInTask<T>(this T t)
     {
         return await Task.FromResult(t);
     }
@@ -793,7 +793,7 @@ public static class TaskExtension
         Func<T, Task<TR2>> fr2)
     {
         var tResult = await task;
-        return await Util.TaskRunner.WhenAll(tResult.ToTask(), fr1(tResult), fr2(tResult));
+        return await Util.TaskRunner.WhenAll(tResult.BoxedInTask(), fr1(tResult), fr2(tResult));
     }
 
     public static async Task<ValueTuple<T, TR1, TR2, TR3>> ThenWithAllAsync<T, TR1, TR2, TR3>(
@@ -803,7 +803,7 @@ public static class TaskExtension
         Func<T, Task<TR3>> fr3)
     {
         var tResult = await task;
-        return await Util.TaskRunner.WhenAll(tResult.ToTask(), fr1(tResult), fr2(tResult), fr3(tResult));
+        return await Util.TaskRunner.WhenAll(tResult.BoxedInTask(), fr1(tResult), fr2(tResult), fr3(tResult));
     }
 
     public static async Task<ValueTuple<T, TR1, TR2, TR3, TR4>> ThenWithAllAsync<T, TR1, TR2, TR3, TR4>(
@@ -814,7 +814,7 @@ public static class TaskExtension
         Func<T, Task<TR4>> fr4)
     {
         var tResult = await task;
-        return await Util.TaskRunner.WhenAll(tResult.ToTask(), fr1(tResult), fr2(tResult), fr3(tResult), fr4(tResult));
+        return await Util.TaskRunner.WhenAll(tResult.BoxedInTask(), fr1(tResult), fr2(tResult), fr3(tResult), fr4(tResult));
     }
 
     public static async Task<ValueTuple<T, TR1, TR2, TR3, TR4, TR5>> ThenWithAllAsync<T, TR1, TR2, TR3, TR4, TR5>(
@@ -826,7 +826,7 @@ public static class TaskExtension
         Func<T, Task<TR5>> fr5)
     {
         var tResult = await task;
-        return await Util.TaskRunner.WhenAll(tResult.ToTask(), fr1(tResult), fr2(tResult), fr3(tResult), fr4(tResult), fr5(tResult));
+        return await Util.TaskRunner.WhenAll(tResult.BoxedInTask(), fr1(tResult), fr2(tResult), fr3(tResult), fr4(tResult), fr5(tResult));
     }
 
     #endregion

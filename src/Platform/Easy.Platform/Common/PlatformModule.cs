@@ -2,8 +2,10 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
 using Easy.Platform.Common.Cqrs;
+using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.Hosting;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Utils;
 using MediatR;
@@ -65,7 +67,7 @@ public interface IPlatformModule
 
                 return modules.All(p => p.Initiated);
             },
-            maxWaitSeconds: serviceProvider.GetServices(moduleType).Count() * DefaultMaxWaitModuleInitiatedSeconds,
+            serviceProvider.GetServices(moduleType).Count() * DefaultMaxWaitModuleInitiatedSeconds,
             waitForMsg: $"Wait for all modules of type {moduleType.Name} get initiated",
             waitIntervalSeconds: 5);
 
@@ -110,7 +112,6 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 {
     public const int DefaultExecuteInitPriority = 10;
     public const int ExecuteInitPriorityNextLevelDistance = 10;
-    public const int MinimumRetryTimesToWarning = 2;
 
     protected static readonly ConcurrentDictionary<string, Assembly> ExecutedRegisterByAssemblies = new();
 
@@ -311,7 +312,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
                     .WithTracing(
                         builder => builder
                             .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(distributedTracingConfig.AppName ?? GetType().Assembly.GetName().Name!))
-                            .AddSource(TracingSources().Concat(allDependencyModulesTracingSources).ToArray())
+                            .AddSource(TracingSources().Concat(CommonTracingSources()).Concat(allDependencyModulesTracingSources).Distinct().ToArray())
                             .WithIf(AdditionalTracingConfigure != null, AdditionalTracingConfigure)
                             .WithIf(distributedTracingConfig.AdditionalTraceConfig != null, distributedTracingConfig.AdditionalTraceConfig)
                             .WithIf(distributedTracingConfig.AddOtlpExporterConfig != null, _ => _.AddOtlpExporter(distributedTracingConfig.AddOtlpExporterConfig))
@@ -323,6 +324,11 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
                                     .ForEach(dependencyModuleAdditionalTracingConfigure => dependencyModuleAdditionalTracingConfigure(_))));
             }
         }
+    }
+
+    public List<string> CommonTracingSources()
+    {
+        return Util.ListBuilder.New(IPlatformCqrsEventHandler.ActivitySource.Name, PlatformIntervalProcessHostedService.ActivitySource.Name);
     }
 
     public static ILogger CreateLogger(ILoggerFactory loggerFactory)
@@ -397,7 +403,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
                     serviceCollection.RegisterAllSelfImplementationFromType(typeof(IPipelineBehavior<,>), assembly);
                 },
                 Assembly,
-                actionName: nameof(RegisterCqrs));
+                nameof(RegisterCqrs));
     }
 
     protected void RegisterAllModuleDependencies(IServiceCollection serviceCollection)

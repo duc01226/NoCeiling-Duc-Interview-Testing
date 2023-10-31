@@ -1,6 +1,5 @@
 using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Application.MessageBus.OutboxPattern;
-using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.EfCore.Domain.Repositories;
 using Easy.Platform.EfCore.Domain.UnitOfWork;
@@ -69,10 +68,11 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
         base.RegisterInboxEventBusMessageRepository(serviceCollection);
 
         // Register Default InboxEventBusMessageRepository if not existed custom inherited IPlatformInboxEventBusMessageRepository in assembly
-        if (serviceCollection.All(p => p.ServiceType != typeof(IPlatformInboxBusMessageRepository)))
-            serviceCollection.Register(
-                typeof(IPlatformInboxBusMessageRepository),
-                typeof(PlatformDefaultEfCoreInboxBusMessageRepository<TDbContext>));
+        if (serviceCollection.All(p => p.ServiceType != typeof(IPlatformInboxBusMessageRepository<TDbContext>)))
+        {
+            serviceCollection.RegisterAllForImplementation<PlatformDefaultEfCoreInboxBusMessageRepository<TDbContext>>();
+            serviceCollection.Register<IPlatformInboxBusMessageRepository, PlatformDefaultEfCoreInboxBusMessageRepository<TDbContext>>();
+        }
     }
 
     protected override void RegisterOutboxEventBusMessageRepository(IServiceCollection serviceCollection)
@@ -83,10 +83,11 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
         base.RegisterOutboxEventBusMessageRepository(serviceCollection);
 
         // Register Default OutboxEventBusMessageRepository if not existed custom inherited IPlatformOutboxEventBusMessageRepository in assembly
-        if (serviceCollection.All(p => p.ServiceType != typeof(IPlatformOutboxBusMessageRepository)))
-            serviceCollection.Register(
-                typeof(IPlatformOutboxBusMessageRepository),
-                typeof(PlatformDefaultEfCoreOutboxBusMessageRepository<TDbContext>));
+        if (serviceCollection.All(p => p.ServiceType != typeof(IPlatformOutboxBusMessageRepository<TDbContext>)))
+        {
+            serviceCollection.RegisterAllForImplementation<PlatformDefaultEfCoreOutboxBusMessageRepository<TDbContext>>();
+            serviceCollection.Register<IPlatformOutboxBusMessageRepository, PlatformDefaultEfCoreOutboxBusMessageRepository<TDbContext>>();
+        }
     }
 
     private void RegisterDbContextOptions(IServiceCollection serviceCollection)
@@ -98,11 +99,7 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
 
     private void RegisterEfCoreUow(IServiceCollection serviceCollection)
     {
-        serviceCollection.RegisterAllFromType<IPlatformEfCorePersistenceUnitOfWork<TDbContext>>(
-            Assembly,
-            ServiceLifeTime.Transient,
-            replaceIfExist: true,
-            DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
+        serviceCollection.RegisterAllFromType<IPlatformEfCorePersistenceUnitOfWork<TDbContext>>(Assembly);
         // Register default PlatformMongoDbUnitOfWork if not any implementation in the concrete inherit persistence module
         if (serviceCollection.NotExist(p => p.ServiceType == typeof(IPlatformEfCorePersistenceUnitOfWork<TDbContext>)))
             serviceCollection.RegisterAllForImplementation<PlatformEfCorePersistenceUnitOfWork<TDbContext>>();

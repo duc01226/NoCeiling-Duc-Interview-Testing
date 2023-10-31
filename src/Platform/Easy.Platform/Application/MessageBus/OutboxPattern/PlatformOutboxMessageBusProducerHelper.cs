@@ -211,7 +211,9 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                     await rootServiceProvider.ExecuteInjectScopedAsync(
                         async (IPlatformOutboxBusMessageRepository outboxBusMessageRepository) =>
                         {
-                            var latestCurrentExistingOutboxMessage = await outboxBusMessageRepository.FirstOrDefaultAsync(p => p.Id == existingOutboxMessage.Id);
+                            var latestCurrentExistingOutboxMessage = await outboxBusMessageRepository.FirstOrDefaultAsync(
+                                p => p.Id == existingOutboxMessage.Id,
+                                cancellationToken);
 
                             if (latestCurrentExistingOutboxMessage != null)
                                 await UpdateExistingOutboxMessageFailedAsync(

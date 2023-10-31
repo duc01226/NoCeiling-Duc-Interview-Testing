@@ -78,14 +78,18 @@ public static class PlatformApplicationCommonUserContextKeys
         return context.GetValue<string>(UserLastNameContextKey);
     }
 
-    public static void SetRequestId(this IDictionary<string, object> context, string value)
+    public static TContext SetRequestId<TContext>(this TContext context, string value) where TContext : IDictionary<string, object>
     {
-        context.SetValue(value, RequestIdContextKey);
+        context?.SetValue(value, RequestIdContextKey);
+
+        return context;
     }
 
-    public static void SetUserId(this IDictionary<string, object> context, string value)
+    public static TContext SetUserId<TContext>(this TContext context, string value) where TContext : IDictionary<string, object>
     {
         context?.SetValue(value, UserIdContextKey);
+
+        return context;
     }
 
     public static TContext SetUserRoles<TContext>(this TContext context, List<string> value) where TContext : IDictionary<string, object>

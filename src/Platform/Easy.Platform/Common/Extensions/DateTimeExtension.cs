@@ -81,8 +81,7 @@ public static class DateTimeExtension
 
     public static DateTime ConvertToTimeZone(this DateTime dateTime, TimeZoneInfo timeZoneInfo)
     {
-        if (timeZoneInfo is null)
-            return dateTime;
+        if (timeZoneInfo is null) return dateTime;
 
         return TimeZoneInfo.ConvertTimeFromUtc(dateTime.ToUniversalTime(), timeZoneInfo);
     }
@@ -158,6 +157,11 @@ public static class DateTimeExtension
     {
         var time = new TimeOnly(dateTime.Hour, dateTime.Minute);
         return dateTime.SetTime(time);
+    }
+
+    public static string FormatText(this TimeOnly? timeOnly)
+    {
+        return timeOnly == null ? string.Empty : timeOnly.Value.ToString("HH:mm");
     }
 
     public enum MonToSunDayOfWeeks

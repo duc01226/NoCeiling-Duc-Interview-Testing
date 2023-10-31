@@ -402,7 +402,7 @@ public static class PlatformAsyncValidateExtension
         Func<T, Task<TR2>> fr2)
     {
         var tResultVal = await task;
-        return await tResultVal.ThenAsync(tResult => Util.TaskRunner.WhenAll(tResult.ToTask(), fr1(tResult), fr2(tResult)));
+        return await tResultVal.ThenAsync(tResult => Util.TaskRunner.WhenAll(tResult.BoxedInTask(), fr1(tResult), fr2(tResult)));
     }
 
     public static async Task<PlatformValidationResult<ValueTuple<T, TR1, TR2, TR3>>> WaitValidThenWithAllAsync<T, TR1, TR2, TR3>(
@@ -412,7 +412,7 @@ public static class PlatformAsyncValidateExtension
         Func<T, Task<TR3>> fr3)
     {
         var tResultVal = await task;
-        return await tResultVal.ThenAsync(tResult => Util.TaskRunner.WhenAll(tResult.ToTask(), fr1(tResult), fr2(tResult), fr3(tResult)));
+        return await tResultVal.ThenAsync(tResult => Util.TaskRunner.WhenAll(tResult.BoxedInTask(), fr1(tResult), fr2(tResult), fr3(tResult)));
     }
 
     public static async Task<PlatformValidationResult<ValueTuple<T, TR1, TR2, TR3, TR4>>> WaitValidThenWithAllAsync<T, TR1, TR2, TR3, TR4>(
@@ -423,7 +423,7 @@ public static class PlatformAsyncValidateExtension
         Func<T, Task<TR4>> fr4)
     {
         var tResultVal = await task;
-        return await tResultVal.ThenAsync(tResult => Util.TaskRunner.WhenAll(tResult.ToTask(), fr1(tResult), fr2(tResult), fr3(tResult), fr4(tResult)));
+        return await tResultVal.ThenAsync(tResult => Util.TaskRunner.WhenAll(tResult.BoxedInTask(), fr1(tResult), fr2(tResult), fr3(tResult), fr4(tResult)));
     }
 
     public static async Task<PlatformValidationResult<ValueTuple<T, TR1, TR2, TR3, TR4, TR5>>> WaitValidThenWithAllAsync<T, TR1, TR2, TR3, TR4, TR5>(
@@ -435,7 +435,8 @@ public static class PlatformAsyncValidateExtension
         Func<T, Task<TR5>> fr5)
     {
         var tResultVal = await task;
-        return await tResultVal.ThenAsync(tResult => Util.TaskRunner.WhenAll(tResult.ToTask(), fr1(tResult), fr2(tResult), fr3(tResult), fr4(tResult), fr5(tResult)));
+        return await tResultVal.ThenAsync(
+            tResult => Util.TaskRunner.WhenAll(tResult.BoxedInTask(), fr1(tResult), fr2(tResult), fr3(tResult), fr4(tResult), fr5(tResult)));
     }
 
 

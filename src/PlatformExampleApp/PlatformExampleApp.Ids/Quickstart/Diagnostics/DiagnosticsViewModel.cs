@@ -8,7 +8,7 @@ using System.Text.Json;
 using IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 
-namespace IdentityServerHost.Quickstart.UI;
+namespace PlatformExampleApp.Ids.Quickstart.Diagnostics;
 
 public class DiagnosticsViewModel
 {

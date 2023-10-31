@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Microsoft.Extensions.Logging;
@@ -7,6 +8,7 @@ namespace Easy.Platform.Common.Hosting;
 public abstract class PlatformIntervalProcessHostedService : PlatformHostedService
 {
     public const int DefaultProcessTriggerIntervalTimeMilliseconds = 60000;
+    public static readonly ActivitySource ActivitySource = new($"{nameof(PlatformHostedService)}");
 
     protected readonly SemaphoreSlim IntervalProcessLock = new(1, 1);
 
@@ -18,11 +20,20 @@ public abstract class PlatformIntervalProcessHostedService : PlatformHostedServi
 
     public virtual bool AutoCleanMemory => true;
 
+    public virtual bool LogIntervalProcessInformation => true;
+
     protected override async Task StartProcess(CancellationToken cancellationToken)
     {
         while (!ProcessStopped && !StoppingCts.IsCancellationRequested)
         {
-            await TriggerIntervalProcessAsync(cancellationToken);
+            try
+            {
+                await TriggerIntervalProcessAsync(cancellationToken);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e, "IntervalProcessHostedService {TargetName} FAILED. Error: {Error}", GetType().Name, e.Message);
+            }
 
             await Task.Delay(ProcessTriggerIntervalTime(), cancellationToken);
 
@@ -30,19 +41,34 @@ public abstract class PlatformIntervalProcessHostedService : PlatformHostedServi
         }
     }
 
-    public async Task TriggerIntervalProcessAsync(CancellationToken cancellationToken)
+    public virtual async Task TriggerIntervalProcessAsync(CancellationToken cancellationToken)
     {
         if (IntervalProcessLock.CurrentCount == 0) return;
 
-        try
+        using (var activity = ActivitySource.StartActivity($"{nameof(PlatformIntervalProcessHostedService)}.{nameof(TriggerIntervalProcessAsync)}"))
         {
-            await IntervalProcessLock.WaitAsync(cancellationToken);
+            activity?.AddTag("Type", GetType().FullName);
 
-            await IntervalProcessAsync(cancellationToken);
-        }
-        finally
-        {
-            IntervalProcessLock.Release();
+            try
+            {
+                await IntervalProcessLock.WaitAsync(cancellationToken);
+
+                if (LogIntervalProcessInformation)
+                    Logger.LogInformation("IntervalProcessHostedService {TargetName} STARTED", GetType().Name);
+
+                await IntervalProcessAsync(cancellationToken);
+
+                if (LogIntervalProcessInformation)
+                    Logger.LogInformation("IntervalProcessHostedService {TargetName} FINISHED", GetType().Name);
+            }
+            catch (Exception e)
+            {
+                Logger.LogError(e, "IntervalProcessHostedService {TargetName} FAILED. Error: {Error}", GetType().Name, e.Message);
+            }
+            finally
+            {
+                IntervalProcessLock.Release();
+            }
         }
     }
 

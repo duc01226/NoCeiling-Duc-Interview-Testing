@@ -194,7 +194,7 @@ public static class DependencyInjectionExtension
     }
 
     /// <summary>
-    /// <inheritdoc cref="RegisterAllForImplementation(IServiceCollection,Type,ServiceLifeTime,bool,CheckRegisteredStrategy)" />
+    ///     <inheritdoc cref="RegisterAllForImplementation(IServiceCollection,Type,ServiceLifeTime,bool,CheckRegisteredStrategy)" />
     /// </summary>
     public static IServiceCollection RegisterAllForImplementation<TImplementation>(
         this IServiceCollection services,
@@ -698,10 +698,10 @@ public static class DependencyInjectionExtension
         bool skipIfExist = false,
         CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
     {
-        if (implementationType.IsGenericType)
+        if (!implementationType.IsGenericType)
             implementationType
                 .GetInterfaces()
-                .Where(implementationType.MatchGenericArguments)
+                .Where(implementationTypeInterface => !implementationTypeInterface.IsGenericType)
                 .Where(DefaultIgnoreRegisterLibraryInterfacesForImplementationExpr())
                 .ForEach(
                     implementationTypeInterface => services.Register(
@@ -712,10 +712,11 @@ public static class DependencyInjectionExtension
                         replaceStrategy,
                         skipIfExist: skipIfExist,
                         skipIfExistStrategy: skipIfExistStrategy));
+
         else
             implementationType
                 .GetInterfaces()
-                .Where(implementationTypeInterface => !implementationTypeInterface.IsGenericType)
+                .Where(implementationType.MatchGenericArguments)
                 .Where(DefaultIgnoreRegisterLibraryInterfacesForImplementationExpr())
                 .ForEach(
                     implementationTypeInterface => services.Register(

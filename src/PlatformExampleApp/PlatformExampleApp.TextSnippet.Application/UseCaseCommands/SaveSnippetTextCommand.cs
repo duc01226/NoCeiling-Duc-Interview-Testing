@@ -206,7 +206,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
             request =>
             {
                 // Logic async validation here, example connect database to validate something
-                return PlatformValidationResult.Valid(request).ToTask();
+                return PlatformValidationResult.Valid(request).BoxedInTask();
             });
     }
 
@@ -242,14 +242,14 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
                 {
                     Id = userId,
                     Name = $"User {userId}"
-                }.ToTask()); // return [{Id:"UserId1",Name:"User UserId1"},{Id:"UserId2",Name:"User UserId2"}]
+                }.BoxedInTask()); // return [{Id:"UserId1",Name:"User UserId1"},{Id:"UserId2",Name:"User UserId2"}]
         var demoGetItemsByExecuteAsyncOnEachOtherItemsWithItemIndex = await Util.ListBuilder.New("UserId1", "UserId2")
             .SelectAsync(
                 (userId, itemIndex) => new
                 {
                     Id = userId,
                     Name = $"User Index{itemIndex} {userId}"
-                }.ToTask()); // return [{Id:"UserId1",Name:"User Index0 UserId1"},{Id:"UserId2",Name:"User Index1 UserId2"}]
+                }.BoxedInTask()); // return [{Id:"UserId1",Name:"User Index0 UserId1"},{Id:"UserId2",Name:"User Index1 UserId2"}]
         await Util.ListBuilder.New("UserId1", "UserId2")
             .ForEachAsync(
                 (userId, itemIndex) => Task.Run(
@@ -259,7 +259,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
         // Check that an obj could be a object as other type. Like xxx as TXX in c#. Return null if it could not be parsed.
         // This case return null so that EnsureFound will throw not found
         // var demoFluentAs = request.As<TextSnippetEntity>().EnsureFound();
-        var demoFluentAsync = request.ToTask(); // equal to Task.FromResult(request)
+        var demoFluentAsync = request.BoxedInTask(); // equal to Task.FromResult(request)
         // This case return the command because it is IPlatformCqrsCommand. Also demo fluent async task
         // Do not need to use await keyword in parenthesis (await request.AsTask()).As<IPlatformCqrsCommand>().EnsureFound();
         //var demoFluentAsync1 = await request.AsTask()

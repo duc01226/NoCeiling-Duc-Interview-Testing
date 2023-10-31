@@ -4,10 +4,10 @@ using MongoDB.Bson.Serialization;
 namespace Easy.Platform.MongoDB.Mapping;
 
 /// <summary>
-/// Used to map any entity which is inherited from <see cref="Entity{TEntity,TPrimaryKey}"/>
+/// Used to map any entity which is inherited from <see cref="Entity{TEntity,TPrimaryKey}" />
 /// </summary>
 public abstract class PlatformMongoBaseEntityClassMapping<TEntity, TPrimaryKey> : PlatformMongoClassMapping<TEntity, TPrimaryKey>
-    where TEntity : Entity<TEntity, TPrimaryKey>, new()
+    where TEntity : class, IEntity<TPrimaryKey>, ISupportDomainEventsEntity<TEntity>, new()
 {
     public override bool AutoApplyGuidAsStringMappingConvention => true;
 
