@@ -9,7 +9,7 @@ public class AutomationTestSettings
 {
     private const int DefaultPageLoadTimeoutSeconds = 300;
 
-    public Dictionary<string, string> AppNameToOrigin { get; set; } = new();
+    public Dictionary<string, string> AppNameToOrigin { get; set; } = [];
     public bool UseRemoteWebDriver { get; set; }
     public string? RemoteWebDriverUrl { get; set; }
     public WebDriverTypes WebDriverType { get; set; }
@@ -23,7 +23,7 @@ public class AutomationTestSettings
 
     public string[] GetWebDriverConfigArgumentsList()
     {
-        return WebDriverOptionsArguments?.Split(";").Where(p => !p.IsNullOrWhiteSpace()).Select(p => p.Trim()).ToArray() ?? Array.Empty<string>();
+        return WebDriverOptionsArguments?.Split(";").Where(p => !p.IsNullOrWhiteSpace()).Select(p => p.Trim()).ToArray() ?? [];
     }
 
     public enum WebDriverTypes

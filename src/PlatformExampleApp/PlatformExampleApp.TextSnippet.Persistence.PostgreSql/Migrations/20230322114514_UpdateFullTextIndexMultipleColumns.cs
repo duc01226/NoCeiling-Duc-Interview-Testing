@@ -15,7 +15,7 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_TextSnippetEntity_SnippetText_FullText",
                 table: "TextSnippetEntity",
-                columns: new[] { "SnippetText", "FullText" })
+                columns: ["SnippetText", "FullText"])
                 .Annotation("Npgsql:IndexMethod", "GIN")
                 .Annotation("Npgsql:TsVectorConfig", "english");
         }

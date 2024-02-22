@@ -5,24 +5,38 @@ using Easy.Platform.Common.JsonSerialization.Converters;
 
 namespace Easy.Platform.Common.JsonSerialization;
 
+/// <summary>
+/// Provides utility methods for JSON serialization and deserialization with customizable options.
+/// </summary>
 public static class PlatformJsonSerializer
 {
+    /// <summary>
+    /// Gets the default JSON serialization options.
+    /// </summary>
     public static readonly JsonSerializerOptions DefaultOptions = BuildDefaultOptions();
 
     /// <summary>
-    /// Use Lazy for thread safe
+    /// Lazy-initialized current JSON serialization options for thread safety.
     /// </summary>
     public static Lazy<JsonSerializerOptions> CurrentOptions { get; private set; } = new(() => DefaultOptions);
 
+    /// <summary>
+    /// Sets the current JSON serialization options.
+    /// </summary>
+    /// <param name="serializerOptions">The custom JSON serialization options.</param>
     public static void SetCurrentOptions(JsonSerializerOptions serializerOptions)
     {
         CurrentOptions = new Lazy<JsonSerializerOptions>(() => serializerOptions);
     }
 
     /// <summary>
-    /// Config JsonSerializerOptions with some platform best practices options. <br />
-    /// Support some customization
+    /// Configures the provided JSON serialization options with platform-specific best practices and customizations.
     /// </summary>
+    /// <param name="options">The JSON serialization options to configure.</param>
+    /// <param name="useJsonStringEnumConverter">Whether to use the <see cref="JsonStringEnumConverter" />.</param>
+    /// <param name="useCamelCaseNaming">Whether to use camel case property naming.</param>
+    /// <param name="customConverters">Additional custom JSON converters.</param>
+    /// <returns>The configured JSON serialization options.</returns>
     public static JsonSerializerOptions ConfigOptions(
         JsonSerializerOptions options,
         bool useJsonStringEnumConverter = true,
@@ -34,12 +48,15 @@ public static class PlatformJsonSerializer
         options.ReadCommentHandling = JsonCommentHandling.Skip;
         options.PropertyNameCaseInsensitive = true;
         options.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+
         if (useCamelCaseNaming)
             options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
 
         options.Converters.Clear();
+
         if (useJsonStringEnumConverter)
             options.Converters.Add(new JsonStringEnumConverter());
+
         options.Converters.Add(new PlatformObjectJsonConverter());
         options.Converters.Add(new PlatformClassTypeJsonConverter());
         options.Converters.Add(new PlatformIgnoreMethodBaseJsonConverter());
@@ -48,11 +65,19 @@ public static class PlatformJsonSerializer
         options.Converters.Add(new PlatformDateOnlyJsonConverter());
         options.Converters.Add(new PlatformNullableDateOnlyJsonConverter());
         options.Converters.Add(new PlatformPrimitiveTypeToStringJsonConverter());
+
         customConverters?.ForEach(options.Converters.Add);
 
         return options;
     }
 
+    /// <summary>
+    /// Builds the default JSON serialization options.
+    /// </summary>
+    /// <param name="useJsonStringEnumConverter">Whether to use the <see cref="JsonStringEnumConverter" />.</param>
+    /// <param name="useCamelCaseNaming">Whether to use camel case property naming.</param>
+    /// <param name="customConverters">Additional custom JSON converters.</param>
+    /// <returns>The default JSON serialization options.</returns>
     public static JsonSerializerOptions BuildDefaultOptions(
         bool useJsonStringEnumConverter = true,
         bool useCamelCaseNaming = false,
@@ -61,26 +86,47 @@ public static class PlatformJsonSerializer
         return ConfigOptions(new JsonSerializerOptions(), useJsonStringEnumConverter, useCamelCaseNaming, customConverters);
     }
 
+    /// <summary>
+    /// Serializes the specified value to a JSON string using the provided options or the current default options.
+    /// </summary>
+    /// <typeparam name="TValue">The type of the value to serialize.</typeparam>
+    /// <param name="value">The value to serialize.</param>
+    /// <param name="forceUseRuntimeType">Whether to force the use of the runtime type for abstract types.</param>
+    /// <returns>The JSON string representation of the serialized value.</returns>
     public static string Serialize<TValue>(TValue value, bool forceUseRuntimeType)
     {
         return Serialize(value, customSerializerOptions: null, forceUseRuntimeType: forceUseRuntimeType);
     }
 
+    /// <summary>
+    /// Serializes the specified value to a JSON string using the provided options or the current default options.
+    /// </summary>
+    /// <typeparam name="TValue">The type of the value to serialize.</typeparam>
+    /// <param name="value">The value to serialize.</param>
+    /// <returns>The JSON string representation of the serialized value.</returns>
     public static string Serialize<TValue>(TValue value)
     {
         return Serialize(value, customSerializerOptions: null);
     }
 
+    /// <summary>
+    /// Serializes the specified value to a JSON string using the provided options or the current default options.
+    /// </summary>
+    /// <typeparam name="TValue">The type of the value to serialize.</typeparam>
+    /// <param name="value">The value to serialize.</param>
+    /// <param name="customSerializerOptions">Custom JSON serialization options.</param>
+    /// <param name="forceUseRuntimeType">Whether to force the use of the runtime type for abstract types.</param>
+    /// <returns>The JSON string representation of the serialized value.</returns>
     public static string Serialize<TValue>(TValue value, JsonSerializerOptions customSerializerOptions, bool forceUseRuntimeType = false)
     {
         if (typeof(TValue).IsAbstract || forceUseRuntimeType)
             try
             {
-                // Try to use real runtime type to support TValue is abstract base type. Serialize exactly the type.
-                // If not work come back to original type
+                // Try to use the real runtime type to support TValue as an abstract base type.
+                // Serialize exactly the type. If not successful, fallback to the original type.
                 return JsonSerializer.Serialize(value, value.GetType(), customSerializerOptions ?? CurrentOptions.Value);
             }
-            catch (Exception)
+            catch
             {
                 return JsonSerializer.Serialize(value, typeof(TValue), customSerializerOptions ?? CurrentOptions.Value);
             }

@@ -45,10 +45,9 @@ public class PlatformContextCacheKeyProvider : IPlatformContextCacheKeyProvider
             Context,
             collection ?? DefaultCollection,
             requestKeyParts ??
-            new[]
-            {
+            [
                 DefaultRequestKey
-            });
+            ]);
     }
 
     public Func<PlatformCacheKey, bool> MatchContextKeyPredicate()

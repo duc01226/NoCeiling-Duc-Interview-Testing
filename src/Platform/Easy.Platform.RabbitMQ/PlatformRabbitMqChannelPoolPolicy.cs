@@ -5,16 +5,23 @@ namespace Easy.Platform.RabbitMQ;
 
 public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>, IDisposable
 {
+    public const int TryWaitGetConnectionSeconds = 120;
+
     private readonly PlatformRabbitMqOptions options;
-    private readonly RabbitMqConnectionPool rabbitMqConnectionPool;
+    private bool disposed;
+    private RabbitMqConnectionPool rabbitMqConnectionPool;
 
     public PlatformRabbitMqChannelPoolPolicy(
         int poolSize,
+        int reuseChannelPerConnectionCount,
         PlatformRabbitMqOptions options)
     {
         this.options = options;
-        rabbitMqConnectionPool = new RabbitMqConnectionPool(options, poolSize);
+        ReuseChannelPerConnectionCount = reuseChannelPerConnectionCount;
+        rabbitMqConnectionPool = new RabbitMqConnectionPool(options, poolSize >= ReuseChannelPerConnectionCount ? poolSize / ReuseChannelPerConnectionCount : 1);
     }
+
+    public int ReuseChannelPerConnectionCount { get; set; } = 2;
 
     public void Dispose()
     {
@@ -24,17 +31,22 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>, ID
 
     public IModel Create()
     {
-        var connection = rabbitMqConnectionPool.GetConnection();
+        var connection = rabbitMqConnectionPool.TryWaitGetConnection(TryWaitGetConnectionSeconds);
 
-        var channel = connection.CreateModel();
+        try
+        {
+            var channel = connection.CreateModel();
 
-        // Config the prefectCount. "defines the max number of unacknowledged deliveries that are permitted on a channel" to limit messages to prevent rabbit mq down
-        // Reference: https://www.rabbitmq.com/tutorials/tutorial-two-dotnet.html. Filter: BasicQos
-        channel.BasicQos(prefetchSize: 0, options.QueuePrefetchCount, false);
+            // Config the prefectCount. "defines the max number of unacknowledged deliveries that are permitted on a channel" to limit messages to prevent rabbit mq down
+            // Reference: https://www.rabbitmq.com/tutorials/tutorial-two-dotnet.html. Filter: BasicQos
+            channel.BasicQos(prefetchSize: 0, options.QueuePrefetchCount, false);
 
-        rabbitMqConnectionPool.ReturnConnection(connection);
-
-        return channel;
+            return channel;
+        }
+        finally
+        {
+            rabbitMqConnectionPool.ReturnConnection(connection);
+        }
     }
 
     public bool Return(IModel obj)
@@ -51,5 +63,18 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>, ID
 
     protected virtual void Dispose(bool disposing)
     {
+        if (!disposed)
+        {
+            // Release managed resources
+            if (disposing)
+            {
+                rabbitMqConnectionPool?.Dispose();
+                rabbitMqConnectionPool = default;
+            }
+
+            // Release unmanaged resources
+
+            disposed = true;
+        }
     }
 }

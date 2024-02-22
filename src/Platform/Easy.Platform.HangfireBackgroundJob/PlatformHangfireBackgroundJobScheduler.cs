@@ -74,7 +74,10 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
             BuildAutoRecurringJobIdByType<TJobExecutor>(),
             () => ExecuteBackgroundJobByType(typeof(TJobExecutor), null),
             cronExpressionValue,
-            timeZone ?? TimeZoneInfo.Local);
+            new RecurringJobOptions
+            {
+                TimeZone = timeZone ?? TimeZoneInfo.Local
+            });
     }
 
     public void UpsertRecurringJob<TJobExecutor, TJobExecutorParam>(TJobExecutorParam jobExecutorParam, Func<string> cronExpression = null, TimeZoneInfo timeZone = null)
@@ -87,7 +90,10 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
             BuildAutoRecurringJobIdByType<TJobExecutor>(),
             () => ExecuteBackgroundJobByType(typeof(TJobExecutor), jobExecutorParamJson),
             cronExpressionValue,
-            timeZone ?? TimeZoneInfo.Local);
+            new RecurringJobOptions
+            {
+                TimeZone = timeZone ?? TimeZoneInfo.Local
+            });
     }
 
     public void UpsertRecurringJob(
@@ -101,7 +107,10 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
             BuildAutoRecurringJobIdByType(jobExecutorType),
             () => ExecuteBackgroundJobByType(jobExecutorType, null),
             cronExpressionValue,
-            timeZone ?? TimeZoneInfo.Local);
+            new RecurringJobOptions
+            {
+                TimeZone = timeZone ?? TimeZoneInfo.Local
+            });
     }
 
     public void UpsertRecurringJob(Type jobExecutorType, object jobExecutorParam, Func<string> cronExpression = null, TimeZoneInfo timeZone = null)
@@ -113,7 +122,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
             BuildAutoRecurringJobIdByType(jobExecutorType),
             () => ExecuteBackgroundJobByType(jobExecutorType, jobExecutorParamJson),
             cronExpressionValue,
-            timeZone ?? TimeZoneInfo.Local);
+            new RecurringJobOptions { TimeZone = timeZone ?? TimeZoneInfo.Local });
     }
 
     public void UpsertRecurringJob(
@@ -128,7 +137,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
             recurringJobId.TakeTop(DefaultMaxLengthJobId),
             () => ExecuteBackgroundJobByType(jobExecutorType, null),
             cronExpressionValue,
-            timeZone ?? TimeZoneInfo.Local);
+            new RecurringJobOptions { TimeZone = timeZone ?? TimeZoneInfo.Local });
     }
 
     public void UpsertRecurringJob(string recurringJobId, Type jobExecutorType, object jobExecutorParam, Func<string> cronExpression = null, TimeZoneInfo timeZone = null)
@@ -140,7 +149,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
             recurringJobId.TakeTop(DefaultMaxLengthJobId),
             () => ExecuteBackgroundJobByType(jobExecutorType, jobExecutorParamJson),
             cronExpressionValue,
-            timeZone ?? TimeZoneInfo.Local);
+            new RecurringJobOptions { TimeZone = timeZone ?? TimeZoneInfo.Local });
     }
 
     public void RemoveRecurringJobIfExist(string recurringJobId)

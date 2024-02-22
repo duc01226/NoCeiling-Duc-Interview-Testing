@@ -1,7 +1,6 @@
 using Easy.Platform.AspNetCore;
 using Easy.Platform.AspNetCore.Extensions;
 using Easy.Platform.Common.DependencyInjection;
-using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.EfCore.Logging.Exceptions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -43,9 +42,9 @@ try
         .PipeIf(
             PlatformEnvironment.IsDevelopment && configuration["LocalDockerHttpsCert:FilePath"] != null,
             p => p.UseCustomHttpsCert(
-                httpsCertFileRelativePath: configuration["LocalDockerHttpsCert:FilePath"],
-                httpsCertPassword: configuration["LocalDockerHttpsCert:Password"],
-                ignoreIfFileNotExisting: true));
+                configuration["LocalDockerHttpsCert:FilePath"],
+                configuration["LocalDockerHttpsCert:Password"],
+                true));
 
     // BUILD AND CONFIG APP
     var webApplication = builder.Build();
@@ -66,7 +65,8 @@ catch (Exception e)
 static void ConfigureServices(IServiceCollection services)
 {
     services.AddControllers()
-        .AddJsonOptions(options => PlatformJsonSerializer.ConfigOptions(options.JsonSerializerOptions, useCamelCaseNaming: false));
+        .AddPlatformModelBinderProviders()
+        .AddPlatformJsonOptions(useCamelCaseNaming: false);
     // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
     services.AddEndpointsApiExplorer();
     services.AddSwaggerGen(

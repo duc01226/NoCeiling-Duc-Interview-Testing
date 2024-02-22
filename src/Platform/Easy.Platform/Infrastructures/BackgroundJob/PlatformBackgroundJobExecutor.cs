@@ -101,7 +101,7 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
         }
         finally
         {
-            Util.GarbageCollector.Collect(immediately: true);
+            Util.GarbageCollector.Collect(aggressiveImmediately: false);
         }
     }
 
@@ -110,9 +110,9 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
         Execute(null);
     }
 
-    public abstract Task ProcessAsync(TParam param = null);
+    public abstract Task ProcessAsync(TParam param);
 
-    protected virtual async Task InternalExecuteAsync(TParam param = null)
+    protected virtual async Task InternalExecuteAsync(TParam param)
     {
         await ProcessAsync(param);
     }

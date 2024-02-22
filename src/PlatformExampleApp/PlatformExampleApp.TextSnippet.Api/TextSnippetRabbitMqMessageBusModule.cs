@@ -1,4 +1,4 @@
-using Easy.Platform.Application.Context;
+using Easy.Platform.Application;
 using Easy.Platform.Infrastructures.MessageBus;
 using Easy.Platform.RabbitMQ;
 using Microsoft.Extensions.Configuration;

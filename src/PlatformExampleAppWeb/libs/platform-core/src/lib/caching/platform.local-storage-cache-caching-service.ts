@@ -7,6 +7,22 @@ import {
     PlatformCachingServiceSetCacheOptions
 } from './platform.caching-service';
 
+/**
+ * Local storage caching service implementation.
+ *
+ * @remarks
+ * This class extends the {@link PlatformCachingService} abstract class and provides a caching service
+ * that utilizes the browser's local storage for storing cached data.
+ *
+ * @example
+ * ```typescript
+ * // Create an instance of PlatformLocalStorageCachingService
+ * const localStorageCacheService = new PlatformLocalStorageCachingService();
+ *
+ * // Use caching methods such as get, set, delete, etc.
+ * const cachedData = localStorageCacheService.get<MyData>('myDataCacheKey');
+ * ```
+ */
 export class PlatformLocalStorageCachingService extends PlatformCachingService {
     protected cacheKey: string;
     protected cache: Map<string, PlatformCachingItem> = new Map();
@@ -17,12 +33,18 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
         this.loadCache();
     }
 
+    /**
+     * Loads cached data from local storage.
+     */
     public loadCache() {
         const cachedData = localStorage.getItem(this.cacheKey);
-        this.cache = cachedData ? new Map(JSON.parse(cachedData)) : new Map();
+        this.cache = cachedData != null ? new Map(JSON.parse(cachedData)) : new Map();
         this.removeExpiredItems();
     }
 
+    /**
+     * Removes expired items from the cache.
+     */
     public removeExpiredItems() {
         for (const [key, value] of this.cache.entries()) {
             if (this.isItemExpired(value)) {
@@ -32,6 +54,11 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
         this.saveCache();
     }
 
+    /**
+     * Saves the cache to local storage.
+     *
+     * @param debounceSaveCache - Determines whether to debounce saving the cache.
+     */
     public saveCache(debounceSaveCache?: boolean) {
         if (debounceSaveCache == false) this.doSaveCache();
         // Schedule in background to save cache to not block current thread and improve performance
@@ -51,16 +78,29 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
 
     private doSaveCacheDebounce = task_debounce(() => this.doSaveCache(), this.options.defaultDebounceSaveCacheMs);
 
+    /**
+     * Checks if a cached item is expired.
+     *
+     * @param item - The cached item to check.
+     * @returns True if the item is expired, otherwise false.
+     */
     public isItemExpired(item: PlatformCachingItem) {
         const ttl = item.ttl ?? this.options.ttl;
         return Date.now() - item.timestamp >= ttl * 1000;
     }
 
+    /**
+     * Gets cached data for a given key.
+     *
+     * @param key - The key for which to retrieve the cached data.
+     * @param objectConstuctor - Optional constructor function to create an object from the cached data.
+     * @returns The cached data or undefined if not found.
+     */
     public override get<T>(key: string, objectConstuctor?: (data?: Partial<T>) => T): T | undefined {
         try {
             const cachedItem = this.cache.get(key);
 
-            if (cachedItem) {
+            if (cachedItem != null) {
                 if (this.isItemExpired(cachedItem)) {
                     this.delete(key);
                     return undefined;
@@ -77,6 +117,13 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
         }
     }
 
+    /**
+     * Sets cached data for a given key.
+     *
+     * @param key - The key for which to set the cached data.
+     * @param data - The data to be cached.
+     * @param options - Additional options for caching, such as time to live (TTL).
+     */
     public override set<T>(key: string, data: T | undefined, options?: PlatformCachingServiceSetCacheOptions): void {
         if (data == undefined) this.delete(key);
         else this.doSetData<T>(data, options, key);

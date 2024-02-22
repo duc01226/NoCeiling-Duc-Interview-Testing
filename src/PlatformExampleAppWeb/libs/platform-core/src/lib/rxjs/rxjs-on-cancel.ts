@@ -18,10 +18,12 @@ export function onCancel<T>(f: () => void): (source: Observable<T>) => Observabl
                 },
                 complete: () => {
                     completed = true;
-                    observer.complete();
                     if (!succeeded && !errored) f();
+
+                    observer.complete();
                 }
             });
+
             return () => {
                 subscription.unsubscribe();
                 if (!completed && !errored) f();

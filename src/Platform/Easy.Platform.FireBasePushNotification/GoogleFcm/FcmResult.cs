@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Easy.Platform.FireBasePushNotification.GoogleFcm;
+namespace Easy.Platform.FirebasePushNotification.GoogleFcm;
 
 /// <summary>
 /// Firebase cloud message result

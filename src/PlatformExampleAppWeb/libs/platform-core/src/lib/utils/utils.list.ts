@@ -107,7 +107,7 @@ export function list_remove<T>(collection: T[], predicate: (item: T) => boolean)
 export function list_removeFirst<T>(collection: T[], predicate: (item: T) => boolean): T | undefined {
     let removedItem: T | undefined;
     for (let i = 0; i < collection.length; i++) {
-        if (predicate(collection[i])) {
+        if (predicate(collection[i]!)) {
             removedItem = collection.splice(i, 1)[0];
         }
     }
@@ -140,7 +140,7 @@ export function list_add<T>(
 export function list_replaceOne<T>(collection: T[], replaceItem: T, condition: (item: T) => boolean): T[] {
     const clonedCollection = ObjectUtil.clone(collection);
     for (let i = 0; i < clonedCollection.length; i++) {
-        if (condition(clonedCollection[i])) {
+        if (condition(clonedCollection[i]!)) {
             clonedCollection[i] = replaceItem;
             return clonedCollection;
         }
@@ -157,9 +157,9 @@ export function list_replaceMany<T>(
     replaceItems = ObjectUtil.clone(replaceItems);
     for (let i = 0; i < collection.length; i++) {
         for (let j = 0; j < replaceItems.length; j++) {
-            if (condition(collection[i], replaceItems[j])) {
-                collection[i] = replaceItems[j];
-                replacedItems.push(replaceItems[j]);
+            if (condition(collection[i]!, replaceItems[j]!)) {
+                collection[i] = replaceItems[j]!;
+                replacedItems.push(replaceItems[j]!);
                 replaceItems.splice(j, 1);
                 break;
             }
@@ -175,7 +175,7 @@ export function list_addOrReplace<T>(
 ): T[] | undefined {
     if (collection == undefined) return collection;
     for (let i = 0; i < collection.length; i++) {
-        if (replaceCondition(collection[i])) {
+        if (replaceCondition(collection[i]!)) {
             collection[i] = item;
             return collection;
         }
@@ -243,11 +243,11 @@ export function list_rightMerge<T>(
     const currentCollectionDic = list_toDictionary(currentCollection, compareSelector);
     const result: T[] = [];
     for (let i = 0; i < newCollection.length; i++) {
-        result.push(newCollection[i]);
+        result.push(newCollection[i]!);
 
-        const innerJoinItem = currentCollectionDic[compareSelector(result[i]).toString()];
+        const innerJoinItem = currentCollectionDic[compareSelector(result[i]!).toString()];
         if (innerJoinItem != undefined && typeof innerJoinItem == 'object') {
-            result[i] = ObjectUtil.clone(result[i], newResultItemValue => {
+            result[i] = ObjectUtil.clone(result[i]!, newResultItemValue => {
                 return ObjectUtil.extend(<any>newResultItemValue, <any>innerJoinItem);
             });
         }

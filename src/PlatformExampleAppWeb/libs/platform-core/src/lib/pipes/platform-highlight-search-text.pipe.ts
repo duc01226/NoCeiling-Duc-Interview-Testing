@@ -14,7 +14,7 @@ export class PlatformHighlightSearchTextPipe
         super();
     }
     public transform(value: string | undefined, args: string | undefined): string | undefined | SafeHtml {
-        if (!args || !value) {
+        if (args == undefined || value == undefined) {
             return value;
         }
         const reg = new RegExp(args, 'gi'); //'gi' for global and case insensitive.

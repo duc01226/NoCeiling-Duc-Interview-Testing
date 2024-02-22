@@ -12,17 +12,18 @@ namespace Easy.Platform.RabbitMQ;
 public class PlatformRabbitMqChannelPool : IDisposable
 {
     protected readonly ConcurrentDictionary<int, IModel> CreatedChannelDict = new();
-    protected readonly PlatformRabbitMqChannelPoolPolicy ChannelPoolPolicy;
 
     protected readonly SemaphoreSlim InitInternalObjectPoolLock = new(1, 1);
+    protected PlatformRabbitMqChannelPoolPolicy ChannelPoolPolicy;
     protected DefaultObjectPool<IModel> InternalObjectPool;
+    private bool disposed;
 
     public PlatformRabbitMqChannelPool(PlatformRabbitMqChannelPoolPolicy channelPoolPolicy)
     {
         ChannelPoolPolicy = channelPoolPolicy;
     }
 
-    public int MaximumRetained { get; set; } = Environment.ProcessorCount * 2;
+    public int PoolSize { get; set; } = Environment.ProcessorCount * 2;
 
     public void Dispose()
     {
@@ -44,7 +45,7 @@ public class PlatformRabbitMqChannelPool : IDisposable
     private void InitInternalObjectPool()
     {
         if (InternalObjectPool == null)
-            InitInternalObjectPoolLock.ExecuteLockAction(() => InternalObjectPool ??= new DefaultObjectPool<IModel>(ChannelPoolPolicy, MaximumRetained));
+            InitInternalObjectPoolLock.ExecuteLockAction(() => InternalObjectPool ??= new DefaultObjectPool<IModel>(ChannelPoolPolicy, PoolSize));
     }
 
     public void Return(IModel obj)
@@ -75,10 +76,26 @@ public class PlatformRabbitMqChannelPool : IDisposable
 
     protected virtual void Dispose(bool disposing)
     {
-        if (disposing)
+        if (!disposed)
         {
-            CreatedChannelDict.ForEach(p => p.Value.Dispose());
-            ChannelPoolPolicy?.Dispose();
+            if (disposing)
+            {
+                // Release managed resources
+                CreatedChannelDict.ForEach(p => p.Value.Dispose());
+                CreatedChannelDict.Clear();
+
+                ChannelPoolPolicy?.Dispose();
+                ChannelPoolPolicy = null;
+            }
+
+            // Release unmanaged resources
+
+            disposed = true;
         }
+    }
+
+    ~PlatformRabbitMqChannelPool()
+    {
+        Dispose(false);
     }
 }

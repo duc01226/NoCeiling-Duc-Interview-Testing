@@ -8,14 +8,14 @@ import { Time } from '../common-types/time';
     pure: true
 })
 export class LogTimesDisplayPipe implements PipeTransform {
-    public transform(logTimes: Time[]): string {
-        if (!logTimes) return '';
+    public transform(logTimes?: Time[]): string {
+        if (logTimes == undefined) return '';
 
         if (logTimes.length > 2) {
-            return Time.parse(logTimes[0])
+            return Time.parse(logTimes[0]!)
                 .hourMinuteDisplay()
                 .concat('; ... ; ')
-                .concat(Time.parse(logTimes[logTimes.length - 1]).hourMinuteDisplay());
+                .concat(Time.parse(logTimes[logTimes.length - 1]!).hourMinuteDisplay());
         } else {
             let result = '';
             logTimes.forEach(

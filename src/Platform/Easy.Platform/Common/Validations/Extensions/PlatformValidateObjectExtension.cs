@@ -236,7 +236,7 @@ public static class PlatformValidateObjectExtension
         List<T> mustFoundAllItems,
         Func<List<T>, string> notFoundObjectsToErrorMsg)
     {
-        var notFoundObjects = mustFoundAllItems.Except(objects ?? new List<T>()).ToList();
+        var notFoundObjects = mustFoundAllItems.Except(objects ?? []).ToList();
 
         return notFoundObjects.Any() ? PlatformValidationResult.Invalid(objects, notFoundObjectsToErrorMsg(notFoundObjects)) : PlatformValidationResult.Valid(objects);
     }

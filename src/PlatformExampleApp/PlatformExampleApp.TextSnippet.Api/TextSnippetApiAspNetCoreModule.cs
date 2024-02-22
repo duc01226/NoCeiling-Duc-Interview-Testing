@@ -55,7 +55,7 @@ public class TextSnippetApiAspNetCoreModule : PlatformAspNetCoreModule
 
     protected override Type UserContextKeyToClaimTypeMapperType()
     {
-        return typeof(TextSnippetApplicationUserContextKeyToJwtClaimTypeMapper);
+        return typeof(TextSnippetApplicationRequestContextKeyToJwtClaimTypeMapper);
     }
 
     protected override JsonSerializerOptions JsonSerializerCurrentOptions()

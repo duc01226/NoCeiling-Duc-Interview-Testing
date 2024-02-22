@@ -3,6 +3,9 @@ using Easy.Platform.Infrastructures.BackgroundJob;
 using Hangfire;
 using Hangfire.Mongo;
 using Hangfire.PostgreSql;
+using HangfireBasicAuthenticationFilter;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -49,6 +52,8 @@ public abstract class PlatformHangfireBackgroundJobModule : PlatformBackgroundJo
         await ReplaceAllLatestRecurringBackgroundJobs(serviceScope);
 
         await StartBackgroundJobProcessing(serviceScope);
+
+        if (AutoUseDashboardUi) UseDashboardUi(CurrentApp);
     }
 
     protected virtual BackgroundJobServerOptions BackgroundJobServerOptionsConfigure(
@@ -80,7 +85,7 @@ public abstract class PlatformHangfireBackgroundJobModule : PlatformBackgroundJo
             {
                 var options = UseSqlServerStorageOptions();
                 configuration.UseSqlServerStorage(
-                    options.ConnectionString,
+                    () => new SqlConnection(options.ConnectionString),
                     options.StorageOptions);
                 break;
             }
@@ -98,7 +103,7 @@ public abstract class PlatformHangfireBackgroundJobModule : PlatformBackgroundJo
             case PlatformHangfireBackgroundJobStorageType.PostgreSql:
             {
                 var options = UsePostgreSqlStorageOptions();
-                configuration.UsePostgreSqlStorage(options.ConnectionString, options.StorageOptions);
+                configuration.UsePostgreSqlStorage(opts => opts.UseNpgsqlConnection(options.ConnectionString), options.StorageOptions);
                 break;
             }
 
@@ -139,5 +144,33 @@ public abstract class PlatformHangfireBackgroundJobModule : PlatformBackgroundJo
         {
             ConnectionString = StorageOptionsConnectionString()
         };
+    }
+
+    protected virtual PlatformBackgroundJobUseDashboardUiOptions BackgroundJobUseDashboardUiOptions()
+    {
+        return new PlatformBackgroundJobUseDashboardUiOptions();
+    }
+
+    public override PlatformBackgroundJobModule UseDashboardUi(IApplicationBuilder app, PlatformBackgroundJobUseDashboardUiOptions options = null)
+    {
+        options ??= BackgroundJobUseDashboardUiOptions();
+
+        options.EnsureValid();
+
+        app.UseHangfireDashboard(
+            options.DashboardUiPathStart,
+            new DashboardOptions()
+                .WithIf(
+                    options.UseAuthentication && options.BasicAuthentication != null,
+                    opts => opts.Authorization =
+                    [
+                        new HangfireCustomBasicAuthenticationFilter
+                        {
+                            User = options.BasicAuthentication.UserName,
+                            Pass = options.BasicAuthentication.Password
+                        }
+                    ]));
+
+        return this;
     }
 }

@@ -41,9 +41,7 @@ public abstract class PlatformRabbitMqMessageBusModule : PlatformMessageBusModul
     {
         await base.InternalInit(serviceScope);
 
-        Util.TaskRunner.QueueActionInBackground(
-            () => ServiceProvider.GetRequiredService<PlatformRabbitMqProcessInitializerService>().StartProcess(CancellationToken.None),
-            () => Logger);
+        await ServiceProvider.GetRequiredService<PlatformRabbitMqProcessInitializerService>().StartProcess(CancellationToken.None);
     }
 
     protected abstract PlatformRabbitMqOptions RabbitMqOptionsFactory(IServiceProvider serviceProvider);

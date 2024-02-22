@@ -1,4 +1,4 @@
-﻿namespace Easy.Platform.FireBasePushNotification;
+﻿namespace Easy.Platform.FirebasePushNotification;
 
 public class FireBasePushNotificationSettings
 {

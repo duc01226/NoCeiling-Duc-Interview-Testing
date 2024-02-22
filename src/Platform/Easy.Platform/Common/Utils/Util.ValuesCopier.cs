@@ -55,10 +55,10 @@ public static partial class Util
             /// me if you really need this...
             /// </summary>
             [SuppressMessage("Major Code Smell", "S2743:Static fields should not be used in generic types", Justification = "<Pending>")]
-            private static readonly List<PropertyInfo> SourceProperties = new();
+            private static readonly List<PropertyInfo> SourceProperties = [];
 
             [SuppressMessage("Major Code Smell", "S2743:Static fields should not be used in generic types", Justification = "<Pending>")]
-            private static readonly List<PropertyInfo> TargetProperties = new();
+            private static readonly List<PropertyInfo> TargetProperties = [];
 
             [SuppressMessage("Major Code Smell", "S2743:Static fields should not be used in generic types", Justification = "<Pending>")]
             private static readonly Exception InitializationException;

@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
-using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Cqrs.Queries;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common.Cqrs.Queries;
 using Easy.Platform.Infrastructures.Caching;
 using Microsoft.Extensions.Logging;
@@ -29,11 +29,11 @@ internal sealed class TestGetAllDataAsStreamQueryHandler : PlatformCqrsQueryAppl
     private readonly ITextSnippetRepository<TextSnippetEntity> textSnippetRepository;
 
     public TestGetAllDataAsStreamQueryHandler(
-        IPlatformApplicationUserContextAccessor userContext,
+        IPlatformApplicationRequestContextAccessor requestContextAccessor,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider,
         IPlatformCacheRepositoryProvider cacheRepositoryProvider,
-        ITextSnippetRepository<TextSnippetEntity> textSnippetRepository) : base(userContext, loggerFactory, rootServiceProvider, cacheRepositoryProvider)
+        ITextSnippetRepository<TextSnippetEntity> textSnippetRepository) : base(requestContextAccessor, loggerFactory, rootServiceProvider, cacheRepositoryProvider)
     {
         this.textSnippetRepository = textSnippetRepository;
     }
@@ -45,7 +45,8 @@ internal sealed class TestGetAllDataAsStreamQueryHandler : PlatformCqrsQueryAppl
         // Return data as stream using IAsyncEnumerable do not load all data or sub list of data into memory, it stream each item async
         var asyncEnumerableResult = Enumerable.Range(0, 10000)
             .SelectManyAsync(
-                p => textSnippetRepository.GetAllAsyncEnumerable(queryBuilder: query => query).Select(p => new TextSnippetEntityDto(p)));
+                p => textSnippetRepository.GetAllAsyncEnumerable(queryBuilder: query => query, cancellationToken: cancellationToken)
+                    .Select(p => new TextSnippetEntityDto(p)));
 
         // Test use enumerable to see the memory different
         var enumerableResult = GetEnumerableResult();

@@ -1,5 +1,5 @@
-using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Cqrs.Commands;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Commands;
 using Easy.Platform.Domain.UnitOfWork;
@@ -29,12 +29,12 @@ internal sealed class DemoUseDemoDomainServiceCommandHandler
     private readonly TransferSnippetTextToMultiDbDemoEntityNameService transferSnippetTextToMultiDbDemoEntityNameService;
 
     public DemoUseDemoDomainServiceCommandHandler(
-        IPlatformApplicationUserContextAccessor userContext,
+        IPlatformApplicationRequestContextAccessor requestContextAccessor,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider,
-        TransferSnippetTextToMultiDbDemoEntityNameService transferSnippetTextToMultiDbDemoEntityNameService) : base(userContext, unitOfWorkManager, cqrs, loggerFactory, rootServiceProvider)
+        TransferSnippetTextToMultiDbDemoEntityNameService transferSnippetTextToMultiDbDemoEntityNameService) : base(requestContextAccessor, unitOfWorkManager, cqrs, loggerFactory, rootServiceProvider)
     {
         this.transferSnippetTextToMultiDbDemoEntityNameService = transferSnippetTextToMultiDbDemoEntityNameService;
     }

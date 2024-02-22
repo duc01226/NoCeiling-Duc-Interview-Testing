@@ -14,9 +14,9 @@ namespace Easy.Platform.AzureFileStorage;
 public class PlatformAzureFileStorageService : IPlatformFileStorageService
 {
     private readonly BlobServiceClient blobServiceClient;
-    private readonly ILogger logger;
     private readonly PlatformAzureFileStorageConfiguration fileStorageConfiguration;
     private readonly PlatformFileStorageOptions fileStorageOptions;
+    private readonly ILogger logger;
 
     public PlatformAzureFileStorageService(
         PlatformAzureFileStorageConfiguration fileStorageConfigurationOptions,
@@ -392,7 +392,7 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
     private static readonly Regex FileDirectoryRegex = new("^[^\"\\\\/:|<>*?]*\\/{0,1}$", RegexOptions);
 
     private static readonly string[] ReservedFileNames =
-    {
+    [
         ".",
         "..",
         "LPT1",
@@ -418,7 +418,7 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
         "NUL",
         "CON",
         "CLOCK$"
-    };
+    ];
 
     private static void EnsureFileResourceNameValid(string resourceName, string resourceType)
     {
@@ -444,7 +444,7 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
         {
             // Copy from Microsoft.Azure.Storage.NameValidator
             EnsureFileResourceNameValid(fileName, "file");
-            if (fileName.EndsWith("/", StringComparison.Ordinal))
+            if (fileName.EndsWith('/'))
                 throw new ArgumentException(
                     string.Format(CultureInfo.InvariantCulture, "Invalid {0} name. Check MSDN for more information about valid {0} naming.", "file"));
             if (ReservedFileNames.Any(p => p.Equals(fileName, StringComparison.OrdinalIgnoreCase)))

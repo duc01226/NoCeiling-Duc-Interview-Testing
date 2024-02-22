@@ -7,11 +7,11 @@
 // export function checkIsLeaveRequestDateRangeOverlappedAsyncValidator(
 //   errorKey: string,
 //   checkOverlap$: (query: CheckOverlapLeaveRequestQuery) => Observable<CheckOverlapLeaveRequestQueryResult>,
-//   queryFn: (control: FormControl<Date>) => CheckOverlapLeaveRequestQuery | null
+//   queryFn: (control: FormControl<Date>) => CheckOverlapLeaveRequestQuery | undefined
 // ): AsyncValidatorFn {
 //   const cancelPreviousSub: Subject<null> = new Subject();
 
-//   return (control: FormControl): Promise<ValidationErrors | null> | Observable<ValidationErrors | null> => {
+//   return validator((control: FormControl): Promise<ValidationErrors | null> | Observable<ValidationErrors | null> => {
 //     cancelPreviousSub.next(null);
 //     const query = queryFn(control);
 
@@ -36,5 +36,5 @@
 //         );
 //       })
 //     );
-//   };
+//   });
 // }

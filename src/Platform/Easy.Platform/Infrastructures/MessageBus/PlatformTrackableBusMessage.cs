@@ -16,5 +16,5 @@ public class PlatformTrackableBusMessage : IPlatformTrackableBusMessage
     public string TrackingId { get; set; } = Guid.NewGuid().ToString();
     public DateTime? CreatedUtcDate { get; set; } = DateTime.UtcNow;
     public string ProduceFrom { get; set; }
-    public Dictionary<string, object> RequestContext { get; set; } = new();
+    public Dictionary<string, object> RequestContext { get; set; } = [];
 }

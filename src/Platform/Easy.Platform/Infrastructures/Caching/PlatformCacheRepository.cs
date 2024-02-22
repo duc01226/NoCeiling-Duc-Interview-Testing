@@ -9,6 +9,17 @@ using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Infrastructures.Caching;
 
+/// <summary>
+/// The IPlatformCacheRepository interface in the Easy.Platform.Infrastructures.Caching namespace is a key component of the caching infrastructure in the application. It provides a unified way to interact with different types of caching mechanisms, such as in-memory and distributed caches.
+/// <br />
+/// This interface defines methods for common caching operations, such as getting, setting, and removing cache entries. It also provides methods for handling asynchronous operations and managing cache entry options, including expiration settings.
+/// <br />
+/// The PlatformCacheRepository abstract class implements this interface, and specific cache repository classes like PlatformRedisDistributedCacheRepository and PlatformMemoryCacheRepository extend this abstract class to provide concrete implementations for different caching mechanisms.
+/// <br />
+/// The IPlatformMemoryCacheRepository and IPlatformDistributedCacheRepository interfaces extend IPlatformCacheRepository, indicating that they share the same basic caching operations but may have additional features specific to memory or distributed caching.
+/// <br />
+/// Overall, the IPlatformCacheRepository interface is crucial for abstracting the underlying caching mechanism, allowing the rest of the application to interact with the cache in a consistent and technology-agnostic manner.
+/// </summary>
 public interface IPlatformCacheRepository
 {
     public const string DefaultGlobalContext = "__DefaultGlobalCacheContext__";
@@ -126,23 +137,25 @@ public interface IPlatformCacheRepository
     /// </summary>
     PlatformCacheEntryOptions GetDefaultCacheEntryOptions();
 
+    /// The ProcessClearDeprecatedGlobalRequestCachedKeys method is part of the IPlatformCacheRepository interface and is implemented in the PlatformCacheRepository abstract class. This method is designed to clear deprecated or outdated keys from the global request cache.
+    /// <br />
+    /// In the context of a caching system, this method is crucial for maintaining the freshness and relevance of the data stored in the cache. Over time, certain keys in the cache may become outdated or irrelevant, and keeping these keys can lead to inefficient use of memory and potentially incorrect data being served to the client.
+    /// <br />
+    /// The method is implemented in both PlatformMemoryCacheRepository and PlatformRedisDistributedCacheRepository classes, indicating that it's used for both in-memory and distributed Redis cache repositories.
+    /// <br />
+    /// In the PlatformAutoClearDeprecatedGlobalRequestCachedKeysBackgroundService class, this method is called in an interval process, suggesting that the clearing of deprecated global request cache keys is performed regularly as a background task. This helps to ensure that the cache is consistently maintained and that outdated keys are removed on a regular basis.
     Task ProcessClearDeprecatedGlobalRequestCachedKeys();
 }
 
-public abstract class PlatformCacheRepository : IPlatformCacheRepository
+public abstract class PlatformCacheRepository(
+    IServiceProvider provider,
+    ILoggerFactory loggerFactory,
+    PlatformCacheSettings cacheSettings)
+    : IPlatformCacheRepository
 {
     public static readonly string CachedKeysCollectionName = "___PlatformGlobalCacheKeys___";
-    protected readonly PlatformCacheSettings CacheSettings;
-    protected readonly ILogger Logger;
-
-    private readonly IServiceProvider serviceProvider;
-
-    public PlatformCacheRepository(IServiceProvider serviceProvider, ILoggerFactory loggerFactory, PlatformCacheSettings cacheSettings)
-    {
-        this.serviceProvider = serviceProvider;
-        CacheSettings = cacheSettings;
-        Logger = loggerFactory.CreateLogger(typeof(PlatformCacheRepository));
-    }
+    protected readonly PlatformCacheSettings CacheSettings = cacheSettings;
+    protected readonly ILogger Logger = loggerFactory.CreateLogger(typeof(PlatformCacheRepository));
 
     public abstract T Get<T>(PlatformCacheKey cacheKey);
 
@@ -190,7 +203,7 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
         where TCollectionCacheKeyProvider : PlatformCollectionCacheKeyProvider
     {
         await RemoveAsync(
-            serviceProvider.GetService<TCollectionCacheKeyProvider>()!.MatchCollectionKeyPredicate(),
+            provider.GetService<TCollectionCacheKeyProvider>()!.MatchCollectionKeyPredicate(),
             token);
     }
 
@@ -243,7 +256,7 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
 
     public PlatformCacheEntryOptions GetDefaultCacheEntryOptions()
     {
-        return serviceProvider.GetService<PlatformCacheEntryOptions>() ?? CacheSettings.DefaultCacheEntryOptions;
+        return provider.GetService<PlatformCacheEntryOptions>() ?? CacheSettings.DefaultCacheEntryOptions;
     }
 
     public abstract Task ProcessClearDeprecatedGlobalRequestCachedKeys();
@@ -288,7 +301,7 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
         try
         {
             return await GetAsync<List<PlatformCacheKey>>(cacheKey: GetGlobalAllRequestCachedKeysCacheKey())
-                .Then(keys => keys ?? new List<PlatformCacheKey>())
+                .Then(keys => keys ?? [])
                 .Then(
                     globalRequestCacheKeys => globalRequestCacheKeys
                         .Select(p => new KeyValuePair<PlatformCacheKey, object>(p, null))

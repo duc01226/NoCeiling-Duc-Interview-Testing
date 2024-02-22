@@ -49,6 +49,7 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
         Configuration = configuration;
         LoggerFactory = loggerFactory;
         RootServiceProvider = rootServiceProvider;
+        Logger = loggerFactory.CreateLogger(GetType());
     }
 
     public static int DefaultSeedingMinimumDummyItemsCount => PlatformEnvironment.IsDevelopment ? 100 : 10000;
@@ -63,6 +64,8 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
     public static int DefaultActiveDelaySeedingInBackgroundBySeconds => 5;
     public static int DefaultDelayRetryCheckSeedDataBySeconds => 5;
     public static int DefaultMaxWaitSeedDataBySyncMessagesBySeconds => 300;
+
+    protected ILogger Logger { get; }
 
     /// <summary>
     /// Default is true. Override this if you want to start uow yourself or not want to

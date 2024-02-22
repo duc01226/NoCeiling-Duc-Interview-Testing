@@ -1,14 +1,14 @@
-namespace Easy.Platform.Application.Context.UserContext.Default;
+namespace Easy.Platform.Application.RequestContext;
 
 /// <summary>
-/// Implementation of <see cref="IPlatformApplicationUserContextAccessor"/>
+/// Implementation of <see cref="IPlatformApplicationRequestContextAccessor" />
 /// Inspired by Microsoft.AspNetCore.Http.HttpContextAccessor
 /// </summary>
-public class PlatformDefaultApplicationUserContextAccessor : IPlatformApplicationUserContextAccessor
+public class PlatformDefaultApplicationRequestContextAccessor : IPlatformApplicationRequestContextAccessor
 {
     private static readonly AsyncLocal<UserContextHolder> UserContextCurrentThread = new();
 
-    public IPlatformApplicationUserContext Current
+    public IPlatformApplicationRequestContext Current
     {
         get
         {
@@ -35,13 +35,13 @@ public class PlatformDefaultApplicationUserContextAccessor : IPlatformApplicatio
         }
     }
 
-    protected virtual IPlatformApplicationUserContext CreateNewContext()
+    protected virtual IPlatformApplicationRequestContext CreateNewContext()
     {
-        return new PlatformDefaultApplicationUserContext();
+        return new PlatformDefaultApplicationRequestContext();
     }
 
     protected sealed class UserContextHolder
     {
-        public IPlatformApplicationUserContext Context { get; set; }
+        public IPlatformApplicationRequestContext Context { get; set; }
     }
 }

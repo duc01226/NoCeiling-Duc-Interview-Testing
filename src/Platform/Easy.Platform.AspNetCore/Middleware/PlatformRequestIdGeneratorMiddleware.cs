@@ -1,4 +1,4 @@
-using Easy.Platform.Application.Context.UserContext;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.AspNetCore.Constants;
 using Easy.Platform.AspNetCore.Middleware.Abstracts;
 using Microsoft.AspNetCore.Http;
@@ -6,21 +6,26 @@ using Microsoft.AspNetCore.Http;
 namespace Easy.Platform.AspNetCore.Middleware;
 
 /// <summary>
-/// This middleware will add a generated guid request id in to headers. It should be added at the first middleware or second after UseGlobalExceptionHandlerMiddleware
+/// Middleware for generating a request ID and adding it to headers. Should be added at the first middleware
+/// or second after UseGlobalExceptionHandlerMiddleware.
 /// </summary>
+/// <remarks>
+/// This middleware will add a generated guid request id in to headers. It should be added at the first middleware or second after UseGlobalExceptionHandlerMiddleware
+/// </remarks>
 public class PlatformRequestIdGeneratorMiddleware : PlatformMiddleware
 {
-    private readonly IPlatformApplicationUserContextAccessor applicationUserContextAccessor;
+    private readonly IPlatformApplicationRequestContextAccessor applicationUserContextAccessor;
 
     public PlatformRequestIdGeneratorMiddleware(
         RequestDelegate next,
-        IPlatformApplicationUserContextAccessor applicationUserContextAccessor) : base(next)
+        IPlatformApplicationRequestContextAccessor applicationUserContextAccessor) : base(next)
     {
         this.applicationUserContextAccessor = applicationUserContextAccessor;
     }
 
     protected override async Task InternalInvokeAsync(HttpContext context)
     {
+        // Generate a new request ID if not present in the headers
         if (!context.Request.Headers.TryGetValue(
                 PlatformAspnetConstant.CommonHttpHeaderNames.RequestId,
                 out var existedRequestId) ||
@@ -29,17 +34,18 @@ public class PlatformRequestIdGeneratorMiddleware : PlatformMiddleware
                 PlatformAspnetConstant.CommonHttpHeaderNames.RequestId,
                 Guid.NewGuid().ToString());
 
+        // Set the trace identifier for the context
         context.TraceIdentifier = context.Request.Headers[PlatformAspnetConstant.CommonHttpHeaderNames.RequestId];
         applicationUserContextAccessor.Current.SetValue(
             context.TraceIdentifier,
-            PlatformApplicationCommonUserContextKeys.RequestIdContextKey);
+            PlatformApplicationCommonRequestContextKeys.RequestIdContextKey);
 
-        // Add the request ID to the response header for client side tracking
+        // Add the request ID to the response header for client-side tracking
         context.Response.OnStarting(
             () =>
             {
                 if (!context.Response.Headers.ContainsKey(PlatformAspnetConstant.CommonHttpHeaderNames.RequestId))
-                    context.Response.Headers.Add(
+                    context.Response.Headers.Append(
                         PlatformAspnetConstant.CommonHttpHeaderNames.RequestId,
                         Util.ListBuilder.NewArray(context.TraceIdentifier));
                 return Task.CompletedTask;

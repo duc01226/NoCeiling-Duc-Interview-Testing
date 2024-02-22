@@ -1,11 +1,12 @@
 using Easy.Platform.Application;
-using Easy.Platform.Application.Context.UserContext;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.AspNetCore.Constants;
 using Easy.Platform.AspNetCore.Context.UserContext;
 using Easy.Platform.AspNetCore.Context.UserContext.UserContextKeyToClaimTypeMapper;
 using Easy.Platform.AspNetCore.Context.UserContext.UserContextKeyToClaimTypeMapper.Abstract;
 using Easy.Platform.Common;
 using Easy.Platform.Common.DependencyInjection;
+using Easy.Platform.Common.HostingBackgroundServices;
 using Easy.Platform.Persistence;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -15,7 +16,9 @@ using OpenTelemetry.Trace;
 
 namespace Easy.Platform.AspNetCore;
 
-/// <inheritdoc cref="PlatformModule" />
+/// <summary>
+/// Represents a platform module for ASP.NET Core applications. This class is abstract.
+/// </summary>
 public abstract class PlatformAspNetCoreModule : PlatformModule
 {
     public PlatformAspNetCoreModule(IServiceProvider serviceProvider, IConfiguration configuration) : base(
@@ -24,11 +27,23 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
     {
     }
 
+    /// <summary>
+    /// Gets the action that configures additional tracing for the ASP.NET Core platform module.
+    /// </summary>
+    /// <remarks>
+    /// This action is used to add instrumentation for ASP.NET Core and HTTP client operations.
+    /// </remarks>
+    /// <value>
+    /// The action that configures the <see cref="TracerProviderBuilder" /> for additional tracing.
+    /// </value>
     public override Action<TracerProviderBuilder> AdditionalTracingConfigure =>
         builder => builder
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation();
 
+    /// <summary>
+    /// Gets a value indicating whether the module should automatically seed application data on initialization.
+    /// </summary>
     protected override bool AutoScanAssemblyRegisterCqrs => true;
 
     /// <summary>
@@ -36,6 +51,11 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
     /// </summary>
     protected virtual bool AutoSeedApplicationDataOnInit => true;
 
+    /// <summary>
+    /// Gets the allowed CORS origins for the module.
+    /// </summary>
+    /// <param name="configuration">The configuration for the module.</param>
+    /// <returns>An array of strings representing the allowed CORS origins.</returns>
     protected abstract string[] GetAllowCorsOrigins(IConfiguration configuration);
 
     protected override void InternalRegister(IServiceCollection serviceCollection)
@@ -45,6 +65,7 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
         RegisterUserContext(serviceCollection);
         AddDefaultCorsPolicy(serviceCollection);
         serviceCollection.AddHttpClient();
+        serviceCollection.RegisterHostedServicesFromType(Assembly, typeof(PlatformHostingBackgroundService));
     }
 
     protected override async Task InternalInit(IServiceScope serviceScope)
@@ -64,6 +85,10 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
         }
     }
 
+    /// <summary>
+    /// Executes the seed data for the application module.
+    /// </summary>
+    /// <returns>A Task representing the asynchronous operation.</returns>
     public async Task ExecuteDependencyApplicationModuleSeedData()
     {
         await PlatformApplicationModule.ExecuteDependencyApplicationModuleSeedData(
@@ -71,6 +96,10 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
             ServiceProvider);
     }
 
+    /// <summary>
+    /// Adds the default CORS policy for the module.
+    /// </summary>
+    /// <param name="serviceCollection">The service collection to add the policy to.</param>
     protected virtual void AddDefaultCorsPolicy(IServiceCollection serviceCollection)
     {
         serviceCollection.AddCors(
@@ -87,7 +116,7 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
             options => options.AddPolicy(
                 PlatformAspNetCoreModuleDefaultPolicies.CorsPolicy,
                 builder =>
-                    builder.WithOrigins(GetAllowCorsOrigins(Configuration) ?? Array.Empty<string>())
+                    builder.WithOrigins(GetAllowCorsOrigins(Configuration) ?? [])
                         .SetIsOriginAllowedToAllowWildcardSubdomains()
                         .AllowAnyMethod()
                         .AllowAnyHeader()
@@ -113,12 +142,20 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
         return 1.Days();
     }
 
+    /// <summary>
+    /// Registers the user context in the provided service collection.
+    /// </summary>
+    /// <param name="serviceCollection">The service collection where the user context will be registered.</param>
+    /// <remarks>
+    /// This method adds the HttpContextAccessor to the service collection and registers the PlatformAspNetApplicationRequestContextAccessor as a singleton service for the IPlatformApplicationRequestContextAccessor interface.
+    /// It also registers the UserContextKeyToClaimTypeMapper in the service collection.
+    /// </remarks>
     protected void RegisterUserContext(IServiceCollection serviceCollection)
     {
         serviceCollection.AddHttpContextAccessor();
         serviceCollection.Register(
-            typeof(IPlatformApplicationUserContextAccessor),
-            typeof(PlatformAspNetApplicationUserContextAccessor),
+            typeof(IPlatformApplicationRequestContextAccessor),
+            typeof(PlatformAspNetApplicationRequestContextAccessor),
             ServiceLifeTime.Singleton,
             replaceIfExist: true,
             DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
@@ -128,19 +165,23 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
 
     /// <summary>
     /// This function is used to register implementation for
-    /// <see cref="IPlatformApplicationUserContextKeyToClaimTypeMapper" />
-    /// Default implementation is <see cref="PlatformApplicationUserContextKeyToJwtClaimTypeMapper" />
+    /// <see cref="IPlatformApplicationRequestContextKeyToClaimTypeMapper" />
+    /// Default implementation is <see cref="PlatformApplicationRequestContextKeyToJwtClaimTypeMapper" />
     /// </summary>
     /// <returns></returns>
     protected virtual Type UserContextKeyToClaimTypeMapperType()
     {
-        return typeof(PlatformApplicationUserContextKeyToJwtClaimTypeMapper);
+        return typeof(PlatformApplicationRequestContextKeyToJwtClaimTypeMapper);
     }
 
+    /// <summary>
+    /// Registers the UserContextKeyToClaimTypeMapper in the service collection.
+    /// </summary>
+    /// <param name="serviceCollection">The service collection to add the service to.</param>
     private void RegisterUserContextKeyToClaimTypeMapper(IServiceCollection serviceCollection)
     {
         serviceCollection.Register(
-            typeof(IPlatformApplicationUserContextKeyToClaimTypeMapper),
+            typeof(IPlatformApplicationRequestContextKeyToClaimTypeMapper),
             UserContextKeyToClaimTypeMapperType());
     }
 }
@@ -150,12 +191,12 @@ public static class InitPlatformAspNetCoreModuleExtension
     /// <summary>
     /// Init module to start running init for all other modules and this module itself
     /// </summary>
-    public static void InitPlatformAspNetCoreModule<TModule>(this WebApplication webApplication)
+    public static void InitPlatformAspNetCoreModule<TModule>(this IApplicationBuilder app)
         where TModule : PlatformAspNetCoreModule
     {
-        using (var scope = webApplication.Services.CreateScope())
+        using (var scope = app.ApplicationServices.CreateScope())
         {
-            scope.ServiceProvider.GetRequiredService<TModule>().Init().WaitResult();
+            scope.ServiceProvider.GetRequiredService<TModule>().Init(app).WaitResult();
         }
     }
 }

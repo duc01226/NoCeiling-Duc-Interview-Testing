@@ -23,13 +23,14 @@ export class AppViewModel extends PlatformVm implements IAppViewModel {
         this.totalTextSnippetItems = data?.totalTextSnippetItems ?? 0;
         this.currentTextSnippetItemsPageNumber = data?.currentTextSnippetItemsPageNumber ?? 0;
         this.selectedSnippetTextId = data?.selectedSnippetTextId ?? undefined;
-        this.loadTextSnippetItemsErrorMsg = data?.loadTextSnippetItemsErrorMsg;
-        this.appError = data?.appError;
+        if (data?.loadTextSnippetItemsErrorMsg != undefined)
+            this.loadTextSnippetItemsErrorMsg = data.loadTextSnippetItemsErrorMsg;
+        if (data?.appError != undefined) this.appError = data.appError;
     }
     public searchText?: string;
     public textSnippetItems?: AppTextSnippetItemViewModel[];
-    public currentTextSnippetItemsPageNumber: number;
-    public totalTextSnippetItems: number;
+    public currentTextSnippetItemsPageNumber!: number;
+    public totalTextSnippetItems!: number;
     public selectedSnippetTextId?: string;
     public loadTextSnippetItemsErrorMsg?: string;
     public appError?: PlatformApiServiceErrorResponse | Error;
@@ -55,5 +56,5 @@ export class AppTextSnippetItemViewModel {
     public constructor(data?: Partial<IAppTextSnippetItemViewModel>) {
         this.data = data?.data ?? new TextSnippetDataModel();
     }
-    public data: TextSnippetDataModel;
+    public data!: TextSnippetDataModel;
 }

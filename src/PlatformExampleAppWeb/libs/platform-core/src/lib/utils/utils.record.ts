@@ -5,7 +5,7 @@ export function record_map<T, TResult>(
     const result: Record<string, TResult> = {};
 
     Object.keys(sourceRecord).forEach(key => {
-        result[key] = mapFn(sourceRecord[key]);
+        result[key] = mapFn(sourceRecord[key]!);
     });
 
     return result;

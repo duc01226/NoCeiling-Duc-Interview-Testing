@@ -11,7 +11,7 @@ export function file_isValidExtension(
     const acceptedFileType = allowedFileType.split(separator);
     if (!acceptedFileType.length) return false;
 
-    return acceptedFileType.includes(extensions[extensions.length - 1]);
+    return acceptedFileType.includes(extensions[extensions.length - 1]!);
 }
 
 export function file_renameDuplicateName(originalFileName: string, existingFileNames: string[]) {

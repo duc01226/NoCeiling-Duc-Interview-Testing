@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+
 import { PlatformAppUiStateStore } from '@libs/platform-core';
 
 import { AppUiStateData } from './app-ui.state-data';
@@ -11,9 +12,7 @@ export class AppUiStateStore extends PlatformAppUiStateStore<AppUiStateData> {
 
     protected onInitVm = () => {};
 
-    public vmConstructor = (data?: Partial<AppUiStateData>) => new AppUiStateData(data);
-
-    protected cachedStateKeyName = () => 'EmployeeAssessmentListStore';
-
     public reloadOrInitData = () => {};
+
+    public vmConstructor = (data?: Partial<AppUiStateData>) => new AppUiStateData(data);
 }

@@ -60,6 +60,7 @@ export function TranslateHttpLoaderFactory(http: HttpClient) {
         MatIconModule,
         MatDialogModule
     ],
-    bootstrap: [AppComponent]
+    bootstrap: [AppComponent],
+    providers: []
 })
 export class AppModule {}

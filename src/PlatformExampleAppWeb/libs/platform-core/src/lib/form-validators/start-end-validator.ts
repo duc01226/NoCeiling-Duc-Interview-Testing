@@ -2,19 +2,43 @@ import { AbstractControl, FormControl, ValidatorFn } from '@angular/forms';
 
 import { date_compareOnlyDay, date_compareOnlyTime, date_format } from '../utils';
 import { IPlatformFormValidationError } from './models';
+import { validator } from './validator';
 
+/**
+ * Validator function to check if the start date/time is before the end date/time in a form control.
+ *
+ * @remarks
+ * This validator compares the values of two form controls representing start and end dates or times.
+ * It validates whether the start date/time is chronologically before the end date/time, with options
+ * to allow or disallow equal values and to check only the date part, time part, or both.
+ *
+ * @param errorKey - The key to identify the validation error in the form control.
+ * @param startFn - A function that extracts the start date/time value from the form control.
+ * @param endFn - A function that extracts the end date/time value from the form control.
+ * @param options - Additional options for the validator.
+ *
+ * @returns A validator function that checks the validity of the start and end date/time values.
+ *
+ * @example
+ * ```typescript
+ * const form = new FormGroup({
+ *   startDate: new FormControl(new Date()),
+ *   endDate: new FormControl(new Date())
+ * }, { validators: startEndValidator('dateRange', control => control.value.startDate, control => control.value.endDate) });
+ * ```
+ */
 export function startEndValidator<T extends number | Date>(
     errorKey: string,
     startFn: (control: FormControl<T>) => T,
     endFn: (control: FormControl<T>) => T,
     options: {
-        allowEqual: boolean;
-        checkDatePart: 'default' | 'dateOnly' | 'timeOnly';
-        condition?: (control: FormControl) => T;
+        allowEqual?: boolean;
+        checkDatePart?: 'default' | 'dateOnly' | 'timeOnly';
+        condition?: (control: FormControl) => boolean;
         errorMsg?: string;
     } | null = null
 ): ValidatorFn {
-    return (control: AbstractControl) => {
+    return validator((control: AbstractControl) => {
         const allowEqual = options?.allowEqual ?? true;
         const checkDatePart = options?.checkDatePart ?? 'default';
         const condition = options?.condition;
@@ -59,13 +83,31 @@ export function startEndValidator<T extends number | Date>(
         }
 
         return null;
-    };
+    });
 }
 
+/**
+ * Formats a date value as a string in the 'YYYY/MM/DD' format.
+ *
+ * @param value - The date value to be formatted.
+ * @returns A string representing the formatted date.
+ *
+ * @internal
+ */
 function formatDate(value: Date | number): string {
     return date_format(new Date(value), 'YYYY/MM/DD');
 }
 
+/**
+ * Builds a validation error object for the start-end date/time validator.
+ *
+ * @param start - The start date/time value.
+ * @param end - The end date/time value.
+ * @param errorMsg - Custom error message for the validation error.
+ * @returns A validation error object with error message and parameters.
+ *
+ * @internal
+ */
 function buildValidatorError(start: Date, end: Date, errorMsg?: string): IPlatformFormValidationError {
     errorMsg = errorMsg ?? `Date must be in range ${formatDate(start)} and ${formatDate(end)}`;
 

@@ -1,5 +1,4 @@
 using Easy.Platform.Application;
-using Easy.Platform.Application.Context;
 using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Microsoft.Extensions.Configuration;

@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
-using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Persistence;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
@@ -17,16 +17,18 @@ namespace Easy.Platform.EfCore;
 public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatformDbContext<TDbContext>
     where TDbContext : PlatformEfCoreDbContext<TDbContext>, IPlatformDbContext<TDbContext>
 {
+    public const int ContextMaxConcurrentThreadLock = 1;
+
     protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
     protected readonly IPlatformRootServiceProvider RootServiceProvider;
-    protected readonly IPlatformApplicationUserContextAccessor UserContextAccessor;
+    protected readonly IPlatformApplicationRequestContextAccessor UserContextAccessor;
 
     public PlatformEfCoreDbContext(
         DbContextOptions<TDbContext> options,
         ILoggerFactory loggerFactory,
         IPlatformCqrs cqrs,
         PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
-        IPlatformApplicationUserContextAccessor userContextAccessor,
+        IPlatformApplicationRequestContextAccessor userContextAccessor,
         IPlatformRootServiceProvider rootServiceProvider) : base(options)
     {
         PersistenceConfiguration = persistenceConfiguration;
@@ -34,6 +36,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         RootServiceProvider = rootServiceProvider;
         Logger = CreateLogger(loggerFactory);
     }
+
+    protected SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(ContextMaxConcurrentThreadLock, ContextMaxConcurrentThreadLock);
 
     public DbSet<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryDbSet => Set<PlatformDataMigrationHistory>();
 
@@ -81,6 +85,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "PlatformEfCoreDbContext {Type} Initialize failed.", GetType().Name);
+
             throw new Exception(
                 $"{GetType().Name} Initialize failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
                 ex);
@@ -202,22 +208,35 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(entity);
+        try
+        {
+            await NotThreadSafeDbContextQueryLock.WaitAsync(cancellationToken);
 
-        return await PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TEntity>(
-            RootServiceProvider,
-            MappedUnitOfWork,
-            entity,
-            async entity =>
-            {
-                GetTable<TEntity>().Remove(entity);
+            DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(entity);
 
-                return entity;
-            },
-            dismissSendEvent,
-            eventCustomConfig: eventCustomConfig,
-            requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
-            cancellationToken);
+            return await PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TEntity>(
+                RootServiceProvider,
+                MappedUnitOfWork,
+                entity,
+                async entity =>
+                {
+                    GetTable<TEntity>().Remove(entity);
+
+                    NotThreadSafeDbContextQueryLock.Release();
+
+                    return entity;
+                },
+                dismissSendEvent,
+                eventCustomConfig: eventCustomConfig,
+                requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
+                cancellationToken);
+        }
+        catch (Exception)
+        {
+            if (NotThreadSafeDbContextQueryLock.CurrentCount < ContextMaxConcurrentThreadLock)
+                NotThreadSafeDbContextQueryLock.Release();
+            throw;
+        }
     }
 
     public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
@@ -252,30 +271,48 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
+        try
+        {
+            await NotThreadSafeDbContextQueryLock.WaitAsync(cancellationToken);
 
-        var toBeCreatedEntity = entity
-            .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
-            .PipeIf(
-                entity.IsAuditedUserEntity(),
-                p => p.As<IUserAuditedEntity>()
-                    .SetCreatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
-                    .As<TEntity>())
-            .WithIf(
-                entity is IRowVersionEntity { ConcurrencyUpdateToken: null },
-                entity => entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = Guid.NewGuid());
+            await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
 
-        var result = await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
-            RootServiceProvider,
-            MappedUnitOfWork,
-            toBeCreatedEntity,
-            entity => GetTable<TEntity>().AddAsync(toBeCreatedEntity, cancellationToken).AsTask().Then(p => toBeCreatedEntity),
-            dismissSendEvent,
-            eventCustomConfig: eventCustomConfig,
-            requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
-            cancellationToken);
+            var toBeCreatedEntity = entity
+                .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
+                .PipeIf(
+                    entity.IsAuditedUserEntity(),
+                    p => p.As<IUserAuditedEntity>()
+                        .SetCreatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
+                        .As<TEntity>())
+                .WithIf(
+                    entity is IRowVersionEntity { ConcurrencyUpdateToken: null },
+                    entity => entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = Guid.NewGuid());
 
-        return result;
+            var result = await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
+                RootServiceProvider,
+                MappedUnitOfWork,
+                toBeCreatedEntity,
+                entity =>
+                {
+                    var result = GetTable<TEntity>().AddAsync(toBeCreatedEntity, cancellationToken).AsTask().Then(p => toBeCreatedEntity);
+
+                    NotThreadSafeDbContextQueryLock.Release();
+
+                    return result;
+                },
+                dismissSendEvent,
+                eventCustomConfig: eventCustomConfig,
+                requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
+                cancellationToken);
+
+            return result;
+        }
+        catch (Exception)
+        {
+            if (NotThreadSafeDbContextQueryLock.CurrentCount < ContextMaxConcurrentThreadLock)
+                NotThreadSafeDbContextQueryLock.Release();
+            throw;
+        }
     }
 
     public async Task<TEntity> CreateOrUpdateAsync<TEntity, TPrimaryKey>(
@@ -382,44 +419,59 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
+        try
+        {
+            await NotThreadSafeDbContextQueryLock.WaitAsync(cancellationToken);
 
-        if (existingEntity == null &&
-            ((!dismissSendEvent && entity.HasTrackValueUpdatedDomainEventAttribute()) || entity is IRowVersionEntity { ConcurrencyUpdateToken: null }))
-            existingEntity = await GetQuery<TEntity>().AsNoTracking().Where(p => p.Id.Equals(entity.Id)).FirstOrDefaultAsync(cancellationToken);
+            await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
 
-        if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })
-            entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = existingEntity.As<IRowVersionEntity>().ConcurrencyUpdateToken;
+            if (existingEntity == null &&
+                ((!dismissSendEvent && entity.HasTrackValueUpdatedDomainEventAttribute()) || entity is IRowVersionEntity { ConcurrencyUpdateToken: null }))
+                existingEntity = await GetQuery<TEntity>().AsNoTracking().Where(p => p.Id.Equals(entity.Id)).FirstOrDefaultAsync(cancellationToken);
 
-        // Run DetachLocalIfAny to prevent
-        // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
-        var toBeUpdatedEntity = entity
-            .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
-            .PipeIf(entity is IDateAuditedEntity, p => p.As<IDateAuditedEntity>().With(_ => _.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
-            .PipeIf(
-                entity.IsAuditedUserEntity(),
-                p => p.As<IUserAuditedEntity>()
-                    .SetLastUpdatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
-                    .As<TEntity>());
+            if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })
+                entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = existingEntity.As<IRowVersionEntity>().ConcurrencyUpdateToken;
 
-        var result = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, TEntity>(
-            RootServiceProvider,
-            MappedUnitOfWork,
-            toBeUpdatedEntity,
-            existingEntity,
-            async entity =>
-            {
-                return GetTable<TEntity>()
-                    .Update(entity)
-                    .Entity
-                    .PipeIf(entity is IRowVersionEntity, p => p.As<IRowVersionEntity>().With(_ => _.ConcurrencyUpdateToken = Guid.NewGuid()).As<TEntity>());
-            },
-            dismissSendEvent,
-            eventCustomConfig: eventCustomConfig,
-            requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
-            cancellationToken);
+            // Run DetachLocalIfAny to prevent
+            // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
+            var toBeUpdatedEntity = entity
+                .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
+                .PipeIf(entity is IDateAuditedEntity, p => p.As<IDateAuditedEntity>().With(_ => _.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
+                .PipeIf(
+                    entity.IsAuditedUserEntity(),
+                    p => p.As<IUserAuditedEntity>()
+                        .SetLastUpdatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
+                        .As<TEntity>());
 
-        return result;
+            var result = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, TEntity>(
+                RootServiceProvider,
+                MappedUnitOfWork,
+                toBeUpdatedEntity,
+                existingEntity,
+                async entity =>
+                {
+                    var result = GetTable<TEntity>()
+                        .Update(entity)
+                        .Entity
+                        .PipeIf(entity is IRowVersionEntity, p => p.As<IRowVersionEntity>().With(_ => _.ConcurrencyUpdateToken = Guid.NewGuid()).As<TEntity>());
+
+                    NotThreadSafeDbContextQueryLock.Release();
+
+                    return result;
+                },
+                dismissSendEvent,
+                eventCustomConfig: eventCustomConfig,
+                requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
+                cancellationToken);
+
+            return result;
+        }
+        catch
+        {
+            if (NotThreadSafeDbContextQueryLock.CurrentCount < ContextMaxConcurrentThreadLock)
+                NotThreadSafeDbContextQueryLock.Release();
+            throw;
+        }
     }
 
     protected TEntity DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(TEntity entity) where TEntity : class, IEntity<TPrimaryKey>, new()

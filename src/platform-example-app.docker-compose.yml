@@ -11,7 +11,7 @@ services:
     image: mongo:4.2
 
   rabbitmq:
-    image: rabbitmq:3.9.1-management
+    image: rabbitmq:3.12.4-management
 
   redis-cache:
     image: redis:6.2.5

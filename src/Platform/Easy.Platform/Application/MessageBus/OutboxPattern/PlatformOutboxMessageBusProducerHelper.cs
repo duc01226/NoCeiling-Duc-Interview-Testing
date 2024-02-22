@@ -1,7 +1,7 @@
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Utils;
+using Easy.Platform.Domain.Exceptions;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
 using Microsoft.Extensions.DependencyInjection;
@@ -139,7 +139,8 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         outboxBusMessageRepository);
                 },
                 sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
-                retryCount: DefaultResilientRetiredCount);
+                retryCount: DefaultResilientRetiredCount,
+                cancellationToken: cancellationToken);
         }
         catch (Exception exception)
         {
@@ -187,13 +188,22 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
             async () =>
             {
-                existingOutboxMessage.LastSendDate = DateTime.UtcNow;
-                existingOutboxMessage.SendStatus = PlatformOutboxBusMessage.SendStatuses.Processed;
+                try
+                {
+                    existingOutboxMessage.LastSendDate = DateTime.UtcNow;
+                    existingOutboxMessage.SendStatus = PlatformOutboxBusMessage.SendStatuses.Processed;
 
-                await outboxBusMessageRepository.UpdateAsync(existingOutboxMessage, dismissSendEvent: true, eventCustomConfig: null, cancellationToken);
+                    await outboxBusMessageRepository.UpdateAsync(existingOutboxMessage, dismissSendEvent: true, eventCustomConfig: null, cancellationToken);
+                }
+                catch (PlatformDomainRowVersionConflictException)
+                {
+                    existingOutboxMessage = await outboxBusMessageRepository.GetByIdAsync(existingOutboxMessage.Id, cancellationToken);
+                    throw;
+                }
             },
             sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
-            retryCount: DefaultResilientRetiredCount);
+            retryCount: DefaultResilientRetiredCount,
+            cancellationToken: cancellationToken);
     }
 
     public async Task UpdateExistingOutboxMessageFailedInNewScopeAsync(
@@ -226,7 +236,8 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         });
                 },
                 retryCount: DefaultResilientRetiredCount,
-                sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelayMilliseconds.Milliseconds());
+                sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelayMilliseconds.Milliseconds(),
+                cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {
@@ -247,12 +258,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
     {
         existingOutboxMessage.SendStatus = PlatformOutboxBusMessage.SendStatuses.Failed;
         existingOutboxMessage.LastSendDate = DateTime.UtcNow;
-        existingOutboxMessage.LastSendError = PlatformJsonSerializer.Serialize(
-            new
-            {
-                exception.Message,
-                exception.StackTrace
-            });
+        existingOutboxMessage.LastSendError = exception.Serialize();
         existingOutboxMessage.RetriedProcessCount = (existingOutboxMessage.RetriedProcessCount ?? 0) + 1;
         existingOutboxMessage.NextRetryProcessAfter = PlatformOutboxBusMessage.CalculateNextRetryProcessAfter(
             existingOutboxMessage.RetriedProcessCount,
@@ -336,7 +342,8 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 }
             },
             sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
-            retryCount: DefaultResilientRetiredCount);
+            retryCount: DefaultResilientRetiredCount,
+            cancellationToken: cancellationToken);
     }
 
     protected ILogger CreateLogger()

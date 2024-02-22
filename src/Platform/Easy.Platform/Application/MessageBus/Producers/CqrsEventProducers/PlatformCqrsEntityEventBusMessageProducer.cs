@@ -1,5 +1,4 @@
-using Easy.Platform.Application.Context;
-using Easy.Platform.Application.Context.UserContext;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
@@ -20,7 +19,7 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
-        IPlatformApplicationUserContextAccessor userContextAccessor,
+        IPlatformApplicationRequestContextAccessor userContextAccessor,
         IPlatformApplicationSettingContext applicationSettingContext) : base(
         loggerFactory,
         unitOfWorkManager,

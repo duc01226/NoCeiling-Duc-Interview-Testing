@@ -2,24 +2,24 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Security.Claims;
-using Easy.Platform.Application.Context.UserContext;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.AspNetCore.Context.UserContext.UserContextKeyToClaimTypeMapper.Abstract;
 using Easy.Platform.Common.RequestContext;
 using Microsoft.AspNetCore.Http;
 
 namespace Easy.Platform.AspNetCore.Context.UserContext;
 
-public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserContext
+public class PlatformAspNetApplicationRequestContext : IPlatformApplicationRequestContext
 {
-    private readonly IHttpContextAccessor httpContextAccessor;
-    private readonly IPlatformApplicationUserContextKeyToClaimTypeMapper claimTypeMapper;
+    private readonly IPlatformApplicationRequestContextKeyToClaimTypeMapper claimTypeMapper;
     private readonly MethodInfo getValueByGenericTypeMethodInfo;
+    private readonly IHttpContextAccessor httpContextAccessor;
     private readonly object initCachedUserContextDataLock = new();
     private bool cachedUserContextDataInitiated;
 
-    public PlatformAspNetApplicationUserContext(
+    public PlatformAspNetApplicationRequestContext(
         IHttpContextAccessor httpContextAccessor,
-        IPlatformApplicationUserContextKeyToClaimTypeMapper claimTypeMapper)
+        IPlatformApplicationRequestContextKeyToClaimTypeMapper claimTypeMapper)
     {
         this.httpContextAccessor = httpContextAccessor;
         this.claimTypeMapper = claimTypeMapper;
@@ -33,13 +33,12 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
 
     public T GetValue<T>(string contextKey)
     {
-        return GetValue<T>(contextKey, CurrentHttpContext());
+        return GetValue<T>(contextKey, CurrentHttpContext(), CachedUserContextData, claimTypeMapper);
     }
 
     public void SetValue(object value, string contextKey)
     {
-        if (contextKey == null)
-            throw new ArgumentNullException(nameof(contextKey));
+        ArgumentNullException.ThrowIfNull(contextKey);
 
         CachedUserContextData.Upsert(contextKey, value);
     }
@@ -92,7 +91,7 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
     {
         return getValueByGenericTypeMethodInfo
             .MakeGenericMethod(valueType)
-            .Invoke(this, parameters: new object[] { contextKey });
+            .Invoke(this, parameters: [contextKey]);
     }
 
     public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
@@ -148,16 +147,38 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
     public ICollection<string> Keys => CachedUserContextData.Keys;
     public ICollection<object> Values => CachedUserContextData.Values;
 
-    public T GetValue<T>(string contextKey, HttpContext useHttpContext)
+    /// <summary>
+    /// Retrieves the value associated with the specified context key.
+    /// </summary>
+    /// <param name="contextKey">The key of the value to get.</param>
+    /// <param name="useHttpContext">The HttpContext instance to use.</param>
+    /// <param name="cachedUserContextData">The ConcurrentDictionary instance that contains cached user context data.</param>
+    /// <param name="claimTypeMapper">The IPlatformApplicationRequestContextKeyToClaimTypeMapper instance that maps user context keys to claim types.</param>
+    /// <returns>The value associated with the specified context key. If the specified key is not found, a default value is returned.</returns>
+    /// <typeparam name="T">The type of the value to get.</typeparam>
+    /// <exception cref="ArgumentNullException">Thrown when the contextKey is null.</exception>
+    /// <remarks>
+    /// The GetValue[T] method in the PlatformAspNetApplicationRequestContext class is used to retrieve a value associated with a specified context key from the user's context data. This method is generic, meaning it can return values of any type.
+    /// <br />
+    /// The method first checks if the context data is cached in a ConcurrentDictionary instance.If the data is cached, it retrieves the value from the cache.If the data is not cached, it attempts to retrieve the value from the HttpContext instance.If the value is successfully retrieved from the HttpContext, it is then added to the cache for future use.
+    /// <br />
+    /// This method is useful for efficiently accessing user-specific data that may be needed across multiple requests in an ASP.NET Core application.By caching the data, the method avoids the overhead of repeatedly retrieving the same data from the HttpContext.
+    /// <br />
+    /// The IPlatformApplicationRequestContextKeyToClaimTypeMapper instance is used to map user context keys to claim types, which can be useful when working with claims-based identity.
+    /// </remarks>
+    public static T GetValue<T>(
+        string contextKey,
+        HttpContext useHttpContext,
+        ConcurrentDictionary<string, object> cachedUserContextData = null,
+        IPlatformApplicationRequestContextKeyToClaimTypeMapper claimTypeMapper = null)
     {
-        if (contextKey == null)
-            throw new ArgumentNullException(nameof(contextKey));
+        ArgumentNullException.ThrowIfNull(contextKey);
 
-        if (PlatformRequestContextHelper.TryGetValue(CachedUserContextData, contextKey, out T item)) return item;
+        if (cachedUserContextData != null && PlatformRequestContextHelper.TryGetValue(cachedUserContextData, contextKey, out T item)) return item;
 
-        if (TryGetValueFromHttpContext(useHttpContext, contextKey, out T foundValue))
+        if (TryGetValueFromHttpContext(useHttpContext, contextKey, claimTypeMapper, out T foundValue))
         {
-            CachedUserContextData.Upsert(contextKey, foundValue);
+            cachedUserContextData?.Upsert(contextKey, foundValue);
 
             return foundValue;
         }
@@ -168,10 +189,10 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
     public List<string> GetAllKeys(HttpContext useHttpContext)
     {
         var manuallySetValueItemsDicKeys = CachedUserContextData.Select(p => p.Key);
-        var userClaimsTypeKeys = useHttpContext?.User.Claims.Select(p => p.Type) ?? new List<string>();
-        var requestHeadersKeys = useHttpContext?.Request.Headers.Select(p => p.Key) ?? new List<string>();
+        var userClaimsTypeKeys = useHttpContext?.User.Claims.Select(p => p.Type) ?? [];
+        var requestHeadersKeys = useHttpContext?.Request.Headers.Select(p => p.Key) ?? [];
 
-        return Util.ListBuilder.New(PlatformApplicationCommonUserContextKeys.RequestIdContextKey)
+        return Util.ListBuilder.New(PlatformApplicationCommonRequestContextKeys.RequestIdContextKey)
             .Concat(manuallySetValueItemsDicKeys)
             .Concat(userClaimsTypeKeys)
             .Concat(requestHeadersKeys)
@@ -182,7 +203,7 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
     public Dictionary<string, object> GetAllKeyValues(HttpContext useHttpContext)
     {
         return GetAllKeys(useHttpContext)
-            .Select(key => new KeyValuePair<string, object>(key, GetValue<object>(key, useHttpContext)))
+            .Select(key => new KeyValuePair<string, object>(key, GetValue<object>(key, useHttpContext, CachedUserContextData, claimTypeMapper)))
             .ToDictionary(p => p.Key, p => p.Value);
     }
 
@@ -219,7 +240,11 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
         return httpContextAccessor.HttpContext;
     }
 
-    private bool TryGetValueFromHttpContext<T>(HttpContext useHttpContext, string contextKey, out T foundValue)
+    private static bool TryGetValueFromHttpContext<T>(
+        HttpContext useHttpContext,
+        string contextKey,
+        IPlatformApplicationRequestContextKeyToClaimTypeMapper claimTypeMapper,
+        out T foundValue)
     {
         if (useHttpContext == null)
         {
@@ -227,36 +252,42 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
             return false;
         }
 
-        if (contextKey == PlatformApplicationCommonUserContextKeys.RequestIdContextKey)
+        if (contextKey == PlatformApplicationCommonRequestContextKeys.RequestIdContextKey)
             return TryGetRequestId(useHttpContext, out foundValue);
 
-        if (TryGetValueFromUserClaims(useHttpContext.User, contextKey, out foundValue))
+        if (TryGetValueFromUserClaims(useHttpContext.User, contextKey, claimTypeMapper, out foundValue))
             return true;
 
-        if (TryGetValueFromRequestHeaders(useHttpContext.Request.Headers, contextKey, out foundValue))
+        if (TryGetValueFromRequestHeaders(useHttpContext.Request.Headers, contextKey, claimTypeMapper, out foundValue))
             return true;
 
         return false;
     }
 
-    private bool TryGetValueFromRequestHeaders<T>(
+    private static bool TryGetValueFromRequestHeaders<T>(
         IHeaderDictionary requestHeaders,
         string contextKey,
+        IPlatformApplicationRequestContextKeyToClaimTypeMapper claimTypeMapper,
         out T foundValue)
     {
-        var contextKeyMappedToOneOfClaimTypes = claimTypeMapper.ToOneOfClaimTypes(contextKey);
+        var contextKeyMappedToOneOfClaimTypes = GetContextKeyMappedToOneOfClaimTypes<T>(contextKey, claimTypeMapper);
 
         var stringRequestHeaderValues =
             contextKeyMappedToOneOfClaimTypes
                 .Select(contextKeyMappedToJwtClaimType => requestHeaders.Where(p => p.Key == contextKeyMappedToJwtClaimType).SelectList(p => p.Value.ToString()))
                 .FirstOrDefault(p => p.Any()) ??
-            new List<string>();
+            [];
 
         // Try Get Deserialized value from matchedClaimStringValues
         return PlatformRequestContextHelper.TryGetParsedValuesFromStringValues(out foundValue, stringRequestHeaderValues);
     }
 
-    private bool TryGetRequestId<T>(HttpContext httpContext, out T foundValue)
+    private static HashSet<string> GetContextKeyMappedToOneOfClaimTypes<T>(string contextKey, IPlatformApplicationRequestContextKeyToClaimTypeMapper claimTypeMapper)
+    {
+        return claimTypeMapper?.ToOneOfClaimTypes(contextKey) ?? [contextKey];
+    }
+
+    private static bool TryGetRequestId<T>(HttpContext httpContext, out T foundValue)
     {
         if (httpContext.TraceIdentifier.IsNotNullOrEmpty() && typeof(T) == typeof(string))
         {
@@ -272,19 +303,17 @@ public class PlatformAspNetApplicationUserContext : IPlatformApplicationUserCont
     /// Return True if found value and out the value of type <see cref="T" />.
     /// Return false if value is not found and out default of type <see cref="T" />.
     /// </summary>
-    private bool TryGetValueFromUserClaims<T>(ClaimsPrincipal userClaims, string contextKey, out T foundValue)
+    private static bool TryGetValueFromUserClaims<T>(
+        ClaimsPrincipal userClaims,
+        string contextKey,
+        IPlatformApplicationRequestContextKeyToClaimTypeMapper claimTypeMapper,
+        out T foundValue)
     {
-        var contextKeyMappedToOneOfClaimTypes = claimTypeMapper.ToOneOfClaimTypes(contextKey);
+        var contextKeyMappedToOneOfClaimTypes = GetContextKeyMappedToOneOfClaimTypes<T>(contextKey, claimTypeMapper);
 
-        var matchedClaimStringValues =
-            contextKeyMappedToOneOfClaimTypes
-                .Select(
-                    contextKeyMappedToJwtClaimType =>
-                        userClaims.FindAll(contextKeyMappedToJwtClaimType)
-                            .Select(p => p.Value)
-                            .ToList())
-                .FirstOrDefault(p => p.Any()) ??
-            new List<string>();
+        var matchedClaimStringValues = contextKeyMappedToOneOfClaimTypes
+            .Select(contextKeyMappedToJwtClaimType => userClaims.FindAll(contextKeyMappedToJwtClaimType).Select(p => p.Value))
+            .Aggregate((current, next) => current.Concat(next).ToList()).Distinct().ToList();
 
         // Try Get Deserialized value from matchedClaimStringValues
         return PlatformRequestContextHelper.TryGetParsedValuesFromStringValues(out foundValue, matchedClaimStringValues);

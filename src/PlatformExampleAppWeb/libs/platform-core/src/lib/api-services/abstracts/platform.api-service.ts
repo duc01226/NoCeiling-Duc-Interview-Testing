@@ -1,12 +1,15 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams, HttpStatusCode } from '@angular/common/http';
 import { inject, Injectable, Optional } from '@angular/core';
-import { Observable, of, throwError } from 'rxjs';
-import { catchError, switchMap, tap } from 'rxjs/operators';
+
+import { Observable, throwError } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
 
 import { PlatformCachingService } from '../../caching';
+import { PlatformEventManager } from '../../events';
 import { HttpClientOptions, PlatformHttpService } from '../../http-services';
 import { PlatformCoreModuleConfig } from '../../platform-core.config';
 import { removeNullProps, toPlainObj } from '../../utils';
+import { PlatformApiErrorEvent } from '../events/api-error.event';
 import {
     IPlatformApiServiceErrorResponse,
     PlatformApiServiceErrorInfoCode,
@@ -26,7 +29,8 @@ export abstract class PlatformApiService extends PlatformHttpService {
     public constructor(
         http: HttpClient,
         @Optional() moduleConfig: PlatformCoreModuleConfig,
-        @Optional() private httpOptionsConfigService: PlatformHttpOptionsConfigService
+        @Optional() private httpOptionsConfigService: PlatformHttpOptionsConfigService,
+        protected eventManager: PlatformEventManager
     ) {
         super(moduleConfig, http);
     }
@@ -75,10 +79,12 @@ export abstract class PlatformApiService extends PlatformHttpService {
     protected get<T>(
         path: string,
         params: unknown,
-        configureOptions?: (option: HttpClientOptions) => HttpClientOptions | void | undefined
+        configureOptions?: (option: HttpClientOptions) => HttpClientOptions | void | undefined,
+        disableCached?: boolean
     ): Observable<T> {
-        const requestCacheKey = this.buildRequestCacheKey(path, params);
+        if (disableCached) return this.getFromServer<T>(path, params, configureOptions);
 
+        const requestCacheKey = this.buildRequestCacheKey(path, params);
         return this.cacheService.cacheImplicitReloadRequest(
             requestCacheKey,
             () => this.getFromServer<T>(path, params, configureOptions),
@@ -104,7 +110,7 @@ export abstract class PlatformApiService extends PlatformHttpService {
                     if (err instanceof Error) this.cacheService.clear();
                 }
             }),
-            catchError(err => this.catchHttpError<T>(err))
+            catchError(err => this.catchHttpError<T>(err, path, params))
         );
     }
 
@@ -119,7 +125,7 @@ export abstract class PlatformApiService extends PlatformHttpService {
 
         return super
             .httpPost<T>(this.apiUrl + path, this.preprocessData(body), configuredOptions ?? options)
-            .pipe(catchError(err => this.catchHttpError<T>(err)));
+            .pipe(catchError(err => this.catchHttpError<T>(err, path, body)));
     }
 
     protected postFileMultiPartForm<T>(
@@ -133,7 +139,7 @@ export abstract class PlatformApiService extends PlatformHttpService {
 
         return super
             .httpPostFileMultiPartForm<T>(this.apiUrl + path, <object>body, configuredOptions ?? options)
-            .pipe(catchError(err => this.catchHttpError<T>(err)));
+            .pipe(catchError(err => this.catchHttpError<T>(err, path, body)));
     }
 
     protected put<T>(
@@ -147,7 +153,7 @@ export abstract class PlatformApiService extends PlatformHttpService {
 
         return super
             .httpPut<T>(this.apiUrl + path, <T>this.preprocessData(body), configuredOptions ?? options)
-            .pipe(catchError(err => this.catchHttpError<T>(err)));
+            .pipe(catchError(err => this.catchHttpError<T>(err, path, body)));
     }
 
     protected delete<T>(
@@ -160,71 +166,105 @@ export abstract class PlatformApiService extends PlatformHttpService {
 
         return super
             .httpDelete<T>(this.apiUrl + path, configuredOptions ?? options)
-            .pipe(catchError(err => this.catchHttpError<T>(err)));
+            .pipe(catchError(err => this.catchHttpError<T>(err, path, null)));
     }
 
-    protected catchHttpError<T>(errorResponse: HttpErrorResponse | Error): Observable<T> {
+    protected catchHttpError<T>(
+        errorResponse: HttpErrorResponse | Error,
+        apiRequestPath: string,
+        apiRequestPayload: unknown
+    ): Observable<T> {
         if (errorResponse instanceof Error) {
             console.error(errorResponse);
-            return this.throwError<T>({
-                error: { code: errorResponse.name, message: errorResponse.message },
-                requestId: ''
-            });
+            return this.throwError<T>(
+                {
+                    error: { code: errorResponse.name, message: errorResponse.message },
+                    requestId: ''
+                },
+                apiRequestPath,
+                apiRequestPayload
+            );
         }
 
         if (ERR_CONNECTION_REFUSED_STATUSES.includes(errorResponse.status)) {
-            return this.throwError({
-                error: {
-                    code: PlatformApiServiceErrorInfoCode.ConnectionRefused,
-                    message: 'Your internet connection is not available or the server is temporarily down.'
+            return this.throwError(
+                {
+                    error: {
+                        code: PlatformApiServiceErrorInfoCode.ConnectionRefused,
+                        message: 'Your internet connection is not available or the server is temporarily down.'
+                    },
+                    statusCode: errorResponse.status,
+                    requestId: ''
                 },
-                requestId: ''
-            });
+                apiRequestPath,
+                apiRequestPayload
+            );
         }
 
         const apiErrorResponse = <IPlatformApiServiceErrorResponse | null>errorResponse.error;
         if (apiErrorResponse?.error != null && apiErrorResponse.error.code != null) {
-            return this.throwError({
-                error: apiErrorResponse.error,
-                statusCode: errorResponse.status,
-                requestId: apiErrorResponse.requestId
-            });
+            return this.throwError(
+                {
+                    error: apiErrorResponse.error,
+                    statusCode: errorResponse.status,
+                    requestId: apiErrorResponse.requestId
+                },
+                apiRequestPath,
+                apiRequestPayload
+            );
         }
 
         if (UNAUTHORIZATION_STATUSES.includes(errorResponse.status)) {
-            return this.throwError({
-                error: {
-                    code: PlatformApiServiceErrorInfoCode.PlatformPermissionException,
-                    message: errorResponse.message ?? 'You are unauthorized or forbidden'
+            return this.throwError(
+                {
+                    error: {
+                        code: PlatformApiServiceErrorInfoCode.PlatformPermissionException,
+                        message: errorResponse.message ?? 'You are unauthorized or forbidden'
+                    },
+                    statusCode: errorResponse.status,
+                    requestId: apiErrorResponse?.requestId ?? ''
                 },
-                requestId: apiErrorResponse?.requestId ?? ''
-            });
+                apiRequestPath,
+                apiRequestPayload
+            );
         }
 
-        return this.throwError<T>({
-            error: {
-                code: PlatformApiServiceErrorInfoCode.Unknown,
-                message: errorResponse.message
+        return this.throwError<T>(
+            {
+                error: {
+                    code: PlatformApiServiceErrorInfoCode.Unknown,
+                    message: errorResponse.message
+                },
+                statusCode: errorResponse.status,
+                requestId: apiErrorResponse?.requestId ?? ''
             },
-            statusCode: errorResponse.status,
-            requestId: apiErrorResponse?.requestId ?? ''
-        });
-    }
-
-    protected throwError<T>(errorResponse: IPlatformApiServiceErrorResponse): Observable<T> {
-        if (errorResponse.error.developerExceptionMessage != null)
-            console.error(errorResponse.error.developerExceptionMessage);
-
-        return <Observable<T>>of({}).pipe(
-            switchMap(() => {
-                return throwError(() => new PlatformApiServiceErrorResponse(errorResponse));
-            })
+            apiRequestPath,
+            apiRequestPayload
         );
     }
 
+    protected throwError<T>(
+        errorResponse: IPlatformApiServiceErrorResponse,
+        apiRequestPath: string,
+        apiRequestPayload: unknown
+    ): Observable<T> {
+        if (errorResponse.error.developerExceptionMessage != null)
+            console.error(errorResponse.error.developerExceptionMessage);
+
+        return throwError(() => {
+            const errorResponseInstance = new PlatformApiServiceErrorResponse(errorResponse);
+
+            this.eventManager.publish(
+                new PlatformApiErrorEvent(apiRequestPath, apiRequestPayload, errorResponseInstance)
+            );
+
+            return errorResponseInstance;
+        });
+    }
+
     protected setDefaultOptions(options?: HttpClientOptions): HttpClientOptions {
-        options = options ? options : {};
-        if (!options.headers) {
+        options = options != null ? options : {};
+        if (options.headers == null) {
             const httpHeaders = PlatformApiService.DefaultHeaders;
             options.headers = httpHeaders;
         }
@@ -256,9 +296,9 @@ export abstract class PlatformApiService extends PlatformHttpService {
         prefix?: string
     ): IApiGetParams {
         // eslint-disable-next-line guard-for-in
-        for (const paramKey in inputParams || {}) {
+        for (const paramKey in inputParams ?? {}) {
             const inputParamValue = inputParams instanceof FormData ? inputParams.get(paramKey) : inputParams[paramKey];
-            const inputParamFinalKey = prefix ? `${prefix}.${paramKey}` : paramKey;
+            const inputParamFinalKey = prefix != null ? `${prefix}.${paramKey}` : paramKey;
             if (inputParamValue instanceof Array) {
                 // eslint-disable-next-line no-param-reassign
                 returnParam[inputParamFinalKey] = inputParamValue;
@@ -283,8 +323,8 @@ export abstract class PlatformApiService extends PlatformHttpService {
         let returnParam = new HttpParams();
         const flattenedInputParams = this.flattenHttpGetParam(inputParams);
         for (const paramKey in flattenedInputParams) {
-            if (Object.prototype.hasOwnProperty.call(flattenedInputParams, paramKey)) {
-                const inputParamValue = flattenedInputParams[paramKey];
+            if (Object.prototype.hasOwnProperty.call(flattenedInputParams, paramKey) == true) {
+                const inputParamValue = flattenedInputParams[paramKey]!;
                 if (inputParamValue instanceof Array) {
                     inputParamValue.forEach((p: IApiGetParamItemSingleValue) => {
                         returnParam = returnParam.append(paramKey, p);
@@ -305,7 +345,7 @@ export abstract class PlatformApiService extends PlatformHttpService {
     }
 
     private getRequestPathFromCacheKey(requestCacheKey: string): string {
-        return requestCacheKey.split(this.requestCacheKeySeperator)[0];
+        return requestCacheKey.split(this.requestCacheKeySeperator)[0]!;
     }
 }
 

@@ -1,6 +1,6 @@
-import * as moment from 'moment';
+import moment from 'moment';
 
-import { WEEKDAY, WORKING_TIME_DAY_DISPLAY } from '../common-values/weekdays.const';
+import { MONTH, MONTH_DISPLAY, WEEKDAY, WORKING_TIME_DAY_DISPLAY } from '../common-values/weekdays.const';
 
 export function date_setHours(date: Date, hours: number): Date {
     return new Date(new Date(date).setHours(hours));
@@ -36,6 +36,14 @@ export function date_setToStartOfDay(date: Date): Date {
 
 export function date_setToStartOfDayUTC(date: Date): Date {
     return date_toUTCTime(date_setToStartOfDay(date));
+}
+
+export function date_setToMiddleOfDay(date: Date): Date {
+    return new Date(new Date(date).setHours(12, 0, 0, 0));
+}
+
+export function date_setToMiddleOfDayUTC(date: Date): Date {
+    return date_toUTCTime(date_setToMiddleOfDay(date));
 }
 
 export function date_getEndOfYear(date: Date): Date {
@@ -146,9 +154,9 @@ export function date_compareOnlyDay(firstDate: Date, secondDate: Date): number {
  * @param endDate second date
  * @param floor round down or not
  */
-export function date_dayDiffs(startDate: Date, endDate: Date, floor: boolean = true): number {
-    const firstDate = startDate ? new Date(startDate) : new Date();
-    const secondDate = endDate ? new Date(endDate) : new Date();
+export function date_dayDiffs(startDate?: Date, endDate?: Date, floor: boolean = true): number {
+    const firstDate = startDate != null ? new Date(startDate) : new Date();
+    const secondDate = endDate != null ? new Date(endDate) : new Date();
     firstDate.setHours(0, 0, 0, 0);
     secondDate.setHours(0, 0, 0, 0);
     const diffDays: number = (secondDate.getTime() - firstDate.getTime()) / (1000 * 3600 * 24);
@@ -156,7 +164,7 @@ export function date_dayDiffs(startDate: Date, endDate: Date, floor: boolean = t
 }
 
 export function date_compareOnlyTime(firstDate: Date, secondDate: Date): number {
-    if (secondDate && firstDate) {
+    if (secondDate != null && firstDate != null) {
         const secondHour = secondDate.getHours();
         const firstHour = firstDate.getHours();
         if (secondHour < firstHour) {
@@ -322,17 +330,29 @@ export function date_getNextWeekday(date: Date, dayToFind: WeekDays): Date {
 }
 
 export function date_getDayName(date: Date, shortName?: boolean): string {
-    if (!date) return '';
+    if (date == null) return '';
 
     const weekDays: string[] = [];
     Object.keys(WEEKDAY).forEach(key => {
-        weekDays.push(shortName ? WORKING_TIME_DAY_DISPLAY[key] : key);
+        weekDays.push(shortName ? WORKING_TIME_DAY_DISPLAY[key]! : key);
     });
-    return weekDays[date.getDay()];
+
+    return weekDays[date.getDay()]!;
+}
+
+export function date_getMonthName(date: Date): string {
+    if (date == null) return '';
+
+    const months: string[] = [];
+    Object.keys(MONTH).forEach(key => {
+        months.push(MONTH_DISPLAY[key]!);
+    });
+
+    return months[date.getMonth()]!;
 }
 
 export function date_getHourAndMinute(date: Date): string {
-    if (!date) return '';
+    if (date == null) return '';
 
     const hours = date.getHours();
     const minutes = date.getMinutes();
@@ -342,4 +362,33 @@ export function date_getHourAndMinute(date: Date): string {
 
 export function date_toUTCTime(date: Date): Date {
     return new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+}
+
+export function date_ordinalSuffix(d: number) {
+    if (d > 3 && d < 21) return d + 'th';
+
+    switch (d % 10) {
+        case 1:
+            return d + 'st';
+        case 2:
+            return d + 'nd';
+        case 3:
+            return d + 'rd';
+        default:
+            return d + 'th';
+    }
+}
+
+export function date_remainingDaysUntilToday(inputDateValue: string | Date): number {
+    const inputDate = new Date(inputDateValue);
+    inputDate.setHours(0, 0, 0, 0);
+
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+
+    // The timeDifference variable represents the difference between two timestamps in milliseconds. By dividing timeDifference by 1000, we are converting the time difference from milliseconds to seconds.
+    const timeDifference = inputDate.getTime() - currentDate.getTime();
+    const remainingDays = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+
+    return remainingDays;
 }

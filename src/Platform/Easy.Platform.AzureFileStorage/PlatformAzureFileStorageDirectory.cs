@@ -6,8 +6,8 @@ namespace Easy.Platform.AzureFileStorage;
 
 public class PlatformAzureFileStorageDirectory : IPlatformFileStorageDirectory
 {
-    private static readonly HashSet<string> ReservedFileNames = new()
-    {
+    private static readonly HashSet<string> ReservedFileNames =
+    [
         ".",
         "..",
         "LPT1",
@@ -33,7 +33,7 @@ public class PlatformAzureFileStorageDirectory : IPlatformFileStorageDirectory
         "NUL",
         "CON",
         "CLOCK$"
-    };
+    ];
 
     public PlatformAzureFileStorageDirectory(BlobContainerClient blobContainer, string directoryRelativePath)
     {

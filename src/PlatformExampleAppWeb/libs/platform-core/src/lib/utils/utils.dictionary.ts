@@ -30,12 +30,12 @@ export function dictionary_upsert<T>(
                 typeof newState[id] !== 'object'
             ) {
                 // eslint-disable-next-line no-param-reassign
-                newState[id] = initItem(newDataDic[id]);
+                newState[id] = initItem(newDataDic[id]!);
             } else {
-                const prevNewStateItem = newState[id];
+                const prevNewStateItem = newState[id]!;
                 const newStateItemData = replaceEachItem
-                    ? newDataDic[id]
-                    : assign<Partial<T>>(clone(newState[id]), newDataDic[id]);
+                    ? newDataDic[id]!
+                    : assign<Partial<T>>(clone(newState[id]!), newDataDic[id]!);
                 if (optionalProps.length > 0) {
                     optionalProps.forEach(optionalProp => {
                         if (prevNewStateItem[optionalProp] != null && newStateItemData[optionalProp] == null) {
@@ -53,7 +53,7 @@ export function dictionary_upsert<T>(
         const removeItemIds = lodashKeys(state).filter(
             id =>
                 newDataDic[id] == null &&
-                (removeNotExistedItemsFilter == null || removeNotExistedItemsFilter(state[id]))
+                (removeNotExistedItemsFilter == null || removeNotExistedItemsFilter(state[id]!))
         );
         removeItemIds.forEach(id => {
             // eslint-disable-next-line no-param-reassign

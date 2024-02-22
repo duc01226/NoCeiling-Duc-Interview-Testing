@@ -5,7 +5,7 @@ export class Validation<TValue = void> {
     public get isValid() {
         return this.errors.length == 0;
     }
-    public get error(): ValidationError | null {
+    public get error(): ValidationError | undefined {
         return this.errors[0];
     }
 

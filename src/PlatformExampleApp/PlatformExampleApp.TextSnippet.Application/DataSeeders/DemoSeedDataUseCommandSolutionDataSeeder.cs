@@ -1,5 +1,5 @@
 using Easy.Platform.Application;
-using Easy.Platform.Application.Context.UserContext;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Configuration;
@@ -37,7 +37,7 @@ public sealed class DemoSeedDataUseCommandSolutionDataSeeder : PlatformApplicati
     private static async Task SeedSnippetText(
         bool isReplaceNewSeed,
         IPlatformCqrs cqrs,
-        IPlatformApplicationUserContextAccessor userContextAccessor,
+        IPlatformApplicationRequestContextAccessor userContextAccessor,
         ITextSnippetRepository<TextSnippetEntity> snippetRepository)
     {
         if (await snippetRepository.AnyAsync(p => p.SnippetText == "Dummy Seed SnippetText") && !isReplaceNewSeed) return;

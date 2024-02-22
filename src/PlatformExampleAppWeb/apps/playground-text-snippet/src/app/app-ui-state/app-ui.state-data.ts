@@ -3,6 +3,7 @@ import { PlatformApiServiceErrorResponse, PlatformVm } from '@libs/platform-core
 export class AppUiStateData extends PlatformVm {
     public constructor(data?: Partial<AppUiStateData>) {
         super(data);
+        if (data == undefined) return;
 
         this.selectedSnippetTextId = data?.selectedSnippetTextId;
         this.appError = data?.appError;
@@ -22,7 +23,7 @@ export class AppUiStateData extends PlatformVm {
     // public pagedResult?: PlatformPagedResultDto<LeaveType>;
 
     // // Full syntax execute a NORMAL FUNCTION
-    // @Watch<PlatformPagedQueryDto, LeaveTypesState>((value, change, targetObj) => {
+    // @Watch<LeaveTypesState, PlatformPagedQueryDto>((value, change, targetObj) => {
     //   targetObj.updatePageInfo();
     // })
     // public pagedQuery: PlatformPagedQueryDto = new PlatformPagedQueryDto();
@@ -43,8 +44,8 @@ export class AppUiStateData extends PlatformVm {
                   })
                     .andNextValidate(remainingLeave =>
                       remainingLeave.validateEnoughAvailableRemainingLeaveDays(
-                        this.vm.totalDays,
-                        this.vm.fromDate,
+                        this.vm().totalDays,
+                        this.vm().fromDate,
                         LeaveRequestDetailFormValidationKeys.reachedMaximumTotalDays
                       )
                     )

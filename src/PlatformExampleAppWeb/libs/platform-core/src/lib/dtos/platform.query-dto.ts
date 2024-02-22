@@ -40,7 +40,7 @@ export class PlatformPagedQueryDto extends PlatformQueryDto implements IPlatform
         });
     }
 
-    public withSort(orderDirection: OrderDirection, orderBy: string): PlatformPagedQueryDto {
+    public withSort(orderDirection: OrderDirection | undefined, orderBy?: string): PlatformPagedQueryDto {
         if (this.orderBy == orderBy && this.orderDirection == orderDirection) return this;
         return clone(this, _ => {
             _.orderBy = orderBy;

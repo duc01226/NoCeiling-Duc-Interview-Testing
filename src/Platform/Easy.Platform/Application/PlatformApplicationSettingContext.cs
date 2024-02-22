@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace Easy.Platform.Application.Context;
+namespace Easy.Platform.Application;
 
 public interface IPlatformApplicationSettingContext
 {

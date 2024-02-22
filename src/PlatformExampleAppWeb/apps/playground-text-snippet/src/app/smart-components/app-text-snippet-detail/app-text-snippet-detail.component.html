@@ -17,6 +17,7 @@
     <mat-form-field class="text-snippet-detail__full-text-form-field" appearance="fill">
         <mat-label>Full Text</mat-label>
         <textarea
+            maxlength="1000"
             name="fullText"
             [(ngModel)]="vm.toSaveTextSnippetFullText"
             [ngModelOptions]="{ updateOn: 'blur' }"
@@ -53,4 +54,6 @@
 <div *ngIf="isLoading('saveTextSnippet')" class="platform-mat-mdc-spinner -with-backdrop">
     <mat-spinner></mat-spinner>
 </div>
-<mat-error *ngIf="vm.error" class="text-snippet-detail__error">{{ vm.error }}</mat-error>
+<div *ngIf="vm.error" class="platform-mat-mdc-spinner -with-backdrop">
+    <mat-error class="text-snippet-detail__error">{{ vm.error }}</mat-error>
+</div>

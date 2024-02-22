@@ -1,7 +1,7 @@
-using Easy.Platform.Application.Context;
-using Easy.Platform.Application.Context.UserContext;
+using Easy.Platform.Application;
 using Easy.Platform.Application.MessageBus.Producers;
 using Easy.Platform.Application.MessageBus.Producers.CqrsEventProducers;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Logging;
 using PlatformExampleApp.TextSnippet.Domain.Events;
@@ -17,7 +17,7 @@ public class TransferSnippetTextToMultiDbDemoEntityNameDomainEventSendWithDefaul
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
-        IPlatformApplicationUserContextAccessor userContextAccessor,
+        IPlatformApplicationRequestContextAccessor userContextAccessor,
         IPlatformApplicationSettingContext applicationSettingContext) : base(
         loggerFactory,
         unitOfWorkManager,

@@ -54,7 +54,7 @@ export class PlatformApiServiceErrorInfo implements IPlatformApiServiceErrorInfo
 
     public code: PlatformApiServiceErrorInfoCode | string = '';
 
-    public message?: string;
+    public message: string = '';
 
     public formattedMessagePlaceholderValues?: Map<string, string>;
 

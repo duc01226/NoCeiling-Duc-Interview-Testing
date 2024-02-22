@@ -5,10 +5,11 @@ using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.Hosting;
+using Easy.Platform.Common.HostingBackgroundServices;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Utils;
 using MediatR;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -45,6 +46,15 @@ public interface IPlatformModule
     public bool RegisterServicesExecuted { get; }
     public bool Initiated { get; }
 
+    /// <summary>
+    /// Gets the action that configures additional tracing settings for the platform module.
+    /// </summary>
+    /// <value>
+    /// The action that accepts a <see cref="TracerProviderBuilder" /> and configures it.
+    /// </value>
+    /// <remarks>
+    /// This property can be used to add custom tracing configurations for the platform module.
+    /// </remarks>
     public Action<TracerProviderBuilder> AdditionalTracingConfigure { get; }
 
     public static ILogger CreateDefaultLogger(IServiceProvider serviceProvider)
@@ -52,7 +62,15 @@ public interface IPlatformModule
         return serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(DefaultLogCategory);
     }
 
-    public static void WaitAllModulesInitiated(IServiceProvider serviceProvider, Type moduleType, ILogger logger = null, string logSuffix = null)
+    /// <summary>
+    /// Waits until all modules of a specific type are initiated.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider to fetch services.</param>
+    /// <param name="moduleType">The type of the modules to wait for.</param>
+    /// <param name="logger">The logger to log information. If null, a default logger will be created.</param>
+    /// <param name="logSuffix">The suffix for the log information.</param>
+    /// <returns>A Task representing the asynchronous operation.</returns>
+    public static async Task WaitAllModulesInitiatedAsync(IServiceProvider serviceProvider, Type moduleType, ILogger logger = null, string logSuffix = null)
     {
         if (serviceProvider.GetServices(moduleType).Select(p => p.As<IPlatformModule>()).All(p => p.Initiated)) return;
 
@@ -60,8 +78,8 @@ public interface IPlatformModule
 
         useLogger.LogInformation("[Platform] Start WaitAllModulesInitiated of type {ModuleType} {LogSuffix} STARTED", moduleType.Name, logSuffix);
 
-        Util.TaskRunner.WaitUntil(
-            () =>
+        await Util.TaskRunner.WaitUntilAsync(
+            async () =>
             {
                 var modules = serviceProvider.GetServices(moduleType).Select(p => p.As<IPlatformModule>());
 
@@ -74,6 +92,12 @@ public interface IPlatformModule
         useLogger.LogInformation("[Platform] WaitAllModulesInitiated of type {ModuleType} {LogSuffix} FINISHED", moduleType.Name, logSuffix);
     }
 
+    /// <summary>
+    /// Retrieves all dependent child modules of the current platform module.
+    /// </summary>
+    /// <param name="useServiceCollection">Optional. The service collection to use. If null, the service provider of the current module is used.</param>
+    /// <param name="includeDeepChildModules">Optional. If true, includes all deep child modules in the returned list. Default is true.</param>
+    /// <returns>A list of all dependent child modules.</returns>
     public List<IPlatformModule> AllDependencyChildModules(IServiceCollection useServiceCollection = null, bool includeDeepChildModules = true);
 
     public static bool CheckIsRootModule(IPlatformModule module)
@@ -83,7 +107,12 @@ public interface IPlatformModule
 
     public void RegisterServices(IServiceCollection serviceCollection);
 
-    public Task Init();
+    /// <summary>
+    /// Initializes the platform module.
+    /// </summary>
+    /// <param name="currentApp">Optional. The current application builder. If null, the application builder of the current module is used.</param>
+    /// <returns>A Task representing the asynchronous operation.</returns>
+    public Task Init(IApplicationBuilder currentApp = null);
 
     public List<Func<IConfiguration, Type>> ModuleTypeDependencies();
 
@@ -101,13 +130,20 @@ public interface IPlatformModule
 }
 
 /// <summary>
-/// Example:
-/// <br />
-/// services.RegisterModule{XXXApiModule}(); Register module into service collection
-/// <br />
-/// get module service in collection and call module.Init();
-/// Init module to start running init for all other modules and this module itself
+/// Represents a platform module that provides a set of functionalities and services.
 /// </summary>
+/// <remarks>
+/// This class is an abstract base class for all platform modules. It provides a common set of properties and methods
+/// that are used to manage the lifecycle of a module, such as initialization, registration of services, and disposal.
+/// </remarks>
+/// <example>
+/// Here is an example of how to use this class:
+/// <code>
+/// services.RegisterModule{XXXApiModule}(); // Register module into service collection
+/// // Get module service in collection and call module.Init();
+/// // Init module to start running init for all other modules and this module itself
+/// </code>
+/// </example>
 public abstract class PlatformModule : IPlatformModule, IDisposable
 {
     public const int DefaultExecuteInitPriority = 10;
@@ -117,6 +153,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
     protected readonly SemaphoreSlim InitLockAsync = new(1, 1);
     protected readonly SemaphoreSlim RegisterLockAsync = new(1, 1);
+    private bool disposed;
 
     public PlatformModule(IServiceProvider serviceProvider, IConfiguration configuration)
     {
@@ -131,6 +168,8 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
     protected ILoggerFactory LoggerFactory { get; init; }
 
     protected virtual bool AutoScanAssemblyRegisterCqrs => false;
+
+    protected IApplicationBuilder CurrentApp { get; set; }
 
     public void Dispose()
     {
@@ -180,6 +219,23 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
         serviceCollection.RegisterModule<TModule>(true);
     }
 
+    /// <summary>
+    /// Registers the services provided by this module into the provided service collection.
+    /// </summary>
+    /// <param name="serviceCollection">The service collection to which the services will be registered.</param>
+    /// <remarks>
+    /// This method performs several operations:
+    /// - It registers all module dependencies.
+    /// - It registers default logs.
+    /// - It registers CQRS.
+    /// - It registers helpers.
+    /// - It registers distributed tracing.
+    /// - It performs internal registration.
+    /// - It registers the platform root service provider.
+    /// - It sets the current JSON serializer options if they are not null.
+    /// After all these operations, it sets the RegisterServicesExecuted property to true.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the services have already been registered.</exception>
     public void RegisterServices(IServiceCollection serviceCollection)
     {
         try
@@ -209,10 +265,12 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
         }
     }
 
-    public virtual async Task Init()
+    public virtual async Task Init(IApplicationBuilder currentApp = null)
     {
         try
         {
+            if (currentApp != null) CurrentApp = currentApp;
+
             await InitLockAsync.WaitAsync();
 
             if (Initiated)
@@ -265,7 +323,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
             .ToList();
     }
 
-    public virtual string[] TracingSources() { return Array.Empty<string>(); }
+    public virtual string[] TracingSources() { return []; }
     public virtual Action<TracerProviderBuilder> AdditionalTracingConfigure => null;
 
     /// <summary>
@@ -277,17 +335,38 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
     /// </summary>
     public virtual List<Func<IConfiguration, Type>> ModuleTypeDependencies()
     {
-        return new List<Func<IConfiguration, Type>>();
+        return [];
     }
 
-    protected virtual void Dispose(bool isDisposing)
+    protected virtual void Dispose(bool disposing)
     {
-        if (!isDisposing) return;
+        if (!disposed)
+        {
+            if (disposing)
+            {
+                InitLockAsync?.Dispose();
+                RegisterLockAsync?.Dispose();
+            }
 
-        InitLockAsync?.Dispose();
-        RegisterLockAsync?.Dispose();
+            // Release unmanaged resources
+
+            disposed = true;
+        }
     }
 
+    // Finalizer (destructor)
+    ~PlatformModule()
+    {
+        Dispose(false);
+    }
+
+    /// <summary>
+    /// Registers the distributed tracing services to the provided service collection.
+    /// </summary>
+    /// <param name="serviceCollection">The service collection to which the distributed tracing services are added.</param>
+    /// <remarks>
+    /// This method should only be called if the current module is the root module and distributed tracing is enabled.
+    /// </remarks>
     protected void RegisterDistributedTracing(IServiceCollection serviceCollection)
     {
         if (IsRootModule)
@@ -328,7 +407,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
     public List<string> CommonTracingSources()
     {
-        return Util.ListBuilder.New(IPlatformCqrsEventHandler.ActivitySource.Name, PlatformIntervalProcessHostedService.ActivitySource.Name);
+        return Util.ListBuilder.New(IPlatformCqrsEventHandler.ActivitySource.Name, PlatformIntervalHostingBackgroundService.ActivitySource.Name);
     }
 
     public static ILogger CreateLogger(ILoggerFactory loggerFactory)
@@ -348,6 +427,14 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
         }
     }
 
+    /// <summary>
+    /// Registers services in the provided service collection.
+    /// </summary>
+    /// <param name="serviceCollection">The service collection to add the services to.</param>
+    /// <remarks>
+    /// This method is called internally by the platform module.
+    /// Derived classes should override this method to register their specific services.
+    /// </remarks>
     protected virtual void InternalRegister(IServiceCollection serviceCollection)
     {
     }
@@ -366,12 +453,27 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
         return null;
     }
 
+    /// <summary>
+    /// Initializes all module dependencies asynchronously.
+    /// </summary>
+    /// <remarks>
+    /// This method groups all dependent modules by their execution priority, orders them in descending order of priority,
+    /// and then initializes each group of modules in parallel. This ensures that higher-priority modules are initialized before lower-priority ones.
+    /// </remarks>
+    /// <returns>
+    /// A <see cref="Task" /> representing the asynchronous operation.
+    /// </returns>
+    /// <example>
+    ///     <code>
+    /// await InitAllModuleDependencies();
+    /// </code>
+    /// </example>
     protected async Task InitAllModuleDependencies()
     {
         await AllDependencyChildModules()
             .GroupBy(p => p.ExecuteInitPriority)
             .OrderByDescending(p => p.Key)
-            .ForEachAsync(p => p.ParallelAsync(module => module.Init()));
+            .ForEachAsync(p => p.ParallelAsync(module => module.Init(CurrentApp)));
     }
 
     protected virtual void RegisterHelpers(IServiceCollection serviceCollection)
@@ -379,6 +481,15 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
         serviceCollection.RegisterAllFromType<IPlatformHelper>(Assembly);
     }
 
+    /// <summary>
+    /// Configures the distributed tracing settings for the platform module.
+    /// </summary>
+    /// <returns>
+    /// A <see cref="DistributedTracingConfig" /> object that contains the configuration settings for distributed tracing.
+    /// </returns>
+    /// <remarks>
+    /// This method can be overridden in derived classes to provide custom configuration for distributed tracing.
+    /// </remarks>
     protected virtual DistributedTracingConfig ConfigDistributedTracing()
     {
         return new DistributedTracingConfig();
@@ -413,11 +524,29 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
             .ForEach(moduleType => serviceCollection.RegisterModule(moduleType, true));
     }
 
+    /// <summary>
+    /// Represents the configuration settings for distributed tracing.
+    /// </summary>
     public class DistributedTracingConfig
     {
+        /// <summary>
+        /// Gets or sets a value indicating whether distributed tracing is enabled.
+        /// </summary>
         public bool Enabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets the action to configure additional trace settings.
+        /// </summary>
         public Action<TracerProviderBuilder> AdditionalTraceConfig { get; set; }
+
+        /// <summary>
+        /// Gets or sets the action to configure the OpenTelemetry Protocol (OTLP) exporter options.
+        /// </summary>
         public Action<OtlpExporterOptions> AddOtlpExporterConfig { get; set; }
+
+        /// <summary>
+        /// Gets or sets the name of the application.
+        /// </summary>
         public string AppName { get; set; }
     }
 }

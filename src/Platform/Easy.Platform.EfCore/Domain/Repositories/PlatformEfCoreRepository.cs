@@ -28,8 +28,8 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
     {
         DbContextOptions = dbContextOptions;
         AllAvailableEntityTypes = typeof(TEntity).Assembly.GetTypes().Where(p => p.IsClass && !p.IsAbstract && p.IsAssignableTo(typeof(IEntity))).ToHashSet();
-        ToCheckNoNeedKeepUowPrimitiveTypes = new[]
-        {
+        ToCheckNoNeedKeepUowPrimitiveTypes =
+        [
             typeof(string),
             typeof(Guid),
             typeof(DateTime),
@@ -38,7 +38,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
             typeof(double),
             typeof(float),
             typeof(DateOnly)
-        };
+        ];
     }
 
     protected DbContextOptions<TDbContext> DbContextOptions { get; }
@@ -54,7 +54,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         return GetUowDbContext(uow).Set<TEntity>();
     }
 
-    public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object>>[] loadRelatedEntities)
+    public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return GetTable(uow)
             .AsQueryable()

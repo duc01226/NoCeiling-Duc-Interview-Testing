@@ -4,14 +4,14 @@ using System.Reflection;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.RequestContext;
 
-namespace Easy.Platform.Application.Context.UserContext.Default;
+namespace Easy.Platform.Application.RequestContext;
 
-public class PlatformDefaultApplicationUserContext : IPlatformApplicationUserContext
+public class PlatformDefaultApplicationRequestContext : IPlatformApplicationRequestContext
 {
     protected readonly ConcurrentDictionary<string, object> UserContextData = new();
     private readonly MethodInfo getValueByGenericTypeMethodInfo;
 
-    public PlatformDefaultApplicationUserContext()
+    public PlatformDefaultApplicationRequestContext()
     {
         getValueByGenericTypeMethodInfo =
             GetType().GetMethods().First(p => p.IsGenericMethod && p.Name == nameof(GetValue) && p.GetGenericArguments().Length == 1 && p.IsPublic);
@@ -19,8 +19,7 @@ public class PlatformDefaultApplicationUserContext : IPlatformApplicationUserCon
 
     public T GetValue<T>(string contextKey)
     {
-        if (contextKey == null)
-            throw new ArgumentNullException(nameof(contextKey));
+        ArgumentNullException.ThrowIfNull(contextKey);
 
         if (PlatformRequestContextHelper.TryGetValue(UserContextData, contextKey, out T item)) return item;
 
@@ -31,20 +30,19 @@ public class PlatformDefaultApplicationUserContext : IPlatformApplicationUserCon
     {
         return getValueByGenericTypeMethodInfo
             .MakeGenericMethod(valueType)
-            .Invoke(this, parameters: new object[] { contextKey });
+            .Invoke(this, parameters: [contextKey]);
     }
 
     public void SetValue(object value, string contextKey)
     {
-        if (contextKey == null)
-            throw new ArgumentNullException(nameof(contextKey));
+        ArgumentNullException.ThrowIfNull(contextKey);
 
         UserContextData.Upsert(contextKey, value);
     }
 
     public List<string> GetAllKeys()
     {
-        return UserContextData.Keys.ToList();
+        return [.. UserContextData.Keys];
     }
 
     public Dictionary<string, object> GetAllKeyValues()

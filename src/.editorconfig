@@ -114,7 +114,7 @@ dotnet_style_prefer_compound_assignment = true:error
 dotnet_style_prefer_simplified_interpolation = true:error
 dotnet_style_prefer_simplified_boolean_expressions = true:error
 # Null-checking preferences
-dotnet_style_coalesce_expression = true:error
+dotnet_style_coalesce_expression = true:suggestion
 dotnet_style_null_propagation = true:error
 dotnet_style_prefer_is_null_check_over_reference_equality_method = true:error
 # File header preferences
@@ -137,13 +137,13 @@ csharp_style_expression_bodied_operators = true:none
 csharp_style_expression_bodied_properties = when_on_single_line:none
 csharp_style_expression_bodied_indexers = true:error
 csharp_style_expression_bodied_accessors = true:none
-csharp_style_expression_bodied_lambdas = when_on_single_line:error
-csharp_style_expression_bodied_local_functions = true:error
+csharp_style_expression_bodied_lambdas = when_on_single_line:suggestion
+csharp_style_expression_bodied_local_functions = true:suggestion
 # Pattern matching preferences
 csharp_style_pattern_matching_over_is_with_cast_check = true:error
 csharp_style_pattern_matching_over_as_with_null_check = true:error
 csharp_style_prefer_switch_expression = true:error
-csharp_style_prefer_pattern_matching = true:error
+csharp_style_prefer_pattern_matching = true:suggestion
 csharp_style_prefer_not_pattern = true:error
 # Expression-level preferences
 csharp_style_inlined_variable_declaration = true:error
@@ -157,7 +157,7 @@ csharp_style_implicit_object_creation_when_type_is_apparent = true:error
 csharp_style_throw_expression = true:error
 csharp_style_conditional_delegate_call = true:error
 # Code block preferences
-csharp_prefer_braces = when_multiline:error
+csharp_prefer_braces = when_multiline:suggestion
 csharp_prefer_simple_using_statement = true:suggestion
 # Modifier preferences
 csharp_prefer_static_local_function = true:error
@@ -399,11 +399,11 @@ end_of_line = crlf
 
 # C# Unnecessary code rules
 [*.{cs,csx,cake}]
-csharp_style_unused_value_expression_statement_preference = discard_variable:error
-csharp_style_unused_value_assignment_preference = discard_variable:none
+csharp_style_unused_value_expression_statement_preference = unused_local_variable:none
+csharp_style_unused_value_assignment_preference = unused_local_variable:none
 
 dotnet_diagnostic.IDE0003.severity = error
-dotnet_diagnostic.IDE0005.severity = error
+dotnet_diagnostic.IDE0005.severity = suggestion
 dotnet_diagnostic.IDE0010.severity = suggestion
 dotnet_diagnostic.IDE0011.severity = none
 dotnet_diagnostic.IDE0039.severity = error
@@ -434,6 +434,7 @@ dotnet_diagnostic.IDE0074.severity = error
 dotnet_diagnostic.IDE0200.severity = suggestion
 dotnet_diagnostic.IDE0270.severity = suggestion
 dotnet_diagnostic.IDE0251.severity = none
+dotnet_diagnostic.IDE0290.severity = suggestion
 
 dotnet_diagnostic.SA1101.severity = error
 dotnet_diagnostic.SA1413.severity = error
@@ -487,12 +488,20 @@ dotnet_diagnostic.CA2200.severity = error
 dotnet_diagnostic.CA1852.severity = error
 dotnet_diagnostic.CA1311.severity = suggestion
 dotnet_diagnostic.CA1854.severity = suggestion
+dotnet_diagnostic.CA1860.severity = suggestion
+dotnet_diagnostic.CA1861.severity = suggestion
+dotnet_diagnostic.CA1862.severity = suggestion
+dotnet_diagnostic.CA1863.severity = suggestion
+dotnet_diagnostic.CA1869.severity = suggestion
 
 dotnet_diagnostic.CS0628.severity = error
 dotnet_diagnostic.CS4014.severity = error
 dotnet_diagnostic.CS0108.severity = error
 dotnet_diagnostic.CS8524.severity = suggestion
 dotnet_diagnostic.CS8602.severity = error
+dotnet_diagnostic.CS8604.severity = error
+dotnet_diagnostic.CS8601.severity = error
+dotnet_diagnostic.CS8603.severity = error
 
 dotnet_diagnostic.CS1998.severity = suggestion
 
@@ -707,6 +716,8 @@ dotnet_diagnostic.S1133.severity = warning
 # S1144: Remove unused internal class
 dotnet_diagnostic.S1144.severity = none
 
+dotnet_diagnostic.S2857.severity = none
+
 dotnet_diagnostic.S6602.severity = suggestion
 dotnet_diagnostic.S6603.severity = suggestion
 dotnet_diagnostic.S6605.severity = suggestion
@@ -732,3 +743,7 @@ dotnet_diagnostic.ENUM0003.severity = none
 dotnet_diagnostic.ASYNC0001.severity = none
 dotnet_diagnostic.ASYNC0004.severity = none
 dotnet_diagnostic.ASYNC0002.severity = none
+
+
+dotnet_diagnostic.IDE0130.severity = warning
+dotnet_diagnostic.IDE0305.severity = suggestion

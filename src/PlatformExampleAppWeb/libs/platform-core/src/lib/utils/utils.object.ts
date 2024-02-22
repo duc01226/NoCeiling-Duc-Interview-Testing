@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-constraint */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
+    filter,
     clone as lodashClone,
     cloneDeep as lodashCloneDeep,
-    filter,
     keys as lodashKeys,
-    union,
-    values as lodashValues
+    values as lodashValues,
+    union
 } from 'lodash-es';
 import { PartialDeep } from 'type-fest';
 
@@ -105,11 +105,7 @@ export function toPlainObj<T>(source: T, ignorePrivate: boolean = true, onlyKeys
     const objResult: Dictionary<any> = {};
     keys(source, ignorePrivate).forEach(key => {
         if (onlyKeysExistInPartialObject == undefined || (<any>onlyKeysExistInPartialObject)[key] !== undefined)
-            objResult[key] = toPlainObj(
-                (<any>source)[key],
-                ignorePrivate,
-                onlyKeysExistInPartialObject == undefined ? undefined : (<any>onlyKeysExistInPartialObject)[key]
-            );
+            objResult[key] = toPlainObj((<any>source)[key], ignorePrivate);
     });
     return objResult;
 }
@@ -151,11 +147,21 @@ export function immutableUpdate<TObject extends object>(
 
         if (updatedStateResult != undefined) {
             // Case the partialStateOrUpdaterFn return partial updated props object
-            stateChanged = assignDeep(clonedObj, <object>updatedStateResult, checkDiff, maxDeepLevel);
+            stateChanged = assignDeep(
+                clonedObj,
+                <object>updatedStateResult,
+                checkDiff == true ? 'deepCheck' : checkDiff, // Should deep check for case partialStateOrUpdaterFn is function because of clone deep
+                maxDeepLevel
+            );
         } else {
             // Case the partialStateOrUpdaterFn edit the object state directly.
             // Then the clonnedDeepState is actual an updated result, use it to update the clonedState
-            stateChanged = assignDeep(clonedObj, <object>clonnedDeepState, checkDiff, maxDeepLevel);
+            stateChanged = assignDeep(
+                clonedObj,
+                <object>clonnedDeepState,
+                checkDiff == true ? 'deepCheck' : checkDiff, // Should deep check for case partialStateOrUpdaterFn is function because of clone deep
+                maxDeepLevel
+            );
         }
     }
 
@@ -238,10 +244,10 @@ export function isDifferent<T>(value1: T, value2: T, shallowCheckFirstLevel: boo
     return JSON.stringify(value1) != JSON.stringify(value2);
 }
 
-export function changedKeys(value1: any, value2: any) {
+export function changedKeys<T>(value1: T, value2: T): (keyof T)[] {
     const keys = union(lodashKeys(value1), lodashKeys(value2));
-    return filter(keys, function (key: string) {
-        return isDifferent(value1[key], value2[key]);
+    return <(keyof T)[]>filter(keys, function (key: string) {
+        return isDifferent((<any>value1)[key], (<any>value2)[key]);
     });
 }
 
@@ -295,7 +301,7 @@ export function getCurrentMissingItems<T>(prevValue: Dictionary<T>, currentValue
         .filter(key => {
             return prevValue[key] != undefined && currentValue[key] == undefined;
         })
-        .map(key => prevValue[key]);
+        .map(key => prevValue[key]!);
 }
 
 export function removeProps(obj: object, filterProp: (propValue: any) => boolean) {
@@ -320,7 +326,7 @@ export function cleanFalsyValueProps<T>(obj: T) {
     if (obj != null && typeof obj == 'object') {
         const objKeys = Object.keys(obj);
         for (const key of objKeys) {
-            if (!(<any>obj)[key]) {
+            if ((<any>obj)[key] != null) {
                 // eslint-disable-next-line no-param-reassign
                 delete (<any>obj)[key];
             }
@@ -345,7 +351,8 @@ export function removeNullProps<T>(obj: T): T {
 }
 
 // Do assign deep props in object
-// SetDeep mean that make target object number of prop values same as number of source value props <=> makeTargetValuesSameSourceValues = true
+// SetDeep mean that make target object number of prop values same as number of source value props <=>
+// makeTargetValuesSameSourceValues = true
 function assignOrSetDeep<T extends object>(
     target: T,
     source: T,
@@ -412,8 +419,8 @@ function assignOrSetDeep<T extends object>(
             // a new value which has been set deep to trigger setter of the child props or array item
             // which then use it as a new value to set to the target
             // If setter not exist, we could just shallow clone the target prop object so that when set deep,
-            // we could just set deep the inner object values and combine if checkDiff, only inner prop of the target key object
-            // has value changed will be set
+            // we could just set deep the inner object values and combine if checkDiff, only inner prop of the target
+            // key object has value changed will be set
             newValueToSetToTarget = clone((<any>target)[key]);
 
             if ((<any>target)[key] instanceof Array && (<any>source)[key] instanceof Array) {

@@ -1,7 +1,7 @@
 using System.Diagnostics;
-using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Cqrs.Commands;
 using Easy.Platform.Application.Exceptions.Extensions;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Queries;
@@ -20,24 +20,49 @@ public interface IPlatformCqrsQueryApplicationHandler
     public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformCqrsQueryApplicationHandler)}");
 }
 
+/// <summary>
+/// Provides a base class for application-level handlers of CQRS query requests with a specified result type.
+/// </summary>
+/// <typeparam name="TQuery">The type of CQRS query handled by this class.</typeparam>
+/// <typeparam name="TResult">The type of the result returned by the query handler.</typeparam>
 public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
     : PlatformCqrsRequestApplicationHandler<TQuery>, IPlatformCqrsQueryApplicationHandler, IRequestHandler<TQuery, TResult>
     where TQuery : PlatformCqrsQuery<TResult>, IPlatformCqrsRequest
 {
+    /// <summary>
+    /// The cache repository provider for handling caching operations.
+    /// </summary>
     protected readonly IPlatformCacheRepositoryProvider CacheRepositoryProvider;
 
-    public PlatformCqrsQueryApplicationHandler(
-        IPlatformApplicationUserContextAccessor userContext,
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PlatformCqrsQueryApplicationHandler{TQuery, TResult}" /> class.
+    /// </summary>
+    /// <param name="requestContextAccessor">The request context accessor providing information about the current application request context.</param>
+    /// <param name="loggerFactory">The logger factory used for creating loggers.</param>
+    /// <param name="rootServiceProvider">The root service provider for resolving dependencies.</param>
+    /// <param name="cacheRepositoryProvider">The cache repository provider for handling caching operations.</param>
+    protected PlatformCqrsQueryApplicationHandler(
+        IPlatformApplicationRequestContextAccessor requestContextAccessor,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider,
-        IPlatformCacheRepositoryProvider cacheRepositoryProvider) : base(userContext, loggerFactory, rootServiceProvider)
+        IPlatformCacheRepositoryProvider cacheRepositoryProvider)
+        : base(requestContextAccessor, loggerFactory, rootServiceProvider)
     {
-        CacheRepositoryProvider = cacheRepositoryProvider;
+        CacheRepositoryProvider = cacheRepositoryProvider ?? throw new ArgumentNullException(nameof(cacheRepositoryProvider));
         IsDistributedTracingEnabled = rootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled == true;
     }
 
+    /// <summary>
+    /// Gets a value indicating whether distributed tracing is enabled.
+    /// </summary>
     protected bool IsDistributedTracingEnabled { get; }
 
+    /// <summary>
+    /// Handles the specified CQRS query asynchronously.
+    /// </summary>
+    /// <param name="request">The CQRS query to handle.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken" /> that can be used to cancel the operation.</param>
+    /// <returns>The result of handling the CQRS query.</returns>
     public async Task<TResult> Handle(TQuery request, CancellationToken cancellationToken)
     {
         try
@@ -63,7 +88,7 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
                                     request.GetType().Name,
                                     request.AuditInfo.AuditTrackId,
                                     request.ToJson(),
-                                    CurrentUser.GetAllKeyValues().ToJson());
+                                    RequestContext.GetAllKeyValues().ToJson());
                         });
 
                     return result;
@@ -71,10 +96,16 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
         }
         finally
         {
-            Util.GarbageCollector.Collect(immediately: false);
+            Util.GarbageCollector.Collect(aggressiveImmediately: false);
         }
     }
 
+    /// <summary>
+    /// Handles the specified CQRS query with distributed tracing.
+    /// </summary>
+    /// <param name="request">The CQRS query to handle.</param>
+    /// <param name="handleFunc">The function representing the handling logic.</param>
+    /// <returns>The result of handling the CQRS query.</returns>
     protected async Task<TResult> HandleWithTracing(TQuery request, Func<Task<TResult>> handleFunc)
     {
         if (IsDistributedTracingEnabled)
@@ -86,8 +117,15 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
 
                 return await handleFunc();
             }
-        else return await handleFunc();
+
+        return await handleFunc();
     }
 
+    /// <summary>
+    /// Handles the specified CQRS query asynchronously.
+    /// </summary>
+    /// <param name="request">The CQRS query to handle.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken" /> that can be used to cancel the operation.</param>
+    /// <returns>The result of handling the CQRS query.</returns>
     protected abstract Task<TResult> HandleAsync(TQuery request, CancellationToken cancellationToken);
 }

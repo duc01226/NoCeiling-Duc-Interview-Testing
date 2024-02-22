@@ -227,7 +227,7 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
         }
         finally
         {
-            Util.GarbageCollector.Collect(immediately: true);
+            Util.GarbageCollector.Collect(aggressiveImmediately: false);
         }
     }
 

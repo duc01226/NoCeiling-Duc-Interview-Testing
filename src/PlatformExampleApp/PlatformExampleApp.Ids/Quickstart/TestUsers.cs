@@ -25,8 +25,8 @@ public class TestUsers
                 country = "Germany"
             };
 
-            return new List<TestUser>
-            {
+            return
+            [
                 new()
                 {
                     SubjectId = "818727",
@@ -65,7 +65,7 @@ public class TestUsers
                             IdentityServerConstants.ClaimValueTypes.Json)
                     }
                 }
-            };
+            ];
         }
     }
 }

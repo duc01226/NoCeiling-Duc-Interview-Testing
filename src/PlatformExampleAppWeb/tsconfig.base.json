@@ -1,24 +1,26 @@
 {
-  "compileOnSave": false,
-  "compilerOptions": {
-    "rootDir": ".",
-    "sourceMap": true,
-    "declaration": false,
-    "moduleResolution": "node",
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "importHelpers": true,
-    "target": "es2015",
-    "module": "esnext",
-    "lib": ["es2017", "dom"],
-    "skipLibCheck": true,
-    "skipDefaultLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@libs/apps-domains/text-snippet-domain": ["libs/apps-domains/text-snippet-domain/src/index.ts"],
-      "@libs/platform-core": ["libs/platform-core/src/index.ts"]
+    "compileOnSave": false,
+    "compilerOptions": {
+        "rootDir": ".",
+        "sourceMap": true,
+        "declaration": false,
+        "moduleResolution": "node",
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "importHelpers": true,
+        "target": "ES2022",
+        "module": "esnext",
+        "lib": ["ES2022", "dom"],
+        "skipLibCheck": true,
+        "skipDefaultLibCheck": true,
+        "strictNullChecks": true,
+        "allowSyntheticDefaultImports": true,
+        "baseUrl": ".",
+        "paths": {
+            "@libs/apps-domains/text-snippet-domain": ["libs/apps-domains/text-snippet-domain/src/index.ts"],
+            "@libs/platform-core": ["libs/platform-core/src/index.ts"]
+        },
+        "typeRoots": ["node_modules/@types", "./typings"]
     },
-    "typeRoots": ["node_modules/@types", "./typings"]
-  },
-  "exclude": ["node_modules", "tmp"]
+    "exclude": ["node_modules", "tmp"]
 }

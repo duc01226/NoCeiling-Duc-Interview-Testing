@@ -1,4 +1,5 @@
 using Easy.Platform.HangfireBackgroundJob;
+using Easy.Platform.Infrastructures.BackgroundJob;
 using Hangfire;
 using Microsoft.Extensions.Configuration;
 using PlatformExampleApp.TextSnippet.Application;
@@ -11,6 +12,8 @@ public class TextSnippetHangfireBackgroundJobModule : PlatformHangfireBackground
         base(serviceProvider, configuration)
     {
     }
+
+    public override bool AutoUseDashboardUi => true;
 
     protected override PlatformHangfireBackgroundJobStorageType UseBackgroundJobStorage()
     {
@@ -42,5 +45,15 @@ public class TextSnippetHangfireBackgroundJobModule : PlatformHangfireBackground
     {
         return base.BackgroundJobServerOptionsConfigure(provider, options)
             .With(_ => _.WorkerCount = Configuration.GetValue<int?>("PostgreSql:WorkerCount") ?? TextSnippetApplicationConstants.DefaultBackgroundJobWorkerCount);
+    }
+
+    protected override PlatformBackgroundJobUseDashboardUiOptions BackgroundJobUseDashboardUiOptions()
+    {
+        return base.BackgroundJobUseDashboardUiOptions().With(_ => _.UseAuthentication = true).With(
+            _ => _.BasicAuthentication = new PlatformBackgroundJobUseDashboardUiOptions.BasicAuthentications
+            {
+                UserName = Configuration.GetValue<string>("BackgroundJob:DashboardUiOptions:BasicAuthentication:UserName"),
+                Password = Configuration.GetValue<string>("BackgroundJob:DashboardUiOptions:BasicAuthentication:Password")
+            });
     }
 }

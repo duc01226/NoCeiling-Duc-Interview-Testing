@@ -39,7 +39,7 @@ public static class PlatformConfigurationBuilder
                     ? pathToContentRoot!
                     : Directory.GetCurrentDirectory())
             .AddJsonFile(appSettingsJsonFileName, optional: false, reloadOnChange: false)
-            .Pipe(
+            .PipeAction(
                 builder =>
                 {
                     var aspCoreEnv = PlatformEnvironment.AspCoreEnvironmentValue ?? fallbackAspCoreEnv;
@@ -58,7 +58,10 @@ public static class PlatformConfigurationBuilder
                 })
             .AddEnvironmentVariables()
             .AddInMemoryCollection(
-                new List<KeyValuePair<string, string>>
-                    { new(PlatformEnvironment.AspCoreEnvironmentVariableName, Environment.GetEnvironmentVariable(PlatformEnvironment.AspCoreEnvironmentVariableName)) });
+            [
+                new KeyValuePair<string, string>(
+                    PlatformEnvironment.AspCoreEnvironmentVariableName,
+                    Environment.GetEnvironmentVariable(PlatformEnvironment.AspCoreEnvironmentVariableName))
+            ]);
     }
 }

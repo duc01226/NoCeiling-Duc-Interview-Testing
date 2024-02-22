@@ -384,7 +384,7 @@ public interface IPage : IUiComponent
     public static IEnumerable<IWebElement> GetErrorElements(IPage page, string? errorElementSelector)
     {
         return errorElementSelector.IsNullOrEmpty()
-            ? Enumerable.Empty<IWebElement>()
+            ? []
             : page.WebDriver.FindElements(errorElementSelector!)
                 .Where(predicate: p => p.IsClickable() && !p.Text.IsNullOrWhiteSpace());
     }
@@ -628,10 +628,10 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         double? maxWaitSeconds = null)
     {
         return this.As<TPage>()
-            .WaitUntilGetSuccess(
+            .WaitUntilGetSuccessAsync(
                 waitForSuccess,
                 waitForMsg: waitForMsg,
-                maxWaitSeconds: maxWaitSeconds ?? DefaultMaxWaitSeconds);
+                maxWaitSeconds: maxWaitSeconds ?? DefaultMaxWaitSeconds).GetResult();
     }
 
     public virtual TResult WaitUntilAssertSuccess<TResult>(
@@ -641,7 +641,7 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         double? maxWaitSeconds = null)
     {
         return this.As<TPage>()
-            .WaitUntilGetSuccess(
+            .WaitUntilGetSuccessAsync(
                 waitForSuccess,
                 continueWaitOnlyWhen: _ =>
                 {
@@ -649,7 +649,7 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
                     return default(TResult);
                 },
                 maxWaitSeconds: maxWaitSeconds ?? DefaultMaxWaitSeconds,
-                waitForMsg);
+                waitForMsg).GetResult();
     }
 
     public TCurrentActivePage? TryGetCurrentActiveDefinedPage<TCurrentActivePage>() where TCurrentActivePage : class, IPage<TCurrentActivePage, TSettings>
@@ -669,11 +669,11 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         double? maxWaitSeconds = null)
     {
         return this.As<TPage>()
-            .WaitUntilGetSuccess(
+            .WaitUntilGetSuccessAsync(
                 waitForSuccess,
                 continueWaitOnlyWhen,
                 maxWaitSeconds: maxWaitSeconds ?? DefaultMaxWaitSeconds,
-                waitForMsg);
+                waitForMsg).GetResult();
     }
 
     public TPage RetryReloadPageUntilSuccess(Action action, int retryCount = DefaultWaitRetryRefreshPageRetryCount)
@@ -752,13 +752,13 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         return Util.TaskRunner.WaitUntil(this.As<TPage>(), () => until(this.As<TPage>()), continueWaitOnlyWhen, maxWaitSeconds ?? DefaultMaxWaitSeconds, waitForMsg);
     }
 
-    public TResult WaitUntilGetSuccess<TResult, TAny>(
+    public Task<TResult> WaitUntilGetSuccessAsync<TResult, TAny>(
         Func<TPage, TResult?> getResult,
         Func<TPage, TAny>? continueWaitOnlyWhen = null,
         string? waitForMsg = null,
         double? maxWaitSeconds = null)
     {
-        return Util.TaskRunner.WaitUntilGetSuccess(
+        return Util.TaskRunner.WaitUntilGetSuccessAsync(
             this.As<TPage>(),
             getResult: _ => getResult(this.As<TPage>()),
             continueWaitOnlyWhen,

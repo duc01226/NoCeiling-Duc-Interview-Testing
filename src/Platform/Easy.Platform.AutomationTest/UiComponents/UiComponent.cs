@@ -101,7 +101,7 @@ public interface IUiComponent
 
     public static List<IWebElement> FindChildElements(IUiComponent component, string childElementSelector)
     {
-        return component.TryRootElement?.FindElements(by: By.CssSelector(childElementSelector)).ToList() ?? new List<IWebElement>();
+        return component.TryRootElement?.FindElements(by: By.CssSelector(childElementSelector)).ToList() ?? [];
     }
 }
 

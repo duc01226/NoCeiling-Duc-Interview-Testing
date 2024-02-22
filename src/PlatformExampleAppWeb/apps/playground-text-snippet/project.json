@@ -1,122 +1,118 @@
 {
-  "name": "playground-text-snippet",
-  "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "projectType": "application",
-  "sourceRoot": "apps/playground-text-snippet/src",
-  "prefix": "app",
-  "targets": {
-    "build": {
-      "executor": "@angular-devkit/build-angular:browser",
-      "outputs": ["{options.outputPath}"],
-      "options": {
-        "outputPath": "dist/apps/playground-text-snippet",
-        "index": "apps/playground-text-snippet/src/index.html",
-        "main": "apps/playground-text-snippet/src/main.ts",
-        "polyfills": "apps/playground-text-snippet/src/polyfills.ts",
-        "tsConfig": "apps/playground-text-snippet/tsconfig.app.json",
-        "inlineStyleLanguage": "scss",
-        "assets": ["apps/playground-text-snippet/src/favicon.ico", "apps/playground-text-snippet/src/assets"],
-        "styles": [
-          "apps/playground-text-snippet/src/styles.scss",
-          {
-            "input": "apps/playground-text-snippet/src/styles/themes/default-theme.scss",
-            "bundleName": "default-theme",
-            "inject": false
-          },
-          {
-            "input": "apps/playground-text-snippet/src/styles/themes/deeppurple-amber-theme.scss",
-            "bundleName": "deeppurple-amber-theme",
-            "inject": false
-          }
-        ],
-        "stylePreprocessorOptions": {
-          "includePaths": ["apps/playground-text-snippet/src/styles", "libs/platform-core/src/styles"]
-        },
-        "scripts": [],
-        "allowedCommonJsDependencies": ["moment"]
-      },
-      "configurations": {
-        "production": {
-          "budgets": [
-            {
-              "type": "initial",
-              "maximumWarning": "1mb",
-              "maximumError": "2mb"
+    "name": "playground-text-snippet",
+    "$schema": "../../node_modules/nx/schemas/project-schema.json",
+    "projectType": "application",
+    "sourceRoot": "apps/playground-text-snippet/src",
+    "prefix": "app",
+    "targets": {
+        "build": {
+            "executor": "@angular-devkit/build-angular:browser-esbuild",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/apps/playground-text-snippet",
+                "index": "apps/playground-text-snippet/src/index.html",
+                "main": "apps/playground-text-snippet/src/main.ts",
+                "polyfills": "apps/playground-text-snippet/src/polyfills.ts",
+                "tsConfig": "apps/playground-text-snippet/tsconfig.app.json",
+                "inlineStyleLanguage": "scss",
+                "assets": ["apps/playground-text-snippet/src/favicon.ico", "apps/playground-text-snippet/src/assets"],
+                "styles": [
+                    "apps/playground-text-snippet/src/styles.scss",
+                    {
+                        "input": "apps/playground-text-snippet/src/styles/themes/default-theme.scss",
+                        "bundleName": "default-theme",
+                        "inject": false
+                    },
+                    {
+                        "input": "apps/playground-text-snippet/src/styles/themes/deeppurple-amber-theme.scss",
+                        "bundleName": "deeppurple-amber-theme",
+                        "inject": false
+                    }
+                ],
+                "stylePreprocessorOptions": {
+                    "includePaths": ["apps/playground-text-snippet/src/styles", "libs/platform-core/src/styles"]
+                },
+                "scripts": [],
+                "allowedCommonJsDependencies": ["moment"]
             },
-            {
-              "type": "anyComponentStyle",
-              "maximumWarning": "2kb",
-              "maximumError": "4kb"
-            }
-          ],
-          "fileReplacements": [
-            {
-              "replace": "apps/playground-text-snippet/src/environments/environment.ts",
-              "with": "apps/playground-text-snippet/src/environments/environment.prod.ts"
-            }
-          ],
-          "outputHashing": "all"
+            "configurations": {
+                "production": {
+                    "budgets": [
+                        {
+                            "type": "initial",
+                            "maximumWarning": "1mb",
+                            "maximumError": "2mb"
+                        },
+                        {
+                            "type": "anyComponentStyle",
+                            "maximumWarning": "2kb",
+                            "maximumError": "4kb"
+                        }
+                    ],
+                    "fileReplacements": [
+                        {
+                            "replace": "apps/playground-text-snippet/src/environments/environment.ts",
+                            "with": "apps/playground-text-snippet/src/environments/environment.prod.ts"
+                        }
+                    ],
+                    "outputHashing": "all"
+                },
+                "development": {
+                    "buildOptimizer": false,
+                    "optimization": false,
+                    "vendorChunk": true,
+                    "extractLicenses": false,
+                    "sourceMap": true,
+                    "namedChunks": true
+                },
+                "docker-dev": {
+                    "buildOptimizer": false,
+                    "optimization": false,
+                    "vendorChunk": true,
+                    "extractLicenses": false,
+                    "sourceMap": true,
+                    "namedChunks": true,
+                    "fileReplacements": [
+                        {
+                            "replace": "apps/playground-text-snippet/src/environments/environment.ts",
+                            "with": "apps/playground-text-snippet/src/environments/environment.docker-dev.ts"
+                        }
+                    ]
+                }
+            },
+            "defaultConfiguration": "production"
         },
-        "development": {
-          "buildOptimizer": false,
-          "optimization": false,
-          "vendorChunk": true,
-          "extractLicenses": false,
-          "sourceMap": true,
-          "namedChunks": true
-        },
-        "docker-dev": {
-          "buildOptimizer": false,
-          "optimization": false,
-          "vendorChunk": true,
-          "extractLicenses": false,
-          "sourceMap": true,
-          "namedChunks": true,
-          "fileReplacements": [
-            {
-              "replace": "apps/playground-text-snippet/src/environments/environment.ts",
-              "with": "apps/playground-text-snippet/src/environments/environment.docker-dev.ts"
+        "serve": {
+            "executor": "@angular-devkit/build-angular:dev-server",
+            "configurations": {
+                "production": {
+                    "buildTarget": "playground-text-snippet:build:production"
+                },
+                "development": {
+                    "buildTarget": "playground-text-snippet:build:development"
+                }
+            },
+            "defaultConfiguration": "development",
+            "options": {
+                "port": 4208
             }
-          ]
+        },
+        "extract-i18n": {
+            "executor": "@angular-devkit/build-angular:extract-i18n",
+            "options": {
+                "buildTarget": "playground-text-snippet:build"
+            }
+        },
+        "lint": {
+            "executor": "@nx/eslint:lint"
+        },
+        "test": {
+            "executor": "@nx/jest:jest",
+            "outputs": ["{workspaceRoot}/coverage/apps/playground-text-snippet"],
+            "options": {
+                "jestConfig": "apps/playground-text-snippet/jest.config.ts"
+            }
         }
-      },
-      "defaultConfiguration": "production"
     },
-    "serve": {
-      "executor": "@angular-devkit/build-angular:dev-server",
-      "configurations": {
-        "production": {
-          "browserTarget": "playground-text-snippet:build:production"
-        },
-        "development": {
-          "browserTarget": "playground-text-snippet:build:development"
-        }
-      },
-      "defaultConfiguration": "development",
-      "options": {
-        "port": 4208
-      }
-    },
-    "extract-i18n": {
-      "executor": "@angular-devkit/build-angular:extract-i18n",
-      "options": {
-        "browserTarget": "playground-text-snippet:build"
-      }
-    },
-    "lint": {
-      "executor": "@nrwl/linter:eslint",
-      "options": {
-        "lintFilePatterns": ["apps/playground-text-snippet/**/*.ts", "apps/playground-text-snippet/**/*.html"]
-      }
-    },
-    "test": {
-      "executor": "@nrwl/jest:jest",
-      "outputs": ["{workspaceRoot}/coverage/apps/playground-text-snippet"],
-      "options": {
-        "jestConfig": "apps/playground-text-snippet/jest.config.ts",
-        "passWithNoTests": true
-      }
-    }
-  },
-  "tags": []
+    "tags": []
 }

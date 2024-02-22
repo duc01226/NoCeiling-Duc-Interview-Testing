@@ -10,6 +10,12 @@ namespace Easy.Platform.Common.Extensions;
 
 public static class StringExtension
 {
+    /// <summary>
+    /// Returns a substring from the start of the string up to the specified maximum length.
+    /// </summary>
+    /// <param name="strValue">The string to be processed.</param>
+    /// <param name="takeMaxLength">The maximum length of the substring to be returned.</param>
+    /// <returns>A substring from the start of the string. If the string's length is less than or equal to the specified maximum length, the original string is returned.</returns>
     public static string TakeTop(this string strValue, int takeMaxLength)
     {
         return strValue.Length >= takeMaxLength ? strValue.Substring(0, takeMaxLength) : strValue;
@@ -25,16 +31,35 @@ public static class StringExtension
         return target.Ensure(must: target => !string.IsNullOrEmpty(target), exception)!;
     }
 
+    /// <summary>
+    /// Deserializes the specified string to the specified type T.
+    /// </summary>
+    /// <typeparam name="T">The type to which the string will be deserialized.</typeparam>
+    /// <param name="strValue">The string to deserialize.</param>
+    /// <returns>The deserialized object of type T. If the string is null, the default value of type T is returned.</returns>
     public static T ParseToSerializableType<T>(this string? strValue)
     {
         return strValue != null ? PlatformJsonSerializer.Deserialize<T>(PlatformJsonSerializer.Serialize(strValue)) : default!;
     }
 
+    /// <summary>
+    /// Deserializes the specified string to the specified serializable type.
+    /// </summary>
+    /// <param name="strValue">The string to deserialize.</param>
+    /// <param name="serializeType">The type to deserialize the string to.</param>
+    /// <returns>The deserialized object of the specified type. If the input string is null, the default value of the specified type is returned.</returns>
     public static object ParseToSerializableType(this string? strValue, Type serializeType)
     {
         return strValue != null ? PlatformJsonSerializer.Deserialize(PlatformJsonSerializer.Serialize(strValue), serializeType) : default!;
     }
 
+    /// <summary>
+    /// Returns a substring from the end of the string starting at the specified index.
+    /// </summary>
+    /// <param name="strValue">The string to be processed.</param>
+    /// <param name="fromIndex">The starting index from the end of the string.</param>
+    /// <param name="toIndex">The ending index from the start of the string. Default is 0.</param>
+    /// <returns>A substring from the end of the string starting at the specified index. If the string's length is less than the specified index, an empty string is returned.</returns>
     public static string SliceFromRight(this string strValue, int fromIndex, int toIndex = 0)
     {
         return strValue.Substring(toIndex, strValue.Length - fromIndex);
@@ -60,6 +85,13 @@ public static class StringExtension
         return string.IsNullOrWhiteSpace(strValue);
     }
 
+
+    /// <summary>
+    /// Removes special characters from the given string, which is intended to be used as a URI.
+    /// </summary>
+    /// <param name="source">The source string from which special characters should be removed.</param>
+    /// <param name="replace">The string that should replace the special characters. Default is an empty string.</param>
+    /// <returns>A new string with all special characters replaced by the specified string.</returns>
     [Pure]
     public static string RemoveSpecialCharactersUri(this string source, string replace = "")
     {
@@ -102,6 +134,12 @@ public static class StringExtension
         return string.Concat(prevStr.AsSpan(), chars);
     }
 
+    /// <summary>
+    /// Returns a substring from the start of the string up to the next occurrence of the specified character.
+    /// </summary>
+    /// <param name="str">The string to be processed.</param>
+    /// <param name="beforeChar">The character to stop at.</param>
+    /// <returns>A substring from the start of the string up to the next occurrence of the specified character. If the character is not found in the string, the original string is returned.</returns>
     public static string TakeUntilNextChar(this string str, char beforeChar)
     {
         return str.Substring(0, str.IndexOf(beforeChar));

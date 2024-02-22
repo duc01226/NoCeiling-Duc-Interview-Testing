@@ -1,20 +1,15 @@
 using System.Linq.Expressions;
-using Easy.Platform.Application.Context;
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.Hosting;
+using Easy.Platform.Common.HostingBackgroundServices;
 using Easy.Platform.Common.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.MessageBus.InboxPattern;
 
-public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProcessHostedService
+public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHostingBackgroundService
 {
     public const int MinimumRetryCleanInboxMessageTimesToWarning = 3;
-
-    protected readonly PlatformInboxConfig InboxConfig;
-
-    private readonly IPlatformApplicationSettingContext applicationSettingContext;
 
     private bool isProcessing;
 
@@ -24,9 +19,15 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
         IPlatformApplicationSettingContext applicationSettingContext,
         PlatformInboxConfig inboxConfig) : base(serviceProvider, loggerFactory)
     {
-        this.applicationSettingContext = applicationSettingContext;
+        ApplicationSettingContext = applicationSettingContext;
         InboxConfig = inboxConfig;
     }
+
+    public override bool LogIntervalProcessInformation => InboxConfig.LogIntervalProcessInformation;
+
+    protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
+
+    protected PlatformInboxConfig InboxConfig { get; }
 
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
@@ -44,21 +45,22 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalProce
                 onRetry: (ex, timeSpan, currentRetry, ctx) =>
                 {
                     if (currentRetry >= MinimumRetryCleanInboxMessageTimesToWarning)
-                        Logger.LogWarning(
+                        Logger.LogError(
                             ex,
                             "Retry CleanInboxEventBusMessage {CurrentRetry} time(s) failed. [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
                             currentRetry,
-                            applicationSettingContext.ApplicationName,
-                            applicationSettingContext.ApplicationAssembly.FullName);
-                });
+                            ApplicationSettingContext.ApplicationName,
+                            ApplicationSettingContext.ApplicationAssembly.FullName);
+                },
+                cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {
             Logger.LogError(
                 ex,
                 "CleanInboxEventBusMessage failed. [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
-                applicationSettingContext.ApplicationName,
-                applicationSettingContext.ApplicationAssembly.FullName);
+                ApplicationSettingContext.ApplicationName,
+                ApplicationSettingContext.ApplicationAssembly.FullName);
         }
 
         isProcessing = false;

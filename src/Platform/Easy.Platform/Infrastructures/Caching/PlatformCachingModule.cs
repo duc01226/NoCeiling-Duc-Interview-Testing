@@ -9,6 +9,13 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Easy.Platform.Infrastructures.Caching;
 
+/// <summary>
+/// Represents a module for caching in the platform infrastructure.
+/// </summary>
+/// <remarks>
+/// This class is part of the Easy.Platform.Infrastructures.Caching namespace and extends the PlatformInfrastructureModule class.
+/// It provides methods for registering and configuring caching services in the platform.
+/// </remarks>
 public class PlatformCachingModule : PlatformInfrastructureModule
 {
     public PlatformCachingModule(IServiceProvider serviceProvider, IConfiguration configuration) : base(
@@ -17,6 +24,14 @@ public class PlatformCachingModule : PlatformInfrastructureModule
     {
     }
 
+    /// <summary>
+    /// Handles the event when a new module is registered in the platform.
+    /// </summary>
+    /// <param name="serviceCollection">The service collection where the new module is registered.</param>
+    /// <param name="newOtherRegisterModule">The new module that has been registered.</param>
+    /// <remarks>
+    /// If the new module is not of type PlatformInfrastructureModule, this method will register cache items by scanning the assembly of the new module.
+    /// </remarks>
     public override void OnNewOtherModuleRegistered(
         IServiceCollection serviceCollection,
         PlatformModule newOtherRegisterModule)
@@ -26,8 +41,15 @@ public class PlatformCachingModule : PlatformInfrastructureModule
     }
 
     /// <summary>
-    /// Override this function provider to register IPlatformDistributedCache. Default return null;
+    /// Provides a distributed cache repository for the platform.
     /// </summary>
+    /// <param name="serviceProvider">The service provider to resolve dependencies.</param>
+    /// <param name="configuration">The configuration to setup the distributed cache repository.</param>
+    /// <returns>An instance of IPlatformDistributedCacheRepository, or null if no distributed cache is registered.</returns>
+    /// <remarks>
+    /// Override this method in a derived class to provide a custom implementation of IPlatformDistributedCacheRepository.
+    /// The default implementation returns null, indicating that no distributed cache is registered.
+    /// </remarks>
     protected virtual IPlatformDistributedCacheRepository DistributedCacheRepositoryProvider(
         IServiceProvider serviceProvider,
         IConfiguration configuration)
@@ -35,6 +57,16 @@ public class PlatformCachingModule : PlatformInfrastructureModule
         return null;
     }
 
+    /// <summary>
+    /// Registers the services and configurations related to the platform caching module.
+    /// </summary>
+    /// <param name="serviceCollection">The service collection to add the services to.</param>
+    /// <remarks>
+    /// This method registers the platform cache repository provider, platform cache settings,
+    /// default platform cache entry options, and cache items by scanning assemblies.
+    /// It also registers the built-in default memory cache and distributed cache if available.
+    /// Lastly, it registers a background service for automatically clearing deprecated global request cached keys.
+    /// </remarks>
     protected override void InternalRegister(IServiceCollection serviceCollection)
     {
         base.InternalRegister(serviceCollection);

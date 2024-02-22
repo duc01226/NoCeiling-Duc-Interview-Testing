@@ -1,5 +1,4 @@
-using Easy.Platform.Application.Context.UserContext;
-using Easy.Platform.Application.Context.UserContext.Default;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.EfCore;
 using Easy.Platform.Persistence;
@@ -17,7 +16,7 @@ public sealed class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDb
         ILoggerFactory loggerFactory,
         IPlatformCqrs cqrs,
         PlatformPersistenceConfiguration<TextSnippetDbContext> persistenceConfiguration,
-        IPlatformApplicationUserContextAccessor userContextAccessor,
+        IPlatformApplicationRequestContextAccessor userContextAccessor,
         IPlatformRootServiceProvider rootServiceProvider) : base(
         options,
         loggerFactory,
@@ -45,7 +44,7 @@ public sealed class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDb
                 new LoggerFactory(),
                 null,
                 new PlatformPersistenceConfiguration<TextSnippetDbContext>(),
-                new PlatformDefaultApplicationUserContextAccessor(),
+                new PlatformDefaultApplicationRequestContextAccessor(),
                 new PlatformRootServiceProvider(null));
         }
     }

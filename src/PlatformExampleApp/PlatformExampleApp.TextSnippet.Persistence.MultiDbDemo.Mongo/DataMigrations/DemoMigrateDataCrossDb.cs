@@ -45,9 +45,15 @@ internal sealed class DemoMigrateDataCrossDb : PlatformDataMigrationExecutor<Tex
 
     protected override void Dispose(bool disposing)
     {
-        base.Dispose(disposing);
+        if (!Disposed)
+        {
+            base.Dispose(disposing);
 
-        if (disposing)
-            demoMigrateDataCrossDbContext.Dispose();
+            if (disposing)
+                // Release managed resources
+                demoMigrateDataCrossDbContext.Dispose();
+
+            Disposed = true;
+        }
     }
 }

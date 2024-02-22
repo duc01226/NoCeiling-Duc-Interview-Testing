@@ -1,9 +1,0 @@
-{
-  "$schema": "./node_modules/nx/schemas/workspace-schema.json",
-  "version": 2,
-  "projects": {
-    "apps-domains-text-snippet-domain": "libs/apps-domains/text-snippet-domain",
-    "platform-core": "libs/platform-core",
-    "playground-text-snippet": "apps/playground-text-snippet"
-  }
-}

@@ -23,10 +23,10 @@ public class PlatformCollectionCacheKeyProvider : PlatformContextCacheKeyProvide
             Collection,
             requestKeyParts?.Any() == true
                 ? requestKeyParts
-                : new[]
-                {
+                :
+                [
                     DefaultRequestKey
-                });
+                ]);
     }
 
     public Func<PlatformCacheKey, bool> MatchCollectionKeyPredicate()

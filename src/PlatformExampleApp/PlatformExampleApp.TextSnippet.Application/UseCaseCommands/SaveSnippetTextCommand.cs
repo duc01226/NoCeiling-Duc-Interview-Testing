@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Cqrs.Commands;
 using Easy.Platform.Application.Exceptions.Extensions;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Commands;
 using Easy.Platform.Domain.Events;
@@ -22,7 +22,7 @@ public sealed class SaveSnippetTextCommand : PlatformCqrsCommand<SaveSnippetText
 {
     public TextSnippetEntityDto Data { get; set; }
 
-    public List<TextSnippetEntityDto> DemoWorkWithListOfValidations { get; set; } = new();
+    public List<TextSnippetEntityDto> DemoWorkWithListOfValidations { get; set; } = [];
 
     public PlatformCqrsEntityEventCrudAction StatusToDemoWhenValueCases { get; set; }
 
@@ -65,7 +65,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
     private readonly ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository;
 
     public SaveSnippetTextCommandHandler(
-        IPlatformApplicationUserContextAccessor userContext,
+        IPlatformApplicationRequestContextAccessor requestContextAccessor,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
         ILoggerFactory loggerFactory,
@@ -73,7 +73,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
         ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository,
         ITextSnippetRootRepository<MultiDbDemoEntity> multiDbDemoEntityRepository,
         ISendMailService sendMailService,
-        ILogger<SaveSnippetTextCommandHandler> logger) : base(userContext, unitOfWorkManager, cqrs, loggerFactory, rootServiceProvider)
+        ILogger<SaveSnippetTextCommandHandler> logger) : base(requestContextAccessor, unitOfWorkManager, cqrs, loggerFactory, rootServiceProvider)
     {
         this.textSnippetEntityRepository = textSnippetEntityRepository;
         this.multiDbDemoEntityRepository = multiDbDemoEntityRepository;
@@ -309,7 +309,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
                 {
                     //toSaveEntity.SnippetText += " Update";  //Demo Update Data By With Support Chaining
                 })
-            .ValidateSavePermission(userId: CurrentUser.UserId<Guid?>()) // Demo Permission Logic
+            .ValidateSavePermission(userId: RequestContext.UserId<Guid?>()) // Demo Permission Logic
             .And(entity => toSaveEntity.ValidateSomeSpecificIsXxxLogic()) // Demo domain business logic
             .AndAsync(entity => toSaveEntity.ValidateSomeSpecificIsXxxLogicAsync(textSnippetEntityRepository, multiDbDemoEntityRepository)) // Demo domain business logic
             .AndAsync(ValidateSomeThisCommandApplicationLogic) // Demo application business logic
@@ -320,7 +320,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
         var validToSaveEntity1 = toSaveEntity
             .Validate(
                 must: toSaveEntity =>
-                    toSaveEntity.CreatedByUserId == null || CurrentUser.UserId<Guid?>() == null || toSaveEntity.CreatedByUserId == CurrentUser.UserId<Guid?>(),
+                    toSaveEntity.CreatedByUserId == null || RequestContext.UserId<Guid?>() == null || toSaveEntity.CreatedByUserId == RequestContext.UserId<Guid?>(),
                 "User must be the creator to update text snippet entity")
             .WithPermissionException() // Equivalent to ValidateSavePermission
             .And(
@@ -347,7 +347,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
 
         // ADDITIONAL DEMO STEP 2 - DEMO Reuse logic and expression
         var hasSavePermissionSnippetTextEntities = await textSnippetEntityRepository.GetAllAsync(
-            predicate: TextSnippetEntity.SavePermissionValidator(CurrentUser.UserId<Guid?>()).ValidExpr,
+            predicate: TextSnippetEntity.SavePermissionValidator(RequestContext.UserId<Guid?>()).ValidExpr,
             cancellationToken);
         var isXxxTextSnippetEntityIds = await textSnippetEntityRepository.GetAllAsync(
             queryBuilder: query => query.Where(TextSnippetEntity.SomeSpecificIsXxxLogicValidator().ValidExpr).Select(p => p.Id),

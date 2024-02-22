@@ -78,7 +78,13 @@ public class PlatformRabbitMqOptions
     /// </summary>
     public int QueueMaxNumberMessagesInMemory { get; set; } = 100;
 
-    public int ProducerConnectionPoolSize { get; set; } = Environment.ProcessorCount * 2;
+    public int ProducerChannelPoolSize { get; set; } = Environment.ProcessorCount * 5;
+
+    public int ConsumerChannelPoolSize => CalculateNumberOfParallelConsumers();
+
+    public int ConsumerReuseChannelPerConnectionCount { get; set; } = 4;
+
+    public int ProducerReuseChannelPerConnectionCount { get; set; } = 4;
 
     public int CalculateNumberOfParallelConsumers()
     {

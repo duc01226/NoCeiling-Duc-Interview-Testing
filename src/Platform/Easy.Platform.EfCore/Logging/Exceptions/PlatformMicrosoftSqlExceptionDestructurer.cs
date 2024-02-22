@@ -11,7 +11,7 @@ namespace Easy.Platform.EfCore.Logging.Exceptions;
 public class PlatformMicrosoftSqlExceptionDestructurer : ExceptionDestructurer
 {
     /// <inheritdoc />
-    public override Type[] TargetTypes => new[] { typeof(SqlException) };
+    public override Type[] TargetTypes => [typeof(SqlException)];
 
     /// <inheritdoc />
     public override void Destructure(

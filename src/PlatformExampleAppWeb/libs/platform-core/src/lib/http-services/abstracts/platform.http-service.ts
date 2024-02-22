@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Optional } from '@angular/core';
+
 import { Observable, OperatorFunction } from 'rxjs';
 import { timeout } from 'rxjs/operators';
 
@@ -13,12 +14,17 @@ import { HttpClientOptions } from './platform.http-client-options';
 export const STRESS_TEST_SIMULATION_LOCAL_STORAGE_KEY = 'STRESS_TEST_SIMULATION_LOCAL_STORAGE_KEY';
 
 export abstract class PlatformHttpService {
-    public DEFAULT_TIMEOUT = 60;
-    public constructor(@Optional() protected moduleConfig: PlatformCoreModuleConfig, protected http: HttpClient) {}
+    public DEFAULT_TIMEOUT_SECONDS = 3600 * 24;
+
+    public constructor(
+        @Optional() protected moduleConfig: PlatformCoreModuleConfig,
+        protected http: HttpClient
+    ) {}
 
     protected get requestTimeoutInMs(): number {
-        return (this.moduleConfig?.httpRequestTimeoutInSeconds ?? this.DEFAULT_TIMEOUT) * 1000;
+        return (this.moduleConfig?.httpRequestTimeoutInSeconds ?? this.DEFAULT_TIMEOUT_SECONDS) * 1000;
     }
+
     protected get defaultOptions(): HttpClientOptions {
         return {
             headers: {

@@ -42,4 +42,6 @@ public class PlatformInboxConfig
     /// back to failed.
     /// </summary>
     public double MessageProcessingMaxSeconds { get; set; } = 3600;
+
+    public bool LogIntervalProcessInformation { get; set; }
 }

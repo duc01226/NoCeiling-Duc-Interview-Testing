@@ -2,6 +2,8 @@ using Easy.Platform.Common;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
+using Easy.Platform.Common.Validations.Extensions;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -22,6 +24,16 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
     public override int ExecuteInitPriority => DefaultExecuteInitPriority;
 
     public static int DefaultStartBackgroundJobProcessingRetryCount => PlatformEnvironment.IsDevelopment ? 5 : 10;
+
+    /// <summary>
+    /// Override AutoUseDashboardUi = true to background job dashboard ui. Config via PlatformBackgroundJobUseDashboardUiOptions. Default Path is /BackgroundJobsDashboard
+    /// </summary>
+    public virtual bool AutoUseDashboardUi => false;
+
+    public virtual PlatformBackgroundJobModule UseDashboardUi(IApplicationBuilder app, PlatformBackgroundJobUseDashboardUiOptions options = null)
+    {
+        return this;
+    }
 
     protected override void InternalRegister(IServiceCollection serviceCollection)
     {
@@ -48,6 +60,8 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
         await ReplaceAllLatestRecurringBackgroundJobs(serviceScope);
 
         await StartBackgroundJobProcessing(serviceScope);
+
+        if (AutoUseDashboardUi) UseDashboardUi(CurrentApp);
     }
 
     public async Task StartBackgroundJobProcessing(IServiceScope serviceScope)
@@ -79,8 +93,7 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
 
     public async Task ExecuteOnStartUpRecurringBackgroundJobImmediately()
     {
-        await Task.Run(
-            () => IPlatformModule.WaitAllModulesInitiated(ServiceProvider, typeof(IPlatformModule), Logger, "execute on start-up recurring background job"));
+        await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformModule), Logger, "execute on start-up recurring background job");
 
         await ServiceProvider.ExecuteInjectScopedAsync(
             (IPlatformBackgroundJobScheduler backgroundJobScheduler, IServiceProvider serviceProvider) =>
@@ -120,5 +133,35 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
                         currentRetry,
                         DefaultStartBackgroundJobProcessingRetryCount);
             });
+    }
+}
+
+/// <summary>
+/// Config BackgroundJobsDashboard. Default path is: /BackgroundJobsDashboard
+/// </summary>
+public class PlatformBackgroundJobUseDashboardUiOptions
+{
+    /// <summary>
+    /// Default is "/BackgroundJobsDashboard"
+    /// </summary>
+    public string DashboardUiPathStart { get; set; } = "/BackgroundJobsDashboard";
+
+    public bool UseAuthentication { get; set; }
+
+    public BasicAuthentications BasicAuthentication { get; set; }
+
+    public void EnsureValid()
+    {
+        this.Validate(
+                p => p.BasicAuthentication == null || (p.BasicAuthentication.UserName.IsNotNullOrEmpty() && p.BasicAuthentication.Password.IsNotNullOrEmpty()),
+                "PlatformBackgroundJobUseDashboardUiOptions BasicAuthentication UserName and Password must be not null or empty")
+            .And(p => p.UseAuthentication == false || p.BasicAuthentication != null, "UseAuthentication is True must come with one of BasicAuthentication")
+            .EnsureValid();
+    }
+
+    public class BasicAuthentications
+    {
+        public string UserName { get; set; }
+        public string Password { get; set; }
     }
 }

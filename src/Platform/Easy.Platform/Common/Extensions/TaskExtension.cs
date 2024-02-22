@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Easy.Platform.Common.Extensions.WhenCases;
 using Easy.Platform.Common.Utils;
 using Microsoft.Extensions.Logging;
@@ -7,8 +8,16 @@ namespace Easy.Platform.Common.Extensions;
 public static class TaskExtension
 {
     /// <summary>
-    /// Apply using functional programming to map from Task[A] => (A) => B => Task[B]
+    /// Transforms the result of a task using a provided function.
     /// </summary>
+    /// <typeparam name="T">The type of the result produced by the task.</typeparam>
+    /// <typeparam name="TR">The type of the result produced by the function.</typeparam>
+    /// <param name="task">The task to be transformed.</param>
+    /// <param name="f">The function to apply to the result of the task.</param>
+    /// <returns>A task that represents the transformed result.</returns>
+    /// <remarks>
+    /// This method allows for chaining of asynchronous operations without the need for nested callbacks or explicit continuation tasks.
+    /// </remarks>
     public static async Task<TR> Then<T, TR>(
         this Task<T> task,
         Func<T, TR> f)
@@ -17,8 +26,25 @@ public static class TaskExtension
     }
 
     /// <summary>
-    /// Apply using functional programming to map from Task[A] => (A) => B => Task[B]
+    /// Executes a function on the result of a Task once it has completed.
     /// </summary>
+    /// <typeparam name="T">The type of the result of the Task.</typeparam>
+    /// <param name="task">The Task to execute the function on.</param>
+    /// <param name="f">The function to execute on the Task's result.</param>
+    /// <returns>A Task representing the asynchronous operation.</returns>
+    public static async Task Then<T>(
+        this Task<T> task,
+        Func<T, Task> f)
+    {
+        await f(await task);
+    }
+
+    /// <summary>
+    /// </summary>
+    /// <typeparam name="TR">The type of the result of the function.</typeparam>
+    /// <param name="task">The original task.</param>
+    /// <param name="f">A function that transforms the result of the original task into a new result.</param>
+    /// <returns>A new task that represents the transformation of the original task by the function.</returns>
     public static async Task<TR> Then<TR>(
         this Task task,
         Func<TR> f)
@@ -28,8 +54,51 @@ public static class TaskExtension
     }
 
     /// <summary>
-    /// Apply using functional programming to map from Task[A] => (A) => Task[B] => Task[B]
+    /// Executes the provided action after the completion of the given task.
     /// </summary>
+    /// <param name="task">The task to await.</param>
+    /// <param name="f">The action to execute after the task completes.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public static async Task ThenAction(
+        this Task task,
+        Action f)
+    {
+        await task;
+        f();
+    }
+
+    /// <summary>
+    /// Asynchronously waits for the task to complete, and then executes the provided function.
+    /// </summary>
+    /// <param name="task">The task to await.</param>
+    /// <param name="f">The function to execute after the task completes.</param>
+    /// <returns>A Task representing the asynchronous operation.</returns>
+    public static async Task ThenAction(
+        this Task task,
+        Func<Task> f)
+    {
+        await task;
+        await f();
+    }
+
+    /// <summary>
+    /// Transforms the result of a task with a specified function after the task has completed.
+    /// </summary>
+    /// <typeparam name="T">The type of the result produced by the antecedent <see cref="Task{TResult}" />.</typeparam>
+    /// <typeparam name="TR">The type of the result produced by the transformation function.</typeparam>
+    /// <param name="task">The task to await.</param>
+    /// <param name="nextTask">A function to apply to the result of the task when it completes.</param>
+    /// <returns>A new task that will complete with the result of the function.</returns>
+    /// <remarks>
+    /// This method allows you to easily chain asynchronous operations without having to nest callbacks.
+    /// It is based on the idea of "continuations" in functional programming.
+    /// </remarks>
+    /// <example>
+    ///     <code>
+    /// var task = GetSomeTask();
+    /// var transformedTask = task.Then(result => TransformResult(result));
+    /// </code>
+    /// </example>
     public static async Task<TR> Then<T, TR>(
         this Task<T> task,
         Func<T, Task<TR>> nextTask)
@@ -81,6 +150,13 @@ public static class TaskExtension
         return targetValue;
     }
 
+    /// <summary>
+    /// Executes the provided task and then performs the specified action asynchronously.
+    /// </summary>
+    /// <typeparam name="T">The type of the result produced by the task.</typeparam>
+    /// <param name="task">The task to be executed.</param>
+    /// <param name="nextTask">The action to be performed after the task execution.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the result of the original task.</returns>
     public static async Task<T> ThenActionAsync<T>(
         this Task<T> task,
         Func<T, Task> nextTask)
@@ -92,6 +168,14 @@ public static class TaskExtension
         return targetValue;
     }
 
+    /// <summary>
+    /// Executes a specified action on the result of the Task if a given condition is true.
+    /// </summary>
+    /// <typeparam name="T">The type of result produced by the Task.</typeparam>
+    /// <param name="task">The Task on which the action is to be performed.</param>
+    /// <param name="actionIf">A boolean value that determines whether the action should be performed.</param>
+    /// <param name="action">The action to be performed on the result of the Task if the condition is true.</param>
+    /// <returns>The original result of the Task.</returns>
     public static async Task<T> ThenActionIf<T>(
         this Task<T> task,
         bool actionIf,
@@ -104,6 +188,14 @@ public static class TaskExtension
         return targetValue;
     }
 
+    /// <summary>
+    /// Executes a given task and then performs another task if a specified condition is true.
+    /// </summary>
+    /// <typeparam name="T">The type of the result produced by the task.</typeparam>
+    /// <param name="task">The task to be executed.</param>
+    /// <param name="actionIf">The condition that determines whether the next task should be executed.</param>
+    /// <param name="nextTask">The task to be executed if the condition is true.</param>
+    /// <returns>The result of the original task.</returns>
     public static async Task<T> ThenActionIfAsync<T>(
         this Task<T> task,
         bool actionIf,
@@ -117,12 +209,17 @@ public static class TaskExtension
     }
 
     /// <summary>
-    /// Side effect call other action, which will not affect the main action flow if error. Just a side effect action
+    /// Executes a side effect action on the result of the given task. If the side effect action throws an exception, it logs the error and continues with the original task result.
     /// </summary>
+    /// <typeparam name="T">The type of the result of the task.</typeparam>
+    /// <param name="task">The task on which to perform the side effect action.</param>
+    /// <param name="action">The side effect action to perform on the result of the task.</param>
+    /// <param name="logger">The logger used to log any exceptions thrown by the side effect action.</param>
+    /// <returns>The original task result, regardless of whether the side effect action succeeded or failed.</returns>
     public static async Task<T> ThenSideEffectAction<T>(
         this Task<T> task,
         Action<T> action,
-        ILogger logger)
+        ILogger logger = null)
     {
         var targetValue = await task;
 
@@ -132,16 +229,23 @@ public static class TaskExtension
         }
         catch (Exception e)
         {
-            logger.LogError(e, "SideEffectAction failed");
+            logger?.LogError(e, "SideEffectAction failed");
         }
 
         return targetValue;
     }
 
+    /// <summary>
+    /// Executes the given task and then performs a side effect action asynchronously. If the side effect action fails, the exception is logged.
+    /// </summary>
+    /// <param name="task">The task to be executed.</param>
+    /// <param name="nextTask">The side effect action to be performed after the task execution.</param>
+    /// <param name="logger">The logger used to log any exceptions that occur during the execution of the side effect action.</param>
+    /// <returns>A Task representing the asynchronous operation.</returns>
     public static async Task ThenSideEffectActionAsync(
         this Task task,
         Func<Task> nextTask,
-        ILogger logger)
+        ILogger logger = null)
     {
         await task;
 
@@ -151,17 +255,26 @@ public static class TaskExtension
         }
         catch (Exception e)
         {
-            logger.LogError(e, "SideEffectAction failed");
+            logger?.LogError(e, "SideEffectAction failed");
         }
     }
 
     /// <summary>
-    /// Side effect call other action, which will not affect the main action flow if error. Just a side effect action
+    /// Executes a side effect action asynchronously after the completion of the given task.
     /// </summary>
+    /// <typeparam name="T">The type of the result produced by the task.</typeparam>
+    /// <param name="task">The task after which the side effect action is to be executed.</param>
+    /// <param name="nextTask">The side effect action to be executed after the task. This action takes the result of the task as a parameter.</param>
+    /// <param name="logger">The logger to be used for logging any exceptions that occur during the execution of the side effect action.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the result of the original task.</returns>
+    /// <remarks>
+    /// The side effect action is executed regardless of whether the original task completed successfully or faulted.
+    /// If the side effect action throws an exception, this exception is logged and ignored, and does not affect the result of the returned task.
+    /// </remarks>
     public static async Task<T> ThenSideEffectActionAsync<T>(
         this Task<T> task,
         Func<T, Task> nextTask,
-        ILogger logger)
+        ILogger logger = null)
     {
         var targetValue = await task;
 
@@ -171,7 +284,7 @@ public static class TaskExtension
         }
         catch (Exception e)
         {
-            logger.LogError(e, "SideEffectAction failed");
+            logger?.LogError(e, "SideEffectAction failed");
         }
 
         return targetValue;
@@ -188,6 +301,15 @@ public static class TaskExtension
                 : completed(t.GetResult()));
     }
 
+    /// <summary>
+    /// Executes the specified asynchronous task if the provided condition is met.
+    /// </summary>
+    /// <typeparam name="TTarget">The type of the result of the task.</typeparam>
+    /// <typeparam name="TResult">The type of the result of the next task.</typeparam>
+    /// <param name="task">The task to be executed.</param>
+    /// <param name="if">A function that defines the condition to be met for the next task to be executed.</param>
+    /// <param name="nextTask">The next task to be executed if the condition is met.</param>
+    /// <returns>The result of the next task if the condition is met; otherwise, the result of the original task.</returns>
     public static async Task<TResult> ThenIf<TTarget, TResult>(
         this Task<TTarget> task,
         Func<TTarget, bool> @if,
@@ -197,6 +319,16 @@ public static class TaskExtension
         return @if(targetValue) ? await nextTask(targetValue) : targetValue;
     }
 
+    /// <summary>
+    /// Executes the provided function if the condition is met, otherwise returns a default value.
+    /// </summary>
+    /// <typeparam name="TTarget">The type of the result of the task.</typeparam>
+    /// <typeparam name="TResult">The type of the result of the function or the default value.</typeparam>
+    /// <param name="task">The task to be processed.</param>
+    /// <param name="if">A function that defines the condition to be met.</param>
+    /// <param name="nextTask">The function to be executed if the condition is met.</param>
+    /// <param name="defaultValue">The default value to be returned if the condition is not met.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the result of the function if the condition is met, otherwise the default value.</returns>
     public static async Task<TResult> ThenIfOrDefault<TTarget, TResult>(
         this Task<TTarget> task,
         Func<TTarget, bool> @if,
@@ -207,11 +339,27 @@ public static class TaskExtension
         return @if(targetValue) ? await nextTask(targetValue) : defaultValue;
     }
 
+    /// <summary>
+    /// Asynchronously executes a function on the result of a task and returns a tuple containing the original task result and the result of the function.
+    /// </summary>
+    /// <typeparam name="T">The result type of the task.</typeparam>
+    /// <typeparam name="T1">The result type of the function.</typeparam>
+    /// <param name="task">The task to execute the function on.</param>
+    /// <param name="getWith">The function to execute on the task result.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result is a tuple containing the original task result and the result of the function.</returns>
     public static async Task<ValueTuple<T, T1>> ThenGetWith<T, T1>(this Task<T> task, Func<T, T1> getWith)
     {
         return await task.Then(p => (p, getWith(p)));
     }
 
+    /// <summary>
+    /// Asynchronously executes a function on the result of a task and returns a tuple containing the original task result and the result of the function.
+    /// </summary>
+    /// <typeparam name="T">The type of the result of the original task.</typeparam>
+    /// <typeparam name="T1">The type of the result of the function.</typeparam>
+    /// <param name="task">The original task.</param>
+    /// <param name="getWith">The function to execute on the result of the original task.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result is a tuple containing the original task result and the result of the function.</returns>
     public static async Task<ValueTuple<T, T1>> ThenGetWith<T, T1>(this Task<T> task, Func<T, Task<T1>> getWith)
     {
         var value = await task;
@@ -219,12 +367,32 @@ public static class TaskExtension
         return (value, withValue);
     }
 
+    /// <summary>
+    /// Asynchronously executes the provided functions after the completion of the target task.
+    /// </summary>
+    /// <typeparam name="T">The type of the result of the target task.</typeparam>
+    /// <typeparam name="T1">The type of the result of the first function.</typeparam>
+    /// <typeparam name="T2">The type of the result of the second function.</typeparam>
+    /// <param name="task">The target task.</param>
+    /// <param name="getWith1">The first function to execute after the task completes.</param>
+    /// <param name="getWith2">The second function to execute after the first function completes. It takes the results of the task and the first function as parameters.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a tuple with the results of the task, the first function, and the second function.</returns>
     public static async Task<ValueTuple<T, T1, T2>> ThenGetWith<T, T1, T2>(this Task<T> task, Func<T, T1> getWith1, Func<T, T1, T2> getWith2)
     {
         var (value, value1) = await task.ThenGetWith(getWith1);
         return (value, value1, getWith2(value, value1));
     }
 
+    /// <summary>
+    /// Asynchronously executes a task and then applies two functions to the result of the task.
+    /// </summary>
+    /// <typeparam name="T">The type of the result of the task.</typeparam>
+    /// <typeparam name="T1">The type of the result of the first function.</typeparam>
+    /// <typeparam name="T2">The type of the result of the second function.</typeparam>
+    /// <param name="task">The task to execute.</param>
+    /// <param name="getWith1">The first function to apply to the result of the task. This function should return a Task of type T1.</param>
+    /// <param name="getWith2">The second function to apply to the result of the first function and the result of the task. This function should return a Task of type T2.</param>
+    /// <returns>A Task that represents the asynchronous operation. The result of the Task is a tuple containing the result of the task, the result of the first function, and the result of the second function.</returns>
     public static async Task<ValueTuple<T, T1, T2>> ThenGetWith<T, T1, T2>(this Task<T> task, Func<T, Task<T1>> getWith1, Func<T, T1, Task<T2>> getWith2)
     {
         var (value, value1) = await task.ThenGetWith(getWith1);
@@ -257,6 +425,13 @@ public static class TaskExtension
         return task.GetAwaiter().GetResult();
     }
 
+    /// <summary>
+    /// Provides a fallback mechanism for a task in case of failure.
+    /// </summary>
+    /// <typeparam name="T">The type of the result produced by the task.</typeparam>
+    /// <param name="task">The task to recover from if it faults.</param>
+    /// <param name="fallback">A function that takes the exception thrown by the task and returns a fallback value of type T.</param>
+    /// <returns>A new task that will complete with the result of the original task if it succeeds, or with the result of the fallback function if the original task faults.</returns>
     public static Task<T> Recover<T>(
         this Task<T> task,
         Func<Exception, T> fallback)
@@ -267,11 +442,38 @@ public static class TaskExtension
                 : t.GetResult());
     }
 
+    /// <summary>
+    /// Wraps the specified value into a Task.
+    /// </summary>
+    /// <typeparam name="T">The type of the value to be wrapped.</typeparam>
+    /// <param name="t">The value to be wrapped.</param>
+    /// <returns>A Task containing the specified value.</returns>
     public static async Task<T> BoxedInTask<T>(this T t)
     {
         return await Task.FromResult(t);
     }
 
+    /// <summary>
+    /// Suspends the current thread for a specified time.
+    /// </summary>
+    /// <param name="target">The target object of type T.</param>
+    /// <param name="maxWaitSeconds">The maximum amount of time to wait in seconds.</param>
+    /// <returns>Returns the target object of type T.</returns>
+    /// <remarks>
+    /// This method uses the `Util.TaskRunner.Wait` method to suspend the current thread.
+    /// </remarks>
+    /// <example>
+    ///     <code>
+    /// var result = someObject.Wait(5);
+    /// </code>
+    /// </example>
+    /// <exception cref="ThreadInterruptedException">
+    /// The thread is interrupted while waiting.
+    /// </exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// The value of maxWaitSeconds is negative and not equal to -1 milliseconds, or is greater than
+    /// <see cref="int.MaxValue" /> milliseconds.
+    /// </exception>
     public static T Wait<T>(this T target, double maxWaitSeconds)
     {
         Util.TaskRunner.Wait((int)(maxWaitSeconds * 1000));
@@ -328,17 +530,18 @@ public static class TaskExtension
         return Util.TaskRunner.WaitUntil(target, condition, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
     }
 
-    public static TResult WaitUntilGetValidResult<T, TResult>(
+    public static Task<TResult> WaitUntilGetValidResultAsync<T, TResult>(
         this T target,
         Func<T, TResult> getResult,
         Func<TResult, bool> condition,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
+        double delayRetryTimeSeconds = Util.TaskRunner.DefaultWaitIntervalSeconds,
         string waitForMsg = null)
     {
-        return Util.TaskRunner.WaitUntilGetValidResult(target, getResult, condition, maxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntilGetValidResultAsync(target, getResult, condition, maxWaitSeconds, delayRetryTimeSeconds, waitForMsg);
     }
 
-    public static TResult WaitUntilGetValidResult<T, TResult>(
+    public static Task<TResult> WaitUntilGetValidResultAsync<T, TResult>(
         this T target,
         Func<T, TResult> getResult,
         Func<TResult, bool> condition,
@@ -346,7 +549,7 @@ public static class TaskExtension
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return Util.TaskRunner.WaitUntilGetValidResult(target, getResult, condition, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntilGetValidResultAsync(target, getResult, condition, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
     }
 
     /// <inheritdoc cref="Util.TaskRunner.WaitUntil{T}" />
@@ -371,7 +574,7 @@ public static class TaskExtension
         return Util.TaskRunner.WaitUntil(target, () => condition(target), continueWaitOnlyWhen.ToFunc(), maxWaitSeconds, waitForMsg);
     }
 
-    public static TResult WaitUntilGetValidResult<T, TResult, TAny>(
+    public static Task<TResult> WaitUntilGetValidResultAsync<T, TResult, TAny>(
         this T target,
         Func<T, TResult> getResult,
         Func<TResult, bool> condition,
@@ -379,13 +582,13 @@ public static class TaskExtension
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return Util.TaskRunner.WaitUntilGetValidResult(target, getResult, condition, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntilGetValidResultAsync(target, getResult, condition, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
     }
 
     /// <summary>
     /// WaitUntilGetValidResult. If failed return default value.
     /// </summary>
-    public static TResult TryWaitUntilGetValidResult<T, TResult, TAny>(
+    public static Task<TResult> TryWaitUntilGetValidResultAsync<T, TResult, TAny>(
         this T target,
         Func<T, TResult> getResult,
         Func<TResult, bool> condition,
@@ -395,7 +598,7 @@ public static class TaskExtension
     {
         try
         {
-            return Util.TaskRunner.WaitUntilGetValidResult(target, getResult, condition, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
+            return Util.TaskRunner.WaitUntilGetValidResultAsync(target, getResult, condition, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
         }
         catch (Exception)
         {
@@ -403,42 +606,54 @@ public static class TaskExtension
         }
     }
 
-    public static TResult WaitUntilNotNull<T, TResult>(
+    /// <summary>
+    /// Waits until the result of the specified function is not null.
+    /// </summary>
+    /// <typeparam name="T">The type of the target object.</typeparam>
+    /// <typeparam name="TResult">The type of the result.</typeparam>
+    /// <param name="target">The target object.</param>
+    /// <param name="getResult">The function to get the result.</param>
+    /// <param name="maxWaitSeconds">The maximum number of seconds to wait. Default is 60 seconds.</param>
+    /// <param name="delayRetryTimeSeconds">delayRetryTimeSeconds</param>
+    /// <param name="waitForMsg">The message to display while waiting. Default is null.</param>
+    /// <returns>The result of the function when it's not null.</returns>
+    public static Task<TResult> WaitUntilNotNullAsync<T, TResult>(
+        this T target,
+        Func<T, TResult> getResult,
+        double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
+        double delayRetryTimeSeconds = Util.TaskRunner.DefaultWaitIntervalSeconds,
+        string waitForMsg = null)
+    {
+        return WaitUntilGetValidResultAsync(target, getResult, _ => _ != null, maxWaitSeconds, delayRetryTimeSeconds, waitForMsg);
+    }
+
+    public static Task<TResult> WaitUntilGetSuccessAsync<T, TResult>(
         this T target,
         Func<T, TResult> getResult,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return WaitUntilGetValidResult(target, getResult, _ => _ != null, maxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntilGetSuccessAsync(target, getResult, maxWaitSeconds, waitForMsg);
     }
 
-    public static TResult WaitUntilGetSuccess<T, TResult>(
-        this T target,
-        Func<T, TResult> getResult,
-        double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
-        string waitForMsg = null)
-    {
-        return Util.TaskRunner.WaitUntilGetSuccess(target, getResult, maxWaitSeconds, waitForMsg);
-    }
-
-    public static TResult WaitUntilGetSuccess<T, TResult, TAny>(
+    public static Task<TResult> WaitUntilGetSuccessAsync<T, TResult, TAny>(
         this T target,
         Func<T, TResult> getResult,
         Func<T, TAny> continueWaitOnlyWhen = null,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return Util.TaskRunner.WaitUntilGetSuccess(target, getResult, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntilGetSuccessAsync(target, getResult, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
     }
 
-    public static TResult WaitUntilGetSuccess<T, TResult>(
+    public static Task<TResult> WaitUntilGetSuccessAsync<T, TResult>(
         this T target,
         Func<T, TResult> getResult,
         Action<T> continueWaitOnlyWhen,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return Util.TaskRunner.WaitUntilGetSuccess(target, getResult, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
+        return Util.TaskRunner.WaitUntilGetSuccessAsync(target, getResult, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
     }
 
     public static T WaitUntilToDo<T>(
@@ -509,7 +724,7 @@ public static class TaskExtension
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return source.WaitUntilHasMatchedCase(_ => whenDo, maxWaitSeconds, waitForMsg: waitForMsg);
+        return source.WaitUntilHasMatchedCase(_ => whenDo, maxWaitSeconds, waitForMsg);
     }
 
     public static TSource WaitUntilHasMatchedCase<TSource>(
@@ -518,7 +733,7 @@ public static class TaskExtension
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
         string waitForMsg = null)
     {
-        return source.WaitUntilHasMatchedCase(_ => whenDo, maxWaitSeconds, waitForMsg: waitForMsg);
+        return source.WaitUntilHasMatchedCase(_ => whenDo, maxWaitSeconds, waitForMsg);
     }
 
     public static T WaitRetryDoUntil<T>(
@@ -532,6 +747,135 @@ public static class TaskExtension
 
         return target;
     }
+
+    public static async Task Timeout(this Task task, TimeSpan maxTimeout)
+    {
+        await task.Then(() => ValueTuple.Create()).Timeout(maxTimeout);
+    }
+
+    public static async Task<T> Timeout<T>(this Task<T> task, TimeSpan maxTimeout)
+    {
+        var timeoutTaskCts = new CancellationTokenSource();
+
+        var timeoutTask = Task.Delay(maxTimeout, timeoutTaskCts.Token);
+
+        var finalTask = await Task.WhenAny(
+            task,
+            timeoutTask);
+
+        if (finalTask == timeoutTask) throw new Exception($"Task timed out. MaxTimeout: {maxTimeout.Milliseconds} milliseconds");
+
+        await timeoutTaskCts.CancelAsync();
+        timeoutTaskCts.Dispose();
+
+        return await task;
+    }
+
+    public static TResult ExecuteUseThreadLock<TTarget, TResult>(this TTarget target, object lockObj, Func<TTarget, TResult> fn)
+    {
+        lock (lockObj)
+        {
+            return fn(target);
+        }
+    }
+
+    public static void ExecuteUseThreadLock<TTarget>(this TTarget target, object lockObj, Action<TTarget> fn)
+    {
+        lock (lockObj)
+        {
+            fn(target);
+        }
+    }
+
+    public static TResult ExecuteUseThreadLockAsync<TTarget, TResult>(this TTarget target, object lockObj, Func<TTarget, Task<TResult>> fn)
+    {
+        lock (lockObj)
+        {
+            return fn(target).GetResult();
+        }
+    }
+
+    public static void ExecuteUseThreadLockAsync<TTarget>(this TTarget target, object lockObj, Func<TTarget, Task> fn)
+    {
+        lock (lockObj)
+        {
+            fn(target).Wait();
+        }
+    }
+
+    #region Tuple await all
+
+    public static TaskAwaiter<(T1, T2)> GetAwaiter<T1, T2>(this (Task<T1>, Task<T2>) tasksTuple)
+    {
+        return CombineTasks().GetAwaiter();
+
+        async Task<(T1, T2)> CombineTasks()
+        {
+            await Task.WhenAll(tasksTuple.Item1, tasksTuple.Item2);
+
+            return (tasksTuple.Item1.Result, tasksTuple.Item2.Result);
+        }
+    }
+
+    public static TaskAwaiter<(T1, T2, T3)> GetAwaiter<T1, T2, T3>(this (Task<T1>, Task<T2>, Task<T3>) tasksTuple)
+    {
+        return CombineTasks().GetAwaiter();
+
+        async Task<(T1, T2, T3)> CombineTasks()
+        {
+            await Task.WhenAll(tasksTuple.Item1, tasksTuple.Item2, tasksTuple.Item3);
+
+            return (tasksTuple.Item1.Result, tasksTuple.Item2.Result, tasksTuple.Item3.Result);
+        }
+    }
+
+    public static TaskAwaiter<(T1, T2, T3, T4)> GetAwaiter<T1, T2, T3, T4>(this (Task<T1>, Task<T2>, Task<T3>, Task<T4>) tasksTuple)
+    {
+        return CombineTasks().GetAwaiter();
+
+        async Task<(T1, T2, T3, T4)> CombineTasks()
+        {
+            await Task.WhenAll(tasksTuple.Item1, tasksTuple.Item2, tasksTuple.Item3, tasksTuple.Item4);
+
+            return (tasksTuple.Item1.Result, tasksTuple.Item2.Result, tasksTuple.Item3.Result, tasksTuple.Item4.Result);
+        }
+    }
+
+    public static TaskAwaiter<(T1, T2, T3, T4, T5)> GetAwaiter<T1, T2, T3, T4, T5>(this (Task<T1>, Task<T2>, Task<T3>, Task<T4>, Task<T5>) tasksTuple)
+    {
+        return CombineTasks().GetAwaiter();
+
+        async Task<(T1, T2, T3, T4, T5)> CombineTasks()
+        {
+            await Task.WhenAll(tasksTuple.Item1, tasksTuple.Item2, tasksTuple.Item3, tasksTuple.Item4, tasksTuple.Item5);
+
+            return (tasksTuple.Item1.Result, tasksTuple.Item2.Result, tasksTuple.Item3.Result, tasksTuple.Item4.Result, tasksTuple.Item5.Result);
+        }
+    }
+
+    public static TaskAwaiter<(T1, T2, T3, T4, T5, T6)> GetAwaiter<T1, T2, T3, T4, T5, T6>(this (Task<T1>, Task<T2>, Task<T3>, Task<T4>, Task<T5>, Task<T6>) tasksTuple)
+    {
+        return CombineTasks().GetAwaiter();
+
+        async Task<(T1, T2, T3, T4, T5, T6)> CombineTasks()
+        {
+            await Task.WhenAll(tasksTuple.Item1, tasksTuple.Item2, tasksTuple.Item3, tasksTuple.Item4, tasksTuple.Item5, tasksTuple.Item6);
+
+            return (tasksTuple.Item1.Result, tasksTuple.Item2.Result, tasksTuple.Item3.Result, tasksTuple.Item4.Result, tasksTuple.Item5.Result, tasksTuple.Item6.Result);
+        }
+    }
+
+    public static TaskAwaiter<List<T>> GetAwaiter<T>(this IEnumerable<Task<T>> tasks)
+    {
+        return Util.TaskRunner.WhenAll(tasks).GetAwaiter();
+    }
+
+    public static Task<List<T>> WhenAll<T>(this IEnumerable<Task<T>> tasks)
+    {
+        return Util.TaskRunner.WhenAll(tasks);
+    }
+
+    #endregion
 
     #region ThenFrom
 

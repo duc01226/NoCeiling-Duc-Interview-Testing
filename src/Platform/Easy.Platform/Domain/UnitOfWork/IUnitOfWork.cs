@@ -32,8 +32,22 @@ public interface IUnitOfWork : IDisposable
 
     public IUnitOfWork ParentUnitOfWork { get; set; }
 
+    /// <summary>
+    /// Gets or sets a list of actions to be executed upon the completion of the UnitOfWork.
+    /// Each action in the list is a function returning a Task, allowing for asynchronous operations.
+    /// </summary>
     public List<Func<Task>> OnCompletedActions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of actions to be executed when the unit of work is disposed.
+    /// Each action in the list is a function returning a Task, allowing for asynchronous operations.
+    /// </summary>
     public List<Func<Task>> OnDisposedActions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of actions to be executed when the unit of work fails.
+    /// Each action is a function that takes a UnitOfWorkFailedArgs object and returns a Task.
+    /// </summary>
     public List<Func<UnitOfWorkFailedArgs, Task>> OnFailedActions { get; set; }
 
     /// <summary>
@@ -53,6 +67,17 @@ public interface IUnitOfWork : IDisposable
     /// <summary>
     /// If true, the uow actually do not handle real transaction. Repository when create/update data actually save immediately
     /// </summary>
+    /// <remarks>
+    /// The IsPseudoTransactionUow method is part of the IUnitOfWork interface in the Easy.Platform.Domain.UnitOfWork namespace. This method is used to determine whether the current unit of work (UoW) is handling a real transaction or not.
+    /// <br />
+    /// In the context of a UoW pattern, a real transaction implies that the changes made within the UoW are not immediately saved to the database, but are instead held until the UoW is completed. If the UoW fails, the changes can be rolled back, maintaining the integrity of the data.
+    /// <br />
+    /// On the other hand, a pseudo-transaction UoW implies that the changes are immediately saved to the database when they are made. This means there is no rollback mechanism if the UoW fails.
+    /// <br />
+    /// In the provided code, different implementations of the IUnitOfWork interface override the IsPseudoTransactionUow method to specify whether they handle real transactions or pseudo-transactions. For example, the PlatformEfCorePersistenceUnitOfWork class returns false, indicating it handles real transactions, while the PlatformMongoDbPersistenceUnitOfWork class returns true, indicating it handles pseudo-transactions.
+    /// <br />
+    /// This method is used in various parts of the code to decide how to handle certain operations. For example, in the PlatformCqrsEventApplicationHandler class, the IsPseudoTransactionUow method is used to determine whether to execute certain actions immediately or add them to the OnCompletedActions list to be executed when the UoW is completed.
+    /// </remarks>
     public bool IsPseudoTransactionUow();
 
     /// <summary>
@@ -79,6 +104,15 @@ public interface IUnitOfWork : IDisposable
     /// <summary>
     /// Get itself or inner uow which is TUnitOfWork.
     /// </summary>
+    /// <remarks>
+    /// The method is part of the IUnitOfWork interface in the Easy.Platform.Domain.UnitOfWork namespace. This method is used to retrieve a unit of work of a specific type from the current unit of work or its inner units of work.
+    /// <br />
+    /// In the context of the Unit of Work pattern, a unit of work is a single, cohesive operation that consists of multiple steps. It's used to ensure that all these steps are completed successfully as a whole, or none of them are, to maintain the integrity of the data.
+    /// <br />
+    /// The method is a generic method that takes a type parameter TUnitOfWork which must be a class and implement the IUnitOfWork interface. It checks if the current unit of work (this) is of the type TUnitOfWork. If it is, it returns the current unit of work cast to TUnitOfWork. If it's not, it looks for the first unit of work of the type TUnitOfWork in its inner units of work.
+    /// <br />
+    /// This method is useful in scenarios where you have nested units of work and you need to retrieve a specific unit of work by its type. For example, in the provided code, UowOfType[TUnitOfWork]() is used to retrieve the current active unit of work of type IUnitOfWork to perform operations like SaveChangesAsync().
+    /// </remarks>
     public TUnitOfWork UowOfType<TUnitOfWork>() where TUnitOfWork : class, IUnitOfWork
     {
         return this is TUnitOfWork
@@ -118,6 +152,8 @@ public class UnitOfWorkFailedArgs
 
 public abstract class PlatformUnitOfWork : IUnitOfWork
 {
+    private const int ContextMaxConcurrentThreadLock = 1;
+
     protected PlatformUnitOfWork(IPlatformRootServiceProvider rootServiceProvider)
     {
         LoggerFactory = rootServiceProvider.GetRequiredService<ILoggerFactory>();
@@ -126,17 +162,17 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
     public bool Completed { get; protected set; }
     public bool Disposed { get; protected set; }
 
-    protected SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(1, 1);
+    protected SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(ContextMaxConcurrentThreadLock, ContextMaxConcurrentThreadLock);
     protected ILoggerFactory LoggerFactory { get; }
 
     public string Id { get; set; } = Guid.NewGuid().ToString();
 
     public IUnitOfWork ParentUnitOfWork { get; set; }
 
-    public List<Func<Task>> OnCompletedActions { get; set; } = new();
-    public List<Func<Task>> OnDisposedActions { get; set; } = new();
-    public List<Func<UnitOfWorkFailedArgs, Task>> OnFailedActions { get; set; } = new();
-    public List<IUnitOfWork> InnerUnitOfWorks { get; protected set; } = new();
+    public List<Func<Task>> OnCompletedActions { get; set; } = [];
+    public List<Func<Task>> OnDisposedActions { get; set; } = [];
+    public List<Func<UnitOfWorkFailedArgs, Task>> OnFailedActions { get; set; } = [];
+    public List<IUnitOfWork> InnerUnitOfWorks { get; protected set; } = [];
     public IUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
 
     public virtual async Task CompleteAsync(CancellationToken cancellationToken = default)
@@ -199,7 +235,8 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
 
     public void ReleaseLock()
     {
-        NotThreadSafeDbContextQueryLock.Release();
+        if (NotThreadSafeDbContextQueryLock.CurrentCount < ContextMaxConcurrentThreadLock)
+            NotThreadSafeDbContextQueryLock.Release();
     }
 
     public void Dispose()
@@ -211,18 +248,27 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
         GC.SuppressFinalize(this);
     }
 
+    ~PlatformUnitOfWork()
+    {
+        Dispose(false);
+    }
+
     // Protected implementation of Dispose pattern.
     protected virtual void Dispose(bool disposing)
     {
-        if (Disposed) return;
+        if (!Disposed)
+        {
+            // Release managed resources
+            if (disposing) NotThreadSafeDbContextQueryLock.Dispose();
 
-        if (disposing)
-            // Dispose managed state (managed objects).
-            NotThreadSafeDbContextQueryLock.Dispose();
+            // Release unmanaged resources
 
-        Disposed = true;
+            Disposed = true;
 
-        OnDisposedActions.ForEachAsync(p => p.Invoke()).WaitResult();
+            OnDisposedActions.ForEachAsync(p => p.Invoke()).WaitResult();
+            OnDisposedActions.Clear();
+            OnDisposedActions = null;
+        }
     }
 
     protected virtual Task SaveChangesAsync(CancellationToken cancellationToken)

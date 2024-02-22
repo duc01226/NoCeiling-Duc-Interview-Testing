@@ -1,7 +1,6 @@
-using Easy.Platform.Application.Context;
 using Easy.Platform.Application.MessageBus.Consumers;
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.Hosting;
+using Easy.Platform.Common.HostingBackgroundServices;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Timing;
 using Easy.Platform.Common.Utils;
@@ -16,13 +15,9 @@ namespace Easy.Platform.Application.MessageBus.InboxPattern;
 /// <summary>
 /// Run in an interval to scan messages in InboxCollection in database, check new message to consume it
 /// </summary>
-public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProcessHostedService
+public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHostingBackgroundService
 {
     public const int MinimumRetryConsumeInboxMessageTimesToWarning = 3;
-
-    private readonly IPlatformApplicationSettingContext applicationSettingContext;
-    private readonly PlatformInboxConfig inboxConfig;
-    private readonly PlatformMessageBusConfig messageBusConfig;
 
     private bool isProcessing;
 
@@ -34,17 +29,21 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
         PlatformInboxConfig inboxConfig,
         PlatformMessageBusConfig messageBusConfig) : base(serviceProvider, loggerFactory)
     {
-        this.applicationSettingContext = applicationSettingContext;
-        this.inboxConfig = inboxConfig;
-        this.messageBusConfig = messageBusConfig;
+        ApplicationSettingContext = applicationSettingContext;
+        InboxConfig = inboxConfig;
+        MessageBusConfig = messageBusConfig;
         ConsumerByNameToTypeDic = messageBusScanner
             .ScanAllDefinedConsumerTypes()
             .ToDictionary(PlatformInboxBusMessage.GetConsumerByValue);
         InvokeConsumerLogger = loggerFactory.CreateLogger(typeof(PlatformMessageBusConsumer));
     }
 
-    protected Dictionary<string, Type> ConsumerByNameToTypeDic { get; }
+    public override bool LogIntervalProcessInformation => InboxConfig.LogIntervalProcessInformation;
 
+    protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
+    protected PlatformInboxConfig InboxConfig { get; }
+    protected PlatformMessageBusConfig MessageBusConfig { get; }
+    protected Dictionary<string, Type> ConsumerByNameToTypeDic { get; }
     protected ILogger InvokeConsumerLogger { get; }
 
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
@@ -60,25 +59,26 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
             await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                 () => ConsumeInboxEventBusMessages(cancellationToken),
                 retryAttempt => 10.Seconds(),
-                retryCount: inboxConfig.ProcessConsumeMessageRetryCount,
+                retryCount: InboxConfig.ProcessConsumeMessageRetryCount,
                 onRetry: (ex, timeSpan, currentRetry, ctx) =>
                 {
                     if (currentRetry >= MinimumRetryConsumeInboxMessageTimesToWarning)
-                        Logger.LogWarning(
+                        Logger.LogError(
                             ex,
                             "Retry ConsumeInboxEventBusMessages {CurrentRetry} time(s) failed. [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
                             currentRetry,
-                            applicationSettingContext.ApplicationName,
-                            applicationSettingContext.ApplicationAssembly.FullName);
-                });
+                            ApplicationSettingContext.ApplicationName,
+                            ApplicationSettingContext.ApplicationAssembly.FullName);
+                },
+                cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {
             Logger.LogError(
                 ex,
                 "Retry ConsumeInboxEventBusMessages failed. [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
-                applicationSettingContext.ApplicationName,
-                applicationSettingContext.ApplicationAssembly.FullName);
+                ApplicationSettingContext.ApplicationName,
+                ApplicationSettingContext.ApplicationAssembly.FullName);
         }
 
         isProcessing = false;
@@ -104,7 +104,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                     });
 
             // Random wait to decrease the chance that multiple deploy instance could process same messages at the same time
-            await Task.Delay(Util.RandomGenerator.Next(0, 10000).Milliseconds(), cancellationToken);
+            await Task.Delay(Util.RandomGenerator.Next(5, 10).Seconds(), cancellationToken);
         } while (await IsAnyMessagesToHandleAsync());
 
         async Task HandleInboxMessageAsync(PlatformInboxBusMessage toHandleInboxMessage)
@@ -136,7 +136,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
             (IPlatformInboxBusMessageRepository inboxEventBusMessageRepo) =>
             {
                 return inboxEventBusMessageRepo!.AnyAsync(
-                    PlatformInboxBusMessage.CanHandleMessagesExpr(inboxConfig.MessageProcessingMaxSeconds));
+                    PlatformInboxBusMessage.CanHandleMessagesExpr(InboxConfig.MessageProcessingMaxSeconds));
             });
     }
 
@@ -172,19 +172,16 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                     consumer,
                     busMessage,
                     toHandleInboxMessage.RoutingKey,
-                    messageBusConfig,
+                    MessageBusConfig,
                     InvokeConsumerLogger);
         }
         else
         {
-            await PlatformInboxMessageBusConsumerHelper.UpdateExistingInboxFailedMessageAsync(
-                scope.ServiceProvider,
-                toHandleInboxMessage.Id,
-                new Exception(
-                    $"[{GetType().Name}] Error resolve consumer type {toHandleInboxMessage.ConsumerBy}. InboxId:{toHandleInboxMessage.Id} "),
-                inboxConfig.RetryProcessFailedMessageInSecondsUnit,
-                () => Logger,
-                cancellationToken);
+            Logger.LogWarning(
+                "[{LoggerType}] Error resolve consumer type {ToHandleInboxMessageConsumerBy}. InboxId:{ToHandleInboxMessageId}",
+                GetType().Name,
+                toHandleInboxMessage.ConsumerBy,
+                toHandleInboxMessage.Id);
         }
     }
 
@@ -200,9 +197,9 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalProce
                     {
                         var toHandleMessages = await inboxEventBusMessageRepo.GetAllAsync(
                             queryBuilder: query => query
-                                .Where(PlatformInboxBusMessage.CanHandleMessagesExpr(inboxConfig.MessageProcessingMaxSeconds))
+                                .Where(PlatformInboxBusMessage.CanHandleMessagesExpr(InboxConfig.MessageProcessingMaxSeconds))
                                 .OrderBy(p => p.LastConsumeDate)
-                                .Take(inboxConfig.NumberOfProcessConsumeInboxMessagesBatch),
+                                .Take(InboxConfig.NumberOfProcessConsumeInboxMessagesBatch),
                             cancellationToken);
 
                         if (toHandleMessages.IsEmpty()) return toHandleMessages;

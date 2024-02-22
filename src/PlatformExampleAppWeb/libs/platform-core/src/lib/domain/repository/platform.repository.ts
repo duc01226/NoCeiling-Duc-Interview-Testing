@@ -188,7 +188,7 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
             const requestIdPrefix = requestId.endsWith(']') ? requestId.slice(0, requestId.length - 1) : requestId;
             Object.keys(this.context.loadedRequestRefreshFnDic).forEach(key => {
                 if (key.startsWith(requestIdPrefix)) {
-                    this.context.loadedRequestRefreshFnDic[key]();
+                    this.context.loadedRequestRefreshFnDic[key]!();
                 }
             });
         }, delayTime);
@@ -281,7 +281,7 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
 
     private clearLoadedRequestDataCacheItem(startWithRequestName: string): void {
         const noSubscriberRequests = Object.keys(this.context.loadedRequestDataDic).filter(
-            key => key.startsWith(startWithRequestName) && this.context.loadedRequestSubscriberCountDic[key] <= 0
+            key => key.startsWith(startWithRequestName) && this.context.loadedRequestSubscriberCountDic[key]! <= 0
         );
 
         while (noSubscriberRequests.length > this.maxCacheRequestDataPerApiRequestName()) {

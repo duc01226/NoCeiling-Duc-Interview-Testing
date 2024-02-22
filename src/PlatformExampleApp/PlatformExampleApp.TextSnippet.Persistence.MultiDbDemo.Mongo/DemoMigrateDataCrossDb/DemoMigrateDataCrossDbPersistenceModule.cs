@@ -24,6 +24,6 @@ public class DemoMigrateDataCrossDbPersistenceModule : PlatformMongoDbPersistenc
 
     protected override List<Type> RegisterLimitedRepositoryImplementationTypes()
     {
-        return new List<Type>();
+        return [];
     }
 }

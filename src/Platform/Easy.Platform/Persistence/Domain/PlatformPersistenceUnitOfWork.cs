@@ -19,17 +19,23 @@ public abstract class PlatformPersistenceUnitOfWork<TDbContext> : PlatformUnitOf
         DbContext = dbContext.With(_ => _.MappedUnitOfWork = this);
     }
 
-    public TDbContext DbContext { get; }
+    public TDbContext DbContext { get; protected set; }
 
     // Protected implementation of Dispose pattern.
     protected override void Dispose(bool disposing)
     {
-        base.Dispose(disposing);
+        if (!Disposed)
+        {
+            base.Dispose(disposing);
 
-        // Dispose managed state (managed objects).
-        if (disposing)
-            DbContext?.Dispose();
+            // Dispose managed state (managed objects).
+            if (disposing)
+            {
+                DbContext?.Dispose();
+                DbContext = default;
+            }
 
-        Disposed = true;
+            Disposed = true;
+        }
     }
 }

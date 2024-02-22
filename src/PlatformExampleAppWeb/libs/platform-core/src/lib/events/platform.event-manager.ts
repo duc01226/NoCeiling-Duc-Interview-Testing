@@ -2,7 +2,23 @@ import { Inject, Injectable, Injector, Type } from '@angular/core';
 
 import { IPlatformEventManager, PlatformEvent, PlatformEventHandler } from './abstracts';
 
-@Injectable()
+/**
+ * Platform Event Manager service for handling and publishing platform events.
+ *
+ * @remarks
+ * This service is responsible for managing the publication and handling of platform events.
+ * It aggregates event handlers from different modules and invokes them when an event is published.
+ *
+ * @example
+ * ```typescript
+ * // Inject and use the PlatformEventManager service
+ * constructor(private platformEventManager: PlatformEventManager) {}
+ *
+ * // Publish a platform event
+ * this.platformEventManager.publish(new MyPlatformEvent());
+ * ```
+ */
+@Injectable({ providedIn: 'root' })
 export class PlatformEventManager implements IPlatformEventManager {
     public constructor(
         private injector: Injector,
@@ -14,6 +30,11 @@ export class PlatformEventManager implements IPlatformEventManager {
 
     private aggregatedSubscriptionsMap: PlatformEventManagerSubscriptionsMap;
 
+    /**
+     * Publishes a platform event, invoking all associated event handlers.
+     *
+     * @param event - The platform event to be published.
+     */
     public publish<TEvent extends PlatformEvent>(event: TEvent): void {
         const currentEventHandlerTypes =
             this.aggregatedSubscriptionsMap.get(<Type<PlatformEvent>>event.constructor) ?? [];
@@ -47,7 +68,19 @@ export class PlatformEventManager implements IPlatformEventManager {
     }
 }
 
-@Injectable()
+/**
+ * Map structure that associates platform event types with arrays of associated event handler types.
+ *
+ * @remarks
+ * This map is used by the `PlatformEventManager` to aggregate event handler types from different modules.
+ *
+ * @example
+ * ```typescript
+ * const subscriptionsMap = new PlatformEventManagerSubscriptionsMap();
+ * subscriptionsMap.set(MyPlatformEvent, [MyPlatformEventHandler]);
+ * ```
+ */
+@Injectable({ providedIn: 'root' })
 export class PlatformEventManagerSubscriptionsMap extends Map<
     Type<PlatformEvent>,
     Type<PlatformEventHandler<PlatformEvent>>[]

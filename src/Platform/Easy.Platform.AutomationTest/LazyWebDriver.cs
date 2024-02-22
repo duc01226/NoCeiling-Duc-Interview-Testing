@@ -29,19 +29,32 @@ public class LazyWebDriver : ILazyWebDriver, IScopedLazyWebDriver, ISingletonLaz
         GC.SuppressFinalize(obj: this);
     }
 
+    ~LazyWebDriver()
+    {
+        Dispose(false);
+    }
+
     // Protected implementation of Dispose pattern.
     protected virtual void Dispose(bool disposing)
     {
-        if (Disposed)
-            return;
-
-        if (disposing && LazyDriver.IsValueCreated)
+        if (!Disposed)
         {
-            Value.Quit();
-            Value.Dispose();
-        }
+            // Release managed resources
+            if (disposing)
+                LazyDriver.PipeAction(
+                    _ =>
+                    {
+                        if (LazyDriver.IsValueCreated)
+                        {
+                            Value.Quit();
+                            Value.Dispose();
+                        }
+                    });
 
-        Disposed = true;
+            // Release unmanaged resources
+
+            Disposed = true;
+        }
     }
 }
 

@@ -7,7 +7,6 @@ namespace Easy.Platform.Common.Utils;
 /// <summary>
 /// Utils is class to store all static small functions which could be used in any project.
 /// This do not have any logic related to any domains.
-///
 /// Utils default grouping by "output", either by the output data type, or serve a "functional purpose".
 /// Example: Utils.String should produce string as output.Utils.Enums should produce enum as output.Utils.Copy should only do the copy data functional.
 /// </summary>
@@ -15,6 +14,13 @@ public static partial class Util
 {
     public static class FullTextSearchChecker
     {
+        /// <summary>
+        /// Determines if the target text matches the search text.
+        /// </summary>
+        /// <param name="targetText">The text to be searched.</param>
+        /// <param name="searchText">The text to search for.</param>
+        /// <param name="exactMatchAllWords">If set to true, all words in the search text must exactly match in the target text. If false, any word in the search text can match in the target text.</param>
+        /// <returns>Returns true if a match is found, otherwise false.</returns>
         public static bool IsFullTextSearchMatch(
             string targetText,
             string searchText,
@@ -46,6 +52,11 @@ public static partial class Util
                    isMatchWords;
         }
 
+        /// <summary>
+        /// Removes diacritics from the given string.
+        /// </summary>
+        /// <param name="str">The input string.</param>
+        /// <returns>The string with diacritics removed.</returns>
         public static string RemoveDiacritics(string str)
         {
             if (str == null)
@@ -61,6 +72,11 @@ public static partial class Util
                 .Normalize(NormalizationForm.FormC);
         }
 
+        /// <summary>
+        /// Gets the regex pattern for matching a word in a string.
+        /// </summary>
+        /// <param name="word">The word to match.</param>
+        /// <returns>The regex pattern for matching the word in a string.</returns>
         public static string GetMatchWordRegexPattern(string word)
         {
             return $"^(.*?(\\b{word}\\b)[^$]*)$";

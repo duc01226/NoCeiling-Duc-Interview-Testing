@@ -1,8 +1,8 @@
 using Easy.Platform.Common.Extensions;
 
-namespace Easy.Platform.Application.Context.UserContext;
+namespace Easy.Platform.Application.RequestContext;
 
-public static class PlatformApplicationCommonUserContextKeys
+public static class PlatformApplicationCommonRequestContextKeys
 {
     public const string RequestIdContextKey = "RequestId";
     public const string UserIdContextKey = "UserId";
@@ -13,20 +13,26 @@ public static class PlatformApplicationCommonUserContextKeys
     public const string UserFirstNameContextKey = "UserFirstName";
     public const string UserMiddleNameContextKey = "UserMiddleName";
     public const string UserLastNameContextKey = "UserLastName";
+    public const string IsSeedingTestingDataKey = "IsSeedingTestingData";
 
     public static string RequestId(this IDictionary<string, object> context)
     {
-        return context.GetValue<string>(RequestIdContextKey);
+        return context.GetUserContextValue<string>(RequestIdContextKey);
     }
 
     public static string UserId(this IDictionary<string, object> context)
     {
-        return context.GetValue<string>(UserIdContextKey);
+        return context.GetUserContextValue<string>(UserIdContextKey);
+    }
+
+    public static bool IsSeedingTestingData(this IDictionary<string, object> context)
+    {
+        return context.GetUserContextValue<bool?>(IsSeedingTestingDataKey) == true;
     }
 
     public static T UserId<T>(this IDictionary<string, object> context)
     {
-        return (T)UserId(context, typeof(T));
+        return (T)context.UserId(typeof(T));
     }
 
     public static object UserId(this IDictionary<string, object> context, Type userIdType)
@@ -36,22 +42,22 @@ public static class PlatformApplicationCommonUserContextKeys
 
     public static string UserName(this IDictionary<string, object> context)
     {
-        return context.GetValue<string>(UserNameContextKey);
+        return context.GetUserContextValue<string>(UserNameContextKey);
     }
 
     public static string Email(this IDictionary<string, object> context)
     {
-        return context.GetValue<string>(EmailContextKey);
+        return context.GetUserContextValue<string>(EmailContextKey);
     }
 
     public static List<string> UserRoles(this IDictionary<string, object> context)
     {
-        return context.GetValue<List<string>>(UserRolesContextKey);
+        return context.GetUserContextValue<List<string>>(UserRolesContextKey) ?? [];
     }
 
     public static string UserFullName(this IDictionary<string, object> context)
     {
-        return context.GetValue<string>(UserFullNameContextKey) ?? context.UserCalculatedFullName();
+        return context.GetUserContextValue<string>(UserFullNameContextKey) ?? context.UserCalculatedFullName();
     }
 
     public static string UserCalculatedFullName(this IDictionary<string, object> context)
@@ -65,69 +71,74 @@ public static class PlatformApplicationCommonUserContextKeys
 
     public static string UserFirstName(this IDictionary<string, object> context)
     {
-        return context.GetValue<string>(UserFirstNameContextKey);
+        return context.GetUserContextValue<string>(UserFirstNameContextKey);
     }
 
     public static string UserMiddleName(this IDictionary<string, object> context)
     {
-        return context.GetValue<string>(UserMiddleNameContextKey);
+        return context.GetUserContextValue<string>(UserMiddleNameContextKey);
     }
 
     public static string UserLastName(this IDictionary<string, object> context)
     {
-        return context.GetValue<string>(UserLastNameContextKey);
+        return context.GetUserContextValue<string>(UserLastNameContextKey);
     }
 
     public static TContext SetRequestId<TContext>(this TContext context, string value) where TContext : IDictionary<string, object>
     {
-        context?.SetValue(value, RequestIdContextKey);
+        context?.SetUserContextValue(value, RequestIdContextKey);
 
         return context;
     }
 
     public static TContext SetUserId<TContext>(this TContext context, string value) where TContext : IDictionary<string, object>
     {
-        context?.SetValue(value, UserIdContextKey);
+        context?.SetUserContextValue(value, UserIdContextKey);
 
         return context;
     }
 
     public static TContext SetUserRoles<TContext>(this TContext context, List<string> value) where TContext : IDictionary<string, object>
     {
-        context.SetValue(value, UserRolesContextKey);
+        context.SetUserContextValue(value, UserRolesContextKey);
 
         return context;
     }
 
     public static TContext SetEmail<TContext>(this TContext context, string value) where TContext : IDictionary<string, object>
     {
-        context.SetValue(value, EmailContextKey);
+        context.SetUserContextValue(value, EmailContextKey);
 
         return context;
     }
 
     public static void SetUserName(this IDictionary<string, object> context, string value)
     {
-        context.SetValue(value, UserNameContextKey);
+        context.SetUserContextValue(value, UserNameContextKey);
     }
 
     public static void SetUserFullName(this IDictionary<string, object> context, string value)
     {
-        context.SetValue(value, UserFullNameContextKey);
+        context.SetUserContextValue(value, UserFullNameContextKey);
     }
 
     public static void SetUserLastName(this IDictionary<string, object> context, string value)
     {
-        context.SetValue(value, UserLastNameContextKey);
+        context.SetUserContextValue(value, UserLastNameContextKey);
     }
 
     public static void SetUserMiddleName(this IDictionary<string, object> context, string value)
     {
-        context.SetValue(value, UserMiddleNameContextKey);
+        context.SetUserContextValue(value, UserMiddleNameContextKey);
     }
 
     public static void SetUserFirstName(this IDictionary<string, object> context, string value)
     {
-        context.SetValue(value, UserFirstNameContextKey);
+        context.SetUserContextValue(value, UserFirstNameContextKey);
+    }
+
+    public static void SetIsSeedingTestingData(this IDictionary<string, object> context, bool value)
+    {
+        context.SetUserContextValue(value, IsSeedingTestingDataKey);
     }
 }

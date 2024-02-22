@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using Easy.Platform.Persistence.Services;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
@@ -31,10 +30,10 @@ internal sealed class ExampleHelper : IPlatformHelper
             query => fullTextSearchPersistenceService.Search(
                 query,
                 searchText: name,
-                inFullTextSearchProps: new Expression<Func<TextSnippetEntity, object>>[]
-                {
+                inFullTextSearchProps:
+                [
                     p => p.SnippetText
-                }));
+                ]));
         var firstFoundMultiDemo = await multiDbDemoEntityRepository.FirstOrDefaultAsync(p => p.Name == name);
 
         return new SearchEntityByNameHelperResult

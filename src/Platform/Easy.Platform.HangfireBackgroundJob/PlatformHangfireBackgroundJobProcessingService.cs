@@ -11,6 +11,7 @@ public class PlatformHangfireBackgroundJobProcessingService : IPlatformBackgroun
     private readonly BackgroundJobServerOptions options;
 
     private BackgroundJobServer currentBackgroundJobServer;
+    private bool disposed;
 
     public PlatformHangfireBackgroundJobProcessingService(BackgroundJobServerOptions options, ILoggerFactory loggerFactory)
     {
@@ -53,6 +54,20 @@ public class PlatformHangfireBackgroundJobProcessingService : IPlatformBackgroun
 
     protected virtual void Dispose(bool disposing)
     {
-        if (disposing) currentBackgroundJobServer?.Dispose();
+        if (!disposed)
+        {
+            if (disposing)
+                // Release managed resources
+                currentBackgroundJobServer?.Dispose();
+
+            // Release unmanaged resources
+
+            disposed = true;
+        }
+    }
+
+    ~PlatformHangfireBackgroundJobProcessingService()
+    {
+        Dispose(false);
     }
 }

@@ -1,7 +1,4 @@
 using Easy.Platform.Application.BackgroundJob;
-using Easy.Platform.Application.Context;
-using Easy.Platform.Application.Context.UserContext;
-using Easy.Platform.Application.Context.UserContext.Default;
 using Easy.Platform.Application.Cqrs.Commands;
 using Easy.Platform.Application.Cqrs.Events;
 using Easy.Platform.Application.Cqrs.Queries;
@@ -14,10 +11,12 @@ using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Application.MessageBus.Producers;
 using Easy.Platform.Application.MessageBus.Producers.CqrsEventProducers;
 using Easy.Platform.Application.Persistence;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Application.Services;
 using Easy.Platform.Common;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.HostingBackgroundServices;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.Abstract;
@@ -69,6 +68,15 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
     /// </summary>
     protected virtual int MinThreadPool => 100;
 
+    /// <summary>
+    /// Seeds the application data into the database.
+    /// </summary>
+    /// <param name="serviceScope">The service scope which provides services for seeding data.</param>
+    /// <remarks>
+    /// This method will attempt to seed the data multiple times if the initial seeding fails,
+    /// due to the possibility of the database server not being fully initialized.
+    /// </remarks>
+    /// <returns>A <see cref="Task" /> representing the asynchronous operation.</returns>
     public async Task SeedData(IServiceScope serviceScope)
     {
         //if the db server is not initiated, SeedData could fail.
@@ -172,6 +180,15 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         }
     }
 
+    /// <summary>
+    /// Clears the distributed cache based on the provided options and service scope.
+    /// </summary>
+    /// <param name="options">The options for auto clearing the distributed cache on initialization.</param>
+    /// <param name="serviceScope">The service scope used to get the cache provider.</param>
+    /// <remarks>
+    /// If the cache server is not initiated, this method could fail. Therefore, it uses a retry mechanism to ensure successful execution.
+    /// </remarks>
+    /// <returns>A Task representing the asynchronous operation.</returns>
     public async Task ClearDistributedCache(
         PlatformApplicationAutoClearDistributedCacheOnInitOptions options,
         IServiceScope serviceScope)
@@ -231,6 +248,12 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         serviceCollection.RegisterAllFromType<IPlatformHelper>(Assembly);
     }
 
+    /// <summary>
+    /// Executes the seed data method of all dependent application modules in the order of their initialization priority.
+    /// </summary>
+    /// <param name="moduleTypeDependencies">A list of types representing the dependencies of the application module.</param>
+    /// <param name="serviceProvider">An instance of IServiceProvider to resolve dependencies.</param>
+    /// <returns>A Task representing the asynchronous operation.</returns>
     public static async Task ExecuteDependencyApplicationModuleSeedData(List<Type> moduleTypeDependencies, IServiceProvider serviceProvider)
     {
         await moduleTypeDependencies
@@ -275,7 +298,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         serviceCollection.RegisterAllSelfImplementationFromType<IPlatformCqrsEventApplicationHandler>(Assembly);
         RegisterMessageBus(serviceCollection);
         RegisterApplicationSettingContext(serviceCollection);
-        RegisterDefaultApplicationUserContext(serviceCollection);
+        RegisterDefaultApplicationRequestContext(serviceCollection);
         serviceCollection.RegisterIfServiceNotExist<IUnitOfWorkManager, PlatformPseudoApplicationUnitOfWorkManager>(ServiceLifeTime.Scoped);
         serviceCollection.RegisterAllFromType<IPlatformApplicationService>(Assembly);
 
@@ -286,6 +309,8 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         if (AutoRegisterDefaultCaching)
             RegisterRuntimeModuleDependencies<PlatformCachingModule>(serviceCollection);
 
+        serviceCollection.RegisterHostedServicesFromType(Assembly, typeof(PlatformHostingBackgroundService));
+        // Register default built-in background services
         serviceCollection.RegisterHostedService<PlatformAutoClearMemoryHostingBackgroundService>();
     }
 
@@ -305,9 +330,14 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             await ClearDistributedCache(autoClearDistributedCacheOnInitOptions, serviceScope);
 
         if (AutoRegisterDefaultCaching)
-            await serviceScope.ServiceProvider.GetRequiredService<PlatformCachingModule>().Init();
+            await serviceScope.ServiceProvider.GetRequiredService<PlatformCachingModule>().Init(CurrentApp);
     }
 
+    /// <summary>
+    /// Gets the options for automatically clearing the distributed cache on initialization.
+    /// </summary>
+    /// <param name="serviceScope">The service scope.</param>
+    /// <returns>A <see cref="PlatformApplicationAutoClearDistributedCacheOnInitOptions" /> object that represents the options for automatically clearing the distributed cache on initialization.</returns>
     protected virtual PlatformApplicationAutoClearDistributedCacheOnInitOptions
         AutoClearDistributedCacheOnInitOptions(IServiceScope serviceScope)
     {
@@ -317,10 +347,10 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         return new PlatformApplicationAutoClearDistributedCacheOnInitOptions
         {
             EnableAutoClearDistributedCacheOnInit = true,
-            AutoClearContexts = new HashSet<string>
-            {
+            AutoClearContexts =
+            [
                 applicationSettingContext.ApplicationName
-            }
+            ]
         };
     }
 
@@ -335,17 +365,21 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             serviceCollection.Register<IPlatformApplicationSettingContext>(DefaultApplicationSettingContextFactory);
     }
 
-    private static void RegisterDefaultApplicationUserContext(IServiceCollection serviceCollection)
+    private static void RegisterDefaultApplicationRequestContext(IServiceCollection serviceCollection)
     {
-        if (serviceCollection.All(p => p.ServiceType != typeof(IPlatformApplicationUserContextAccessor)))
+        if (serviceCollection.All(p => p.ServiceType != typeof(IPlatformApplicationRequestContextAccessor)))
             serviceCollection.Register(
-                typeof(IPlatformApplicationUserContextAccessor),
-                typeof(PlatformDefaultApplicationUserContextAccessor),
+                typeof(IPlatformApplicationRequestContextAccessor),
+                typeof(PlatformDefaultApplicationRequestContextAccessor),
                 ServiceLifeTime.Singleton,
                 true,
                 DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
     }
 
+    /// <summary>
+    /// Registers the message bus services in the provided service collection.
+    /// </summary>
+    /// <param name="serviceCollection">The service collection to add the services to.</param>
     private void RegisterMessageBus(IServiceCollection serviceCollection)
     {
         serviceCollection.Register<IPlatformMessageBusScanner, PlatformApplicationMessageBusScanner>(ServiceLifeTime.Singleton);

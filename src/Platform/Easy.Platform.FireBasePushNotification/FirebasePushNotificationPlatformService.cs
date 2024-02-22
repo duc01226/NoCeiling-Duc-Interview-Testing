@@ -1,8 +1,8 @@
-using Easy.Platform.FireBasePushNotification.GoogleFcm;
+using Easy.Platform.FirebasePushNotification.GoogleFcm;
 using Easy.Platform.Infrastructures.PushNotification;
 using Microsoft.Extensions.Logging;
 
-namespace Easy.Platform.FireBasePushNotification;
+namespace Easy.Platform.FirebasePushNotification;
 
 internal sealed class FireBasePushNotificationService : IPushNotificationPlatformService
 {

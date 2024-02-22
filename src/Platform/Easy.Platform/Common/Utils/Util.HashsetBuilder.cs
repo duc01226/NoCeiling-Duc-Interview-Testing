@@ -6,7 +6,7 @@ public static partial class Util
     {
         public static HashSet<T> New<T>(params T[] values)
         {
-            return new HashSet<T>(values);
+            return values.ToHashSet();
         }
     }
 }

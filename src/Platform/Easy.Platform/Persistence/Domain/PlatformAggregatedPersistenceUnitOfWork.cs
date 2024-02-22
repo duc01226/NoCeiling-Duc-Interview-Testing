@@ -31,7 +31,7 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
         InnerUnitOfWorks = innerUnitOfWorks?
                                .Select(innerUow => innerUow.With(_ => _.ParentUnitOfWork = this))
                                .ToList() ??
-                           new List<IUnitOfWork>();
+                           [];
         this.associatedServiceScope = associatedServiceScope;
     }
 
@@ -72,23 +72,21 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
 
     protected override void Dispose(bool disposing)
     {
-        base.Dispose(disposing);
-
-        if (disposing)
+        if (!Disposed)
         {
-            InnerUnitOfWorks.ForEach(p => p.Dispose());
-            InnerUnitOfWorks.Clear();
+            base.Dispose(disposing);
 
-            if (associatedServiceScope != null)
+            // Release managed resources
+            if (disposing)
             {
-                var associatedServiceScopeToDispose = associatedServiceScope;
+                InnerUnitOfWorks.ForEach(p => p.Dispose());
+                InnerUnitOfWorks.Clear();
 
+                associatedServiceScope?.Dispose();
                 associatedServiceScope = null;
-
-                associatedServiceScopeToDispose.Dispose();
             }
-        }
 
-        Disposed = true;
+            Disposed = true;
+        }
     }
 }

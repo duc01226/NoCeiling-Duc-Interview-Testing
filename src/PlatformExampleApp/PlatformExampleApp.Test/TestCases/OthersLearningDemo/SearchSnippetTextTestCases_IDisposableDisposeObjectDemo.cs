@@ -11,7 +11,7 @@ namespace PlatformExampleApp.Test.TestCases.OthersLearningDemo;
 [Trait(name: "App", value: "TextSnippet")]
 public sealed class SearchSnippetTextTestCases_IDisposableDisposeObjectDemo : TestCase, IDisposable
 {
-    private readonly ILazyWebDriver manuallyCreateDriverLazyInitializer;
+    private readonly LazyWebDriver manuallyCreateDriverLazyInitializer;
 
     public SearchSnippetTextTestCases_IDisposableDisposeObjectDemo(
         IWebDriverManager driverManager,

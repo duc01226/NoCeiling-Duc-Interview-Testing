@@ -1,10 +1,10 @@
-using Easy.Platform.FireBasePushNotification.GoogleFcm;
+using Easy.Platform.FirebasePushNotification.GoogleFcm;
 using Easy.Platform.Infrastructures;
 using Easy.Platform.Infrastructures.PushNotification;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Easy.Platform.FireBasePushNotification;
+namespace Easy.Platform.FirebasePushNotification;
 
 public abstract class FireBasePushNotificationPlatformModule : PlatformInfrastructureModule
 {

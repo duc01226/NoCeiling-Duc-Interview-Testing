@@ -1,4 +1,3 @@
-using Easy.Platform.Application.Context;
 using Easy.Platform.Infrastructures.Caching;
 
 namespace Easy.Platform.Application.Caching;

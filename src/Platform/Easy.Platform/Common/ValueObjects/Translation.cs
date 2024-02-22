@@ -8,5 +8,5 @@ public class Translation : PlatformValueObject<Translation>
     public string Template { get; set; } = "";
 
     // The Params property is a dictionary that holds placeholder values to be inserted into the template.
-    public Dictionary<string, object> Params { get; set; } = new();
+    public Dictionary<string, object> Params { get; set; } = [];
 }

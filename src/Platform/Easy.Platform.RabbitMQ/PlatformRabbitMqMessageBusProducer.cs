@@ -69,9 +69,11 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
             activity?.AddTag("routingKey", routingKey);
             activity?.AddTag("message", message);
 
+            IModel channel = null;
+
             try
             {
-                var channel = ChannelPool.Get();
+                channel = ChannelPool.Get();
 
                 var publishRequestProps = channel.CreateBasicProperties();
 
@@ -96,6 +98,10 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
                         GetType().FullName);
                 else
                     throw;
+            }
+            finally
+            {
+                if (channel != null) ChannelPool.Return(channel);
             }
         }
 

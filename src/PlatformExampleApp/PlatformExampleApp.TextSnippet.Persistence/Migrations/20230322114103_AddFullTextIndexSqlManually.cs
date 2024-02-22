@@ -14,8 +14,7 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
             SqlServerMigrationUtil.CreateFullTextIndexIfNotExists(
                 migrationBuilder,
                 tableName: "TextSnippetEntity",
-                columnNames: new List<string>
-                    { nameof(TextSnippetEntity.SnippetText), nameof(TextSnippetEntity.FullText) },
+                columnNames: [nameof(TextSnippetEntity.SnippetText), nameof(TextSnippetEntity.FullText)],
                 keyIndex: "PK_TextSnippetEntity",
                 fullTextCatalog: $"FTS_{nameof(TextSnippetEntity)}");
         }

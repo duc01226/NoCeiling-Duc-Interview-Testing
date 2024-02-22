@@ -1,6 +1,5 @@
-using System.Linq.Expressions;
-using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Cqrs.Queries;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Queries;
 using Easy.Platform.Common.Dtos;
@@ -57,13 +56,13 @@ internal sealed class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicati
     private readonly ITextSnippetRepository<TextSnippetEntity> repository;
 
     public SearchSnippetTextQueryHandler(
-        IPlatformApplicationUserContextAccessor userContext,
+        IPlatformApplicationRequestContextAccessor requestContextAccessor,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider,
         IPlatformCacheRepositoryProvider cacheRepositoryProvider,
         ITextSnippetRepository<TextSnippetEntity> repository,
         IPlatformFullTextSearchPersistenceService fullTextSearchPersistenceService,
-        ExampleHelper exampleHelper) : base(userContext, loggerFactory, rootServiceProvider, cacheRepositoryProvider)
+        ExampleHelper exampleHelper) : base(requestContextAccessor, loggerFactory, rootServiceProvider, cacheRepositoryProvider)
     {
         this.repository = repository;
         this.fullTextSearchPersistenceService = fullTextSearchPersistenceService;
@@ -96,15 +95,16 @@ internal sealed class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicati
                     _ => fullTextSearchPersistenceService.Search(
                         query,
                         request.SearchText,
-                        inFullTextSearchProps: new Expression<Func<TextSnippetEntity, object>>[]
-                        {
-                            e => e.SnippetText, e => e.FullText
-                        },
+                        inFullTextSearchProps:
+                        [
+                            e => e.SnippetText,
+                            e => e.FullText
+                        ],
                         fullTextAccurateMatch: true,
-                        includeStartWithProps: new Expression<Func<TextSnippetEntity, object>>[]
-                        {
+                        includeStartWithProps:
+                        [
                             e => e.SnippetText
-                        }))
+                        ]))
                 .PipeIf(
                     request.SearchAddress.IsNotNullOrEmpty(),
                     _ => _.Where(p => p.Addresses.Any(add => add.Street == request.SearchAddress)))

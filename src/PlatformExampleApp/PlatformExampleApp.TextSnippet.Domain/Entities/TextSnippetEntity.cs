@@ -34,15 +34,15 @@ public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid
         Street = "Random default street"
     };
 
-    public List<string> AddressStrings { get; set; } = new()
-    {
+    public List<string> AddressStrings { get; set; } =
+    [
         "Random default street",
         "Random default streetAB",
         "Random default streetCD"
-    };
+    ];
 
-    public List<ExampleAddressValueObject> Addresses { get; set; } = new()
-    {
+    public List<ExampleAddressValueObject> Addresses { get; set; } =
+    [
         new ExampleAddressValueObject
         {
             Street = "Random default street"
@@ -55,7 +55,7 @@ public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid
         {
             Street = "Random default streetCD"
         }
-    };
+    ];
 
     public Guid? ConcurrencyUpdateToken { get; set; }
 

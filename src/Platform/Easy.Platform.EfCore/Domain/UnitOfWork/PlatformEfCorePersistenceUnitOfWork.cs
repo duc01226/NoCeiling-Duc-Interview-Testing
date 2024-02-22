@@ -4,7 +4,6 @@ using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.Domain;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.EfCore.Domain.UnitOfWork;
 
@@ -50,13 +49,6 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
         }
         catch (DbUpdateConcurrencyException ex)
         {
-            LoggerFactory.CreateLogger(GetType())
-                .LogWarning(
-                    ex,
-                    "Uow complete failed because of version conflict. [[Exception:{Exception}]]. FullStackTrace:{FullStackTrace}]]",
-                    ex.Message,
-                    fullStackTrace);
-
             throw new PlatformDomainRowVersionConflictException(
                 $"{GetType().Name} complete uow failed because of {nameof(DbUpdateConcurrencyException)}. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
                 ex);

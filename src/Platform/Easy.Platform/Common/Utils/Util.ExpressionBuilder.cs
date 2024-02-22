@@ -23,10 +23,10 @@ public static partial class Util
                     calledOnExpressionTarget: propertyExpr,
                     methodClassType: typeof(string),
                     methodName: "Contains",
-                    methodParams: new object[]
-                    {
+                    methodParams:
+                    [
                         containStringValue
-                    });
+                    ]);
 
             return Expression.Lambda<Func<T, bool>>(body: containsMethodCallExpr, parameters: parameterExpr);
         }
@@ -78,11 +78,10 @@ public static partial class Util
         {
             var firstReversedChainMethodInfo = methodClassType.GetMethod(
                 methodName,
-                methodParams?.Select(param => param?.GetType() ?? typeof(object)).ToArray() ?? Array.Empty<Type>());
+                methodParams?.Select(param => param?.GetType() ?? typeof(object)).ToArray() ?? []);
             var firstChainMethodParamArgumentExpressions =
                 methodParams?.Select(
-                    methodParam => Expression.Constant(methodParam, methodParam?.GetType() ?? typeof(object))) ??
-                new List<ConstantExpression>();
+                    methodParam => Expression.Constant(methodParam, methodParam?.GetType() ?? typeof(object))) ?? [];
             return Expression.Call(
                 calledOnExpressionTarget,
                 firstReversedChainMethodInfo!,

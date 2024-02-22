@@ -1,6 +1,6 @@
 namespace Easy.Platform.AspNetCore.Context.UserContext.UserContextKeyToClaimTypeMapper.Abstract;
 
-public interface IPlatformApplicationUserContextKeyToClaimTypeMapper
+public interface IPlatformApplicationRequestContextKeyToClaimTypeMapper
 {
     public string ToClaimType(string contextKey);
     public HashSet<string> ToOneOfClaimTypes(string contextKey);

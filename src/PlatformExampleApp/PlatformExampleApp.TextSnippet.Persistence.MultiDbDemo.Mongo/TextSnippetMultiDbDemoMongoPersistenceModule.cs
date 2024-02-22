@@ -27,18 +27,18 @@ public class TextSnippetMultiDbDemoMongoPersistenceModule : PlatformMongoDbPersi
 
     protected override List<Type> RegisterLimitedRepositoryImplementationTypes()
     {
-        return new List<Type>
-        {
+        return
+        [
             typeof(TextSnippetMultiDbDemoRootRepository<MultiDbDemoEntity>)
-        };
+        ];
     }
 
     public override List<Func<IConfiguration, Type>> ModuleTypeDependencies()
     {
-        return new List<Func<IConfiguration, Type>>
-        {
+        return
+        [
             p => typeof(DemoMigrateDataCrossDbPersistenceModule)
-        };
+        ];
     }
 
     // override to Config PlatformPersistenceConfiguration

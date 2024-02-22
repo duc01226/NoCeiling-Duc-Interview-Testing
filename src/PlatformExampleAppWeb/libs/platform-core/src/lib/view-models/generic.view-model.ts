@@ -6,18 +6,44 @@ export type StateStatus = 'Pending' | 'Loading' | 'Success' | 'Error';
 
 export interface IPlatformVm {
     status?: StateStatus;
-    error?: string | null;
+    error?: string;
 }
 
+/**
+ * Class representing the Platform View Model.
+ *
+ * @class
+ * @implements IPlatformVm
+ *
+ * @constructor
+ * @param {Partial<IPlatformVm>} data - Data to initialize the view model state.
+ *
+ * @property {StateStatus} status - Current status of the view model state.
+ * @property {string | undefined} error - Error message associated with the view model state.
+ * @property {Dictionary<string | undefined>} errorMsgMap - Dictionary storing error messages for different request keys.
+ * @property {Dictionary<boolean | undefined | null>} loadingMap - Dictionary storing loading states for different request keys.
+ * @property {Dictionary<boolean | undefined | null>} reloadingMap - Dictionary storing reloading states for different request keys.
+ * @property {string | undefined} allErrorMsgs - Concatenated error messages for all request keys.
+ *
+ * @method getAllErrorMsgs - Gets the concatenated error messages for all request keys.
+ * @method setErrorMsg - Sets the error message for a specific request key in the view model state.
+ * @method getErrorMsg - Gets the error message for a specific request key from the view model state.
+ * @method setLoading - Sets the loading state for a specific request key in the view model state.
+ * @method setReloading - Sets the reloading state for a specific request key in the view model state.
+ * @method isLoading - Gets the loading state for a specific request key from the view model state.
+ * @method isReloading - Gets the reloading state for a specific request key from the view model state.
+ * @method isAnyLoadingRequest - Checks if there is any request with a loading state in the view model state.
+ * @method isAnyReloadingRequest - Checks if there is any request with a reloading state in the view model state.
+ */
 export class PlatformVm implements IPlatformVm {
     public static requestStateDefaultKey = requestStateDefaultKey;
 
     public status: StateStatus = 'Pending';
-    public error: string | undefined | null = undefined;
+    public error: string | undefined = undefined;
 
-    public errorMsgMap: Dictionary<string | undefined | null> = {};
-    public loadingMap: Dictionary<boolean | undefined | null> = {};
-    public reloadingMap: Dictionary<boolean | undefined | null> = {};
+    public errorMsgMap: Dictionary<string | undefined> = {};
+    public loadingMap: Dictionary<boolean | undefined> = {};
+    public reloadingMap: Dictionary<boolean | undefined> = {};
     public allErrorMsgs?: string;
 
     constructor(data?: Partial<IPlatformVm>) {
@@ -36,11 +62,11 @@ export class PlatformVm implements IPlatformVm {
     }
 
     public get isStateSuccess(): boolean {
-        return this.status == 'Success';
+        return this.status == 'Success' && this.error == undefined;
     }
 
     public get isStateError(): boolean {
-        return this.status == 'Error';
+        return this.status == 'Error' || this.error != undefined;
     }
 
     public getAllErrorMsgs(): string | undefined {
@@ -70,7 +96,7 @@ export class PlatformVm implements IPlatformVm {
         this.error = errorMsg;
     }
 
-    public getErrorMsg(requestKey: string = requestStateDefaultKey): string | null | undefined {
+    public getErrorMsg(requestKey: string = requestStateDefaultKey): string | undefined {
         if (this.errorMsgMap[requestKey] == null && requestKey == requestStateDefaultKey) return this.error;
 
         return this.errorMsgMap[requestKey];
@@ -88,12 +114,12 @@ export class PlatformVm implements IPlatformVm {
         });
     }
 
-    public isLoading(requestKey: string = requestStateDefaultKey): boolean | null | undefined {
-        return this.loadingMap[requestKey];
+    public isLoading(requestKey: string = requestStateDefaultKey): boolean {
+        return this.loadingMap[requestKey] == true;
     }
 
-    public isReloading(requestKey: string = requestStateDefaultKey): boolean | null | undefined {
-        return this.reloadingMap[requestKey];
+    public isReloading(requestKey: string = requestStateDefaultKey): boolean {
+        return this.reloadingMap[requestKey] == true;
     }
 
     public isAnyLoadingRequest(): boolean | undefined {

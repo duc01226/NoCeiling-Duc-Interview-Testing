@@ -1,4 +1,5 @@
 import { SimpleChanges } from '@angular/core';
+
 import * as _ from 'lodash-es';
 
 export class LifeCycleHelper {
@@ -6,7 +7,7 @@ export class LifeCycleHelper {
         return Object.keys(changes).some(
             key =>
                 changes[key]?.currentValue != undefined &&
-                !_.isEqual(changes[key].previousValue, changes[key].currentValue)
+                !_.isEqual(changes[key]!.previousValue, changes[key]!.currentValue)
         );
     }
 }

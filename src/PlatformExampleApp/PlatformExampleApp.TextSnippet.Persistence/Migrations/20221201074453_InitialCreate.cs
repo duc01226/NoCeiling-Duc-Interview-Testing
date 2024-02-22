@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
 {
@@ -90,17 +90,17 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_PlatformInboxEventBusMessage_ConsumeStatus_LastConsumeDate",
                 table: "PlatformInboxEventBusMessage",
-                columns: new[] { "ConsumeStatus", "LastConsumeDate" });
+                columns: ["ConsumeStatus", "LastConsumeDate"]);
 
             migrationBuilder.CreateIndex(
                 name: "IX_PlatformInboxEventBusMessage_ConsumeStatus_NextRetryProcessAfter_LastConsumeDate",
                 table: "PlatformInboxEventBusMessage",
-                columns: new[] { "ConsumeStatus", "NextRetryProcessAfter", "LastConsumeDate" });
+                columns: ["ConsumeStatus", "NextRetryProcessAfter", "LastConsumeDate"]);
 
             migrationBuilder.CreateIndex(
                 name: "IX_PlatformInboxEventBusMessage_LastConsumeDate_ConsumeStatus",
                 table: "PlatformInboxEventBusMessage",
-                columns: new[] { "LastConsumeDate", "ConsumeStatus" });
+                columns: ["LastConsumeDate", "ConsumeStatus"]);
 
             migrationBuilder.CreateIndex(
                 name: "IX_PlatformInboxEventBusMessage_RoutingKey",
@@ -110,7 +110,7 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_PlatformOutboxEventBusMessage_LastSendDate_SendStatus",
                 table: "PlatformOutboxEventBusMessage",
-                columns: new[] { "LastSendDate", "SendStatus" });
+                columns: ["LastSendDate", "SendStatus"]);
 
             migrationBuilder.CreateIndex(
                 name: "IX_PlatformOutboxEventBusMessage_NextRetryProcessAfter",
@@ -125,12 +125,12 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_PlatformOutboxEventBusMessage_SendStatus_LastSendDate",
                 table: "PlatformOutboxEventBusMessage",
-                columns: new[] { "SendStatus", "LastSendDate" });
+                columns: ["SendStatus", "LastSendDate"]);
 
             migrationBuilder.CreateIndex(
                 name: "IX_PlatformOutboxEventBusMessage_SendStatus_NextRetryProcessAfter_LastSendDate",
                 table: "PlatformOutboxEventBusMessage",
-                columns: new[] { "SendStatus", "NextRetryProcessAfter", "LastSendDate" });
+                columns: ["SendStatus", "NextRetryProcessAfter", "LastSendDate"]);
 
             migrationBuilder.CreateIndex(
                 name: "IX_TextSnippetEntity_CreatedBy",

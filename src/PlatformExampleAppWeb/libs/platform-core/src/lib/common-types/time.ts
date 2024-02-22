@@ -13,12 +13,12 @@ export class Time implements ITime {
         return this.fromString(data) ?? new Time();
     }
 
-    public static fromString(value: string | null): Time | null {
-        if (value == null) return null;
+    public static fromString(value: string | null | undefined | Time): Time | undefined {
+        if (value == null) return undefined;
 
-        const hour = value.substring(0, 2);
-        const minute = value.substring(3, 5);
-        const second = value.substring(6, 8);
+        const hour = value.toString().substring(0, 2);
+        const minute = value.toString().substring(3, 5);
+        const second = value.toString().substring(6, 8);
 
         const time: ITime = {
             hour: Number.parseInt(hour),
@@ -27,12 +27,12 @@ export class Time implements ITime {
         };
 
         return Number.isNaN(time.hour) || Number.isNaN(time.minute) || Number.isNaN(time.second)
-            ? null
+            ? undefined
             : new Time(time);
     }
 
-    public static compareTime(from: Time, to: Time, isEqual: boolean = false): boolean {
-        if (!from || !to) return false;
+    public static compareTime(from: Time | undefined, to: Time | undefined, isEqual: boolean = false): boolean {
+        if (from == undefined || to == undefined) return false;
 
         const fromDate = this.setTimeIntoDate(new Date(), from) as Date;
         const toDate = this.setTimeIntoDate(new Date(), to) as Date;
@@ -111,8 +111,8 @@ export class Time implements ITime {
         return this.toString();
     }
 
-    public static setTimeIntoDate(date?: Date, time?: Time): Date | undefined {
-        if (!date || !time) return;
+    public static setTimeIntoDate(date?: Date, time?: Time | null): Date | undefined {
+        if (date == undefined || time == undefined) return;
 
         const newDate = new Date(date);
         newDate.setHours(time.hour, time.minute, time.second);
@@ -121,13 +121,13 @@ export class Time implements ITime {
     }
 
     public static isTimeInRange(
-        from: Time,
-        to: Time,
-        time: Time,
+        from: Time | undefined,
+        to: Time | undefined,
+        time: Time | undefined,
         isIncludedFrom?: boolean,
         isIncludedTo?: boolean
     ): boolean {
-        if (!from || !to || !time) return false;
+        if (from == undefined || to == undefined || time == undefined) return false;
 
         if (isIncludedFrom && isIncludedTo) {
             return Time.compareTime(from, time, isIncludedFrom) && Time.compareTime(time, to, isIncludedTo);

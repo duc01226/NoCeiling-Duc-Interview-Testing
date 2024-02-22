@@ -30,21 +30,21 @@ public static class PlatformCombineValidationsExtension
         return PlatformValidationResult<TValue>.Aggregate(validations.ToArray());
     }
 
-    /// <inheritdoc cref="AggregateValidations{TValue}(IEnumerable{PlatformValidationResult{TValue}})"/>
+    /// <inheritdoc cref="AggregateValidations{TValue}(IEnumerable{PlatformValidationResult{TValue}})" />
     public static PlatformValidationResult<TValue> AggregateValidations<TValue>(
         this List<PlatformValidationResult<TValue>> validations)
     {
         return PlatformValidationResult<TValue>.Aggregate(validations.ToArray());
     }
 
-    /// <inheritdoc cref="AggregateValidations{TValue}(IEnumerable{PlatformValidationResult{TValue}})"/>
+    /// <inheritdoc cref="AggregateValidations{TValue}(IEnumerable{PlatformValidationResult{TValue}})" />
     public static PlatformValidationResult<TValue> AggregateValidations<TValue>(
         this PlatformValidationResult<TValue>[] validations)
     {
         return PlatformValidationResult<TValue>.Aggregate(validations.ToArray());
     }
 
-    /// <inheritdoc cref="AggregateValidations{TValue}" />
+    /// <inheritdoc cref="AggregateValidations{TValue}(IEnumerable{PlatformValidationResult{TValue}})" />
     public static PlatformValidationResult<TValue> AggregateValidations<TValue>(
         this TValue value,
         params (bool, PlatformValidationError)[] validateConditions)
@@ -54,7 +54,7 @@ public static class PlatformCombineValidationsExtension
         return PlatformValidationResult<TValue>.Aggregate(value, validateConditions);
     }
 
-    /// <inheritdoc cref="AggregateValidations{TValue}" />
+    /// <inheritdoc cref="AggregateValidations{TValue}(IEnumerable{PlatformValidationResult{TValue}})" />
     public static PlatformValidationResult<TValue> AggregateValidations<TValue>(
         this IEnumerable<Func<PlatformValidationResult<TValue>>> validations)
     {

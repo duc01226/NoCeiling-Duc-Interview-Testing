@@ -6,23 +6,20 @@ public static partial class Util
     {
         private static readonly TaskRunner.Throttler CollectGarbageMemoryThrottler = new();
 
-        public static readonly int DefaultCollectGarbageMemoryThrottleMilliseconds = 1000;
+        public static readonly int DefaultCollectGarbageMemoryThrottleSeconds = 1;
 
-        public static void Collect(int? throttleSeconds = null, bool immediately = false)
+        public static void Collect(int? throttleSeconds = null, bool aggressiveImmediately = false)
         {
-            if (immediately)
+            if (aggressiveImmediately)
             {
                 GC.Collect();
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
                 return;
             }
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             CollectGarbageMemoryThrottler.ThrottleExecuteAsync(
-                () => Task.Run(
-                    () =>
-                    {
-                        GC.Collect();
-                    }),
-                TimeSpan.FromMilliseconds(throttleSeconds ?? DefaultCollectGarbageMemoryThrottleMilliseconds));
+                () => Task.Run(GC.Collect),
+                TimeSpan.FromSeconds(throttleSeconds ?? DefaultCollectGarbageMemoryThrottleSeconds));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
         }
 
@@ -42,12 +39,8 @@ public static partial class Util
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             CollectGarbageMemoryThrottler.ThrottleExecuteAsync(
-                () => Task.Run(
-                    () =>
-                    {
-                        GC.Collect(generation, mode, blocking, compacting);
-                    }),
-                TimeSpan.FromMilliseconds(throttleSeconds ?? DefaultCollectGarbageMemoryThrottleMilliseconds));
+                () => Task.Run(() => GC.Collect(generation, mode, blocking, compacting)),
+                TimeSpan.FromSeconds(throttleSeconds ?? DefaultCollectGarbageMemoryThrottleSeconds));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
         }
     }

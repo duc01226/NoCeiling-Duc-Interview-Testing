@@ -1,4 +1,4 @@
-using Easy.Platform.Application.Context.UserContext;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.MongoDB;
 using Easy.Platform.Persistence;
 using Microsoft.Extensions.Logging;
@@ -15,7 +15,7 @@ public sealed class TextSnippetDbContext : PlatformMongoDbContext<TextSnippetDbC
         IOptions<PlatformMongoOptions<TextSnippetDbContext>> options,
         IPlatformMongoClient<TextSnippetDbContext> client,
         ILoggerFactory loggerFactory,
-        IPlatformApplicationUserContextAccessor userContextAccessor,
+        IPlatformApplicationRequestContextAccessor userContextAccessor,
         PlatformPersistenceConfiguration<TextSnippetDbContext> persistenceConfiguration,
         IPlatformRootServiceProvider rootServiceProvider) : base(
         options,
@@ -37,36 +37,35 @@ public sealed class TextSnippetDbContext : PlatformMongoDbContext<TextSnippetDbC
 
         await Task.WhenAll(
             TextSnippetCollection.Indexes.CreateManyAsync(
-                new List<CreateIndexModel<TextSnippetEntity>>
-                {
-                    new(
-                        Builders<TextSnippetEntity>.IndexKeys.Ascending(p => p.CreatedBy)),
-                    new(
-                        Builders<TextSnippetEntity>.IndexKeys.Ascending(p => p.CreatedDate)),
-                    new(
-                        Builders<TextSnippetEntity>.IndexKeys.Ascending(p => p.LastUpdatedBy)),
-                    new(
-                        Builders<TextSnippetEntity>.IndexKeys.Ascending(p => p.LastUpdatedDate)),
-                    new(
-                        Builders<TextSnippetEntity>.IndexKeys.Ascending(p => p.SnippetText)),
-                    new(
-                        Builders<TextSnippetEntity>.IndexKeys.Ascending(p => p.Address)),
-                    new(
-                        Builders<TextSnippetEntity>.IndexKeys.Ascending(p => p.Addresses)),
-                    new(
-                        Builders<TextSnippetEntity>.IndexKeys.Ascending(p => p.AddressStrings)),
-                    new(
-                        Builders<TextSnippetEntity>.IndexKeys
-                            .Text(p => p.SnippetText)
-                            .Text(p => p.FullText))
-                }));
+            [
+                new CreateIndexModel<TextSnippetEntity>(
+                    Builders<TextSnippetEntity>.IndexKeys.Ascending(p => p.CreatedBy)),
+                new CreateIndexModel<TextSnippetEntity>(
+                    Builders<TextSnippetEntity>.IndexKeys.Ascending(p => p.CreatedDate)),
+                new CreateIndexModel<TextSnippetEntity>(
+                    Builders<TextSnippetEntity>.IndexKeys.Ascending(p => p.LastUpdatedBy)),
+                new CreateIndexModel<TextSnippetEntity>(
+                    Builders<TextSnippetEntity>.IndexKeys.Ascending(p => p.LastUpdatedDate)),
+                new CreateIndexModel<TextSnippetEntity>(
+                    Builders<TextSnippetEntity>.IndexKeys.Ascending(p => p.SnippetText)),
+                new CreateIndexModel<TextSnippetEntity>(
+                    Builders<TextSnippetEntity>.IndexKeys.Ascending(p => p.Address)),
+                new CreateIndexModel<TextSnippetEntity>(
+                    Builders<TextSnippetEntity>.IndexKeys.Ascending(p => p.Addresses)),
+                new CreateIndexModel<TextSnippetEntity>(
+                    Builders<TextSnippetEntity>.IndexKeys.Ascending(p => p.AddressStrings)),
+                new CreateIndexModel<TextSnippetEntity>(
+                    Builders<TextSnippetEntity>.IndexKeys
+                        .Text(p => p.SnippetText)
+                        .Text(p => p.FullText))
+            ]));
     }
 
     public override List<KeyValuePair<Type, string>> EntityTypeToCollectionNameMaps()
     {
-        return new List<KeyValuePair<Type, string>>
-        {
-            new(typeof(TextSnippetEntity), "TextSnippetEntity")
-        };
+        return
+        [
+            new KeyValuePair<Type, string>(typeof(TextSnippetEntity), "TextSnippetEntity")
+        ];
     }
 }

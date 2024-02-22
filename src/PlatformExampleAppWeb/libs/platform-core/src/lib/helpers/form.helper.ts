@@ -3,7 +3,7 @@ import { AbstractControl, FormArray, FormGroup } from '@angular/forms';
 
 export class FormHelpers {
     public static isFormValid(form: FormGroup): boolean {
-        if (!form.controls) {
+        if (form.controls == null) {
             return form.valid;
         }
 
@@ -21,15 +21,37 @@ export class FormHelpers {
         return form.valid;
     }
 
+    public static validateAllFormControls(form: FormGroup): boolean {
+        if (form.controls == null) {
+            return form.valid;
+        }
+
+        Object.values(form.controls).forEach((control: AbstractControl) => {
+            control.markAsDirty();
+            control.markAsTouched();
+            control.updateValueAndValidity({ onlySelf: false });
+
+            if (control instanceof FormArray)
+                control.controls.some(
+                    (form: AbstractControl) => !FormHelpers.validateAllFormControls(form as FormGroup)
+                );
+        });
+
+        return form.valid;
+    }
+
     public static convertModelToFormData(
         model: object,
         form: FormData | null = null,
         namespace: string = ''
     ): FormData {
-        const formData: FormData = form || new FormData();
+        const formData: FormData = form ?? new FormData();
 
         Object.keys(model).forEach(propertyName => {
-            if (Object.prototype.hasOwnProperty.call(model, propertyName) && (<any>model)[propertyName] != undefined) {
+            if (
+                Object.prototype.hasOwnProperty.call(model, propertyName) == true &&
+                (<any>model)[propertyName] != undefined
+            ) {
                 const formKey = namespace ? namespace + '.' + propertyName : propertyName.toString();
                 if ((<any>model)[propertyName] instanceof Date) {
                     formData.append(formKey, (<any>model)[propertyName].toISOString());

@@ -34,6 +34,12 @@ public class TextSnippetPostgreSqlEfCorePersistenceModule : PlatformEfCorePersis
     protected override Action<DbContextOptionsBuilder> DbContextOptionsBuilderActionProvider(
         IServiceProvider serviceProvider)
     {
+        /*
+         * If your column JSON contains documents with a stable schema, you can map them to your own .NET types (or POCOs). The provider will use System.Text.Json APIs under the hood to serialize instances of your types to JSON documents before sending them to the database, and to deserialize documents coming back from the database. This effectively allows mapping an arbitrary .NET type - or object graph - to a single column in the database.
+         * Starting with Npgsql 8.0, to use this feature, you must first enable it by calling <xref:Npgsql.INpgsqlTypeMapperExtensions.EnableDynamicJson> on your NpgsqlDataSourceBuilder, or, if you're not yet using data sources, on NpgsqlConnection.GlobalTypeMapper:
+         */
+        NpgsqlConnection.GlobalTypeMapper.EnableDynamicJson();
+
         // UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery) for best practice increase performance
         // With(conn => conn.Enlist = false); With(conn => conn.ReadBufferSize = 8192) https://www.npgsql.org/doc/performance.html
         return options => options
@@ -41,8 +47,8 @@ public class TextSnippetPostgreSqlEfCorePersistenceModule : PlatformEfCorePersis
                 new NpgsqlConnectionStringBuilder(Configuration.GetConnectionString("PostgreSqlConnection"))
                     .With(conn => conn.Enlist = false)
                     .With(conn => conn.Pooling = true)
-                    .With(conn => conn.MinPoolSize = 5) // Always available connection to serve request, reduce latency
-                    .With(conn => conn.MaxPoolSize = 40) // Setup max pool size depend on the database maximum connections available
+                    .With(conn => conn.MinPoolSize = 1) // Always available connection to serve request, reduce latency
+                    .With(conn => conn.MaxPoolSize = 80) // Setup max pool size depend on the database maximum connections available
                     .ToString(),
                 options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
             .UseLazyLoadingProxies()

@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
-using Easy.Platform.Application.Context;
+using Easy.Platform.Application;
 using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Common;
@@ -50,6 +50,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
     private readonly SemaphoreSlim stopProcessLock = new(initialCount: 1, maxCount: 1);
     private readonly ConcurrentDictionary<string, object> waitingAckMessages = new();
     private CancellationToken currentStartProcessCancellationToken;
+    private bool disposed;
 
     private bool processStarted;
 
@@ -85,6 +86,8 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
     protected ILogger Logger { get; }
 
     protected ILogger InvokeConsumerLogger { get; }
+
+    protected bool CheckAllModulesInitiatedToAllowConsumeMessages { get; set; }
 
     public void Dispose()
     {
@@ -129,7 +132,8 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                 }
             },
             _ => 10.Seconds(),
-            int.MaxValue);
+            int.MaxValue,
+            cancellationToken: cancellationToken);
     }
 
     public async Task StopProcess()
@@ -168,14 +172,6 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
     {
         try
         {
-            await Task.Run(
-                () => IPlatformModule.WaitAllModulesInitiated(
-                    rootServiceProvider,
-                    typeof(IPlatformPersistenceModule),
-                    Logger,
-                    "to start connect all consumers to rabbitmq queue"),
-                currentStartProcessCancellationToken);
-
             Logger.LogInformation("Start connect all consumers to rabbitmq queue STARTED");
 
             // Binding all defined event bus consumer to RabbitMQ Basic Consumer
@@ -208,7 +204,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "[{GetTypeFullName}] RabbitMq Consumer can't start", GetType().FullName);
+            Logger.LogError(ex, "[{GetTypeFullName}] RabbitMq Consumer can't start", GetType().FullName);
             throw;
         }
     }
@@ -227,6 +223,14 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
     {
         try
         {
+            if (!CheckAllModulesInitiatedToAllowConsumeMessages)
+                await IPlatformModule.WaitAllModulesInitiatedAsync(
+                    rootServiceProvider,
+                    typeof(IPlatformPersistenceModule),
+                    Logger,
+                    "to start connect all consumers to rabbitmq queue");
+            CheckAllModulesInitiatedToAllowConsumeMessages = true;
+
             var canProcessConsumerTypes = rabbitMqMessage.RoutingKey.Pipe(
                 routingKey =>
                 {
@@ -449,7 +453,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
             {
                 props.Headers.TryGetValue(key, out var value);
 
-                return new[] { Encoding.UTF8.GetString(value.As<byte[]>() ?? Array.Empty<byte>()) };
+                return [Encoding.UTF8.GetString(value.As<byte[]>() ?? [])];
             }
         }
         catch (Exception ex)
@@ -457,7 +461,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
             Logger.LogError(ex, "Failed to extract trace context");
         }
 
-        return Enumerable.Empty<string>();
+        return [];
     }
 
     private void InitRabbitMqChannel()
@@ -590,10 +594,18 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
 
     protected virtual void Dispose(bool disposing)
     {
-        if (disposing)
+        if (!disposed)
         {
-            startProcessLock?.Dispose();
-            stopProcessLock?.Dispose();
+            if (disposing)
+            {
+                // Release managed resources
+                startProcessLock?.Dispose();
+                stopProcessLock?.Dispose();
+            }
+
+            // Release unmanaged resources
+
+            disposed = true;
         }
     }
 }

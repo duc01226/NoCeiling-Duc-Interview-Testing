@@ -60,6 +60,8 @@ public interface IPlatformDataMigrationExecutor<in TDbContext> : IPlatformDataMi
 public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataMigrationExecutor<TDbContext>
     where TDbContext : IPlatformDbContext
 {
+    protected bool Disposed;
+
     protected PlatformDataMigrationExecutor(IPlatformRootServiceProvider rootServiceProvider)
     {
         RootServiceProvider = rootServiceProvider;
@@ -165,5 +167,16 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
 
     protected virtual void Dispose(bool disposing)
     {
+        if (!Disposed)
+        {
+            if (disposing)
+            {
+                // Release managed resources
+            }
+
+            // Release unmanaged resources
+
+            Disposed = true;
+        }
     }
 }

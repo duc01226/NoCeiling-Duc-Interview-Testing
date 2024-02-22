@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using Easy.Platform.Persistence.Services;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
@@ -6,7 +5,7 @@ using PlatformExampleApp.TextSnippet.Domain.Repositories;
 namespace PlatformExampleApp.TextSnippet.Domain.Helpers;
 
 /// <summary>
-/// This is just an example helper to solve internal logic reuse code for domain layer. <br/>
+/// This is just an example helper to solve internal logic reuse code for domain layer. <br />
 /// It's auto registered when define it implement IPlatformHelper
 /// </summary>
 internal sealed class ExampleHelper : IPlatformHelper
@@ -31,10 +30,10 @@ internal sealed class ExampleHelper : IPlatformHelper
             query => fullTextSearchPersistenceService.Search(
                 query,
                 searchText: name,
-                inFullTextSearchProps: new Expression<Func<TextSnippetEntity, object>>[]
-                {
+                inFullTextSearchProps:
+                [
                     p => p.SnippetText
-                }));
+                ]));
         var firstFoundMultiDemo = await multiDbDemoEntityRepository.FirstOrDefaultAsync(p => p.Name == name);
 
         return new SearchEntityByNameHelperResult

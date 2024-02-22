@@ -4,12 +4,24 @@ using Easy.Platform.Common.Extensions;
 
 namespace Easy.Platform.Domain.Entities;
 
+/// <summary>
+/// Extension methods for entities that support domain events.
+/// </summary>
 public static class SupportDomainEventsEntityExtensions
 {
     /// <summary>
-    /// Update property even if it's setter protected or private and add <see cref="ISupportDomainEventsEntity.FieldUpdatedDomainEvent{TValue}" />
+    /// Updates a property even if its setter is protected or private and adds <see cref="ISupportDomainEventsEntity.FieldUpdatedDomainEvent{TValue}" />.
     /// </summary>
-    public static TEntity SetPropertyIncludeValueUpdatedEvent<TEntity, TValue>(this TEntity entity, PropertyInfo propertyInfo, TValue newValue)
+    /// <typeparam name="TEntity">Type of the entity.</typeparam>
+    /// <typeparam name="TValue">Type of the property value.</typeparam>
+    /// <param name="entity">The entity instance.</param>
+    /// <param name="propertyInfo">The property information.</param>
+    /// <param name="newValue">The new value for the property.</param>
+    /// <returns>The updated entity instance.</returns>
+    public static TEntity SetPropertyIncludeValueUpdatedEvent<TEntity, TValue>(
+        this TEntity entity,
+        PropertyInfo propertyInfo,
+        TValue newValue)
         where TEntity : IEntity
     {
         if (entity is ISupportDomainEventsEntity supportDomainEventsEntity)
@@ -25,9 +37,18 @@ public static class SupportDomainEventsEntityExtensions
     }
 
     /// <summary>
-    /// Update property even if it's setter protected or private and add <see cref="ISupportDomainEventsEntity.FieldUpdatedDomainEvent{TValue}" />
+    /// Updates a property even if its setter is protected or private and adds <see cref="ISupportDomainEventsEntity.FieldUpdatedDomainEvent{TValue}" />.
     /// </summary>
-    public static TEntity SetPropertyIncludeValueUpdatedEvent<TEntity, TValue>(this TEntity entity, Expression<Func<TEntity, TValue>> property, TValue newValue)
+    /// <typeparam name="TEntity">Type of the entity.</typeparam>
+    /// <typeparam name="TValue">Type of the property value.</typeparam>
+    /// <param name="entity">The entity instance.</param>
+    /// <param name="property">The property expression.</param>
+    /// <param name="newValue">The new value for the property.</param>
+    /// <returns>The updated entity instance.</returns>
+    public static TEntity SetPropertyIncludeValueUpdatedEvent<TEntity, TValue>(
+        this TEntity entity,
+        Expression<Func<TEntity, TValue>> property,
+        TValue newValue)
         where TEntity : IEntity
     {
         if (entity is ISupportDomainEventsEntity supportDomainEventsEntity)
@@ -42,6 +63,14 @@ public static class SupportDomainEventsEntityExtensions
         return entity;
     }
 
+    /// <summary>
+    /// Adds a field updated domain event to the entity.
+    /// </summary>
+    /// <typeparam name="TEntity">Type of the entity.</typeparam>
+    /// <typeparam name="TValue">Type of the field value.</typeparam>
+    /// <param name="entity">The entity instance.</param>
+    /// <param name="propertyValueUpdatedDomainEvent">The field updated domain event.</param>
+    /// <returns>The entity instance with the added domain event.</returns>
     public static TEntity AddFieldUpdatedEvent<TEntity, TValue>(
         this TEntity entity,
         ISupportDomainEventsEntity.FieldUpdatedDomainEvent<TValue> propertyValueUpdatedDomainEvent)
@@ -53,20 +82,56 @@ public static class SupportDomainEventsEntityExtensions
         return entity;
     }
 
-    public static TEntity AddFieldUpdatedEvent<TEntity, TValue>(this TEntity entity, string propertyName, TValue originalValue, TValue newValue)
+    /// <summary>
+    /// Adds a field updated domain event to the entity.
+    /// </summary>
+    /// <typeparam name="TEntity">Type of the entity.</typeparam>
+    /// <typeparam name="TValue">Type of the field value.</typeparam>
+    /// <param name="entity">The entity instance.</param>
+    /// <param name="propertyName">The name of the property.</param>
+    /// <param name="originalValue">The original value of the property.</param>
+    /// <param name="newValue">The new value of the property.</param>
+    /// <returns>The entity instance with the added domain event.</returns>
+    public static TEntity AddFieldUpdatedEvent<TEntity, TValue>(
+        this TEntity entity,
+        string propertyName,
+        TValue originalValue,
+        TValue newValue)
         where TEntity : ISupportDomainEventsEntity
     {
-        return entity.AddFieldUpdatedEvent(
-            ISupportDomainEventsEntity.FieldUpdatedDomainEvent<TValue>.Create(propertyName, originalValue, newValue));
+        return entity.AddFieldUpdatedEvent(ISupportDomainEventsEntity.FieldUpdatedDomainEvent<TValue>.Create(propertyName, originalValue, newValue));
     }
 
-    public static TEntity AddFieldUpdatedEvent<TEntity, TValue>(this TEntity entity, PropertyInfo propertyInfo, TValue originalValue, TValue newValue)
+    /// <summary>
+    /// Adds a field updated domain event to the entity.
+    /// </summary>
+    /// <typeparam name="TEntity">Type of the entity.</typeparam>
+    /// <typeparam name="TValue">Type of the field value.</typeparam>
+    /// <param name="entity">The entity instance.</param>
+    /// <param name="propertyInfo">The property information.</param>
+    /// <param name="originalValue">The original value of the property.</param>
+    /// <param name="newValue">The new value of the property.</param>
+    /// <returns>The entity instance with the added domain event.</returns>
+    public static TEntity AddFieldUpdatedEvent<TEntity, TValue>(
+        this TEntity entity,
+        PropertyInfo propertyInfo,
+        TValue originalValue,
+        TValue newValue)
         where TEntity : ISupportDomainEventsEntity
     {
-        return entity.AddFieldUpdatedEvent(
-            ISupportDomainEventsEntity.FieldUpdatedDomainEvent<TValue>.Create(propertyInfo.Name, originalValue, newValue));
+        return entity.AddFieldUpdatedEvent(ISupportDomainEventsEntity.FieldUpdatedDomainEvent<TValue>.Create(propertyInfo.Name, originalValue, newValue));
     }
 
+    /// <summary>
+    /// Adds a field updated domain event to the entity.
+    /// </summary>
+    /// <typeparam name="TEntity">Type of the entity.</typeparam>
+    /// <typeparam name="TValue">Type of the field value.</typeparam>
+    /// <param name="entity">The entity instance.</param>
+    /// <param name="property">The property expression.</param>
+    /// <param name="originalValue">The original value of the property.</param>
+    /// <param name="newValue">The new value of the property.</param>
+    /// <returns>The entity instance with the added domain event.</returns>
     public static TEntity AddFieldUpdatedEvent<TEntity, TValue>(
         this TEntity entity,
         Expression<Func<TEntity, TValue>> property,
@@ -74,10 +139,16 @@ public static class SupportDomainEventsEntityExtensions
         TValue newValue)
         where TEntity : ISupportDomainEventsEntity
     {
-        return entity.AddFieldUpdatedEvent(
-            ISupportDomainEventsEntity.FieldUpdatedDomainEvent<TValue>.Create(property.GetPropertyName(), originalValue, newValue));
+        return entity.AddFieldUpdatedEvent(ISupportDomainEventsEntity.FieldUpdatedDomainEvent<TValue>.Create(property.GetPropertyName(), originalValue, newValue));
     }
 
+    /// <summary>
+    /// Finds domain events of a specific type associated with the entity.
+    /// </summary>
+    /// <typeparam name="TEntity">Type of the entity.</typeparam>
+    /// <typeparam name="TEvent">Type of the domain event.</typeparam>
+    /// <param name="entity">The entity instance.</param>
+    /// <returns>List of domain events of the specified type.</returns>
     public static List<TEvent> FindDomainEvents<TEntity, TEvent>(this TEntity entity)
         where TEvent : ISupportDomainEventsEntity.DomainEvent
         where TEntity : ISupportDomainEventsEntity
@@ -88,6 +159,14 @@ public static class SupportDomainEventsEntityExtensions
             .ToList();
     }
 
+    /// <summary>
+    /// Finds field updated domain events for a specific field.
+    /// </summary>
+    /// <typeparam name="TEntity">Type of the entity.</typeparam>
+    /// <typeparam name="TValue">Type of the field value.</typeparam>
+    /// <param name="entity">The entity instance.</param>
+    /// <param name="propertyName">The name of the property.</param>
+    /// <returns>List of field updated domain events for the specified field.</returns>
     public static List<ISupportDomainEventsEntity.FieldUpdatedDomainEvent<TValue>> FindFieldUpdatedDomainEvents<TEntity, TValue>(
         this TEntity entity,
         string propertyName)
@@ -100,6 +179,12 @@ public static class SupportDomainEventsEntityExtensions
             .ToList();
     }
 
+    /// <summary>
+    /// Gets all field updated domain events associated with the entity.
+    /// </summary>
+    /// <typeparam name="TEntity">Type of the entity.</typeparam>
+    /// <param name="entity">The entity instance.</param>
+    /// <returns>List of all field updated domain events.</returns>
     public static List<ISupportDomainEventsEntity.FieldUpdatedDomainEvent> GetFieldUpdatedDomainEvents<TEntity>(this TEntity entity)
         where TEntity : ISupportDomainEventsEntity
     {

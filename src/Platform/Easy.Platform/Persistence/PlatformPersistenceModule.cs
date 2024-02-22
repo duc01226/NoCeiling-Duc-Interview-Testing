@@ -52,8 +52,13 @@ public interface IPlatformPersistenceModule : IPlatformModule
 }
 
 /// <summary>
-/// IPlatformDbContext.Initialize() is run on module init to init db context
+/// Represents an abstract base class for platform persistence modules.
 /// </summary>
+/// <remarks>
+/// This class provides a set of methods and properties to manage the persistence layer of the platform.
+/// It includes functionalities for database initialization, migration, and tracing sources.
+/// It also provides methods for registering services and initializing the module.
+/// </remarks>
 public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersistenceModule
 {
     public new const int DefaultExecuteInitPriority = PlatformModule.DefaultExecuteInitPriority + (ExecuteInitPriorityNextLevelDistance * 2);
@@ -72,16 +77,59 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
             IUnitOfWorkManager.ActivitySource.Name);
     }
 
+    /// <summary>
+    /// Gets a value indicating whether the current persistence module is used only for cross-database migrations.
+    /// </summary>
+    /// <value>
+    /// <c>true</c> if this instance is for cross-database migrations only; otherwise, <c>false</c>.
+    /// </value>
+    /// <remarks>
+    /// When this property is set to <c>true</c>, the persistence module will not register certain services and repositories, and will not perform database initialization and migration.
+    /// </remarks>
     public virtual bool ForCrossDbMigrationOnly => false;
 
+    /// <summary>
+    /// Gets a value indicating whether the database initialization and migration is disabled.
+    /// </summary>
+    /// <value>
+    /// <c>true</c> if the database initialization and migration is disabled; otherwise, <c>false</c>.
+    /// </value>
+    /// <remarks>
+    /// If this property is set to <c>true</c>, the database initialization and migration will not be performed.
+    /// This can be useful in scenarios where the database schema is managed outside the application, or for testing purposes.
+    /// </remarks>
     public virtual bool DisableDbInitializingAndMigration => false;
 
     public override int ExecuteInitPriority => DefaultExecuteInitPriority;
 
+    /// <summary>
+    /// Asynchronously migrates the application data.
+    /// </summary>
+    /// <param name="serviceScope">The service scope.</param>
+    /// <returns>A <see cref="Task" /> representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// This method is responsible for migrating the application data. It is an abstract method, meaning it must be implemented in any non-abstract class that extends PlatformPersistenceModule.
+    /// </remarks>
     public abstract Task MigrateApplicationDataAsync(IServiceScope serviceScope);
 
+    /// <summary>
+    /// Initializes the database.
+    /// </summary>
+    /// <param name="serviceScope">The service scope.</param>
+    /// <returns>A <see cref="Task" /> representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// This method is responsible for initializing the database. It is an abstract method, meaning it must be implemented in any non-abstract class that extends PlatformPersistenceModule.
+    /// </remarks>
     public abstract Task InitializeDb(IServiceScope serviceScope);
 
+    /// <summary>
+    /// Registers the services related to the persistence layer of the platform.
+    /// </summary>
+    /// <param name="serviceCollection">The service collection to which the persistence services are registered.</param>
+    /// <remarks>
+    /// This method registers various services including the database context, unit of work, repositories, and persistence services.
+    /// If the module is not only for cross database migration, it also registers the unit of work manager and event bus message repositories.
+    /// </remarks>
     protected override void InternalRegister(IServiceCollection serviceCollection)
     {
         base.InternalRegister(serviceCollection);
@@ -237,6 +285,12 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
                 .Pipe(_ => ConfigurePersistenceConfiguration(_, Configuration)));
     }
 
+    /// <summary>
+    /// Configures the persistence configuration for the specific database context.
+    /// </summary>
+    /// <param name="config">The initial configuration of the persistence module.</param>
+    /// <param name="configuration">The application's configuration.</param>
+    /// <returns>The configured persistence configuration.</returns>
     protected virtual PlatformPersistenceConfiguration<TDbContext> ConfigurePersistenceConfiguration(
         PlatformPersistenceConfiguration<TDbContext> config,
         IConfiguration configuration)

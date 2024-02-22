@@ -1,6 +1,7 @@
 export * from './utils.date';
 export * from './utils.dictionary';
 export * from './utils.dom';
+export * from './utils.enum';
 export * from './utils.file';
 export * from './utils.guid';
 export * from './utils.list';

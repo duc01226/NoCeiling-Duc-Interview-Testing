@@ -4,32 +4,115 @@ using RabbitMQ.Client;
 
 namespace Easy.Platform.RabbitMQ;
 
-public class RabbitMqConnectionPool
+public class RabbitMqConnectionPool : IDisposable
 {
     private readonly DefaultObjectPool<IConnection> connectionPool;
+    private readonly object currentUsingObjectCounterLock = new();
+    private bool disposed;
 
     public RabbitMqConnectionPool(PlatformRabbitMqOptions options, int poolSize)
     {
+        PoolSize = poolSize;
         connectionPool = new DefaultObjectPool<IConnection>(
             new RabbitMqPooledObjectPolicy(options),
             poolSize
         );
     }
 
+    protected int PoolSize { get; }
+
+    public int CurrentUsingObjectCounter { get; set; }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
     public IConnection GetConnection()
     {
-        return connectionPool.Get();
+        lock (currentUsingObjectCounterLock)
+        {
+            if (IsConnectionPoolFull()) throw new Exception($"RabbitMqConnectionPool is fulled. PoolSize is {PoolSize}");
+
+            var result = ProcessGetConnectionFromPool();
+
+            return result;
+        }
+    }
+
+
+    public IConnection TryWaitGetConnection(
+        int maxWaitSeconds)
+    {
+        return Util.TaskRunner.WaitUntilGetValidResultAsync(
+            this,
+            p =>
+            {
+                lock (currentUsingObjectCounterLock)
+                {
+                    if (IsConnectionPoolFull()) return null;
+
+                    var result = ProcessGetConnectionFromPool();
+
+                    return result;
+                }
+            },
+            con => con != null,
+            maxWaitSeconds,
+            delayRetryTimeSeconds: 1,
+            waitForMsg: $"RabbitMqConnectionPool is fulled. PoolSize is {PoolSize}").GetResult();
     }
 
     public void ReturnConnection(IConnection connection)
     {
-        connectionPool.Return(connection);
+        lock (currentUsingObjectCounterLock)
+        {
+            if (CurrentUsingObjectCounter > 0)
+                CurrentUsingObjectCounter--;
+
+            connectionPool.Return(connection);
+        }
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposed)
+        {
+            if (disposing)
+            {
+                // Release managed resources
+            }
+
+            // Release unmanaged resources
+
+            disposed = true;
+        }
+    }
+
+    private IConnection ProcessGetConnectionFromPool()
+    {
+        var result = connectionPool.Get();
+
+        CurrentUsingObjectCounter++;
+
+        return result;
+    }
+
+    private bool IsConnectionPoolFull()
+    {
+        return CurrentUsingObjectCounter >= PoolSize;
+    }
+
+    ~RabbitMqConnectionPool()
+    {
+        Dispose(false);
     }
 }
 
 public class RabbitMqPooledObjectPolicy : IPooledObjectPolicy<IConnection>
 {
-    private readonly IConnectionFactory connectionFactory;
+    private readonly ConnectionFactory connectionFactory;
     private readonly PlatformRabbitMqOptions options;
 
     public RabbitMqPooledObjectPolicy(PlatformRabbitMqOptions options)
@@ -85,7 +168,7 @@ public class RabbitMqPooledObjectPolicy : IPooledObjectPolicy<IConnection>
         }
     }
 
-    private IConnectionFactory InitializeFactory()
+    private ConnectionFactory InitializeFactory()
     {
         var connectionFactoryResult = new ConnectionFactory
         {

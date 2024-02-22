@@ -1,4 +1,4 @@
-using Easy.Platform.Application.Context.UserContext;
+using Easy.Platform.Application.RequestContext;
 
 namespace PlatformExampleApp.TextSnippet.Application.Context.UserContext;
 
@@ -12,6 +12,6 @@ public static class TextSnippetApplicationCustomUserContextKeys
 
     public static List<string> GetOrganization(this IDictionary<string, object> context)
     {
-        return context.GetValue<List<string>>(Organizations);
+        return context.GetUserContextValue<List<string>>(Organizations);
     }
 }

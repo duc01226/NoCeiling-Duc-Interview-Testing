@@ -47,4 +47,6 @@ public class PlatformOutboxConfig
     /// back to failed.
     /// </summary>
     public int MessageProcessingMaxSeconds { get; set; } = 600;
+
+    public bool LogIntervalProcessInformation { get; set; }
 }

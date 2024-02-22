@@ -1,15 +1,16 @@
 import { ChangeDetectionStrategy, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { PageEvent } from '@angular/material/paginator';
+
 import { SearchTextSnippetQuery, TextSnippetRepository } from '@libs/apps-domains/text-snippet-domain';
 import { PlatformApiServiceErrorResponse, PlatformSmartComponent, task_delay } from '@libs/platform-core';
 
-import { AppTextSnippetItemViewModel, AppViewModel } from './app.view-model';
 import { AppUiStateData, AppUiStateStore } from './app-ui-state';
+import { AppTextSnippetItemViewModel, AppViewModel } from './app.view-model';
 
 @Component({
     selector: 'platform-example-web-root',
     templateUrl: './app.component.html',
-    styleUrls: ['./app.component.scss'],
+    styleUrl: 'app.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
     encapsulation: ViewEncapsulation.None
 })
@@ -17,7 +18,10 @@ export class AppComponent
     extends PlatformSmartComponent<AppUiStateData, AppUiStateStore, AppViewModel>
     implements OnInit
 {
-    public constructor(appUiState: AppUiStateStore, private snippetTextRepo: TextSnippetRepository) {
+    public constructor(
+        appUiState: AppUiStateStore,
+        public snippetTextRepo: TextSnippetRepository
+    ) {
         super(appUiState);
         this.vm = new AppViewModel();
 
@@ -31,7 +35,7 @@ export class AppComponent
     public title = 'Text Snippet';
     public textSnippetsItemGridDisplayedColumns = ['SnippetText', 'FullText'];
 
-    public ngOnInit(): void {
+    public override ngOnInit(): void {
         super.ngOnInit();
 
         this.loadSnippetTextItems();
@@ -44,9 +48,9 @@ export class AppComponent
         return this.snippetTextRepo
             .search(
                 new SearchTextSnippetQuery({
-                    maxResultCount: this.vm.textSnippetItemsPageSize(),
-                    skipCount: this.vm.currentTextSnippetItemsSkipCount(),
-                    searchText: this.vm.searchText
+                    maxResultCount: this.vm().textSnippetItemsPageSize(),
+                    skipCount: this.vm().currentTextSnippetItemsSkipCount(),
+                    searchText: this.vm().searchText
                 })
             )
             .pipe(
@@ -72,7 +76,7 @@ export class AppComponent
 
         const onSearchTextChangeDelay = task_delay(
             () => {
-                if (this.vm.searchText == newValue) return;
+                if (this.vm().searchText == newValue) return;
 
                 this.updateVm({
                     searchText: newValue,
@@ -89,7 +93,7 @@ export class AppComponent
     }
 
     public onTextSnippetGridChangePage(e: PageEvent) {
-        if (this.vm.currentTextSnippetItemsPageNumber == e.pageIndex) return;
+        if (this.vm().currentTextSnippetItemsPageNumber == e.pageIndex) return;
 
         this.updateVm({
             currentTextSnippetItemsPageNumber: e.pageIndex
@@ -99,10 +103,10 @@ export class AppComponent
 
     public toggleSelectTextSnippedGridRow(row: AppTextSnippetItemViewModel) {
         this.updateVm({
-            selectedSnippetTextId: this.vm.selectedSnippetTextId != row.data.id ? row.data.id : undefined
+            selectedSnippetTextId: this.vm().selectedSnippetTextId != row.data.id ? row.data.id : undefined
         });
         this.appUiStateStore.updateState({
-            selectedSnippetTextId: this.vm.selectedSnippetTextId
+            selectedSnippetTextId: this.vm().selectedSnippetTextId
         });
     }
 

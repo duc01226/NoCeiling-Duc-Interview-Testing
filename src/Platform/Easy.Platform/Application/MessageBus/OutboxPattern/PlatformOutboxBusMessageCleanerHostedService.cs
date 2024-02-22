@@ -1,7 +1,6 @@
 using System.Linq.Expressions;
-using Easy.Platform.Application.Context;
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.Hosting;
+using Easy.Platform.Common.HostingBackgroundServices;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,13 +8,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.MessageBus.OutboxPattern;
 
-public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProcessHostedService
+public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHostingBackgroundService
 {
     public const int MinimumRetryCleanOutboxMessageTimesToWarning = 3;
-
-    protected readonly PlatformOutboxConfig OutboxConfig;
-
-    private readonly IPlatformApplicationSettingContext applicationSettingContext;
 
     private bool isProcessing;
 
@@ -25,9 +20,15 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
         IPlatformApplicationSettingContext applicationSettingContext,
         PlatformOutboxConfig outboxConfig) : base(serviceProvider, loggerFactory)
     {
-        this.applicationSettingContext = applicationSettingContext;
+        ApplicationSettingContext = applicationSettingContext;
         OutboxConfig = outboxConfig;
     }
+
+    public override bool LogIntervalProcessInformation => OutboxConfig.LogIntervalProcessInformation;
+
+    protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
+
+    protected PlatformOutboxConfig OutboxConfig { get; }
 
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
@@ -45,13 +46,14 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
                 onRetry: (ex, timeSpan, currentRetry, ctx) =>
                 {
                     if (currentRetry >= MinimumRetryCleanOutboxMessageTimesToWarning)
-                        Logger.LogWarning(
+                        Logger.LogError(
                             ex,
                             "Retry CleanOutboxEventBusMessage {CurrentRetry} time(s) failed. [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
                             currentRetry,
-                            applicationSettingContext.ApplicationName,
-                            applicationSettingContext.ApplicationAssembly.FullName);
-                });
+                            ApplicationSettingContext.ApplicationName,
+                            ApplicationSettingContext.ApplicationAssembly.FullName);
+                },
+                cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {
@@ -59,8 +61,8 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalProc
                 ex,
                 "CleanOutboxEventBusMessage failed. [[Error:{Error}]] [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
                 ex.Message,
-                applicationSettingContext.ApplicationName,
-                applicationSettingContext.ApplicationAssembly.FullName);
+                ApplicationSettingContext.ApplicationName,
+                ApplicationSettingContext.ApplicationAssembly.FullName);
         }
 
         isProcessing = false;

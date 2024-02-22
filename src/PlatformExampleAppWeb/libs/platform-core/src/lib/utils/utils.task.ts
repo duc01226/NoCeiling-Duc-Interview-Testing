@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Observable, of, pipe, Subscription } from 'rxjs';
+import { asyncScheduler, Observable, of, pipe, Subscription } from 'rxjs';
 import { delay as rxjs_delay, filter as rxjs_filter, takeUntil as rxjs_takeUntil } from 'rxjs/operators';
 
 export function task_delay(
@@ -16,7 +16,7 @@ export function task_delay(
         cancelOnFirstTrueValue$ != null
             ? rxjs_takeUntil(cancelOnFirstTrueValue$?.pipe(rxjs_filter(x => x == true)))
             : (obs: Observable<unknown>) => obs,
-        rxjs_delay(delayTimeMilliseconds == null ? 10 : delayTimeMilliseconds)
+        rxjs_delay(delayTimeMilliseconds == null ? 10 : delayTimeMilliseconds, asyncScheduler)
     );
     return delayObs(of({})).subscribe(() => {
         callback();

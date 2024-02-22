@@ -1,6 +1,6 @@
-using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Cqrs.Commands;
 using Easy.Platform.Application.MessageBus.Producers;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Commands;
 using Easy.Platform.Domain.UnitOfWork;
@@ -25,12 +25,12 @@ internal sealed class DemoSendFreeFormatEventBusMessageCommandHandler
     private readonly IPlatformApplicationBusMessageProducer busMessageProducer;
 
     public DemoSendFreeFormatEventBusMessageCommandHandler(
-        IPlatformApplicationUserContextAccessor userContext,
+        IPlatformApplicationRequestContextAccessor requestContextAccessor,
         IUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider,
-        IPlatformApplicationBusMessageProducer busMessageProducer) : base(userContext, unitOfWorkManager, cqrs, loggerFactory, rootServiceProvider)
+        IPlatformApplicationBusMessageProducer busMessageProducer) : base(requestContextAccessor, unitOfWorkManager, cqrs, loggerFactory, rootServiceProvider)
     {
         this.busMessageProducer = busMessageProducer;
     }

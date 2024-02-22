@@ -16,6 +16,6 @@ public static partial class F
 
     public static List<T> List<T>(params T[] items)
     {
-        return new List<T>(items);
+        return items.ToList();
     }
 }

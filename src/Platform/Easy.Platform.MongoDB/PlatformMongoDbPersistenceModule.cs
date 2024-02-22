@@ -220,6 +220,6 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext>
 /// </summary>
 public abstract class PlatformMongoDbPersistenceModuleCache
 {
-    public static HashSet<Type> RegisteredClassMapTypes { get; } = new();
-    public static HashSet<Type> RegisteredSerializerTypes { get; } = new();
+    public static HashSet<Type> RegisteredClassMapTypes { get; } = [];
+    public static HashSet<Type> RegisteredSerializerTypes { get; } = [];
 }

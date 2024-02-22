@@ -195,15 +195,15 @@ public static class Validation
     {
         public ValidationException()
         {
-            Messages = new List<string>();
+            Messages = [];
         }
 
         public ValidationException(string message) : base(message)
         {
-            Messages = new List<string>
-            {
+            Messages =
+            [
                 message
-            };
+            ];
         }
 
         public ValidationException(IEnumerable<string> messages)
@@ -261,7 +261,7 @@ public readonly struct Validation<T>
     {
         IsValid = true;
         Value = right;
-        Errors = new List<Error>();
+        Errors = [];
     }
 
     public static implicit operator Validation<T>(Error error)

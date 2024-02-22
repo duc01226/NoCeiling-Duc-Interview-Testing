@@ -1,4 +1,4 @@
-using Easy.Platform.Application.Context.UserContext;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.MongoDB;
 using Easy.Platform.Persistence;
 using Microsoft.Extensions.Logging;
@@ -14,7 +14,7 @@ public sealed class DemoMigrateDataCrossDbContext : PlatformMongoDbContext<DemoM
         IOptions<PlatformMongoOptions<DemoMigrateDataCrossDbContext>> options,
         IPlatformMongoClient<DemoMigrateDataCrossDbContext> client,
         ILoggerFactory loggerFactory,
-        IPlatformApplicationUserContextAccessor userContextAccessor,
+        IPlatformApplicationRequestContextAccessor userContextAccessor,
         PlatformPersistenceConfiguration<DemoMigrateDataCrossDbContext> persistenceConfiguration,
         IPlatformRootServiceProvider rootServiceProvider) : base(
         options,

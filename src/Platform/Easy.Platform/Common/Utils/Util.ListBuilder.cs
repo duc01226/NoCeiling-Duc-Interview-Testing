@@ -6,7 +6,12 @@ public static partial class Util
     {
         public static List<T> New<T>(params T[] values)
         {
-            return new List<T>(values);
+            return values.ToList();
+        }
+
+        public static HashSet<T> NewHashSet<T>(params T[] values)
+        {
+            return values.ToHashSet();
         }
 
         public static T[] NewArray<T>(params T[] values)

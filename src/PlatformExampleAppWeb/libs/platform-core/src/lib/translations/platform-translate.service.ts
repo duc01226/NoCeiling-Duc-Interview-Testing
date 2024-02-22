@@ -7,7 +7,10 @@ export const PlatformTranslationCurrentLangLocalStorageKey = 'i18n';
 
 @Injectable({ providedIn: 'root' })
 export class PlatformTranslateService {
-    constructor(private ngxTranslate: TranslateService, private config: PlatformTranslateConfig) {
+    constructor(
+        private ngxTranslate: TranslateService,
+        private config: PlatformTranslateConfig
+    ) {
         this.setup(config.defaultLanguage);
     }
 
@@ -43,8 +46,8 @@ export class PlatformTranslateService {
         return value[browserLang] != undefined
             ? value[browserLang]
             : value[this.defaultLanguage] != undefined
-            ? value[this.defaultLanguage]
-            : '';
+              ? value[this.defaultLanguage]
+              : '';
     }
 
     public getBrowserLanguage() {
@@ -87,8 +90,8 @@ export class PlatformLanguageUtil {
         return value[browserLang] != undefined
             ? value[browserLang]
             : value[defaultLang] != undefined
-            ? value[defaultLang]
-            : '';
+              ? value[defaultLang]
+              : '';
     }
 }
 

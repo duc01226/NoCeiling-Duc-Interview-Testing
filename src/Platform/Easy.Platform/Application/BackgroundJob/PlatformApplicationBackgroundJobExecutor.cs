@@ -27,7 +27,7 @@ public abstract class PlatformApplicationBackgroundJobExecutor<TParam> : Platfor
 
     public virtual bool AutoOpenUow => true;
 
-    protected override async Task InternalExecuteAsync(TParam param = null)
+    protected override async Task InternalExecuteAsync(TParam param)
     {
         using (var activity = IPlatformApplicationBackgroundJobExecutor.ActivitySource.StartActivity($"BackgroundJob.{nameof(InternalExecuteAsync)}"))
         {

@@ -7,11 +7,11 @@ public class PlatformHangfireUseSqlServerStorageOptions
     public static readonly SqlServerStorageOptions DefaultStorageOptions = new()
     {
         CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
-        SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
-        QueuePollInterval = TimeSpan.Zero,
+        QueuePollInterval = PlatformHangfireCommonOptions.DefaultQueuePollInterval,
         UseRecommendedIsolationLevel = true,
         DisableGlobalLocks = true,
-        JobExpirationCheckInterval = PlatformHangfireCommonOptions.DefaultJobExpirationCheckInterval
+        JobExpirationCheckInterval = PlatformHangfireCommonOptions.DefaultJobExpirationCheckInterval,
+        CountersAggregateInterval = PlatformHangfireCommonOptions.DefaultCountersAggregateInterval
     };
 
     public string ConnectionString { get; set; }

@@ -76,7 +76,7 @@ public static class WebElementExtension
         Action<IWebElement> otherElementAction
     )
     {
-        webDriver.TryFindElement(cssSelector: "body")?.Pipe(otherElementAction);
+        webDriver.TryFindElement(cssSelector: "body")?.PipeAction(otherElementAction);
 
         if (IsFocused(targetElement, webDriver))
         {
@@ -85,7 +85,7 @@ public static class WebElementExtension
                 .SelectMany(webDriver.FindElements)
                 .Where(p => p.IsClickable())
                 .Select<IWebElement, Action>(otherElement => () => otherElementAction(otherElement))
-                .Concat(additionalFocusToOtherElements.Select<IWebElement, Action>(element => () => element.Pipe(otherElementAction)))
+                .Concat(additionalFocusToOtherElements.Select<IWebElement, Action>(element => () => element.PipeAction(otherElementAction)))
                 .Where(otherElement => !otherElement.Equals(targetElement));
 
             foreach (var action in otherElementActions)

@@ -50,7 +50,7 @@ public class PlatformBusMessage<TPayload> : IPlatformTrackableBusMessage, IPlatf
     public string TrackingId { get; set; } = Guid.NewGuid().ToString();
     public DateTime? CreatedUtcDate { get; set; } = Clock.UtcNow;
     public string ProduceFrom { get; set; } = Assembly.GetEntryAssembly()?.FullName;
-    public Dictionary<string, object> RequestContext { get; set; } = new();
+    public Dictionary<string, object> RequestContext { get; set; } = [];
     public TPayload Payload { get; set; }
 
     public static TBusMessage New<TBusMessage>(
@@ -75,7 +75,7 @@ public class PlatformBusMessage<TPayload> : IPlatformTrackableBusMessage, IPlatf
         if (messageAction != null)
             message.MessageAction = messageAction;
         message.MessageType ??= GetDefaultMessageType();
-        message.RequestContext = requestContext ?? new Dictionary<string, object>();
+        message.RequestContext = requestContext ?? [];
 
         return message;
     }

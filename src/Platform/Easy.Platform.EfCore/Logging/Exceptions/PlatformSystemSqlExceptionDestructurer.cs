@@ -5,13 +5,13 @@ using Serilog.Exceptions.Destructurers;
 namespace Easy.Platform.EfCore.Logging.Exceptions;
 
 /// <summary>
-/// A destructurer for <see cref="SqlException"/>.
+/// A destructurer for <see cref="SqlException" />.
 /// </summary>
 /// <seealso cref="ExceptionDestructurer" />
 public class PlatformSystemSqlExceptionDestructurer : ExceptionDestructurer
 {
     /// <inheritdoc />
-    public override Type[] TargetTypes => new[] { typeof(SqlException) };
+    public override Type[] TargetTypes => [typeof(SqlException)];
 
     /// <inheritdoc />
     public override void Destructure(

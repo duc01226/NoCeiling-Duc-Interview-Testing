@@ -6,6 +6,6 @@ set AutomationTestSettings__AppNameToOrigin__TextSnippetApp=http://localhost:400
 set AutomationTestSettings__RemoteWebDriverUrl=http://localhost:4444/wd/hub
 set RandomThrowExceptionForTesting=true
 
-docker compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example kill
-docker compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example up --remove-orphans --detach
+docker-compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example kill
+docker-compose -f platform-example-app.docker-compose.yml -f platform-example-app.docker-compose.override.yml -p easyplatform-example up --remove-orphans --detach
 pause

@@ -2,10 +2,29 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Easy.Platform.Infrastructures.Caching;
 
+/// <summary>
+/// Provides an interface for a platform collection cache repository.
+/// </summary>
+/// <typeparam name="TCollectionCacheKeyProvider">The type of the collection cache key provider.</typeparam>
+/// <remarks>
+/// This interface defines methods for getting, setting, and removing cache entries,
+/// as well as methods for caching requests and removing all cache entries.
+/// </remarks>
 public interface IPlatformCollectionCacheRepository<TCollectionCacheKeyProvider>
     where TCollectionCacheKeyProvider : PlatformCollectionCacheKeyProvider
 {
     T Get<T>(string requestKey = PlatformContextCacheKeyProvider.DefaultRequestKey);
+
+    /// <summary>
+    /// Retrieves the cached value of the specified type.
+    /// </summary>
+    /// <typeparam name="T">The type of the value to retrieve.</typeparam>
+    /// <param name="requestKeyParts">An array of strings that form the request key. If null, the default request key is used.</param>
+    /// <returns>The cached value of the specified type.</returns>
+    /// <remarks>
+    /// This method retrieves the cached value associated with the request key formed by the provided array of strings.
+    /// If the array is null, the default request key is used.
+    /// </remarks>
     T Get<T>(string[] requestKeyParts = null);
 
     Task<T> GetAsync<T>(
@@ -62,6 +81,15 @@ public interface IPlatformCollectionCacheRepository<TCollectionCacheKeyProvider>
 
     Task RemoveAllAsync();
 
+    /// <summary>
+    /// Asynchronously removes the cache entries that match the specified predicate.
+    /// </summary>
+    /// <param name="cacheRequestKeyPredicate">The function to test each cache request key for a condition.</param>
+    /// <param name="token">A cancellation token that can be used to cancel the operation.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <remarks>
+    /// The method will remove all cache entries where the cache request key satisfies the condition provided by the predicate function.
+    /// </remarks>
     Task RemoveAsync(
         Func<string, bool> cacheRequestKeyPredicate,
         CancellationToken token = default);
@@ -114,8 +142,8 @@ public abstract class PlatformCollectionCacheRepository<TCollectionCacheKeyProvi
     where TCollectionCacheKeyProvider : PlatformCollectionCacheKeyProvider
 {
     protected readonly IPlatformCacheRepositoryProvider CacheRepositoryProvider;
-    protected readonly IServiceProvider ServiceProvider;
     protected readonly TCollectionCacheKeyProvider CollectionCacheKeyProvider;
+    protected readonly IServiceProvider ServiceProvider;
 
     public PlatformCollectionCacheRepository(
         IPlatformCacheRepositoryProvider cacheRepositoryProvider,

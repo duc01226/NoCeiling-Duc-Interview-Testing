@@ -28,10 +28,22 @@ public abstract class PlatformEntityConfiguration<TEntity, TPrimaryKey>
     : PlatformEntityConfiguration, IEntityTypeConfiguration<TEntity>
     where TEntity : class, IEntity<TPrimaryKey>
 {
+    public virtual bool AutoIndexUserAuditInfo => true;
+
     public virtual void Configure(EntityTypeBuilder<TEntity> builder)
     {
         builder.HasKey(p => p.Id);
         ConfigureRowVersionEntity(builder);
+        if (AutoIndexUserAuditInfo) IndexUserAuditInfo(builder);
+    }
+
+    private void IndexUserAuditInfo(EntityTypeBuilder<TEntity> builder)
+    {
+        if (typeof(TEntity).IsAssignableTo(typeof(IUserAuditedEntity<TPrimaryKey>)))
+        {
+            builder.HasIndex(nameof(IUserAuditedEntity<TPrimaryKey>.CreatedBy));
+            builder.HasIndex(nameof(IUserAuditedEntity<TPrimaryKey>.LastUpdatedBy));
+        }
     }
 }
 
@@ -43,10 +55,15 @@ public abstract class PlatformAuditedEntityConfiguration<TEntity, TPrimaryKey, T
     {
         builder.HasKey(p => p.Id);
 
+        ConfigureFullAuditInfoEntity(builder);
+        ConfigureRowVersionEntity(builder);
+    }
+
+    private static void ConfigureFullAuditInfoEntity(EntityTypeBuilder<TEntity> builder)
+    {
         builder.HasIndex(p => p.CreatedBy);
         builder.HasIndex(p => p.CreatedDate);
         builder.HasIndex(p => p.LastUpdatedBy);
         builder.HasIndex(p => p.LastUpdatedDate);
-        ConfigureRowVersionEntity(builder);
     }
 }

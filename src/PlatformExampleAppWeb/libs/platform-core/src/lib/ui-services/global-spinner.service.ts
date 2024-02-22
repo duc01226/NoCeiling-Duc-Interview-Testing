@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+
 import { BehaviorSubject } from 'rxjs';
 
 const MinSpinnerDisplayTime = 500;
@@ -9,14 +10,14 @@ const MinSpinnerDisplayTime = 500;
 export class GlobalSpinnerService {
     public showSpinner$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
     private showingTimer = 0;
-    private showingTimerInterval: NodeJS.Timeout | NodeJS.Timer | undefined = undefined;
+    private showingTimerInterval: number | undefined = undefined;
 
     public displaySpinner(): void {
         setTimeout(() => {
             this.showSpinner$.next(true);
 
             if (this.showingTimerInterval == undefined) {
-                this.showingTimerInterval = setInterval(() => (this.showingTimer += 100), 100);
+                this.showingTimerInterval = <number>(<unknown>setInterval(() => (this.showingTimer += 100), 100));
             }
         });
     }

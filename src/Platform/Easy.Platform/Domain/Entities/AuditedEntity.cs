@@ -27,6 +27,63 @@ public interface IFullAuditedEntity<TUserId> : IDateAuditedEntity, IUserAuditedE
 {
 }
 
+public abstract class AuditedEntity<TEntity, TPrimaryKey, TUserId> : Entity<TEntity, TPrimaryKey>, IFullAuditedEntity<TUserId>
+    where TEntity : Entity<TEntity, TPrimaryKey>, new()
+{
+    private DateTime? createdDate = Clock.UtcNow;
+    private TUserId lastUpdatedBy;
+    private DateTime? lastUpdatedDate = Clock.UtcNow;
+
+    public AuditedEntity()
+    {
+    }
+
+    public AuditedEntity(TUserId createdBy) : this()
+    {
+        CreatedBy = createdBy;
+        LastUpdatedBy ??= CreatedBy;
+    }
+
+    public TUserId CreatedBy { get; set; }
+
+    public TUserId LastUpdatedBy
+    {
+        get => lastUpdatedBy ?? CreatedBy;
+        set => lastUpdatedBy = value;
+    }
+
+    public DateTime? CreatedDate
+    {
+        get => createdDate ??= Clock.UtcNow;
+        set => createdDate = value;
+    }
+
+    public DateTime? LastUpdatedDate
+    {
+        get => lastUpdatedDate ??= CreatedDate;
+        set => lastUpdatedDate = value;
+    }
+
+    public IUserAuditedEntity SetCreatedBy(object value)
+    {
+        if (value != typeof(TUserId).GetDefaultValue())
+        {
+            CreatedBy = (TUserId)value;
+            LastUpdatedBy = CreatedBy;
+        }
+
+        return this;
+    }
+
+    public IUserAuditedEntity SetLastUpdatedBy(object value)
+    {
+        if (value != typeof(TUserId).GetDefaultValue())
+            LastUpdatedBy = (TUserId)value;
+
+        return this;
+    }
+}
+
 public abstract class RootAuditedEntity<TEntity, TPrimaryKey, TUserId> : RootEntity<TEntity, TPrimaryKey>, IFullAuditedEntity<TUserId>
     where TEntity : Entity<TEntity, TPrimaryKey>, new()
 {

@@ -17,7 +17,9 @@ public class PlatformHangfireUseMongoStorageOptions
         },
         Prefix = "hangfire.mongo",
         CheckConnection = true,
-        JobExpirationCheckInterval = PlatformHangfireCommonOptions.DefaultJobExpirationCheckInterval
+        JobExpirationCheckInterval = PlatformHangfireCommonOptions.DefaultJobExpirationCheckInterval,
+        CountersAggregateInterval = PlatformHangfireCommonOptions.DefaultCountersAggregateInterval,
+        QueuePollInterval = PlatformHangfireCommonOptions.DefaultQueuePollInterval
     };
 
     public string ConnectionString { get; set; }

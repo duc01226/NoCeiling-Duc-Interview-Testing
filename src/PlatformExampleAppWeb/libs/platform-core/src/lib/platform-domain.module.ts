@@ -12,11 +12,53 @@ import {
 } from './domain';
 import { PlatformEventManagerSubscriptionsMap } from './events';
 
+/**
+ * Angular module for platform domain-related features.
+ *
+ * @remarks
+ * This module includes common Angular modules, services, and configurations required for the platform domain.
+ * It provides functionality related to repositories, APIs, and repository error handling.
+ *
+ * @example
+ * ```typescript
+ * // Import the PlatformDomainModule in your Angular application.
+ * import { PlatformDomainModule } from '@your-company/platform-domain';
+ *
+ * @NgModule({
+ *   imports: [PlatformDomainModule.forRoot({ configuration options })],
+ *   declarations: [ your components, directives, and pipes ],
+ *   bootstrap: [ your main component ],
+ * })
+ * export class AppModule { }
+ * ```
+ *
+ * @ngModule PlatformDomainModule
+ * @exports PlatformDomainModule
+ */
 @NgModule({
     imports: [],
     exports: [CommonModule, FormsModule, ReactiveFormsModule, HttpClientModule]
 })
 export class PlatformDomainModule {
+    /**
+     * Creates and returns an Angular module with platform domain features for the root module.
+     *
+     * @param config - Configuration options for the platform domain module.
+     * @returns An array of providers and configuration objects for the root module.
+     *
+     * @example
+     * ```typescript
+     * // Import the PlatformDomainModule in your Angular application.
+     * import { PlatformDomainModule } from '@your-company/platform-domain';
+     *
+     * @NgModule({
+     *   imports: [PlatformDomainModule.forRoot({ configuration options })],
+     *   declarations: [ your components, directives, and pipes ],
+     *   bootstrap: [ your main component ],
+     * })
+     * export class AppModule { }
+     * ```
+     */
     public static forRoot(config: {
         appRepositoryContext?: Type<PlatformRepositoryContext>;
         appRepositories?: Type<PlatformRepository<PlatformRepositoryContext>>[];
@@ -40,6 +82,24 @@ export class PlatformDomainModule {
         ];
     }
 
+    /**
+     * Creates and returns an Angular module with platform domain features for child modules.
+     *
+     * @param config - Configuration options for the platform domain module.
+     * @returns An array of providers and configuration objects for child modules.
+     *
+     * @example
+     * ```typescript
+     * // Import the PlatformDomainModule in your Angular feature module.
+     * import { PlatformDomainModule } from '@your-company/platform-domain';
+     *
+     * @NgModule({
+     *   imports: [PlatformDomainModule.forChild({  configuration options  })],
+     *   declarations: [ your feature components, directives, and pipes ],
+     * })
+     * export class FeatureModule { }
+     * ```
+     */
     public static forChild(config: {
         appModuleRepositoryContext?: Type<PlatformRepositoryContext>;
         appModuleRepositories?: Type<PlatformRepository<PlatformRepositoryContext>>[];
@@ -61,6 +121,14 @@ export class PlatformDomainModule {
         ];
     }
 
+    /**
+     * Builds an array of providers related to repositories, APIs, and repository error handling.
+     *
+     * @param config - Configuration options for the platform domain module.
+     * @returns An array of providers for the platform domain module.
+     *
+     * @internal
+     */
     private static buildRepositoryRelatedProviders(config: {
         repositoryContext?: Type<PlatformRepositoryContext>;
         repositories?: Type<PlatformRepository<PlatformRepositoryContext>>[];

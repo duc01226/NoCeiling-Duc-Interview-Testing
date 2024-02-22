@@ -1,10 +1,10 @@
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.Hosting;
+using Easy.Platform.Common.HostingBackgroundServices;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Infrastructures.Caching;
 
-public class PlatformAutoClearDeprecatedGlobalRequestCachedKeysBackgroundService : PlatformIntervalProcessHostedService
+public class PlatformAutoClearDeprecatedGlobalRequestCachedKeysBackgroundService : PlatformIntervalHostingBackgroundService
 {
     private readonly IPlatformCacheRepositoryProvider cacheRepositoryProvider;
 
@@ -15,6 +15,8 @@ public class PlatformAutoClearDeprecatedGlobalRequestCachedKeysBackgroundService
     {
         this.cacheRepositoryProvider = cacheRepositoryProvider;
     }
+
+    public override bool LogIntervalProcessInformation => false;
 
     protected override TimeSpan ProcessTriggerIntervalTime()
     {

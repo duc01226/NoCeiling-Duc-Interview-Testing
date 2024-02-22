@@ -1,8 +1,38 @@
-import { concat, delay, Observable, of, tap } from 'rxjs';
+import { asyncScheduler, concat, delay, Observable, of, tap } from 'rxjs';
 import { TapObserver } from 'rxjs/internal/operators/tap';
 
 import { distinctUntilObjectValuesChanged } from '../rxjs';
 
+/**
+ * Abstract class for platform caching service.
+ *
+ * @remarks
+ * This class provides a base implementation for caching data in a platform.
+ * It includes methods for getting, setting, deleting, and clearing cached data.
+ *
+ * @example
+ * ```typescript
+ * // Create a custom caching service by extending PlatformCachingService
+ * class CustomCachingService extends PlatformCachingService {
+ *   // Implement the abstract methods
+ *   public get<T>(key: string, objectConstuctor?: (data?: Partial<T>) => T): T | undefined {
+ *     // Custom implementation here
+ *   }
+ *
+ *   public set<T>(key: string, value: T | undefined, options?: PlatformCachingServiceSetCacheOptions): void {
+ *     // Custom implementation here
+ *   }
+ *
+ *   public delete(key: string): void {
+ *     // Custom implementation here
+ *   }
+ *
+ *   public clear(): void {
+ *     // Custom implementation here
+ *   }
+ * }
+ * ```
+ */
 export abstract class PlatformCachingService {
     protected readonly options: PlatformCachingServiceOptions;
 
@@ -18,6 +48,15 @@ export abstract class PlatformCachingService {
 
     public abstract clear(): void;
 
+    /**
+     * Caches data with implicit reload request.
+     *
+     * @param requestCacheKey - The key associated with the cached data.
+     * @param request - The function that returns an observable for the reload request.
+     * @param options - Additional options for caching, such as time to live (TTL).
+     * @param customSetCachedRequestDataFn - Custom function to handle setting cached data.
+     * @returns An observable that emits the cached data and triggers a reload request.
+     */
     public cacheImplicitReloadRequest<T>(
         requestCacheKey: string,
         request: () => Observable<T>,
@@ -34,7 +73,7 @@ export abstract class PlatformCachingService {
             // delay(10ms) a little to mimic the real async rxjs observable => the next will be async => the flow is corrected if before call api
             // do update something in store
             return concat(
-                of(cachedData).pipe(delay(10)),
+                of(cachedData).pipe(delay(10, asyncScheduler)),
                 request().pipe(
                     tap(this.tapCacheDataObserver<T>(customSetCachedRequestDataFn, requestCacheKey, options))
                 )

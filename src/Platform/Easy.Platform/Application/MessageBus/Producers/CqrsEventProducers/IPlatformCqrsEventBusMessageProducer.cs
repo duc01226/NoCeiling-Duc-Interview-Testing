@@ -1,6 +1,5 @@
-using Easy.Platform.Application.Context;
-using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Cqrs.Events;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.Extensions;
@@ -34,7 +33,7 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
     where TMessage : class, new()
 {
     protected readonly IPlatformApplicationBusMessageProducer ApplicationBusMessageProducer;
-    protected readonly IPlatformApplicationUserContextAccessor UserContext;
+    protected readonly IPlatformApplicationRequestContextAccessor UserContext;
 
     public PlatformCqrsEventBusMessageProducer(
         ILoggerFactory loggerFactory,
@@ -42,7 +41,7 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
-        IPlatformApplicationUserContextAccessor userContextAccessor,
+        IPlatformApplicationRequestContextAccessor userContextAccessor,
         IPlatformApplicationSettingContext applicationSettingContext) : base(loggerFactory, unitOfWorkManager, serviceProvider, rootServiceProvider)
     {
         ApplicationBusMessageProducer = applicationBusMessageProducer;
@@ -72,10 +71,11 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
         CreateLogger(loggerFactory)
             .LogError(
                 exception,
-                "[PlatformCqrsEventBusMessageProducer] Failed to send {MessageName}. [[Error:{Error}]]. MessageContent: {MessageContent}.",
+                "[PlatformCqrsEventBusMessageProducer] Failed to send {MessageName}. [[Error:{Error}]]. MessageContent: {MessageContent}. EventContent:{EventContent}",
                 typeof(TMessage).FullName,
                 exception.Message,
-                exception.As<PlatformMessageBusException<TMessage>>()?.EventBusMessage.ToJson());
+                exception.As<PlatformMessageBusException<TMessage>>()?.EventBusMessage.ToJson(),
+                notification.ToJson());
     }
 
     protected virtual async Task SendMessage(TEvent @event, CancellationToken cancellationToken)

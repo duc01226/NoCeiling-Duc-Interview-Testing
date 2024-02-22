@@ -1,6 +1,5 @@
-using Easy.Platform.Application.Context;
-using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.MessageBus.OutboxPattern;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Infrastructures.MessageBus;
 using Microsoft.Extensions.DependencyInjection;
@@ -55,7 +54,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
         IServiceProvider serviceProvider,
         ILogger<PlatformApplicationBusMessageProducer> logger,
         IPlatformApplicationSettingContext applicationSettingContext,
-        IPlatformApplicationUserContextAccessor userContextAccessor,
+        IPlatformApplicationRequestContextAccessor userContextAccessor,
         PlatformOutboxConfig outboxConfig)
     {
         ServiceProvider = serviceProvider;
@@ -70,7 +69,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
     protected ILogger<PlatformApplicationBusMessageProducer> Logger { get; }
     protected IPlatformMessageBusProducer MessageBusProducer { get; }
     protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
-    protected IPlatformApplicationUserContextAccessor UserContextAccessor { get; }
+    protected IPlatformApplicationRequestContextAccessor UserContextAccessor { get; }
     protected PlatformOutboxConfig OutboxConfig { get; }
 
     public async Task<TMessage> SendAsync<TMessage, TMessagePayload>(

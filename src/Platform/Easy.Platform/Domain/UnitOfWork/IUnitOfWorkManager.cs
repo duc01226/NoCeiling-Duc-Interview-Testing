@@ -53,6 +53,15 @@ public interface IUnitOfWorkManager : IDisposable
     /// Gets currently latest active unit of work of type <see cref="TUnitOfWork" />.
     /// <exception cref="Exception">Throw exception if there is not active unit of work.</exception>
     /// </summary>
+    /// <remarks>
+    /// The method is used to retrieve the latest active unit of work of a specific type from the current scope. A unit of work, in this context, represents a transactional set of operations that are either all committed or all rolled back.
+    /// <br />
+    /// This method is particularly useful when you have different types of units of work and you need to retrieve the current active one of a specific type. For instance, you might have different types of units of work for handling different domains or different types of database transactions.
+    /// <br />
+    /// The method will throw an exception if there is no active unit of work of the specified type. This ensures that the method always returns a valid, active unit of work of the specified type, or fails explicitly, preventing silent failures or unexpected behavior due to a missing or inactive unit of work.
+    /// <br />
+    /// In the PlatformUnitOfWorkManager class, this method is implemented by first retrieving the current unit of work and then checking if it is of the specified type and if it is active. If these conditions are not met, an exception is thrown.
+    /// </remarks>
     public TUnitOfWork CurrentActiveUowOfType<TUnitOfWork>() where TUnitOfWork : class, IUnitOfWork;
 
     /// <summary>
@@ -84,8 +93,17 @@ public interface IUnitOfWorkManager : IDisposable
     /// current active uow if possible. <br />
     /// Default is true.
     /// </summary>
-    /// <param name="suppressCurrentUow">
-    /// </param>
+    /// <param name="suppressCurrentUow">If set to true, a new unit of work will be created even if a current unit of work exists. If set to false, the current active unit of work will be used if possible. Default value is true.</param>
+    /// <returns>Returns an instance of the unit of work.</returns>
+    /// <remarks>
+    /// The Begin method in the IUnitOfWorkManager interface is used to start a new unit of work in the context of the application. A unit of work, in this context, represents a transactional boundary for operations that need to be executed together.
+    /// <br />
+    /// The Begin method takes a boolean parameter suppressCurrentUow which, when set to true, forces the creation of a new unit of work even if there is an existing active unit of work. If set to false, the method will use the current active unit of work if one exists. By default, this parameter is set to true.
+    /// <br />
+    /// This method is used in various parts of the application where a set of operations need to be executed within a transactional boundary.
+    /// <br />
+    /// In these classes, the Begin method is used to start a unit of work, after which various operations are performed. Once all operations are completed, the unit of work is completed by calling the CompleteAsync method on the unit of work instance. This ensures that all operations within the unit of work are executed as a single transaction.
+    /// </remarks>
     public IUnitOfWork Begin(bool suppressCurrentUow = true);
 
     /// <summary>
@@ -94,24 +112,19 @@ public interface IUnitOfWorkManager : IDisposable
     public void RemoveAllInactiveUow();
 }
 
-public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
+public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCqrs, IPlatformRootServiceProvider rootServiceProvider)
+    : IUnitOfWorkManager
 {
-    protected readonly List<IUnitOfWork> CurrentUnitOfWorks = new();
+    protected readonly List<IUnitOfWork> CurrentUnitOfWorks = [];
     protected readonly ConcurrentDictionary<string, IUnitOfWork> FreeCreatedUnitOfWorks = new();
     protected readonly SemaphoreSlim RemoveAllInactiveUowLock = new(1, 1);
-    protected readonly IPlatformRootServiceProvider RootServiceProvider;
+    protected readonly IPlatformRootServiceProvider RootServiceProvider = rootServiceProvider;
     private bool disposed;
-    private bool disposing;
 
     private IUnitOfWork globalUow;
+    private bool isDisposing;
 
-    protected PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCqrs, IPlatformRootServiceProvider rootServiceProvider)
-    {
-        CurrentSameScopeCqrs = currentSameScopeCqrs;
-        RootServiceProvider = rootServiceProvider;
-    }
-
-    public IPlatformCqrs CurrentSameScopeCqrs { get; }
+    public IPlatformCqrs CurrentSameScopeCqrs { get; } = currentSameScopeCqrs;
 
     public abstract IUnitOfWork CreateNewUow();
 
@@ -200,19 +213,31 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
 
     public void RemoveAllInactiveUow()
     {
-        if (disposed || disposing) return;
+        if (disposed || isDisposing) return;
 
+        List<IUnitOfWork> removedUOWs = [];
         try
         {
             RemoveAllInactiveUowLock.Wait();
 
-            CurrentUnitOfWorks.RemoveWhere(p => !p.IsActive(), out _);
-            FreeCreatedUnitOfWorks.Keys.Where(key => !FreeCreatedUnitOfWorks[key].IsActive())
-                .ForEach(inactivatedUowKey => FreeCreatedUnitOfWorks.TryRemove(inactivatedUowKey, out _));
+            CurrentUnitOfWorks.RemoveWhere(p => !p.IsActive(), out removedUOWs);
+
+            FreeCreatedUnitOfWorks.Keys
+                .Where(key => !FreeCreatedUnitOfWorks[key].IsActive())
+                .ForEach(
+                    inactivatedUowKey =>
+                    {
+                        FreeCreatedUnitOfWorks.TryRemove(inactivatedUowKey, out var removedUOW);
+                        if (removedUOW != null) removedUOWs.Add(removedUOW);
+                    });
         }
         finally
         {
             RemoveAllInactiveUowLock.Release();
+
+            // Must dispose removedUOWs after release lock to prevent forever lock because
+            // Dispose => trigger RemoveAllInactiveUow again => in same thread the lock hasn't been released yet
+            removedUOWs.ForEach(p => p.Dispose());
         }
     }
 
@@ -248,27 +273,38 @@ public abstract class PlatformUnitOfWorkManager : IUnitOfWorkManager
 
     protected virtual void Dispose(bool disposing)
     {
-        if (disposed) return;
-
-        this.disposing = true;
-
-        if (disposing)
+        if (!disposed)
         {
-            // free managed resources. ToList to clone the list to dispose because dispose could cause trigger RemoveAllInactiveUow => modified the original list
-            CurrentUnitOfWorks.ToList().ForEach(currentUnitOfWork => currentUnitOfWork?.Dispose());
-            CurrentUnitOfWorks.Clear();
+            isDisposing = true;
 
-            // free managed resources. ToList to clone the list to dispose because dispose could cause trigger RemoveAllInactiveUow => modified the original list
-            FreeCreatedUnitOfWorks.ToList().ForEach(currentUnitOfWork => currentUnitOfWork.Value?.Dispose());
-            FreeCreatedUnitOfWorks.Clear();
+            if (disposing)
+            {
+                // Release managed resources
+                // ToList to clone the list to dispose because dispose could cause trigger RemoveAllInactiveUow => modified the original list
+                CurrentUnitOfWorks.ToList().ForEach(currentUnitOfWork => currentUnitOfWork?.Dispose());
+                CurrentUnitOfWorks.Clear();
 
-            globalUow?.Dispose();
+                // Release managed resources
+                // ToList to clone the list to dispose because dispose could cause trigger RemoveAllInactiveUow => modified the original list
+                FreeCreatedUnitOfWorks.ToList().ForEach(currentUnitOfWork => currentUnitOfWork.Value?.Dispose());
+                FreeCreatedUnitOfWorks.Clear();
 
-            RemoveAllInactiveUowLock.Dispose();
+                globalUow?.Dispose();
+                globalUow = null;
+
+                RemoveAllInactiveUowLock.Dispose();
+            }
+
+            // Release unmanaged resources
+
+            disposed = true;
+            isDisposing = false;
         }
+    }
 
-        disposed = true;
-        this.disposing = false;
+    ~PlatformUnitOfWorkManager()
+    {
+        Dispose(false);
     }
 }
 

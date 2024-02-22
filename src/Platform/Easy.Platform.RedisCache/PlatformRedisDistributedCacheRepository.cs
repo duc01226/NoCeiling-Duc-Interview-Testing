@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using Easy.Platform.Application.Context;
+using Easy.Platform.Application;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Infrastructures.Caching;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
@@ -169,13 +169,20 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
 
     protected virtual void Dispose(bool disposing)
     {
-        if (disposed)
-            return;
+        if (!disposed)
+        {
+            if (disposing)
+                // Release managed resources
+                redisCache.PipeAction(
+                    _ =>
+                    {
+                        if (redisCache.IsValueCreated) redisCache.Value.Dispose();
+                    });
 
-        if (disposing && redisCache.IsValueCreated)
-            redisCache.Value.Dispose();
+            // Release unmanaged resources
 
-        disposed = true;
+            disposed = true;
+        }
     }
 
     protected async Task UpdateGlobalCachedKeys(Action<ConcurrentDictionary<PlatformCacheKey, object>> updateCachedKeysAction)

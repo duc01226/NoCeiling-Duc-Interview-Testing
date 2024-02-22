@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Infrastructures.PushNotification;
 
-namespace Easy.Platform.FireBasePushNotification.GoogleFcm;
+namespace Easy.Platform.FirebasePushNotification.GoogleFcm;
 
 internal interface IFcmSender
 {

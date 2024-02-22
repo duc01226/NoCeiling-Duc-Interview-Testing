@@ -1,12 +1,11 @@
 # BUILDER START
-FROM node:14-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /usr/src
 
-# https://stackoverflow.com/questions/52196518/could-not-get-uid-gid-when-building-node-docker
-# To handle 'not get uid/gid'
-RUN npm config set unsafe-perm true
-RUN npm install -g @angular/cli
-RUN npm install -g @nrwl/cli
+
+RUN npm install -g @angular/cli@17.0.8
+RUN npm install -g @nrwl/cli@15.9.3
+RUN npm install -g yarn --force
 
 # npm install
 COPY decorate-angular-cli.js .
@@ -17,8 +16,8 @@ RUN npm install
 # Copy common files
 COPY tsconfig.base.json .
 COPY .editorconfig .
-COPY angular.json .
 COPY .eslintrc.json .
+COPY .eslintignore .
 COPY .prettierrc .
 COPY .prettierignore .
 COPY jest.config.ts .
@@ -39,7 +38,7 @@ RUN node --max-old-space-size=4000 ./node_modules/@angular/cli/bin/ng build play
 # BUILDER END
 
 # Build static web app
-FROM nginx:1.19.9-alpine as app
+FROM nginx:1.25.1-alpine as app
 EXPOSE 80
 RUN apk add --update nodejs npm moreutils
 RUN apk --update add bash

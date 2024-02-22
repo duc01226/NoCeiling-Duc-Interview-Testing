@@ -6,7 +6,9 @@ public class PlatformHangfireUsePostgreSqlStorageOptions
 {
     public static readonly PostgreSqlStorageOptions DefaultStorageOptions = new()
     {
-        JobExpirationCheckInterval = PlatformHangfireCommonOptions.DefaultJobExpirationCheckInterval
+        JobExpirationCheckInterval = PlatformHangfireCommonOptions.DefaultJobExpirationCheckInterval,
+        CountersAggregateInterval = PlatformHangfireCommonOptions.DefaultCountersAggregateInterval,
+        QueuePollInterval = PlatformHangfireCommonOptions.DefaultQueuePollInterval
     };
 
     public string ConnectionString { get; set; }

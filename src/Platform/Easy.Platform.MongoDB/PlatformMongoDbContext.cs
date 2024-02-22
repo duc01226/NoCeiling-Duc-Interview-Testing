@@ -1,8 +1,8 @@
 using System.Linq.Expressions;
-using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Application.Persistence;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
@@ -32,13 +32,14 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     protected readonly Lazy<Dictionary<Type, string>> EntityTypeToCollectionNameDictionary;
     protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
     protected readonly IPlatformRootServiceProvider RootServiceProvider;
-    protected readonly IPlatformApplicationUserContextAccessor UserContextAccessor;
+    protected readonly IPlatformApplicationRequestContextAccessor UserContextAccessor;
+    private bool disposed;
 
     public PlatformMongoDbContext(
         IOptions<PlatformMongoOptions<TDbContext>> options,
         IPlatformMongoClient<TDbContext> client,
         ILoggerFactory loggerFactory,
-        IPlatformApplicationUserContextAccessor userContextAccessor,
+        IPlatformApplicationRequestContextAccessor userContextAccessor,
         PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
         IPlatformRootServiceProvider rootServiceProvider)
     {
@@ -90,6 +91,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "PlatformMongoDbContext {Type} Initialize failed.", GetType().Name);
+
             throw new Exception(
                 $"{GetType().Name} Initialize failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
                 ex);
@@ -201,7 +204,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                     .Take(pageSize)
                     .SelectAsync(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken)),
                 maxItemCount: entities.Count,
-                IPlatformDbContext.DefaultPageSize)
+                IPlatformDbContext.DefaultPageSize,
+                cancellationToken: cancellationToken)
             .Then(result => result.SelectMany(p => p).ToList())
             .ThenActionIfAsync(
                 !dismissSendEvent,
@@ -230,7 +234,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                     .Take(pageSize)
                     .SelectAsync(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken)),
                 maxItemCount: entities.Count,
-                IPlatformDbContext.DefaultPageSize)
+                IPlatformDbContext.DefaultPageSize,
+                cancellationToken: cancellationToken)
             .Then(result => result.SelectMany(p => p).ToList())
             .ThenActionIfAsync(
                 !dismissSendEvent,
@@ -555,7 +560,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             $"Missing collection name mapping item for entity {typeof(TEntity).Name}. Please define it in return of {nameof(EntityTypeToCollectionNameMaps)} method.");
     }
 
-    public IMongoCollection<TEntity> GetCollection<TEntity>()
+    public virtual IMongoCollection<TEntity> GetCollection<TEntity>()
     {
         return Database.GetCollection<TEntity>(GetCollectionName<TEntity>());
     }
@@ -572,15 +577,14 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
         if (recreate || !IsEnsureIndexesMigrationExecuted())
             await MigrationHistoryCollection.Indexes.CreateManyAsync(
-                new List<CreateIndexModel<PlatformMongoMigrationHistory>>
-                {
-                    new(
-                        Builders<PlatformMongoMigrationHistory>.IndexKeys.Ascending(p => p.Name),
-                        new CreateIndexOptions
-                        {
-                            Unique = true
-                        })
-                });
+            [
+                new CreateIndexModel<PlatformMongoMigrationHistory>(
+                    Builders<PlatformMongoMigrationHistory>.IndexKeys.Ascending(p => p.Name),
+                    new CreateIndexOptions
+                    {
+                        Unique = true
+                    })
+            ]);
     }
 
     public virtual async Task EnsureApplicationDataMigrationHistoryCollectionIndexesAsync(bool recreate = false)
@@ -590,15 +594,14 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
         if (recreate || !IsEnsureIndexesMigrationExecuted())
             await ApplicationDataMigrationHistoryCollection.Indexes.CreateManyAsync(
-                new List<CreateIndexModel<PlatformDataMigrationHistory>>
-                {
-                    new(
-                        Builders<PlatformDataMigrationHistory>.IndexKeys.Ascending(p => p.Name),
-                        new CreateIndexOptions
-                        {
-                            Unique = true
-                        })
-                });
+            [
+                new CreateIndexModel<PlatformDataMigrationHistory>(
+                    Builders<PlatformDataMigrationHistory>.IndexKeys.Ascending(p => p.Name),
+                    new CreateIndexOptions
+                    {
+                        Unique = true
+                    })
+            ]);
     }
 
     public virtual async Task EnsureInboxBusMessageCollectionIndexesAsync(bool recreate = false)
@@ -608,13 +611,12 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
         if (recreate || !IsEnsureIndexesMigrationExecuted())
             await InboxBusMessageCollection.Indexes.CreateManyAsync(
-                new List<CreateIndexModel<PlatformInboxBusMessage>>
-                {
-                    new(
-                        Builders<PlatformInboxBusMessage>.IndexKeys
-                            .Ascending(p => p.ConsumeStatus)
-                            .Ascending(p => p.LastConsumeDate))
-                });
+            [
+                new CreateIndexModel<PlatformInboxBusMessage>(
+                    Builders<PlatformInboxBusMessage>.IndexKeys
+                        .Ascending(p => p.ConsumeStatus)
+                        .Ascending(p => p.LastConsumeDate))
+            ]);
     }
 
     public virtual async Task EnsureOutboxBusMessageCollectionIndexesAsync(bool recreate = false)
@@ -624,13 +626,12 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
         if (recreate || !IsEnsureIndexesMigrationExecuted())
             await OutboxBusMessageCollection.Indexes.CreateManyAsync(
-                new List<CreateIndexModel<PlatformOutboxBusMessage>>
-                {
-                    new(
-                        Builders<PlatformOutboxBusMessage>.IndexKeys
-                            .Ascending(p => p.SendStatus)
-                            .Ascending(p => p.LastSendDate))
-                });
+            [
+                new CreateIndexModel<PlatformOutboxBusMessage>(
+                    Builders<PlatformOutboxBusMessage>.IndexKeys
+                        .Ascending(p => p.SendStatus)
+                        .Ascending(p => p.LastSendDate))
+            ]);
     }
 
     public abstract Task InternalEnsureIndexesAsync(bool recreate = false);
@@ -713,6 +714,22 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     protected virtual void Dispose(bool disposing)
     {
+        if (!disposed)
+        {
+            if (disposing)
+            {
+                // Release managed resources
+            }
+
+            // Release unmanaged resources
+
+            disposed = true;
+        }
+    }
+
+    ~PlatformMongoDbContext()
+    {
+        Dispose(false);
     }
 
     protected List<PlatformMongoMigrationExecutor<TDbContext>> ScanAllMigrationExecutors()

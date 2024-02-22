@@ -1,4 +1,4 @@
-using Easy.Platform.Common.Hosting;
+using Easy.Platform.Common.HostingBackgroundServices;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.RabbitMQ;
@@ -8,7 +8,7 @@ namespace Easy.Platform.RabbitMQ;
 /// Name/Consumer Message Name via RoutingKey.
 /// Then start to connect listening messages, execute consumer which handle the suitable message
 /// </summary>
-public class PlatformRabbitMqStartProcessHostedService : PlatformHostedService
+public class PlatformRabbitMqStartProcessHostedService : PlatformHostingBackgroundService
 {
     private readonly PlatformRabbitMqProcessInitializerService rabbitMqProcessInitializerService;
 

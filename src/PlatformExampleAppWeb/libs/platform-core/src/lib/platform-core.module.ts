@@ -3,11 +3,14 @@ import { ErrorHandler, ModuleWithProviders, NgModule, Provider, Type } from '@an
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { RouterModule } from '@angular/router';
 import { TranslateModule, TranslateModuleConfig } from '@ngx-translate/core';
 import { GlobalConfig, ToastrModule } from 'ngx-toastr';
 
 import {
     DefaultPlatformHttpOptionsConfigService,
+    PlatformApiErrorEvent,
+    PlatformApiErrorEventHandler,
     PlatformApiService,
     PlatformHttpOptionsConfigService
 } from './api-services';
@@ -31,11 +34,52 @@ import { list_selectMany } from './utils';
 type ForRootModules = PlatformCoreModule | BrowserModule | BrowserAnimationsModule;
 type ForChildModules = PlatformCoreModule;
 
+/**
+ * Angular module for core platform features.
+ *
+ * @remarks
+ * This module includes common Angular modules, services, and configurations required for the platform.
+ *
+ * @example
+ * ```typescript
+ * // Import the PlatformCoreModule in your Angular application.
+ * import { PlatformCoreModule } from '@your-company/platform-core';
+ *
+ * @NgModule({
+ *   imports: [PlatformCoreModule.forRoot({  configuration options  })],
+ *   declarations: [your components, directives, and pipes ],
+ *   bootstrap: [your main component ],
+ * })
+ * export class AppModule { }
+ * ```
+ *
+ * @ngModule PlatformCoreModule
+ * @exports PlatformCoreModule
+ */
 @NgModule({
     declarations: [PlatformHighlightSearchTextPipe],
     exports: [CommonModule, FormsModule, ReactiveFormsModule, PlatformHighlightSearchTextPipe]
 })
 export class PlatformCoreModule {
+    /**
+     * Creates and returns an Angular module with platform core features for the root module.
+     *
+     * @param config - Configuration options for the platform core module.
+     * @returns An array of providers and configuration objects for the root module.
+     *
+     * @example
+     * ```typescript
+     * // Import the PlatformCoreModule in your Angular application.
+     * import { PlatformCoreModule } from '@your-company/platform-core';
+     *
+     * @NgModule({
+     *   imports: [PlatformCoreModule.forRoot({ configuration options })],
+     *   declarations: [your components, directives, and pipes],
+     *   bootstrap: [your main component],
+     * })
+     * export class AppModule { }
+     * ```
+     */
     public static forRoot<TAppUiStateData extends PlatformAppUiStateData>(config: {
         moduleConfig?: {
             type: Type<PlatformCoreModuleConfig>;
@@ -50,6 +94,7 @@ export class PlatformCoreModule {
         translate?: { platformConfig?: PlatformTranslateConfig; config?: TranslateModuleConfig };
         toastConfig?: Partial<GlobalConfig>;
         cachingServiceFactory?: () => PlatformCachingService;
+        appApiErrorEventHandlers?: Type<PlatformApiErrorEventHandler>[];
     }): ModuleWithProviders<ForRootModules>[] {
         return [
             {
@@ -79,11 +124,9 @@ export class PlatformCoreModule {
                     ...(config.eventHandlerMaps != null
                         ? list_selectMany(config.eventHandlerMaps, ([event, eventHandlers]) => eventHandlers)
                         : []),
-                    PlatformEventManager,
-                    ...(config.eventManager != null ? [config.eventManager] : []),
                     {
-                        provide: 'IPlatformEventManager',
-                        useExisting: config.eventManager ?? PlatformEventManager
+                        provide: PlatformEventManager,
+                        useClass: config.eventManager ?? PlatformEventManager
                     },
 
                     ...this.buildCanBeInChildModuleProviders({
@@ -106,7 +149,18 @@ export class PlatformCoreModule {
                                 : new PlatformLocalStorageCachingService()
                     },
                     PlatformServiceWorkerService,
-                    { provide: ErrorHandler, useClass: PlatformGlobalErrorHandler }
+                    { provide: ErrorHandler, useClass: PlatformGlobalErrorHandler },
+
+                    ...(config.appApiErrorEventHandlers ?? []),
+                    {
+                        provide: PlatformEventManagerSubscriptionsMap,
+                        useValue: new PlatformEventManagerSubscriptionsMap(
+                            config.appApiErrorEventHandlers
+                                ? [[PlatformApiErrorEvent, config.appApiErrorEventHandlers]]
+                                : []
+                        ),
+                        multi: true
+                    }
                 ]
             },
             {
@@ -114,6 +168,9 @@ export class PlatformCoreModule {
             },
             {
                 ngModule: BrowserAnimationsModule
+            },
+            {
+                ngModule: RouterModule
             },
             TranslateModule.forRoot(config.translate?.config),
             ToastrModule.forRoot(
@@ -127,6 +184,24 @@ export class PlatformCoreModule {
         ];
     }
 
+    /**
+     * Creates and returns an Angular module with platform core features for child modules.
+     *
+     * @param config - Configuration options for the platform core module.
+     * @returns An array of providers and configuration objects for child modules.
+     *
+     * @example
+     * ```typescript
+     * // Import the PlatformCoreModule in your Angular feature module.
+     * import { PlatformCoreModule } from '@your-company/platform-core';
+     *
+     * @NgModule({
+     *   imports: [PlatformCoreModule.forChild({ configuration options })],
+     *   declarations: [ your feature components, directives, and pipes ],
+     * })
+     * export class FeatureModule { }
+     * ```
+     */
     public static forChild<TAppUiStateData extends PlatformAppUiStateData>(config: {
         appModuleState?: Type<PlatformAppUiStateStore<TAppUiStateData>>;
         apiServices?: Type<PlatformApiService>[];
@@ -146,6 +221,14 @@ export class PlatformCoreModule {
         ];
     }
 
+    /**
+     * Builds an array of providers that can be used in child modules.
+     *
+     * @param config - Configuration options for the platform core module in child modules.
+     * @returns An array of providers for child modules.
+     *
+     * @internal
+     */
     private static buildCanBeInChildModuleProviders<TAppUiStateData extends PlatformAppUiStateData>(config: {
         moduleUiState?: Type<PlatformAppUiStateStore<TAppUiStateData>>;
         apiServices?: Type<PlatformApiService>[];

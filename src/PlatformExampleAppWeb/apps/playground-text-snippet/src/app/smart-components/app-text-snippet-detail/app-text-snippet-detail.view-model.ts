@@ -1,11 +1,19 @@
-import { ITextSnippetDataModel, TextSnippetDataModel } from '@libs/apps-domains/text-snippet-domain';
-import { cloneDeep, IPlatformVm, isDifferent, PlatformVm } from '@libs/platform-core';
+import {
+  ITextSnippetDataModel,
+  TextSnippetDataModel,
+} from '@libs/apps-domains/text-snippet-domain';
+import {
+  cloneDeep,
+  IPlatformVm,
+  isDifferent,
+  PlatformVm,
+} from '@libs/platform-core';
 
 export interface IAppTextSnippetDetail extends IPlatformVm {
     toSaveTextSnippet: ITextSnippetDataModel;
     toSaveTextSnippetId?: string;
     hasSelectedSnippetItemChanged: boolean;
-    saveTextSnippetError?: string | null;
+    saveTextSnippetError?: string | undefined = undefined;
 }
 
 export class AppTextSnippetDetail extends PlatformVm implements IAppTextSnippetDetail {
@@ -14,10 +22,10 @@ export class AppTextSnippetDetail extends PlatformVm implements IAppTextSnippetD
         this.toSaveTextSnippet = data?.toSaveTextSnippet
             ? new TextSnippetDataModel(data.toSaveTextSnippet)
             : new TextSnippetDataModel();
-        this.originalToSaveTextSnippet = cloneDeep(this.toSaveTextSnippet);
+        this.clonedSelectedSnippetItem = cloneDeep(this.toSaveTextSnippet);
         this.toSaveTextSnippetId = data?.toSaveTextSnippetId ?? undefined;
         this.hasSelectedSnippetItemChanged = data?.hasSelectedSnippetItemChanged ?? false;
-        this.saveTextSnippetError = data?.saveTextSnippetError;
+        if (data?.saveTextSnippetError != undefined) this.saveTextSnippetError = data.saveTextSnippetError;
     }
 
     private _toSaveTextSnippet: TextSnippetDataModel = new TextSnippetDataModel();
@@ -26,7 +34,7 @@ export class AppTextSnippetDetail extends PlatformVm implements IAppTextSnippetD
     }
     public set toSaveTextSnippet(v: TextSnippetDataModel) {
         this._toSaveTextSnippet = v;
-        this.originalToSaveTextSnippet = cloneDeep(v);
+        this.clonedSelectedSnippetItem = cloneDeep(v);
         this.updateHasSelectedSnippetItemChanged();
     }
 
@@ -41,10 +49,10 @@ export class AppTextSnippetDetail extends PlatformVm implements IAppTextSnippetD
         }
     }
 
-    public hasSelectedSnippetItemChanged: boolean;
-    public saveTextSnippetError?: string | null;
+    public hasSelectedSnippetItemChanged!: boolean;
+    public saveTextSnippetError?: string | undefined = undefined;
 
-    public originalToSaveTextSnippet: TextSnippetDataModel;
+    private clonedSelectedSnippetItem!: TextSnippetDataModel;
 
     public get toSaveTextSnippetSnippetText(): string {
         return this.toSaveTextSnippet?.snippetText ?? '';
@@ -62,12 +70,12 @@ export class AppTextSnippetDetail extends PlatformVm implements IAppTextSnippetD
     }
 
     public updateHasSelectedSnippetItemChanged(): boolean {
-        this.hasSelectedSnippetItemChanged = isDifferent(this.toSaveTextSnippet, this.originalToSaveTextSnippet);
+        this.hasSelectedSnippetItemChanged = isDifferent(this.toSaveTextSnippet, this.clonedSelectedSnippetItem);
         return this.hasSelectedSnippetItemChanged;
     }
 
     public resetSelectedSnippetItem() {
-        this.toSaveTextSnippet = cloneDeep(this.originalToSaveTextSnippet);
+        this.toSaveTextSnippet = cloneDeep(this.clonedSelectedSnippetItem);
     }
 
     public isCreateNew(): boolean {

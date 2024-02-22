@@ -29,10 +29,7 @@ public abstract class PlatformMongoClassMapping : IPlatformMongoClassMapping
                 bsonMemberMap.SetSerializer(
                     (IBsonSerializer)Activator.CreateInstance(
                         type: typeof(EnumSerializer<>).MakeGenericType(bsonMemberMap.MemberType),
-                        args: new object[]
-                        {
-                            BsonType.String
-                        }));
+                        args: [BsonType.String]));
             }
             else
             {
@@ -59,16 +56,14 @@ public abstract class PlatformMongoClassMapping : IPlatformMongoClassMapping
     {
         ApplySerializerMappingConvention<TEntity, GuidSerializer, Guid>(
             cm,
-            new object[]
-            {
+            [
                 BsonType.String
-            });
+            ]);
         ApplySerializerMappingConvention<TEntity, NullableSerializer<Guid>, Guid?>(
             cm,
-            new object[]
-            {
+            [
                 new GuidSerializer(BsonType.String)
-            });
+            ]);
     }
 
     public static void ApplyTimeOnlyAsStringMappingConvention<TEntity>(BsonClassMap<TEntity> cm)

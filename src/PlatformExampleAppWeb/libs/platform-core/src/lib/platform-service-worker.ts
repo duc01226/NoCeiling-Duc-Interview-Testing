@@ -1,7 +1,9 @@
 import { inject, Injectable, NgZone } from '@angular/core';
 import { SwUpdate } from '@angular/service-worker';
-import { TranslateService } from '@ngx-translate/core';
+
 import { map, Observable, of, tap } from 'rxjs';
+
+import { TranslateService } from '@ngx-translate/core';
 
 import { PlatformCachingService } from './caching';
 import { date_timeDiff } from './utils';
@@ -13,7 +15,11 @@ export class PlatformServiceWorkerService {
 
     private readonly translateSvc = inject(TranslateService);
 
-    constructor(private swUpdate: SwUpdate, private cacheService: PlatformCachingService, private ngZone: NgZone) {}
+    constructor(
+        private swUpdate: SwUpdate,
+        private cacheService: PlatformCachingService,
+        private ngZone: NgZone
+    ) {}
 
     public reloadConfirmed: boolean = false;
     public showingReloadDialog: boolean = false;
@@ -128,12 +134,13 @@ export class PlatformServiceWorkerService {
         );
     }
 
-    public clearCache(cacheKeysRegex?: RegExp) {
+    // Use arrow function to prevent missing "this" context
+    public clearCache = (cacheKeysRegex?: RegExp) => {
         this.cacheService.clear();
         return PlatformServiceWorkerService.clearNgswCacheStorage(
             cacheKeysRegex ?? PlatformServiceWorkerService.apiDataCacheKeysRegex
         );
-    }
+    };
 
     public static allNgswCacheKeysRegex = /^ngsw:.*/;
     public static apiDataCacheKeysRegex = /^ngsw:.*:data:/;
@@ -155,7 +162,7 @@ export class PlatformServiceWorkerService {
 
     public static unregisterRegisteredServiceWorker() {
         // Unregister service worker if already registered
-        if (navigator.serviceWorker) {
+        if (navigator.serviceWorker != null) {
             navigator.serviceWorker.getRegistrations().then(registrations => {
                 for (const registration of registrations) {
                     registration.unregister();
@@ -169,9 +176,9 @@ export class PlatformServiceWorkerService {
     public static registerServiceWorker(ngswWorkerEnabled: boolean, ngSwFilePath: string = '/ngsw-worker.js') {
         return new Promise(resolve => {
             try {
-                if (navigator.serviceWorker && ngswWorkerEnabled) {
+                if (navigator.serviceWorker != null && ngswWorkerEnabled) {
                     navigator.serviceWorker.register(ngSwFilePath);
-                } else if (navigator.serviceWorker && !ngswWorkerEnabled) {
+                } else if (navigator.serviceWorker != null && !ngswWorkerEnabled) {
                     this.unregisterRegisteredServiceWorker();
                 }
 

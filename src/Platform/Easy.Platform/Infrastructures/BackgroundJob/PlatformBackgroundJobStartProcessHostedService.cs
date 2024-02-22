@@ -1,9 +1,9 @@
-using Easy.Platform.Common.Hosting;
+using Easy.Platform.Common.HostingBackgroundServices;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Infrastructures.BackgroundJob;
 
-public class PlatformBackgroundJobStartProcessHostedService : PlatformHostedService
+public class PlatformBackgroundJobStartProcessHostedService : PlatformHostingBackgroundService
 {
     private readonly IPlatformBackgroundJobProcessingService backgroundJobProcessingService;
 

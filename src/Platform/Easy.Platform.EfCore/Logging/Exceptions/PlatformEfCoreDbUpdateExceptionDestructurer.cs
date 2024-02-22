@@ -12,7 +12,7 @@ namespace Easy.Platform.EfCore.Logging.Exceptions;
 public class PlatformEfCoreDbUpdateExceptionDestructurer : ExceptionDestructurer
 {
     /// <inheritdoc />
-    public override Type[] TargetTypes => new[] { typeof(DbUpdateException), typeof(DbUpdateConcurrencyException) };
+    public override Type[] TargetTypes => [typeof(DbUpdateException), typeof(DbUpdateConcurrencyException)];
 
     public override void Destructure(
         Exception exception,

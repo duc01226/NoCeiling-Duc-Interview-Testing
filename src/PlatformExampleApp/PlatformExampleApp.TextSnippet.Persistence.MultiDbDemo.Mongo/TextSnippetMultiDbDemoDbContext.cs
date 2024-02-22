@@ -1,4 +1,4 @@
-using Easy.Platform.Application.Context.UserContext;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.MongoDB;
 using Easy.Platform.Persistence;
 using Microsoft.Extensions.Logging;
@@ -14,7 +14,7 @@ public sealed class TextSnippetMultiDbDemoDbContext : PlatformMongoDbContext<Tex
         IOptions<PlatformMongoOptions<TextSnippetMultiDbDemoDbContext>> options,
         IPlatformMongoClient<TextSnippetMultiDbDemoDbContext> client,
         ILoggerFactory loggerFactory,
-        IPlatformApplicationUserContextAccessor userContextAccessor,
+        IPlatformApplicationRequestContextAccessor userContextAccessor,
         PlatformPersistenceConfiguration<TextSnippetMultiDbDemoDbContext> persistenceConfiguration,
         IPlatformRootServiceProvider rootServiceProvider) : base(
         options,
@@ -36,18 +36,17 @@ public sealed class TextSnippetMultiDbDemoDbContext : PlatformMongoDbContext<Tex
 
         await Util.TaskRunner.WhenAll(
             MultiDbDemoEntityCollection.Indexes.CreateManyAsync(
-                new List<CreateIndexModel<MultiDbDemoEntity>>
-                {
-                    new(
-                        Builders<MultiDbDemoEntity>.IndexKeys.Ascending(p => p.Name))
-                }));
+            [
+                new CreateIndexModel<MultiDbDemoEntity>(
+                    Builders<MultiDbDemoEntity>.IndexKeys.Ascending(p => p.Name))
+            ]));
     }
 
     public override List<KeyValuePair<Type, string>> EntityTypeToCollectionNameMaps()
     {
-        return new List<KeyValuePair<Type, string>>
-        {
-            new(typeof(MultiDbDemoEntity), "MultiDbDemoEntity")
-        };
+        return
+        [
+            new KeyValuePair<Type, string>(typeof(MultiDbDemoEntity), "MultiDbDemoEntity")
+        ];
     }
 }

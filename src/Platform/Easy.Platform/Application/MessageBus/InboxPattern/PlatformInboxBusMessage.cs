@@ -1,6 +1,5 @@
 using System.Linq.Expressions;
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Timing;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Infrastructures.MessageBus;
@@ -14,6 +13,8 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
     public const int RoutingKeyMaxLength = 500;
     public const double DefaultRetryProcessFailedMessageInSecondsUnit = 60;
     public const string BuildIdSeparator = "---";
+
+    private const double MarginRetryMessageProcessingMaximumTimeInSeconds = 60;
 
     public string JsonMessage { get; set; }
 
@@ -42,17 +43,6 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
 
     public Guid? ConcurrencyUpdateToken { get; set; }
 
-    public static string SerializeOneLevelExceptionForLastConsumeError(Exception exception)
-    {
-        return PlatformJsonSerializer.Serialize(
-            new
-            {
-                exception.Message,
-                InnerException = exception.InnerException?.Pipe(ex => SerializeOneLevelExceptionForLastConsumeError(ex)),
-                exception.StackTrace
-            });
-    }
-
     public static Expression<Func<PlatformInboxBusMessage, bool>> CanHandleMessagesExpr(
         double messageProcessingMaximumTimeInSeconds)
     {
@@ -60,7 +50,7 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
                     (p.ConsumeStatus == ConsumeStatuses.Failed &&
                      (p.NextRetryProcessAfter == null || p.NextRetryProcessAfter <= DateTime.UtcNow)) ||
                     (p.ConsumeStatus == ConsumeStatuses.Processing &&
-                     p.LastConsumeDate <= Clock.UtcNow.AddSeconds(-messageProcessingMaximumTimeInSeconds));
+                     p.LastConsumeDate <= Clock.UtcNow.AddSeconds(-messageProcessingMaximumTimeInSeconds - MarginRetryMessageProcessingMaximumTimeInSeconds));
     }
 
     public static Expression<Func<PlatformInboxBusMessage, bool>> ToCleanExpiredMessagesByTimeExpr(
@@ -124,11 +114,6 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
     public static string GetConsumerByValue(Type consumerType)
     {
         return consumerType.FullName;
-    }
-
-    public string GetTrackId()
-    {
-        return Id.Split(BuildIdSeparator).FirstOrDefault();
     }
 
     public enum ConsumeStatuses

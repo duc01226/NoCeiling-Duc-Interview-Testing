@@ -4,6 +4,12 @@ namespace Easy.Platform.Common.Extensions;
 
 public static class TypeExtension
 {
+    /// <summary>
+    /// Determines whether a given type is assignable to a specified generic type.
+    /// </summary>
+    /// <param name="givenType">The type to check.</param>
+    /// <param name="genericType">The generic type to which the given type may be assignable.</param>
+    /// <returns>True if the given type is assignable to the generic type, otherwise false.</returns>
     public static bool IsAssignableToGenericType(this Type givenType, Type genericType)
     {
         while (true)
@@ -23,6 +29,11 @@ public static class TypeExtension
         }
     }
 
+    /// <summary>
+    /// Gets the name of the type or, if the type is generic, gets the generic type name.
+    /// </summary>
+    /// <param name="t">The type to get the name for.</param>
+    /// <returns>The name of the type or the generic type name.</returns>
     public static string GetNameOrGenericTypeName(this Type t)
     {
         if (!t.IsGenericType)
@@ -31,6 +42,11 @@ public static class TypeExtension
         return !t.IsGenericType ? t.Name : GetGenericTypeName(t);
     }
 
+    /// <summary>
+    /// Gets the generic type name of a type.
+    /// </summary>
+    /// <param name="t">The type to get the generic type name for.</param>
+    /// <returns>The generic type name of the type.</returns>
     public static string GetGenericTypeName(this Type t)
     {
         var genericTypeName = t.GetGenericTypeDefinition().Name;
@@ -42,6 +58,12 @@ public static class TypeExtension
         return genericTypeClassNameOnly + "<" + genericArgs + ">";
     }
 
+    /// <summary>
+    /// Gets all public constant values of a specific type from a type.
+    /// </summary>
+    /// <typeparam name="T">The type of the constant values to get.</typeparam>
+    /// <param name="type">The type to get the constant values from.</param>
+    /// <returns>A list of all public constant values of the specified type.</returns>
     public static List<T> GetAllPublicConstantValues<T>(this Type type)
     {
         return type
@@ -73,17 +95,26 @@ public static class TypeExtension
     }
 
     /// <summary>
-    /// Check if all GenericArguments from sourceType must be assignable to targetType
+    /// Checks if all generic arguments from a source type are assignable to a target type.
     /// </summary>
+    /// <param name="sourceType">The source type.</param>
+    /// <param name="targetType">The target type.</param>
+    /// <returns>True if all generic arguments from the source type are assignable to the target type, otherwise false.</returns>
     public static bool MatchGenericArguments(this Type sourceType, Type targetType)
     {
         return targetType.IsGenericType &&
                sourceType.GetGenericArguments()
-                   .ItemsMatch(
+                   .IsAllItemsMatch(
                        targetType.GetGenericArguments(),
                        (sourceItem, targetItem) => sourceItem.IsAssignableTo(targetItem));
     }
 
+    /// <summary>
+    /// Finds the first generic type in the inheritance hierarchy of the given type that matches the specified generic type.
+    /// </summary>
+    /// <param name="givenType">The type to check.</param>
+    /// <param name="genericType">The generic type to match.</param>
+    /// <returns>The first matched generic type in the inheritance hierarchy of the given type, or null if no match is found.</returns>
     public static Type FindMatchedGenericType(this Type givenType, Type genericType)
     {
         while (true)
@@ -108,6 +139,12 @@ public static class TypeExtension
         return type.IsValueType ? Activator.CreateInstance(type) : null;
     }
 
+    /// <summary>
+    /// Determines whether the given type is using a specified type in any of its public constructors.
+    /// </summary>
+    /// <typeparam name="T">The type to check for in the constructors.</typeparam>
+    /// <param name="type">The type to inspect its constructors.</param>
+    /// <returns>True if the given type is using the specified type in any of its public constructors, otherwise false.</returns>
     public static bool IsUsingGivenTypeViaConstructor<T>(this Type type)
     {
         return type

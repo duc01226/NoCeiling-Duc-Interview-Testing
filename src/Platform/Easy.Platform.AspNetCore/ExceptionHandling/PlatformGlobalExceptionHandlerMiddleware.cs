@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.Json;
-using Easy.Platform.Application.Context.UserContext;
 using Easy.Platform.Application.Exceptions;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.AspNetCore.Middleware.Abstracts;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Exceptions;
@@ -22,7 +22,7 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
         RequestDelegate next,
         ILogger<PlatformGlobalExceptionHandlerMiddleware> logger,
         IConfiguration configuration,
-        IPlatformApplicationUserContextAccessor userContextAccessor) : base(next)
+        IPlatformApplicationRequestContextAccessor userContextAccessor) : base(next)
     {
         Logger = logger;
         UserContextAccessor = userContextAccessor;
@@ -31,7 +31,7 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
 
     protected IConfiguration Configuration { get; }
     protected ILogger Logger { get; }
-    protected IPlatformApplicationUserContextAccessor UserContextAccessor { get; }
+    protected IPlatformApplicationRequestContextAccessor UserContextAccessor { get; }
     protected bool DeveloperExceptionEnabled => PlatformEnvironment.IsDevelopment || Configuration.GetValue<bool>("DeveloperExceptionEnabled");
 
     protected override async Task InternalInvokeAsync(HttpContext context)
@@ -51,12 +51,12 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
                 if (exception is OperationCanceledException or TaskCanceledException)
                     Logger.LogWarning(exception, "Exception {Exception}", exception.GetType().Name);
                 else
-                    throw;
+                    Logger.LogError(exception, "Exception {Exception}", exception.GetType().Name);
             }
         }
         finally
         {
-            Util.GarbageCollector.Collect(immediately: false);
+            Util.GarbageCollector.Collect(aggressiveImmediately: false);
         }
     }
 
@@ -73,27 +73,27 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
                 permissionException => new PlatformAspNetMvcErrorResponse(
                     PlatformAspNetMvcErrorInfo.FromPermissionException(permissionException, DeveloperExceptionEnabled),
                     HttpStatusCode.Forbidden,
-                    context.TraceIdentifier).Pipe(_ => LogKnownRequestWarning(exception, context)))
+                    context.TraceIdentifier).PipeAction(_ => LogKnownRequestWarning(exception, context)))
             .WhenIs<IPlatformValidationException>(
                 validationException => new PlatformAspNetMvcErrorResponse(
                     PlatformAspNetMvcErrorInfo.FromValidationException(validationException, DeveloperExceptionEnabled),
                     HttpStatusCode.BadRequest,
-                    context.TraceIdentifier).Pipe(_ => LogKnownRequestWarning(exception, context)))
+                    context.TraceIdentifier).PipeAction(_ => LogKnownRequestWarning(exception, context)))
             .WhenIs<PlatformApplicationException>(
                 applicationException => new PlatformAspNetMvcErrorResponse(
                     PlatformAspNetMvcErrorInfo.FromApplicationException(applicationException, DeveloperExceptionEnabled),
                     HttpStatusCode.BadRequest,
-                    context.TraceIdentifier).Pipe(_ => LogKnownRequestWarning(exception, context)))
+                    context.TraceIdentifier).PipeAction(_ => LogKnownRequestWarning(exception, context)))
             .WhenIs<PlatformNotFoundException>(
                 domainNotFoundException => new PlatformAspNetMvcErrorResponse(
                     PlatformAspNetMvcErrorInfo.FromNotFoundException(domainNotFoundException, DeveloperExceptionEnabled),
                     HttpStatusCode.NotFound,
-                    context.TraceIdentifier).Pipe(_ => LogKnownRequestWarning(exception, context)))
+                    context.TraceIdentifier).PipeAction(_ => LogKnownRequestWarning(exception, context)))
             .WhenIs<PlatformDomainException>(
                 domainException => new PlatformAspNetMvcErrorResponse(
                     PlatformAspNetMvcErrorInfo.FromDomainException(domainException, DeveloperExceptionEnabled),
                     HttpStatusCode.BadRequest,
-                    context.TraceIdentifier).Pipe(_ => LogKnownRequestWarning(exception, context)))
+                    context.TraceIdentifier).PipeAction(_ => LogKnownRequestWarning(exception, context)))
             .Else(
                 exception =>
                 {

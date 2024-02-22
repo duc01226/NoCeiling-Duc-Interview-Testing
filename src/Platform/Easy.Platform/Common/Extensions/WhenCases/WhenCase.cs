@@ -43,7 +43,7 @@ public class WhenCase<TSource, TTarget> : WhenCase
 
     public TSource Source { get; init; }
 
-    protected List<CaseItem> Cases { get; init; } = new();
+    protected List<CaseItem> Cases { get; init; } = [];
     protected bool ElseCaseAdded { get; set; }
 
     public static implicit operator TTarget(WhenCase<TSource, TTarget> caseCase)
