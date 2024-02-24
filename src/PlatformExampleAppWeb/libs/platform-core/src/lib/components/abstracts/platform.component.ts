@@ -25,7 +25,7 @@ import {
     Subject,
     Subscription
 } from 'rxjs';
-import { filter, finalize, takeUntil, tap, throttleTime } from 'rxjs/operators';
+import { filter, finalize, takeUntil, tap, TapObserver, throttleTime } from 'rxjs/operators';
 
 import { PlatformApiServiceErrorResponse } from '../../api-services';
 import { LifeCycleHelper } from '../../helpers';
@@ -450,13 +450,22 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     public effect<TOrigin, TReturn>(
         generator: (
             origin: TOrigin | Observable<TOrigin | null> | null,
-            isReloading?: boolean
+            isReloading?: boolean,
+            tapRequestObserverOrNext?:
+                | Partial<TapObserver<TOrigin | null | undefined>>
+                | ((value: TOrigin | null | undefined) => void)
         ) => Observable<TReturn> | TReturn | unknown,
         throttleTimeMs?: number
     ) {
         let previousEffectSub: Subscription = new Subscription();
 
-        return (observableOrValue: TOrigin | Observable<TOrigin> | null = null, isReloading?: boolean) => {
+        return (
+            observableOrValue: TOrigin | Observable<TOrigin> | null = null,
+            isReloading?: boolean,
+            tapRequestObserverOrNext?:
+                | Partial<TapObserver<TOrigin | null | undefined>>
+                | ((value: TOrigin | null | undefined) => void)
+        ) => {
             previousEffectSub.unsubscribe();
 
             // ThrottleTime explain: Delay to enhance performance
@@ -472,6 +481,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                         trailing: true
                     }),
                     this.untilDestroyed(),
+                    tap(tapRequestObserverOrNext ?? {}),
                     finalize(() => this.detectChanges())
                 )
                 .subscribe();

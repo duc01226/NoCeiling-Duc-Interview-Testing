@@ -23,6 +23,7 @@ import {
     switchMap,
     takeUntil,
     tap,
+    TapObserver,
     throttleTime
 } from 'rxjs';
 import { PartialDeep } from 'type-fest';
@@ -695,9 +696,18 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         ReturnType = ObservableType extends void
             ? (
                   observableOrValue: ObservableType | Observable<ObservableType> | null | undefined,
-                  isReloading?: boolean
+                  isReloading?: boolean,
+                  tapRequestObserverOrNext?:
+                      | Partial<TapObserver<ObservableType | null | undefined>>
+                      | ((value: ObservableType | null | undefined) => void)
               ) => Subscription
-            : (observableOrValue: ObservableType | Observable<ObservableType>, isReloading?: boolean) => Subscription
+            : (
+                  observableOrValue: ObservableType | Observable<ObservableType>,
+                  isReloading?: boolean,
+                  tapRequestObserverOrNext?:
+                      | Partial<TapObserver<ObservableType | null | undefined>>
+                      | ((value: ObservableType | null | undefined) => void)
+              ) => Subscription
     >(
         generator: (origin$: OriginType, isReloading?: boolean) => Observable<unknown> | unknown,
         throttleTimeMs?: number
@@ -706,7 +716,10 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
 
         return ((
             observableOrValue?: ObservableType | Observable<ObservableType> | null,
-            isReloading?: boolean
+            isReloading?: boolean,
+            tapRequestObserverOrNext?:
+                | Partial<TapObserver<ObservableType | null | undefined>>
+                | ((value: ObservableType | null | undefined) => void)
         ): Subscription => {
             previousEffectSub.unsubscribe();
 
@@ -732,7 +745,8 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                         return (generatorResult instanceof Observable ? generatorResult : of(<unknown>null)).pipe(
                             takeUntil(this.innerStore.destroy$)
                         );
-                    })
+                    }),
+                    tap(tapRequestObserverOrNext ?? {})
                 )
                 .subscribe();
 

@@ -97,11 +97,11 @@ export function dictionaryMapTo<TSource, TTarget>(
  */
 export function toPlainObj<T>(source: T, ignorePrivate: boolean = true, onlyKeysExistInPartialObject?: object): any {
     if (source == undefined) return undefined;
-    if (typeof source != 'object') return source;
+    if (typeof source != 'object' || source instanceof Date || source instanceof Time || source instanceof File)
+        return source;
     if (source instanceof Array) {
         return source.map(p => toPlainObj(p, ignorePrivate));
     }
-    if (source instanceof Date || source instanceof Time) return source;
     const objResult: Dictionary<any> = {};
     keys(source, ignorePrivate).forEach(key => {
         if (onlyKeysExistInPartialObject == undefined || (<any>onlyKeysExistInPartialObject)[key] !== undefined)
