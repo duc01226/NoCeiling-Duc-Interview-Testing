@@ -38,6 +38,8 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
 
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
+        await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformModule), Logger, $"process ${GetType().Name}");
+
         if (!HasOutboxEventBusMessageRepositoryRegistered() || isProcessing)
             return;
 
@@ -200,11 +202,11 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
         }
         catch (PlatformDomainRowVersionConflictException conflictDomainException)
         {
-            Logger.LogWarning(
+            Logger.LogDebug(
                 conflictDomainException,
-                "Some other producer instance has been handling some outbox messages, which lead to row version conflict (support multi service instance running concurrently). This is as expected so just warning.");
+                "Some other producer instance has been handling some outbox messages, which lead to row version conflict (support multi service instance running concurrently). This is as expected.");
 
-            // WHY: Because support multi service instance running concurrently,
+            // WHY: Because support multiple service instance running concurrently,
             // get row version conflict is expected, so just retry again to get unprocessed outbox messages
             return await PopToHandleOutboxEventBusMessages(cancellationToken);
         }

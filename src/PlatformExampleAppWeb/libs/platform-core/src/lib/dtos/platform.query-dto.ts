@@ -31,7 +31,7 @@ export class PlatformPagedQueryDto extends PlatformQueryDto implements IPlatform
     public skipCount: number = 0;
     public maxResultCount: number = 20;
 
-    public withPageIndex(pageIndex: number): PlatformPagedQueryDto {
+    public withPageIndex(pageIndex: number) {
         const newSkipCount = pageIndex * this.maxResultCount;
 
         if (this.skipCount == newSkipCount) return this;
@@ -40,7 +40,7 @@ export class PlatformPagedQueryDto extends PlatformQueryDto implements IPlatform
         });
     }
 
-    public withSort(orderDirection: OrderDirection | undefined, orderBy?: string): PlatformPagedQueryDto {
+    public withSort(orderDirection: OrderDirection | undefined, orderBy?: string) {
         if (this.orderBy == orderBy && this.orderDirection == orderDirection) return this;
         return clone(this, _ => {
             _.orderBy = orderBy;

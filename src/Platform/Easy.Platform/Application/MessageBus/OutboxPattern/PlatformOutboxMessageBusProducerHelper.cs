@@ -134,9 +134,9 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                     await messageBusProducer.SendAsync(message, routingKey, cancellationToken);
 
                     await UpdateExistingOutboxMessageProcessedAsync(
+                        rootServiceProvider,
                         existingOutboxMessage,
-                        cancellationToken,
-                        outboxBusMessageRepository);
+                        cancellationToken);
                 },
                 sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
                 retryCount: DefaultResilientRetiredCount,
@@ -181,25 +181,35 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
     }
 
     public static async Task UpdateExistingOutboxMessageProcessedAsync(
+        IPlatformRootServiceProvider serviceProvider,
         PlatformOutboxBusMessage existingOutboxMessage,
-        CancellationToken cancellationToken,
-        IPlatformOutboxBusMessageRepository outboxBusMessageRepository)
+        CancellationToken cancellationToken)
     {
+        var toUpdateOutboxMessage = existingOutboxMessage;
+
         await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
             async () =>
             {
-                try
-                {
-                    existingOutboxMessage.LastSendDate = DateTime.UtcNow;
-                    existingOutboxMessage.SendStatus = PlatformOutboxBusMessage.SendStatuses.Processed;
+                if (toUpdateOutboxMessage.SendStatus == PlatformOutboxBusMessage.SendStatuses.Processed) return;
 
-                    await outboxBusMessageRepository.UpdateAsync(existingOutboxMessage, dismissSendEvent: true, eventCustomConfig: null, cancellationToken);
-                }
-                catch (PlatformDomainRowVersionConflictException)
-                {
-                    existingOutboxMessage = await outboxBusMessageRepository.GetByIdAsync(existingOutboxMessage.Id, cancellationToken);
-                    throw;
-                }
+                await serviceProvider.ExecuteInjectScopedAsync(
+                    async (IPlatformOutboxBusMessageRepository outboxBusMessageRepository) =>
+                    {
+                        try
+                        {
+                            toUpdateOutboxMessage.LastSendDate = DateTime.UtcNow;
+                            toUpdateOutboxMessage.SendStatus = PlatformOutboxBusMessage.SendStatuses.Processed;
+
+                            await outboxBusMessageRepository.UpdateAsync(toUpdateOutboxMessage, dismissSendEvent: true, eventCustomConfig: null, cancellationToken);
+                        }
+                        catch (PlatformDomainRowVersionConflictException)
+                        {
+                            toUpdateOutboxMessage = await serviceProvider.ExecuteInjectScopedAsync<PlatformOutboxBusMessage>(
+                                (IPlatformOutboxBusMessageRepository outboxBusMessageRepository) =>
+                                    outboxBusMessageRepository.GetByIdAsync(toUpdateOutboxMessage.Id, cancellationToken));
+                            throw;
+                        }
+                    });
             },
             sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
             retryCount: DefaultResilientRetiredCount,

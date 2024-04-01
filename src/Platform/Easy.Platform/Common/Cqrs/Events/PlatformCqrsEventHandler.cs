@@ -34,7 +34,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     protected bool IsDistributedTracingEnabled { get; }
 
-    public virtual int RetryOnFailedTimes => 5;
+    public virtual int RetryOnFailedTimes => 3;
 
     public virtual double RetryOnFailedDelaySeconds => 0.5;
 
@@ -50,13 +50,13 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         if (!HandleWhen(@event)) return;
 
         // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
-        // so the it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
+        // so that it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
         if (AllowHandleInBackgroundThread(@event) &&
             !ForceCurrentInstanceHandleInCurrentThread &&
             !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()) &&
             couldRunInBackgroundThread)
             Util.TaskRunner.QueueActionInBackground(
-                async () => await DoExecuteInstanceInNewScope(@event),
+                async () => await ExecuteRetryHandleInNewScopeAsync(@event, cancellationToken),
                 () => LoggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>)),
                 cancellationToken: default);
         else
@@ -72,18 +72,37 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         return true;
     }
 
-    protected async Task DoExecuteInstanceInNewScope(
-        TEvent notification)
+    protected async Task ExecuteRetryHandleInNewScopeAsync(
+        TEvent notification,
+        CancellationToken cancellationToken = default)
     {
-        await RootServiceProvider.ExecuteInjectScopedAsync(
-            async (IServiceProvider sp) =>
-            {
-                var thisHandlerNewInstance = sp.GetRequiredService(GetType())
-                    .As<PlatformCqrsEventHandler<TEvent>>()
-                    .With(newInstance => CopyPropertiesToNewInstanceBeforeExecution(this, newInstance));
+        try
+        {
+            // Retry RetryOnFailedTimes to help resilient PlatformCqrsEventHandler. Sometime parallel, create/update concurrency could lead to error
+            if (RetryOnFailedTimes > 0)
+                await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                    async () =>
+                    {
+                        await RootServiceProvider.ExecuteInjectScopedAsync(
+                            async (IServiceProvider sp) =>
+                            {
+                                var thisHandlerNewInstance = sp.GetRequiredService(GetType())
+                                    .As<PlatformCqrsEventHandler<TEvent>>()
+                                    .With(newInstance => CopyPropertiesToNewInstanceBeforeExecution(this, newInstance));
 
-                await ExecuteRetryHandleAsync(thisHandlerNewInstance, notification);
-            });
+                                await thisHandlerNewInstance.ExecuteHandleAsync(notification, cancellationToken);
+                            });
+                    },
+                    retryCount: RetryOnFailedTimes,
+                    sleepDurationProvider: retryAttempt => RetryOnFailedDelaySeconds.Seconds(),
+                    cancellationToken: cancellationToken);
+            else
+                await ExecuteHandleAsync(notification, cancellationToken);
+        }
+        catch (Exception e)
+        {
+            LogError(notification, e, LoggerFactory);
+        }
     }
 
     protected async Task ExecuteRetryHandleAsync(

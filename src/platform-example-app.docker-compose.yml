@@ -19,6 +19,11 @@ services:
   postgres-sql:
     image: postgres:14.5
 
+  pyroscope-agent.monitoring:
+    image: grafana/pyroscope
+    ports:
+      - "4040:4040"
+
   text-snippet-api:
     image: ${REGISTRY:-duc01226}/easy-platform-example-app-text-snippet-api:${PLATFORM:-linux}-${TAG:-latest}
     build:

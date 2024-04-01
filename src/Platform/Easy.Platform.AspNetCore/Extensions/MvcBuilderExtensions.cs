@@ -47,19 +47,22 @@ public static class MvcBuilderExtensions
     /// <param name="customConverters">
     /// A list of custom <see cref="JsonConverter" /> instances to be added to the serialization options.
     /// </param>
+    /// <param name="ignoreJsonConverterTypes">Input list of default platform json converters that you want to be ignored</param>
     /// <returns>The configured <see cref="IMvcBuilder" />.</returns>
     public static IMvcBuilder AddPlatformJsonOptions(
         this IMvcBuilder builder,
         bool useJsonStringEnumConverter = true,
         bool useCamelCaseNaming = false,
-        List<JsonConverter> customConverters = null)
+        List<JsonConverter> customConverters = null,
+        HashSet<Type> ignoreJsonConverterTypes = null)
     {
         return builder.AddJsonOptions(
             options => PlatformJsonSerializer.ConfigOptions(
                 options.JsonSerializerOptions,
                 useJsonStringEnumConverter,
                 useCamelCaseNaming,
-                customConverters));
+                customConverters,
+                ignoreJsonConverterTypes));
     }
 
     /// <summary>

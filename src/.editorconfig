@@ -716,6 +716,8 @@ dotnet_diagnostic.S1133.severity = warning
 # S1144: Remove unused internal class
 dotnet_diagnostic.S1144.severity = none
 
+dotnet_diagnostic.S1186.severity = suggestion
+
 dotnet_diagnostic.S2857.severity = none
 
 dotnet_diagnostic.S6602.severity = suggestion

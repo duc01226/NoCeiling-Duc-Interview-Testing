@@ -1,4 +1,5 @@
 using Easy.Platform.Application.MessageBus.Consumers;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.HostingBackgroundServices;
 using Easy.Platform.Common.JsonSerialization;
@@ -48,6 +49,8 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
 
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
+        await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformModule), Logger, $"process ${GetType().Name}");
+
         if (!HasInboxEventBusMessageRepositoryRegistered() || isProcessing)
             return;
 
@@ -225,11 +228,11 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
         }
         catch (PlatformDomainRowVersionConflictException conflictDomainException)
         {
-            Logger.LogWarning(
+            Logger.LogDebug(
                 conflictDomainException,
-                "Some other consumer instance has been handling some inbox messages (support multi service instance running concurrently), which lead to row version conflict. This is as expected so just warning.");
+                "Some other consumer instance has been handling some inbox messages (support multi service instance running concurrently), which lead to row version conflict. This is as expected.");
 
-            // WHY: Because support multi service instance running concurrently,
+            // WHY: Because support multiple service instance running concurrently,
             // get row version conflict is expected, so just retry again to get unprocessed inbox messages
             return await PopToHandleInboxEventBusMessages(cancellationToken);
         }

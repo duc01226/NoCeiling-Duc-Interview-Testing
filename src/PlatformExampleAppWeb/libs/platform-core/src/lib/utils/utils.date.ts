@@ -1,5 +1,6 @@
 import moment from 'moment';
 
+import { Time } from '../../lib';
 import { MONTH, MONTH_DISPLAY, WEEKDAY, WORKING_TIME_DAY_DISPLAY } from '../common-values/weekdays.const';
 
 export function date_setHours(date: Date, hours: number): Date {
@@ -391,4 +392,8 @@ export function date_remainingDaysUntilToday(inputDateValue: string | Date): num
     const remainingDays = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
 
     return remainingDays;
+}
+
+export function date_setTime(date: Date, time: Time): Date {
+    return new Date(new Date(date).setHours(time.hour, time.minute));
 }

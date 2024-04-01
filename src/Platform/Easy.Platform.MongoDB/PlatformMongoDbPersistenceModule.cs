@@ -15,6 +15,7 @@ using Easy.Platform.Persistence.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson.Serialization;
+using MongoDB.Driver.Core.Extensions.DiagnosticSources;
 using OpenTelemetry.Trace;
 
 namespace Easy.Platform.MongoDB;
@@ -33,7 +34,8 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
     {
     }
 
-    public override Action<TracerProviderBuilder> AdditionalTracingConfigure => builder => builder.AddMongoDBInstrumentation();
+    public override Action<TracerProviderBuilder> AdditionalTracingConfigure =>
+        builder => builder.AddSource(typeof(DiagnosticsActivityEventSubscriber).Assembly.GetName().Name!);
 
     public static void RegisterClassMapType(Type platformMongoClassMapType)
     {

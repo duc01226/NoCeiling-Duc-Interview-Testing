@@ -31,7 +31,7 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
         strategy: RepoLoadStrategy;
         finalResultBuilder: (repoData: Dictionary<TModel>, apiResult: TApiResult) => TApiResult;
         modelDataExtractor: (apiResult: TApiResult) => TModel[];
-        modelIdFn: (item: TModel | Partial<TModel>) => string | number | undefined;
+        modelIdFn: (item: TModel | Partial<TModel>) => string | number | undefined | null;
         initModelItemFn: (data: TModel | Partial<TModel>) => TModel;
         replaceItem?: boolean;
         asRequest?: boolean;
@@ -210,7 +210,7 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
     protected upsertData<TModel>(
         dataSubject: BehaviorSubject<Dictionary<TModel>>,
         data: (TModel | Partial<TModel>)[],
-        modelIdFn: (item: TModel | Partial<TModel>) => string | number | undefined,
+        modelIdFn: (item: TModel | Partial<TModel>) => string | number | undefined | null,
         initModelItemFn: (data: TModel | Partial<TModel>) => TModel,
         replaceItem: boolean = false,
         onDataChanged?: (newState: Dictionary<TModel>) => void,
@@ -246,7 +246,7 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
         apiResult: TApiResult;
         repoDataSubject: BehaviorSubject<Dictionary<TModel>>;
         modelDataExtractor: (apiResult: TApiResult) => TModel[];
-        modelIdFn: (item: TModel | Partial<TModel>) => string | number | undefined;
+        modelIdFn: (item: TModel | Partial<TModel>) => string | number | undefined | null;
         initModelItemFn: (data: TModel | Partial<TModel>) => TModel;
         replaceItem: boolean;
         optionalProps: (keyof TModel)[];

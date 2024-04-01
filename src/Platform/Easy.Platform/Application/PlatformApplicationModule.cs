@@ -330,7 +330,9 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             await ClearDistributedCache(autoClearDistributedCacheOnInitOptions, serviceScope);
 
         if (AutoRegisterDefaultCaching)
-            await serviceScope.ServiceProvider.GetRequiredService<PlatformCachingModule>().Init(CurrentApp);
+            await serviceScope.ServiceProvider.GetRequiredService<PlatformCachingModule>()
+                .With(p => p.IsChildModule = true)
+                .Init(CurrentAppBuilder);
     }
 
     /// <summary>

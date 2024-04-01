@@ -204,4 +204,14 @@ public static class ObjectGeneralExtension
     {
         return PlatformJsonSerializer.Deserialize<TObject>(PlatformJsonSerializer.Serialize(obj));
     }
+
+    public static bool Is<TObject>(this TObject obj, Expression<Func<TObject, bool>> expr)
+    {
+        return expr.Compile().Invoke(obj);
+    }
+
+    public static bool Is<TObject>(this TObject obj, Func<TObject, bool> func)
+    {
+        return func(obj);
+    }
 }

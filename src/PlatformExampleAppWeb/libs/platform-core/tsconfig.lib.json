@@ -6,7 +6,8 @@
         "declarationMap": true,
         "inlineSources": true,
         "target": "ES2022",
-        "useDefineForClassFields": false
+        "useDefineForClassFields": false,
+        "types": ["custom-global"]
     },
     "exclude": ["jest.config.ts", "**/*.test.ts", "**/*.spec.ts"],
     "include": ["**/*.ts"]

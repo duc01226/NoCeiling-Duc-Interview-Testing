@@ -11,6 +11,7 @@ import {
 import { PartialDeep } from 'type-fest';
 
 import { Time } from '../common-types';
+import { PLATFORM_CORE_GLOBAL_ENV } from '../platform-core-global-environment';
 import { any } from './_common-functions';
 import { list_distinct } from './utils.list';
 
@@ -124,15 +125,23 @@ export function clone<T>(value: T, updateClonedValueAction?: (clonedValue: T) =>
     return clonedValue;
 }
 
+export type ImmutableUpdateOptions = {
+    updaterNotDeepMutate?: boolean;
+    checkDiff?: false | true | 'deepCheck';
+    maxDeepLevel?: number;
+};
+
 export function immutableUpdate<TObject extends object>(
     targetObj: TObject,
     partialStateOrUpdaterFn:
         | PartialDeep<TObject>
         | Partial<TObject>
         | ((state: TObject) => void | PartialDeep<TObject> | Partial<TObject>),
-    checkDiff: false | true | 'deepCheck' = true,
-    maxDeepLevel?: number
+    options?: ImmutableUpdateOptions
 ): TObject {
+    const checkDiff = options?.checkDiff == undefined ? true : options.checkDiff;
+    const maxDeepLevel = options?.maxDeepLevel;
+
     const clonedObj = clone(targetObj);
     let stateChanged: boolean | undefined;
 
@@ -141,27 +150,62 @@ export function immutableUpdate<TObject extends object>(
     }
 
     if (typeof partialStateOrUpdaterFn == 'function') {
-        const clonnedDeepState = cloneDeep(targetObj);
+        const clonedDeepState = options?.updaterNotDeepMutate == true ? undefined : cloneDeep(targetObj);
 
-        const updatedStateResult = partialStateOrUpdaterFn(clonnedDeepState);
+        // Explain: To check the function has deep mutated the state object or not, we need to clone the state object to allow mutation at only first level.
+        // Clone deep object to compare with the cloned object to check the deep mutation
+        const clonedLocalDevToCheckStateMutation =
+            options?.updaterNotDeepMutate == true && PLATFORM_CORE_GLOBAL_ENV.isLocalDev ? clone(clonedObj) : undefined;
+        const clonedLocalDevToCheckStateMutationJson =
+            options?.updaterNotDeepMutate == true && PLATFORM_CORE_GLOBAL_ENV.isLocalDev
+                ? JSON.stringify(toPlainObj(clonedLocalDevToCheckStateMutation))
+                : undefined;
 
-        if (updatedStateResult != undefined) {
-            // Case the partialStateOrUpdaterFn return partial updated props object
-            stateChanged = assignDeep(
-                clonedObj,
-                <object>updatedStateResult,
-                checkDiff == true ? 'deepCheck' : checkDiff, // Should deep check for case partialStateOrUpdaterFn is function because of clone deep
-                maxDeepLevel
+        const updatedStateResult = partialStateOrUpdaterFn(clonedDeepState ?? clonedObj);
+
+        // toPlainObj before check different to avoid case object has get property auto update value
+        if (
+            PLATFORM_CORE_GLOBAL_ENV.isLocalDev &&
+            clonedLocalDevToCheckStateMutationJson != JSON.stringify(toPlainObj(clonedLocalDevToCheckStateMutation))
+        ) {
+            const msg =
+                '[DEV_ERROR] Your function has deep mutated the state object. Please use immutable update function to update the state object. See CONSOLE LOG for more detail.';
+
+            alert(msg);
+            console.error(
+                `[ClonedLocalDevToCheckStateMutation Mutated Value]:\n${JSON.stringify(
+                    clonedLocalDevToCheckStateMutation
+                )}\n###\n[ClonedLocalDevToCheckStateMutationJson Original Value]:\n${clonedLocalDevToCheckStateMutationJson}`
             );
-        } else {
-            // Case the partialStateOrUpdaterFn edit the object state directly.
-            // Then the clonnedDeepState is actual an updated result, use it to update the clonedState
-            stateChanged = assignDeep(
-                clonedObj,
-                <object>clonnedDeepState,
-                checkDiff == true ? 'deepCheck' : checkDiff, // Should deep check for case partialStateOrUpdaterFn is function because of clone deep
-                maxDeepLevel
-            );
+            throw new Error(msg);
+        }
+
+        // Case immutable update function return new state object, then use it as the updated state
+        if (options?.updaterNotDeepMutate == true) {
+            return updatedStateResult != undefined &&
+                updatedStateResult instanceof Object &&
+                (<object>updatedStateResult).constructor == clonedObj.constructor
+                ? <TObject>updatedStateResult
+                : clonedObj;
+        } else if (clonedDeepState != undefined) {
+            if (updatedStateResult != undefined) {
+                // Case the partialStateOrUpdaterFn return partial updated props object
+                stateChanged = assignDeep(
+                    clonedObj,
+                    <object>updatedStateResult,
+                    checkDiff == true ? 'deepCheck' : checkDiff, // Should deep check for case partialStateOrUpdaterFn is function because of clone deep
+                    maxDeepLevel
+                );
+            } else {
+                // Case the partialStateOrUpdaterFn edit the object state directly.
+                // Then the clonnedDeepState is actual an updated result, use it to update the clonedState
+                stateChanged = assignDeep(
+                    clonedObj,
+                    <object>clonedDeepState,
+                    checkDiff == true ? 'deepCheck' : checkDiff, // Should deep check for case partialStateOrUpdaterFn is function because of clone deep
+                    maxDeepLevel
+                );
+            }
         }
     }
 
@@ -231,8 +275,8 @@ export function isDifferent<T>(value1: T, value2: T, shallowCheckFirstLevel: boo
     if (value1 instanceof Date && value2 instanceof Date) {
         return value1.getTime() != value2.getTime();
     }
-    const value1Keys = Object.keys(<any>value1);
-    const value2Keys = Object.keys(<any>value2);
+    const value1Keys = keys(<any>value1);
+    const value2Keys = keys(<any>value2);
     if (value1Keys.length != value2Keys.length) return true;
     if (shallowCheckFirstLevel) {
         return any(value1Keys, value1Key => {
@@ -241,7 +285,10 @@ export function isDifferent<T>(value1: T, value2: T, shallowCheckFirstLevel: boo
             return JSON.stringify((<any>value1)[value1Key]) != JSON.stringify((<any>value2)[value1Key]);
         });
     }
-    return JSON.stringify(value1) != JSON.stringify(value2);
+
+    const result = JSON.stringify(value1) != JSON.stringify(value2);
+
+    return result;
 }
 
 export function changedKeys<T>(value1: T, value2: T): (keyof T)[] {

@@ -35,6 +35,8 @@ public sealed class SearchSnippetTextQuery : PlatformCqrsPagedQuery<SearchSnippe
 
 public sealed class SearchSnippetTextQueryResult : PlatformCqrsQueryPagedResult<TextSnippetEntityDto>
 {
+    public SearchSnippetTextQueryResult() { }
+
     public SearchSnippetTextQueryResult(List<TextSnippetEntityDto> items, long totalCount, IPlatformPagedRequest pagedRequest) : base(items, totalCount, pagedRequest)
     {
     }

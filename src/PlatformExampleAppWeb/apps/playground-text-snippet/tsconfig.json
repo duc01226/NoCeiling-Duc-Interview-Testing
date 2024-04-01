@@ -1,7 +1,7 @@
 {
     "extends": "../../tsconfig.base.json",
     "files": [],
-    "include": [],
+    "include": ["**/*.d.ts"],
     "references": [
         {
             "path": "./tsconfig.app.json"
@@ -16,7 +16,6 @@
     "compilerOptions": {
         "target": "ES2022",
         "types": ["custom-global"],
-        "typeRoots": ["node_modules/@types"],
         "useDefineForClassFields": false,
         "forceConsistentCasingInFileNames": true,
         "strict": true,
@@ -32,6 +31,11 @@
         "enableI18nLegacyMessageIdFormat": false,
         "strictInjectionParameters": true,
         "strictInputAccessModifiers": true,
-        "strictTemplates": true
+        "strictTemplates": true,
+        "extendedDiagnostics": {
+            "checks": {
+                "optionalChainNotNullable": "error"
+            }
+        }
     }
 }

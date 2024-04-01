@@ -36,14 +36,16 @@ public static class PlatformJsonSerializer
     /// <param name="useJsonStringEnumConverter">Whether to use the <see cref="JsonStringEnumConverter" />.</param>
     /// <param name="useCamelCaseNaming">Whether to use camel case property naming.</param>
     /// <param name="customConverters">Additional custom JSON converters.</param>
+    /// <param name="ignoreJsonConverterTypes">Input list of default platform json converters that you want to be ignored</param>
     /// <returns>The configured JSON serialization options.</returns>
     public static JsonSerializerOptions ConfigOptions(
         JsonSerializerOptions options,
         bool useJsonStringEnumConverter = true,
         bool useCamelCaseNaming = false,
-        List<JsonConverter> customConverters = null)
+        List<JsonConverter> customConverters = null,
+        HashSet<Type> ignoreJsonConverterTypes = null)
     {
-        options.TypeInfoResolver = new PlatformPrivateConstructorContractResolver();
+        options.TypeInfoResolver = new PlatformJsonTypeInfoResolver();
         options.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
         options.ReadCommentHandling = JsonCommentHandling.Skip;
         options.PropertyNameCaseInsensitive = true;
@@ -57,14 +59,22 @@ public static class PlatformJsonSerializer
         if (useJsonStringEnumConverter)
             options.Converters.Add(new JsonStringEnumConverter());
 
-        options.Converters.Add(new PlatformObjectJsonConverter());
-        options.Converters.Add(new PlatformClassTypeJsonConverter());
-        options.Converters.Add(new PlatformIgnoreMethodBaseJsonConverter());
-        options.Converters.Add(new PlatformDateTimeJsonConverter());
-        options.Converters.Add(new PlatformNullableDateTimeJsonConverter());
-        options.Converters.Add(new PlatformDateOnlyJsonConverter());
-        options.Converters.Add(new PlatformNullableDateOnlyJsonConverter());
-        options.Converters.Add(new PlatformPrimitiveTypeToStringJsonConverter());
+        if (ignoreJsonConverterTypes?.Contains(typeof(PlatformObjectJsonConverter)) != true)
+            options.Converters.Add(new PlatformObjectJsonConverter());
+        if (ignoreJsonConverterTypes?.Contains(typeof(PlatformClassTypeJsonConverter)) != true)
+            options.Converters.Add(new PlatformClassTypeJsonConverter());
+        if (ignoreJsonConverterTypes?.Contains(typeof(PlatformIgnoreMethodBaseJsonConverter)) != true)
+            options.Converters.Add(new PlatformIgnoreMethodBaseJsonConverter());
+        if (ignoreJsonConverterTypes?.Contains(typeof(PlatformDateTimeJsonConverter)) != true)
+            options.Converters.Add(new PlatformDateTimeJsonConverter());
+        if (ignoreJsonConverterTypes?.Contains(typeof(PlatformNullableDateTimeJsonConverter)) != true)
+            options.Converters.Add(new PlatformNullableDateTimeJsonConverter());
+        if (ignoreJsonConverterTypes?.Contains(typeof(PlatformDateOnlyJsonConverter)) != true)
+            options.Converters.Add(new PlatformDateOnlyJsonConverter());
+        if (ignoreJsonConverterTypes?.Contains(typeof(PlatformNullableDateOnlyJsonConverter)) != true)
+            options.Converters.Add(new PlatformNullableDateOnlyJsonConverter());
+        if (ignoreJsonConverterTypes?.Contains(typeof(PlatformPrimitiveTypeToStringJsonConverter)) != true)
+            options.Converters.Add(new PlatformPrimitiveTypeToStringJsonConverter());
 
         customConverters?.ForEach(options.Converters.Add);
 

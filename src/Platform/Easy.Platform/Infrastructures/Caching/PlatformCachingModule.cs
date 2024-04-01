@@ -81,7 +81,7 @@ public class PlatformCachingModule : PlatformInfrastructureModule
             serviceCollection,
             assemblies: Util.ListBuilder.New(Assembly)
                 .Concat(
-                    ServiceProvider.GetServices<PlatformModule>()
+                    serviceCollection.BuildServiceProvider().GetServices<PlatformModule>()
                         .Where(p => p is not PlatformInfrastructureModule)
                         .Select(p => p.GetType().Assembly))
                 .Distinct()
@@ -95,7 +95,7 @@ public class PlatformCachingModule : PlatformInfrastructureModule
         serviceCollection.RegisterAllForImplementation(typeof(PlatformCollectionMemoryCacheRepository<>));
 
         // Register Distributed Cache
-        var tempCheckHasDistributedCacheInstance = DistributedCacheRepositoryProvider(ServiceProvider, Configuration);
+        var tempCheckHasDistributedCacheInstance = DistributedCacheRepositoryProvider(serviceCollection.BuildServiceProvider(), Configuration);
         if (tempCheckHasDistributedCacheInstance != null)
         {
             tempCheckHasDistributedCacheInstance.Dispose();

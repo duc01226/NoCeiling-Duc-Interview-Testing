@@ -36,7 +36,9 @@
                         "variableDeclarationIgnoreFunction": true
                     }
                 ],
-                "@typescript-eslint/member-ordering": "off"
+                "@typescript-eslint/member-ordering": "off",
+                "@angular-eslint/no-input-rename": "off",
+                "@angular-eslint/no-output-on-prefix": "off"
             }
         },
         {

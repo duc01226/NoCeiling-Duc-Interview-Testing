@@ -264,6 +264,24 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         }
     }
 
+    public async Task<List<TEntity>> DeleteManyImmediatelyAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+    {
+        using (var immediatelyUow = UowManager().CreateNewUow())
+        {
+            var toDeleteEntities = await GetAllAsync(predicate, cancellationToken);
+
+            var result = await DeleteManyAsync(immediatelyUow, toDeleteEntities, dismissSendEvent, eventCustomConfig, cancellationToken);
+
+            await immediatelyUow.CompleteAsync(cancellationToken);
+
+            return result;
+        }
+    }
+
     /// <summary>
     /// Asynchronously delete entity in the repository within the context of current active unit of work or single commit create immediately.
     /// </summary>

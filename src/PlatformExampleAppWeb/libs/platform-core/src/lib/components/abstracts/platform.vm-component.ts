@@ -1,10 +1,12 @@
 import { Directive, EventEmitter, Input, OnInit, Output, signal, WritableSignal } from '@angular/core';
 
 import { cloneDeep } from 'lodash-es';
-import { Observable } from 'rxjs';
+import { filter, map, Observable, share } from 'rxjs';
 import { PartialDeep } from 'type-fest';
 
+import { toObservable } from '@angular/core/rxjs-interop';
 import { PlatformApiServiceErrorResponse } from '../../api-services';
+import { distinctUntilObjectValuesChanged } from '../../rxjs';
 import { immutableUpdate, isDifferent } from '../../utils';
 import { IPlatformVm } from '../../view-models';
 import { LoadingState, PlatformComponent } from './platform.component';
@@ -27,16 +29,16 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
         super();
     }
 
-    private _vmSignal?: WritableSignal<TViewModel>;
+    private _vmSignal?: WritableSignal<TViewModel | undefined>;
     /**
      * Get the current view model signal.
      */
-    public get vm(): WritableSignal<TViewModel> {
+    public get vm(): WritableSignal<TViewModel | undefined> {
         this._vmSignal ??= signal(this._vm);
         return this._vmSignal;
     }
 
-    protected _vm!: TViewModel;
+    protected _vm?: TViewModel;
     /**
      * Sets the view model and performs change detection if the new view model is different.
      */
@@ -45,6 +47,26 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
         if (isDifferent(this._vm, v)) {
             this.internalSetVm(v, false);
         }
+    }
+
+    private _vm$?: Observable<TViewModel>;
+    public vm$(): Observable<TViewModel> {
+        this._vm$ ??= <Observable<TViewModel>>toObservable(this.vm).pipe(
+            filter(p => p != undefined),
+            this.untilDestroyed(),
+            share()
+        );
+
+        return this._vm$;
+    }
+
+    public selectVm<T>(selector: (vm: TViewModel) => T): Observable<T> {
+        return this.vm$().pipe(map(selector), distinctUntilObjectValuesChanged());
+    }
+
+    public currentVm() {
+        if (this._vm == undefined) throw new Error('Vm is not initiated');
+        return this._vm;
     }
 
     /**
@@ -66,6 +88,7 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
      */
     public override ngOnInit(): void {
         this.initVm();
+        this.ngOnInitCalled$.next(true);
     }
 
     /**
@@ -76,7 +99,7 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
     public initVm(forceReinit: boolean = false, onSuccess?: () => unknown) {
         if (forceReinit) this.cancelStoredSubscription('initVm');
 
-        const initialVm$ = this.onInitVm();
+        const initialVm$ = this.initOrReloadVm(forceReinit && this._vm?.status == 'Success');
 
         if ((this.vm() == undefined || forceReinit) && initialVm$ != undefined) {
             if (initialVm$ instanceof Observable) {
@@ -84,6 +107,8 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
                     'initVm',
                     initialVm$.subscribe({
                         next: initialVm => {
+                            autoInitVmStatus.bind(this)(initialVm);
+
                             this.internalSetVm(initialVm);
                             this.originalInitVm = cloneDeep(initialVm);
                             super.ngOnInit();
@@ -97,6 +122,8 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
                     })
                 );
             } else {
+                autoInitVmStatus.bind(this)(initialVm$);
+
                 this.internalSetVm(initialVm$);
                 this.originalInitVm = cloneDeep(initialVm$);
                 super.ngOnInit();
@@ -107,6 +134,14 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
             super.ngOnInit();
 
             executeOnSuccessDelay.bind(this)();
+        }
+
+        function autoInitVmStatus(this: PlatformVmComponent<TViewModel>, initialVm: TViewModel) {
+            // Init status auto default Success if first time init and status is Pending
+            if (initialVm.status == 'Pending') {
+                if (this._vm == undefined) initialVm.status = 'Success';
+                else this.updateVm(<Partial<TViewModel>>{ status: 'Success' });
+            }
         }
 
         function executeOnSuccessDelay(this: PlatformVmComponent<TViewModel>) {
@@ -133,7 +168,7 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
      * Hook to be implemented by derived classes to provide the initial view model.
      * @protected
      */
-    protected abstract onInitVm: () => TViewModel | undefined | Observable<TViewModel>;
+    protected abstract initOrReloadVm: (isReload: boolean) => TViewModel | undefined | Observable<TViewModel>;
 
     /**
      * Updates the view model with partial state or an updater function.
@@ -145,15 +180,18 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
         partialStateOrUpdaterFn:
             | PartialDeep<TViewModel>
             | Partial<TViewModel>
-            | ((state: TViewModel) => void | PartialDeep<TViewModel>)
+            | ((state: TViewModel) => void | PartialDeep<TViewModel>),
+        onVmChanged?: (vm: TViewModel) => unknown
     ): TViewModel {
-        const newUpdatedVm: TViewModel = immutableUpdate(this._vm, partialStateOrUpdaterFn);
+        if (this._vm == undefined) return this._vm!;
+
+        const newUpdatedVm: TViewModel = immutableUpdate(this._vm!, partialStateOrUpdaterFn);
 
         if (newUpdatedVm != this._vm) {
-            this.internalSetVm(newUpdatedVm);
+            this.internalSetVm(newUpdatedVm, true, onVmChanged);
         }
 
-        return this._vm;
+        return this._vm!;
     }
 
     /**
@@ -162,12 +200,21 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
      * @param v - The new view model.
      * @param shallowCheckDiff - Whether to shallow check for differences before updating.
      */
-    protected internalSetVm = (v: TViewModel, shallowCheckDiff: boolean = true): void => {
+    protected internalSetVm = (
+        v: TViewModel,
+        shallowCheckDiff: boolean = true,
+        onVmChanged?: (vm: TViewModel) => unknown
+    ): boolean => {
         if (shallowCheckDiff == false || this._vm != v) {
             this._vm = v;
             this.vm.set(v);
 
             if (this.initiated$.value) this.vmChangeEvent.emit(v);
+            if (onVmChanged != undefined) onVmChanged(this._vm);
+
+            return true;
         }
+
+        return false;
     };
 }

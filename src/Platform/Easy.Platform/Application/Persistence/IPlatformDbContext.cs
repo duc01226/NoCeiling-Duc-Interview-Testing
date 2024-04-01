@@ -19,7 +19,7 @@ namespace Easy.Platform.Application.Persistence;
 public interface IPlatformDbContext : IDisposable
 {
     public const int DefaultPageSize = 10;
-    public const int DefaultRunDataMigrationInBackgroundRetryCount = 12;
+    public const int DefaultRunDataMigrationInBackgroundRetryCount = 3;
     public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformDbContext)}");
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery { get; }
@@ -114,24 +114,18 @@ public interface IPlatformDbContext : IDisposable
     {
         try
         {
-            await rootServiceProvider.ExecuteInjectScopedAsync(
-                async (IServiceProvider sp) =>
+            await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                () => rootServiceProvider.ExecuteInjectScopedAsync(
+                    async (IServiceProvider sp, TDbContext dbContext) =>
+                    {
+                        await dbContext.ExecuteDataMigrationExecutor(
+                            PlatformDataMigrationExecutor<TDbContext>.CreateNewInstance(sp, migrationExecutionType));
+                    }),
+                retryCount: DefaultRunDataMigrationInBackgroundRetryCount,
+                sleepDurationProvider: retryAttempt => 20.Seconds(),
+                onRetry: (ex, timeSpan, currentRetry, ctx) =>
                 {
-                    var dbContext = sp.GetRequiredService(typeof(TDbContext)).As<TDbContext>();
-
-                    await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                        () => rootServiceProvider.ExecuteInjectScopedAsync(
-                            async (IServiceProvider sp) =>
-                            {
-                                await dbContext.ExecuteDataMigrationExecutor(
-                                    PlatformDataMigrationExecutor<TDbContext>.CreateNewInstance(sp, migrationExecutionType));
-                            }),
-                        retryCount: DefaultRunDataMigrationInBackgroundRetryCount,
-                        sleepDurationProvider: retryAttempt => 5.Seconds(),
-                        onRetry: (ex, timeSpan, currentRetry, ctx) =>
-                        {
-                            LogDataMigrationFailedError(loggerFactory(), ex, migrationExecutionName);
-                        });
+                    LogDataMigrationFailedError(loggerFactory(), ex, migrationExecutionName);
                 });
         }
         catch (Exception ex)

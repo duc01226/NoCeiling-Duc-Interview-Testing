@@ -210,18 +210,47 @@ public interface IValidatableEntity<TEntity, TPrimaryKey> : IValidatableEntity<T
     public PlatformCheckUniqueValidator<TEntity> CheckUniqueValidator();
 }
 
+public interface IUniqueCompositeIdSupport<TEntity>
+    where TEntity : class, IEntity, new()
+{
+    /// <summary>
+    /// Gets an expression for finding an entity by its unique composite ID.
+    /// Default should return null if no unique composite ID is defined.
+    /// Used to check existing for create of update
+    /// </summary>
+    public Expression<Func<TEntity, bool>> FindByUniqueCompositeIdExpr();
+
+
+    /// <summary>
+    /// Its unique composite ID.
+    /// Default should return Null if no unique composite ID is defined.
+    /// </summary>
+    public string UniqueCompositeId();
+}
+
 /// <summary>
 /// Represents an abstract class for generic entities that support validation and domain events.
 /// </summary>
 /// <typeparam name="TEntity">Type of the entity.</typeparam>
 /// <typeparam name="TPrimaryKey">Type of the primary key.</typeparam>
-public abstract class Entity<TEntity, TPrimaryKey> : IValidatableEntity<TEntity, TPrimaryKey>, ISupportDomainEventsEntity<TEntity>
-    where TEntity : class, IEntity<TPrimaryKey>, ISupportDomainEventsEntity<TEntity>, new()
+public abstract class Entity<TEntity, TPrimaryKey>
+    : IValidatableEntity<TEntity, TPrimaryKey>, ISupportDomainEventsEntity<TEntity>, IUniqueCompositeIdSupport<TEntity>
+    where TEntity : class, IEntity<TPrimaryKey>, ISupportDomainEventsEntity<TEntity>, IUniqueCompositeIdSupport<TEntity>, new()
 {
     /// <summary>
     /// List to store domain events associated with the entity.
     /// </summary>
     protected readonly List<KeyValuePair<string, ISupportDomainEventsEntity.DomainEvent>> DomainEvents = [];
+
+    public virtual Expression<Func<TEntity, bool>> FindByUniqueCompositeIdExpr()
+    {
+        return null;
+    }
+
+    public virtual string UniqueCompositeId()
+    {
+        return null;
+    }
 
     /// <summary>
     /// Gets the domain events associated with the entity.
@@ -371,6 +400,6 @@ public interface IRootEntity<TPrimaryKey> : IEntity<TPrimaryKey>
 /// Root entity represent an aggregate root entity. Only root entity can be Create/Update/Delete via repository
 /// </summary>
 public abstract class RootEntity<TEntity, TPrimaryKey> : Entity<TEntity, TPrimaryKey>, IRootEntity<TPrimaryKey>
-    where TEntity : Entity<TEntity, TPrimaryKey>, new()
+    where TEntity : Entity<TEntity, TPrimaryKey>, IUniqueCompositeIdSupport<TEntity>, new()
 {
 }

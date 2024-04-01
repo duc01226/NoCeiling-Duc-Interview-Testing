@@ -284,7 +284,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
                         cancellationToken));
 
                 await textSnippetEntityRepository.UpdateAsync(
-                    await textSnippetEntityRepository.FirstOrDefaultAsync(cancellationToken: cancellationToken),
+                    testGetDataParallel1,
                     cancellationToken: cancellationToken);
 
                 await uow.CompleteAsync(cancellationToken);
@@ -368,16 +368,12 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
         // DEMO If you want to force wait handler to be handling successfully to continue. By default, handlers for entity event executing
         // in background thread and you dont need to wait for it. The command will return immediately.
         // Sometime you could want to wait for handler done
-        var savedDataWaitClearCacheDone = await textSnippetEntityRepository.CreateOrUpdateAsync(
-            validToSaveEntity,
-            eventCustomConfig: p => p.SetWaitHandlerExecutionFinishedImmediately(
-                typeof(ClearCacheOnSaveSnippetTextEntityEventHandler),
-                typeof(DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEventHandler)),
-            cancellationToken: cancellationToken);
-        var savedDataWaitClearCacheDone1 = await textSnippetEntityRepository.CreateOrUpdateAsync(
-            validToSaveEntity,
-            eventCustomConfig: p => p.SetForceWaitEventHandlerFinished<ClearCacheOnSaveSnippetTextEntityEventHandler>(),
-            cancellationToken: cancellationToken);
+        //var savedDataWaitClearCacheDone = await textSnippetEntityRepository.CreateOrUpdateAsync(
+        //    validToSaveEntity,
+        //    eventCustomConfig: p => p.SetWaitHandlerExecutionFinishedImmediately(
+        //        typeof(ClearCacheOnSaveSnippetTextEntityEventHandler),
+        //        typeof(DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEventHandler)),
+        //    cancellationToken: cancellationToken);
 
         if (request.Data.IsSubmitToUpdate())
             // TEST DEMO Case update using CreateOrUpdate directly entity is mapped from dto. When update do not get from existing entity still should work normally, should also add domain event

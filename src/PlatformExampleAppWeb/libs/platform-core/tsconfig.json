@@ -1,7 +1,7 @@
 {
     "extends": "../../tsconfig.base.json",
     "files": [],
-    "include": [],
+    "include": ["**/*.d.ts"],
     "references": [
         {
             "path": "./tsconfig.lib.json"
@@ -27,6 +27,11 @@
         "enableI18nLegacyMessageIdFormat": false,
         "strictInjectionParameters": true,
         "strictInputAccessModifiers": true,
-        "strictTemplates": true
+        "strictTemplates": true,
+        "extendedDiagnostics": {
+            "checks": {
+                "optionalChainNotNullable": "error"
+            }
+        }
     }
 }

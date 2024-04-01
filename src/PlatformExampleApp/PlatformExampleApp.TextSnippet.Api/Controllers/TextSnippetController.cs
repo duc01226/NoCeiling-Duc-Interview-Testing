@@ -173,4 +173,18 @@ public class TextSnippetController : PlatformBaseController
                 percentChance,
                 () => throw new Exception("Random Test Throw Exception"));
     }
+
+
+    [HttpGet]
+    [Route("TestIAsyncEnumerable")]
+    public IAsyncEnumerable<string> TestIAsyncEnumerable()
+    {
+        return GetAsyncContent();
+    }
+
+    private async IAsyncEnumerable<string> GetAsyncContent()
+    {
+        for (var i = 0; i < int.MaxValue; i++)
+            yield return await Task.Run(() => Guid.NewGuid().ToString());
+    }
 }

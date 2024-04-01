@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Easy.Platform.Application.Persistence;
@@ -42,6 +43,8 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         IEnumerable<TSource> source,
         CancellationToken cancellationToken = default)
     {
+        LogDebugQueryLog(source);
+
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
                 () => DoToListAsync(source, cancellationToken),
@@ -64,6 +67,17 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         }
     }
 
+    protected void LogDebugQueryLog<TSource>(IEnumerable<TSource> source)
+    {
+        if (Debugger.IsAttached && DbContext.EnableDebugQueryLog)
+            source.TryToMongoQueryString()
+                .PipeAction(
+                    queryStr =>
+                    {
+                        if (queryStr != null) Debugger.Log(0, null, queryStr + Environment.NewLine);
+                    });
+    }
+
     public override async IAsyncEnumerable<TSource> ToAsyncEnumerable<TSource>(
         IEnumerable<TSource> source,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -84,6 +98,8 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default)
     {
+        LogDebugQueryLog(source);
+
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
                 () => source.As<IMongoQueryable<TSource>>().FirstOrDefaultAsync(cancellationToken),
@@ -101,6 +117,8 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         IEnumerable<TSource> query,
         CancellationToken cancellationToken = default)
     {
+        LogDebugQueryLog(query);
+
         if (query.As<IMongoQueryable<TSource>>() != null)
             return await FirstOrDefaultAsync(query.As<IMongoQueryable<TSource>>(), cancellationToken);
 
@@ -111,6 +129,8 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         IQueryable<TSource> source,
         CancellationToken cancellationToken = default)
     {
+        LogDebugQueryLog(source);
+
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
                 () => source.As<IMongoQueryable<TSource>>().FirstAsync(cancellationToken),
@@ -126,6 +146,8 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
 
     public override async Task<int> CountAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
+        LogDebugQueryLog(source);
+
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
                 () => source.As<IMongoQueryable<TSource>>().CountAsync(cancellationToken),
@@ -141,6 +163,8 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
 
     public override async Task<bool> AnyAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
+        LogDebugQueryLog(source);
+
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
                 () => source.As<IMongoQueryable<TSource>>().AnyAsync(cancellationToken),

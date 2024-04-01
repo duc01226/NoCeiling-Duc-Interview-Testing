@@ -191,7 +191,7 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
         Logger = CreateLogger(loggerFactory);
     }
 
-    public virtual int RetryOnFailedTimes => 5;
+    public virtual int RetryOnFailedTimes => 3;
 
     public virtual double RetryOnFailedDelaySeconds => 0.5;
 

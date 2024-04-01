@@ -17,10 +17,11 @@
         "allowSyntheticDefaultImports": true,
         "baseUrl": ".",
         "paths": {
-            "@libs/apps-domains/text-snippet-domain": ["libs/apps-domains/text-snippet-domain/src/index.ts"],
-            "@libs/platform-core": ["libs/platform-core/src/index.ts"]
+            "@libs/platform-core": ["libs/platform-core/src/index.ts"],
+            "@libs/apps-domains/text-snippet-domain": ["libs/apps-domains/text-snippet-domain/src/index.ts"]
         },
-        "typeRoots": ["node_modules/@types", "./typings"]
+        "typeRoots": ["node_modules/@types", "./typings"],
+        "types": ["custom-global"]
     },
     "exclude": ["node_modules", "tmp"]
 }

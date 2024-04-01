@@ -195,14 +195,6 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
         }
         catch (PlatformDomainRowVersionConflictException ex)
         {
-            LoggerFactory.CreateLogger(GetType())
-                .LogWarning(
-                    ex,
-                    "{TargetName} complete failed because of version conflict. [[Exception:{Exception}]]. FullStackTrace:{FullStackTrace}]]",
-                    GetType().Name,
-                    ex.Message,
-                    fullStackTrace);
-
             throw new Exception(
                 $"{GetType().Name} complete uow failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
                 ex);

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Linq.Expressions;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Application.RequestContext;
@@ -36,6 +37,11 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         RootServiceProvider = rootServiceProvider;
         Logger = CreateLogger(loggerFactory);
     }
+
+    /// <summary>
+    /// If true enable show query to Debug output
+    /// </summary>
+    public virtual bool EnableDebugQueryLog { get; set; } = true;
 
     protected SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(ContextMaxConcurrentThreadLock, ContextMaxConcurrentThreadLock);
 
@@ -324,8 +330,10 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     {
         var existingEntity = await GetQuery<TEntity>()
             .AsNoTracking()
-            .PipeIf(customCheckExistingPredicate != null, query => query.Where(customCheckExistingPredicate!))
-            .PipeIf(customCheckExistingPredicate == null, query => query.Where(p => p.Id.Equals(entity.Id)))
+            .Pipe(
+                query => customCheckExistingPredicate != null || entity.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() != null
+                    ? query.Where(customCheckExistingPredicate ?? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!)
+                    : query.Where(p => p.Id.Equals(entity.Id)))
             .FirstOrDefaultAsync(cancellationToken);
 
         if (existingEntity != null)
@@ -351,14 +359,20 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             var entityIds = entities.Select(p => p.Id);
 
             var existingEntitiesQuery = GetQuery<TEntity>()
-                .PipeIf(
-                    customCheckExistingPredicateBuilder != null,
-                    query => query.Where(
-                        entities.Select(entity => customCheckExistingPredicateBuilder!(entity)).Aggregate((currentExpr, nextExpr) => currentExpr.Or(nextExpr))))
-                .PipeIf(customCheckExistingPredicateBuilder == null, query => query.Where(p => entityIds.Contains(p.Id)));
+                .Pipe(
+                    query => customCheckExistingPredicateBuilder != null ||
+                             entities.FirstOrDefault()?.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() != null
+                        ? query.Where(
+                            entities
+                                .Select(
+                                    entity => customCheckExistingPredicateBuilder?.Invoke(entity) ??
+                                              entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr())
+                                .Aggregate((currentExpr, nextExpr) => currentExpr.Or(nextExpr)))
+                        : query.Where(p => entityIds.Contains(p.Id)));
 
             // Only need to check by entityIds if no custom check condition
-            if (customCheckExistingPredicateBuilder == null)
+            if (customCheckExistingPredicateBuilder == null &&
+                entities.FirstOrDefault()?.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() == null)
             {
                 var existingEntityIds = await existingEntitiesQuery.Select(p => p.Id).ToListAsync(cancellationToken).Then(items => items.ToHashSet());
 
@@ -381,7 +395,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 var toUpsertEntityToExistingEntityPairs = entities.SelectList(
                     toUpsertEntity =>
                     {
-                        var matchedExistingEntity = existingEntities.FirstOrDefault(p => customCheckExistingPredicateBuilder(toUpsertEntity).Compile()(p));
+                        var matchedExistingEntity = existingEntities.FirstOrDefault(
+                            existingEntity => customCheckExistingPredicateBuilder?.Invoke(toUpsertEntity).Compile()(existingEntity) ??
+                                              existingEntity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr().Compile()(toUpsertEntity));
 
                         // Update to correct the id of toUpdateEntity to the matched existing entity Id
                         if (matchedExistingEntity != null) toUpsertEntity.Id = matchedExistingEntity.Id;
@@ -404,6 +420,13 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         }
 
         return entities;
+    }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+
+        if (Debugger.IsAttached && EnableDebugQueryLog) optionsBuilder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddDebug()));
     }
 
     public ILogger CreateLogger(ILoggerFactory loggerFactory)

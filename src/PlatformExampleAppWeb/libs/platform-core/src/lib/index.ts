@@ -13,6 +13,7 @@ export * from './form-validators';
 export * from './helpers';
 export * from './http-services';
 export * from './pipes';
+export * from './platform-core-global-environment';
 export * from './platform-core.config';
 export * from './platform-core.module';
 export * from './platform-domain.module';

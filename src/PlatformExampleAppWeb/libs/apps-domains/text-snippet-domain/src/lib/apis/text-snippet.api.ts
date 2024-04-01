@@ -1,22 +1,23 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+
 import {
-    IPlatformCommandDto,
     IPlatformPagedResultDto,
-    IPlatformRepositoryPagedQuery,
     PlatformApiService,
     PlatformCommandDto,
     PlatformCoreModuleConfig,
+    PlatformEventManager,
     PlatformHttpOptionsConfigService,
     PlatformPagedQueryDto,
     PlatformPagedResultDto,
     PlatformResultDto
 } from '@libs/platform-core';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
 
 import { AppsTextSnippetDomainModuleConfig } from '../apps-text-snippet-domain.config';
-import { ITextSnippetDataModel, TextSnippetDataModel } from '../data-models';
+import { TextSnippetDataModel } from '../data-models';
 
 @Injectable()
 export class TextSnippetApi extends PlatformApiService {
@@ -24,16 +25,17 @@ export class TextSnippetApi extends PlatformApiService {
         moduleConfig: PlatformCoreModuleConfig,
         http: HttpClient,
         httpOptionsConfigService: PlatformHttpOptionsConfigService,
+        eventManager: PlatformEventManager,
         private domainModuleConfig: AppsTextSnippetDomainModuleConfig
     ) {
-        super(http, moduleConfig, httpOptionsConfigService);
+        super(http, moduleConfig, httpOptionsConfigService, eventManager);
     }
     protected get apiUrl(): string {
         return `${this.domainModuleConfig.textSnippetApiHost}/api/TextSnippet`;
     }
 
     public search(query: SearchTextSnippetQuery): Observable<PlatformPagedResultDto<TextSnippetDataModel>> {
-        return this.get<IPlatformPagedResultDto<ITextSnippetDataModel>>('/search', query).pipe(
+        return this.get<IPlatformPagedResultDto<TextSnippetDataModel>>('/search', query).pipe(
             map(_ => {
                 _.items = _.items.map(item => new TextSnippetDataModel(item));
                 return new PlatformPagedResultDto(_);
@@ -42,47 +44,34 @@ export class TextSnippetApi extends PlatformApiService {
     }
 
     public save(command: SaveTextSnippetCommand): Observable<SaveTextSnippetCommandResult> {
-        return this.post<ISaveTextSnippetCommandResult>('/save', command).pipe(
+        return this.post<SaveTextSnippetCommandResult>('/save', command).pipe(
             map(_ => new SaveTextSnippetCommandResult(_))
         );
     }
 }
 
 // ----------------- SearchTextSnippetQuery -------------------
-export interface ISearchTextSnippetQuery extends IPlatformRepositoryPagedQuery {
-    searchText?: string;
-    searchId?: string;
-}
-
-export class SearchTextSnippetQuery extends PlatformPagedQueryDto implements ISearchTextSnippetQuery {
-    public constructor(data?: ISearchTextSnippetQuery) {
+export class SearchTextSnippetQuery extends PlatformPagedQueryDto {
+    public constructor(data?: Partial<SearchTextSnippetQuery>) {
         super(data);
         this.searchText = data?.searchText;
         this.searchId = data?.searchId;
     }
-    public searchText?: string;
-    public searchId?: string;
-}
-
-export interface ISaveTextSnippetCommand extends IPlatformCommandDto {
-    data: ITextSnippetDataModel;
+    public searchText?: string | null;
+    public searchId?: string | null;
 }
 
 // ----------------- SaveTextSnippetCommand -------------------
-export class SaveTextSnippetCommand extends PlatformCommandDto implements ISaveTextSnippetCommand {
-    public constructor(data?: Partial<ISaveTextSnippetCommand>) {
+export class SaveTextSnippetCommand extends PlatformCommandDto {
+    public constructor(data?: Partial<SaveTextSnippetCommand>) {
         super();
         this.data = data?.data ?? new TextSnippetDataModel();
     }
-    public data: ITextSnippetDataModel;
+    public data: TextSnippetDataModel;
 }
 
-export interface ISaveTextSnippetCommandResult {
-    savedData: ITextSnippetDataModel;
-}
-
-export class SaveTextSnippetCommandResult extends PlatformResultDto implements ISaveTextSnippetCommandResult {
-    public constructor(data?: ISaveTextSnippetCommandResult) {
+export class SaveTextSnippetCommandResult extends PlatformResultDto {
+    public constructor(data?: Partial<SaveTextSnippetCommandResult>) {
         super();
         this.savedData = new TextSnippetDataModel(data?.savedData);
     }

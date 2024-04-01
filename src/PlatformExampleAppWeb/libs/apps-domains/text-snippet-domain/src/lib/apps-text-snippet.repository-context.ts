@@ -1,5 +1,6 @@
-import { PlatformRepositoryContext } from '@libs/platform-core';
 import { BehaviorSubject } from 'rxjs';
+
+import { PlatformRepositoryContext } from '@libs/platform-core';
 
 import { TextSnippetDataModel } from './data-models';
 

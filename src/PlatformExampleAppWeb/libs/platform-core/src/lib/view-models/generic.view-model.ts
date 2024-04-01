@@ -6,7 +6,7 @@ export type StateStatus = 'Pending' | 'Loading' | 'Success' | 'Error';
 
 export interface IPlatformVm {
     status?: StateStatus;
-    error?: string;
+    error?: string | null;
 }
 
 /**
@@ -39,7 +39,7 @@ export class PlatformVm implements IPlatformVm {
     public static requestStateDefaultKey = requestStateDefaultKey;
 
     public status: StateStatus = 'Pending';
-    public error: string | undefined = undefined;
+    public error: string | undefined | null = undefined;
 
     public errorMsgMap: Dictionary<string | undefined> = {};
     public loadingMap: Dictionary<boolean | undefined> = {};
@@ -88,30 +88,43 @@ export class PlatformVm implements IPlatformVm {
                 ? <string | undefined>error
                 : PlatformApiServiceErrorResponse.getDefaultFormattedMessage(error);
 
-        this.errorMsgMap = immutableUpdate(this.errorMsgMap, _ => {
-            _[requestKey] = errorMsg;
-        });
+        this.errorMsgMap = immutableUpdate(
+            this.errorMsgMap,
+            _ => {
+                _[requestKey] = errorMsg;
+            },
+            { updaterNotDeepMutate: true }
+        );
 
         this.allErrorMsgs = this.getAllErrorMsgs();
         this.error = errorMsg;
     }
 
     public getErrorMsg(requestKey: string = requestStateDefaultKey): string | undefined {
-        if (this.errorMsgMap[requestKey] == null && requestKey == requestStateDefaultKey) return this.error;
+        if (this.errorMsgMap[requestKey] == null && requestKey == requestStateDefaultKey)
+            return <string | undefined>this.error;
 
         return this.errorMsgMap[requestKey];
     }
 
     public setLoading(value: boolean | undefined, requestKey: string = requestStateDefaultKey) {
-        this.loadingMap = immutableUpdate(this.loadingMap, _ => {
-            _[requestKey] = value;
-        });
+        this.loadingMap = immutableUpdate(
+            this.loadingMap,
+            _ => {
+                _[requestKey] = value;
+            },
+            { updaterNotDeepMutate: true }
+        );
     }
 
     public setReloading(value: boolean | undefined, requestKey: string = requestStateDefaultKey) {
-        this.reloadingMap = immutableUpdate(this.reloadingMap, _ => {
-            _[requestKey] = value;
-        });
+        this.reloadingMap = immutableUpdate(
+            this.reloadingMap,
+            _ => {
+                _[requestKey] = value;
+            },
+            { updaterNotDeepMutate: true }
+        );
     }
 
     public isLoading(requestKey: string = requestStateDefaultKey): boolean {
@@ -128,5 +141,13 @@ export class PlatformVm implements IPlatformVm {
 
     public isAnyReloadingRequest(): boolean | undefined {
         return keys(this.reloadingMap).find(requestKey => this.reloadingMap[requestKey]) != undefined;
+    }
+
+    public clearAllErrorMsgs() {
+        this.allErrorMsgs = undefined;
+        this.errorMsgMap = {};
+        this.error = undefined;
+
+        return this;
     }
 }

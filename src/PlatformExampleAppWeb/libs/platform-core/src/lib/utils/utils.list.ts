@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
+    max as loadshMax,
     difference as lodashDifference,
     filter as lodashFilter,
     find as lodashFind,
+    first as lodashFirst,
     keyBy as lodashKeyBy,
     last as lodashLast,
-    max as loadshMax,
     maxBy as lodashMaxBy,
     orderBy as lodashOrderBy,
     range as lodashRange,
@@ -69,13 +70,13 @@ export function list_toDictionary<T>(
 export function list_toDictionarySelect<T, TSelect>(
     collection: T[] | undefined,
     dictionaryKeySelector: (item: T) => string | number,
-    dictionaryValueSelector: (item: T) => TSelect
+    dictionaryValueSelector: (item: T, index: number) => TSelect
 ): Dictionary<TSelect> {
     if (collection == undefined) return {};
 
     const result: Dictionary<TSelect> = {};
-    collection.forEach(item => {
-        result[dictionaryKeySelector(item)] = dictionaryValueSelector(item);
+    collection.forEach((item, index) => {
+        result[dictionaryKeySelector(item)] = dictionaryValueSelector(item, index);
     });
     return result;
 }
@@ -171,7 +172,8 @@ export function list_replaceMany<T>(
 export function list_addOrReplace<T>(
     collection: T[] | undefined,
     item: T,
-    replaceCondition: (item: T) => boolean
+    replaceCondition: (item: T) => boolean,
+    onlyReplace: boolean = false
 ): T[] | undefined {
     if (collection == undefined) return collection;
     for (let i = 0; i < collection.length; i++) {
@@ -181,7 +183,7 @@ export function list_addOrReplace<T>(
         }
     }
 
-    collection.push(item);
+    if (!onlyReplace) collection.push(item);
     return collection;
 }
 
@@ -234,22 +236,36 @@ export function list_flat<T>(value: T[][]): T[] {
     return result;
 }
 
-export function list_rightMerge<T>(
+/**
+ * Merge newCollection into currentCollection, return new collection contain all items in both collections. If item in newCollection is existing, replace the new item in newCollection
+ */
+export function list_merge<T>(
     currentCollection: T[],
     newCollection: T[],
     compareSelector: (item: T) => string | number
 ): T[] {
     if (currentCollection.length == 0) return newCollection;
-    const currentCollectionDic = list_toDictionary(currentCollection, compareSelector);
-    const result: T[] = [];
-    for (let i = 0; i < newCollection.length; i++) {
-        result.push(newCollection[i]!);
 
-        const innerJoinItem = currentCollectionDic[compareSelector(result[i]!).toString()];
+    const result: T[] = currentCollection;
+    const currentCollectionDic = list_toDictionary(currentCollection, compareSelector);
+    const currentCollectionCompareToIndexDict = list_toDictionarySelect(
+        currentCollection,
+        p => compareSelector(p).toString(),
+        (item, index) => index
+    );
+
+    for (let i = 0; i < newCollection.length; i++) {
+        const newItem = newCollection[i]!;
+
+        const newItemCompareValue = compareSelector(newItem).toString();
+
+        const innerJoinItem = currentCollectionDic[newItemCompareValue];
+
+        // If exist replace new item into the current item
         if (innerJoinItem != undefined && typeof innerJoinItem == 'object') {
-            result[i] = ObjectUtil.clone(result[i]!, newResultItemValue => {
-                return ObjectUtil.extend(<any>newResultItemValue, <any>innerJoinItem);
-            });
+            result[currentCollectionCompareToIndexDict[newItemCompareValue]!] = newItem;
+        } else {
+            result.push(newItem);
         }
     }
     return result;
@@ -290,4 +306,9 @@ export function list_findDistinctItems<T>(list1: T[], list2: T[], keySelector: (
     }
 
     return distinctItems;
+}
+
+export function list_first<T>(collection: ArrayLike<T> | undefined): T | undefined {
+    if (collection == undefined) return undefined;
+    return lodashFirst(collection);
 }

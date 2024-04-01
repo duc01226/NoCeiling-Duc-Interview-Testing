@@ -61,7 +61,7 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
 
         await StartBackgroundJobProcessing(serviceScope);
 
-        if (AutoUseDashboardUi) UseDashboardUi(CurrentApp);
+        if (AutoUseDashboardUi) UseDashboardUi(CurrentAppBuilder);
     }
 
     public async Task StartBackgroundJobProcessing(IServiceScope serviceScope)

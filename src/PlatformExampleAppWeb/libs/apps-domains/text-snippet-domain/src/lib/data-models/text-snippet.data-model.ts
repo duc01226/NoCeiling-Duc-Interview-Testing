@@ -1,17 +1,12 @@
-import { IPlatformDataModel, PlatformDataModel } from '@libs/platform-core';
+import { PlatformDataModel } from '@libs/platform-core';
 
-export interface ITextSnippetDataModel extends IPlatformDataModel {
-    snippetText: string;
-    fullText: string;
-}
-
-export class TextSnippetDataModel extends PlatformDataModel implements ITextSnippetDataModel {
-    public constructor(data?: Partial<ITextSnippetDataModel>) {
+export class TextSnippetDataModel extends PlatformDataModel {
+    public constructor(data?: Partial<TextSnippetDataModel>) {
         super(data);
         this.snippetText = data?.snippetText ?? '';
         this.fullText = data?.fullText ?? '';
     }
 
-    public snippetText: string;
-    public fullText: string;
+    public snippetText: string = '';
+    public fullText: string = '';
 }

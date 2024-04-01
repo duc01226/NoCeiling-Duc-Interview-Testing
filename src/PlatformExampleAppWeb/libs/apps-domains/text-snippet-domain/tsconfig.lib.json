@@ -1,12 +1,14 @@
 {
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "outDir": "../../../dist/out-tsc",
-    "declaration": true,
-    "declarationMap": true,
-    "inlineSources": true,
-    "types": ["node", "custom-global"]
-  },
-  "exclude": ["src/test-setup.ts", "src/**/*.spec.ts", "jest.config.ts", "src/**/*.test.ts"],
-  "include": ["src/**/*.ts"]
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "outDir": "../../../dist/out-tsc",
+        "declaration": true,
+        "declarationMap": true,
+        "inlineSources": true,
+        "types": ["custom-global"],
+        "target": "ES2022",
+        "useDefineForClassFields": false
+    },
+    "exclude": ["src/test-setup.ts", "**/*.spec.ts", "jest.config.ts", "**/*.test.ts"],
+    "include": ["**/*.ts"]
 }

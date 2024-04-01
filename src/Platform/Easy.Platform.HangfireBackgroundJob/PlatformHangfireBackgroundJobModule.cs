@@ -53,7 +53,7 @@ public abstract class PlatformHangfireBackgroundJobModule : PlatformBackgroundJo
 
         await StartBackgroundJobProcessing(serviceScope);
 
-        if (AutoUseDashboardUi) UseDashboardUi(CurrentApp);
+        if (AutoUseDashboardUi) UseDashboardUi(CurrentAppBuilder);
     }
 
     protected virtual BackgroundJobServerOptions BackgroundJobServerOptionsConfigure(

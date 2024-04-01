@@ -24,7 +24,7 @@ public abstract class PlatformCqrsCommandHandler<TCommand, TResult>
         var result = await ExecuteHandleAsync(request, cancellationToken);
 
         await Cqrs.SendEvent(
-            new PlatformCqrsCommandEvent<TCommand>(request, PlatformCqrsCommandEventAction.Executed),
+            new PlatformCqrsCommandEvent<TCommand, TResult>(request, result, PlatformCqrsCommandEventAction.Executed),
             cancellationToken);
 
         return result;

@@ -41,6 +41,13 @@ public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid
         "Random default streetCD"
     ];
 
+    //// Example of using FindByUniqueCompositeIdExpr to check unique composite key for entity
+    //public override Expression<Func<TextSnippetEntity, bool>> FindByUniqueCompositeIdExpr()
+    //{
+    //    //return p => p.SnippetText == SnippetText && p.Id == Id;
+    //    return null;
+    //}
+
     public List<ExampleAddressValueObject> Addresses { get; set; } =
     [
         new ExampleAddressValueObject

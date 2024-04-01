@@ -1,31 +1,17 @@
-import {
-  ITextSnippetDataModel,
-  TextSnippetDataModel,
-} from '@libs/apps-domains/text-snippet-domain';
-import {
-  cloneDeep,
-  IPlatformVm,
-  isDifferent,
-  PlatformVm,
-} from '@libs/platform-core';
+import { TextSnippetDataModel } from '@libs/apps-domains/text-snippet-domain';
+import { cloneDeep, isDifferent, PlatformVm } from '@libs/platform-core';
 
-export interface IAppTextSnippetDetail extends IPlatformVm {
-    toSaveTextSnippet: ITextSnippetDataModel;
-    toSaveTextSnippetId?: string;
-    hasSelectedSnippetItemChanged: boolean;
-    saveTextSnippetError?: string | undefined = undefined;
-}
-
-export class AppTextSnippetDetail extends PlatformVm implements IAppTextSnippetDetail {
-    public constructor(data?: Partial<IAppTextSnippetDetail>) {
+export class AppTextSnippetDetail extends PlatformVm {
+    public constructor(data?: Partial<AppTextSnippetDetail>) {
         super();
-        this.toSaveTextSnippet = data?.toSaveTextSnippet
-            ? new TextSnippetDataModel(data.toSaveTextSnippet)
-            : new TextSnippetDataModel();
-        this.clonedSelectedSnippetItem = cloneDeep(this.toSaveTextSnippet);
+        this.toSaveTextSnippet =
+            data?.toSaveTextSnippet != null
+                ? new TextSnippetDataModel(data.toSaveTextSnippet)
+                : new TextSnippetDataModel();
+        this.originalToSaveTextSnippet = cloneDeep(this.toSaveTextSnippet);
         this.toSaveTextSnippetId = data?.toSaveTextSnippetId ?? undefined;
         this.hasSelectedSnippetItemChanged = data?.hasSelectedSnippetItemChanged ?? false;
-        if (data?.saveTextSnippetError != undefined) this.saveTextSnippetError = data.saveTextSnippetError;
+        this.saveTextSnippetError = data?.saveTextSnippetError;
     }
 
     private _toSaveTextSnippet: TextSnippetDataModel = new TextSnippetDataModel();
@@ -34,25 +20,25 @@ export class AppTextSnippetDetail extends PlatformVm implements IAppTextSnippetD
     }
     public set toSaveTextSnippet(v: TextSnippetDataModel) {
         this._toSaveTextSnippet = v;
-        this.clonedSelectedSnippetItem = cloneDeep(v);
+        this.originalToSaveTextSnippet = cloneDeep(v);
         this.updateHasSelectedSnippetItemChanged();
     }
 
-    private _toSaveTextSnippetId: string | undefined;
-    public get toSaveTextSnippetId(): string | undefined {
+    private _toSaveTextSnippetId: string | undefined | null;
+    public get toSaveTextSnippetId(): string | undefined | null {
         return this._toSaveTextSnippetId;
     }
-    public set toSaveTextSnippetId(v: string | undefined) {
+    public set toSaveTextSnippetId(v: string | undefined | null) {
         this._toSaveTextSnippetId = v;
         if (v == undefined) {
             this.toSaveTextSnippet = new TextSnippetDataModel();
         }
     }
 
-    public hasSelectedSnippetItemChanged!: boolean;
-    public saveTextSnippetError?: string | undefined = undefined;
+    public hasSelectedSnippetItemChanged: boolean;
+    public saveTextSnippetError?: string | null;
 
-    private clonedSelectedSnippetItem!: TextSnippetDataModel;
+    public originalToSaveTextSnippet: TextSnippetDataModel;
 
     public get toSaveTextSnippetSnippetText(): string {
         return this.toSaveTextSnippet?.snippetText ?? '';
@@ -70,12 +56,12 @@ export class AppTextSnippetDetail extends PlatformVm implements IAppTextSnippetD
     }
 
     public updateHasSelectedSnippetItemChanged(): boolean {
-        this.hasSelectedSnippetItemChanged = isDifferent(this.toSaveTextSnippet, this.clonedSelectedSnippetItem);
+        this.hasSelectedSnippetItemChanged = isDifferent(this.toSaveTextSnippet, this.originalToSaveTextSnippet);
         return this.hasSelectedSnippetItemChanged;
     }
 
     public resetSelectedSnippetItem() {
-        this.toSaveTextSnippet = cloneDeep(this.clonedSelectedSnippetItem);
+        this.toSaveTextSnippet = cloneDeep(this.originalToSaveTextSnippet);
     }
 
     public isCreateNew(): boolean {

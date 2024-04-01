@@ -56,7 +56,7 @@ public class WebDriverManager : IWebDriverManager
     {
         return new RemoteWebDriver(
             remoteAddress: new Uri(uriString: Settings.RemoteWebDriverUrl!),
-            desiredCapabilities: driverOptions.ToCapabilities(),
+            capabilities: driverOptions.ToCapabilities(),
             commandTimeout: TimeSpan.FromSeconds(Settings.RemoteWebDriverCommandTimeoutSeconds)).Pipe(DefaultConfigDriver);
     }
 

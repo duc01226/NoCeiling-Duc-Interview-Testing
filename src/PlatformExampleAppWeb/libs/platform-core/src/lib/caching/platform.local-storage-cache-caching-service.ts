@@ -1,10 +1,10 @@
 import { task_debounce, toPlainObj } from '../utils';
 import {
-    DefaultPlatformCachingServiceOptions as defaultPlatformCachingServiceOptions,
     PlatformCachingItem,
     PlatformCachingService,
     PlatformCachingServiceOptions,
-    PlatformCachingServiceSetCacheOptions
+    PlatformCachingServiceSetCacheOptions,
+    DefaultPlatformCachingServiceOptions as defaultPlatformCachingServiceOptions
 } from './platform.caching-service';
 
 /**
@@ -24,12 +24,12 @@ import {
  * ```
  */
 export class PlatformLocalStorageCachingService extends PlatformCachingService {
-    protected cacheKey: string;
+    protected cacheKeyPrefix: string;
     protected cache: Map<string, PlatformCachingItem> = new Map();
 
     constructor(options?: PlatformCachingServiceOptions) {
         super(options ?? defaultPlatformCachingServiceOptions());
-        this.cacheKey = '__PlatformLocalStorageCachingService__';
+        this.cacheKeyPrefix = '__PlatformLocalStorageCaching__';
         this.loadCache();
     }
 
@@ -37,9 +37,30 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
      * Loads cached data from local storage.
      */
     public loadCache() {
-        const cachedData = localStorage.getItem(this.cacheKey);
-        this.cache = cachedData != null ? new Map(JSON.parse(cachedData)) : new Map();
+        // Load keys
+        const keys = this.getAllCacheKeys();
+
+        // build cache data
+        const cacheMap = new Map();
+        keys.forEach(key => {
+            const cacheDataItem = localStorage.getItem(key);
+            if (cacheDataItem != null) cacheMap.set(key, JSON.parse(cacheDataItem));
+        });
+
+        this.cache = cacheMap;
         this.removeExpiredItems();
+    }
+
+    private getAllCacheKeys() {
+        let currentLoadKeyIndex = 0;
+        const keys = <string[]>[];
+        while (localStorage.key(currentLoadKeyIndex) != null && localStorage.key(currentLoadKeyIndex) != '') {
+            if (localStorage.key(currentLoadKeyIndex)?.startsWith(this.cacheKeyPrefix) == true)
+                keys.push(localStorage.key(currentLoadKeyIndex)!);
+            currentLoadKeyIndex += 1;
+        }
+
+        return keys;
     }
 
     /**
@@ -49,9 +70,9 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
         for (const [key, value] of this.cache.entries()) {
             if (this.isItemExpired(value)) {
                 this.cache.delete(key);
+                localStorage.removeItem(key);
             }
         }
-        this.saveCache();
     }
 
     /**
@@ -67,11 +88,12 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
 
     private doSaveCache = () => {
         try {
-            const cacheData = JSON.stringify(Array.from(this.cache.entries()));
-            localStorage.setItem(this.cacheKey, cacheData);
+            this.getAllCacheKeys().forEach(key => localStorage.removeItem(key));
+            Array.from(this.cache.entries()).forEach(([key, cacheItem]) => {
+                localStorage.setItem(key, JSON.stringify(toPlainObj(cacheItem)));
+            });
         } catch (error) {
-            console.log('Local Storage is full, Please empty data');
-            console.error(error);
+            console.error('Local Storage is full, Please empty data', error);
             this.clear();
         }
     };
@@ -152,12 +174,12 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
             if (oldestKey != null) this.cache.delete(oldestKey);
         }
 
-        this.cache.set(key, newItem);
+        this.cache.set(`${this.cacheKeyPrefix}` + key, newItem);
         this.saveCache(debounceSaveCache);
     }
 
     public override delete(key: string): void {
-        this.cache.delete(key);
+        this.cache.delete(`${this.cacheKeyPrefix}` + key);
         this.saveCache();
     }
 

@@ -14,7 +14,6 @@ import {
     PlatformApiService,
     PlatformHttpOptionsConfigService
 } from './api-services';
-import { PlatformAppUiStateData, PlatformAppUiStateStore } from './app-ui-state';
 import { PlatformCachingService, PlatformLocalStorageCachingService } from './caching';
 import {
     IPlatformEventManager,
@@ -24,6 +23,7 @@ import {
     PlatformEventManagerSubscriptionsMap
 } from './events';
 import { PlatformHighlightSearchTextPipe, PlatformPipe } from './pipes';
+import { PLATFORM_CORE_GLOBAL_ENV } from './platform-core-global-environment';
 import { PlatformCoreModuleConfig } from './platform-core.config';
 import { PlatformGlobalErrorHandler } from './platform-global-error-handler';
 import { PlatformServiceWorkerService } from './platform-service-worker';
@@ -80,15 +80,14 @@ export class PlatformCoreModule {
      * export class AppModule { }
      * ```
      */
-    public static forRoot<TAppUiStateData extends PlatformAppUiStateData>(config: {
+    public static forRoot<TModuleConfig extends PlatformCoreModuleConfig = PlatformCoreModuleConfig>(config: {
         moduleConfig?: {
-            type: Type<PlatformCoreModuleConfig>;
-            configFactory: () => PlatformCoreModuleConfig;
+            type: Type<TModuleConfig>;
+            configFactory: () => TModuleConfig;
         };
         eventManager?: Type<IPlatformEventManager>;
         eventHandlerMaps?: [Type<PlatformEvent>, Type<PlatformEventHandler<PlatformEvent>>[]][];
 
-        appRootUiState?: Type<PlatformAppUiStateStore<TAppUiStateData>>;
         apiServices?: Type<PlatformApiService>[];
         httpOptionsConfigService?: Type<PlatformHttpOptionsConfigService>;
         translate?: { platformConfig?: PlatformTranslateConfig; config?: TranslateModuleConfig };
@@ -131,8 +130,7 @@ export class PlatformCoreModule {
 
                     ...this.buildCanBeInChildModuleProviders({
                         apiServices: config.apiServices,
-                        httpOptionsConfigService: config.httpOptionsConfigService,
-                        moduleUiState: config.appRootUiState
+                        httpOptionsConfigService: config.httpOptionsConfigService
                     }),
                     {
                         provide: PlatformTranslateConfig,
@@ -202,8 +200,7 @@ export class PlatformCoreModule {
      * export class FeatureModule { }
      * ```
      */
-    public static forChild<TAppUiStateData extends PlatformAppUiStateData>(config: {
-        appModuleState?: Type<PlatformAppUiStateStore<TAppUiStateData>>;
+    public static forChild(config: {
         apiServices?: Type<PlatformApiService>[];
         httpOptionsConfigService?: Type<PlatformHttpOptionsConfigService>;
     }): ModuleWithProviders<ForChildModules>[] {
@@ -213,8 +210,7 @@ export class PlatformCoreModule {
                 providers: [
                     ...this.buildCanBeInChildModuleProviders({
                         apiServices: config.apiServices,
-                        httpOptionsConfigService: config.httpOptionsConfigService,
-                        moduleUiState: config.appModuleState
+                        httpOptionsConfigService: config.httpOptionsConfigService
                     })
                 ]
             }
@@ -229,8 +225,7 @@ export class PlatformCoreModule {
      *
      * @internal
      */
-    private static buildCanBeInChildModuleProviders<TAppUiStateData extends PlatformAppUiStateData>(config: {
-        moduleUiState?: Type<PlatformAppUiStateStore<TAppUiStateData>>;
+    private static buildCanBeInChildModuleProviders(config: {
         apiServices?: Type<PlatformApiService>[];
         httpOptionsConfigService?: Type<PlatformHttpOptionsConfigService>;
         pipes?: Type<PlatformPipe<unknown, unknown, unknown>>[];
@@ -243,8 +238,11 @@ export class PlatformCoreModule {
                 useExisting: config.httpOptionsConfigService ?? DefaultPlatformHttpOptionsConfigService
             },
             ...(config.apiServices ?? []),
-            ...(config.moduleUiState != null ? [config.moduleUiState] : []),
             ...(config.pipes ?? [])
         ];
+    }
+
+    constructor(public moduleConfig: PlatformCoreModuleConfig) {
+        PLATFORM_CORE_GLOBAL_ENV.isLocalDev = moduleConfig.isDevelopment;
     }
 }

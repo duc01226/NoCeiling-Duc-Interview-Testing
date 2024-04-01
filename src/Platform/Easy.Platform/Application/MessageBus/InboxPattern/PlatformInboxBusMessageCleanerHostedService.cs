@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.HostingBackgroundServices;
 using Easy.Platform.Common.Utils;
@@ -31,6 +32,8 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
 
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
+        await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformModule), Logger, $"process ${GetType().Name}");
+
         if (!HasInboxEventBusMessageRepositoryRegistered() || isProcessing) return;
 
         isProcessing = true;

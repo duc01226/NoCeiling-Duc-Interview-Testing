@@ -49,7 +49,7 @@ import { PlatformComponent } from './platform.component';
  * @method updateVm - Updates the state of the main store with a partial state or updater function.
  * @method getErrorMsg$ - Returns an observable for retrieving error messages for a specific request key.
  * @method setErrorMsg - Sets the error message for a specific request key in the component's state.
- * @method observerLoadingState - Observes the loading state of a request and updates the component's state accordingly.
+ * @method observerLoadingErrorState - Observes the loading state of a request and updates the component's state accordingly.
  * @method effect - Creates an effect to define loading/updating data methods in the store.
  * @method switchMapVm - Maps the emitted value of the source observable to the current view model state.
  * @method tapResponse - Creates an RxJS operator function to tap into the source observable.
@@ -94,8 +94,7 @@ export abstract class PlatformVmStoreComponent<
                 'errorMsg$',
                 'state$',
                 'vm',
-                'vm$',
-                'currentState'
+                'vm$'
             ])
                 .filter(key => this[key] instanceof PlatformVmStore && key != mainStoreKey)
                 .map(key => <PlatformVmStore<PlatformVm>>this[key]);
@@ -110,10 +109,12 @@ export abstract class PlatformVmStoreComponent<
 
         if (
             this.store.vmStateInitiated &&
-            (this.store.currentState.isStateSuccess || this.store.currentState.isStateError) &&
-            list_all(this.additionalStores, p => p.currentState.isStateSuccess || p.currentState.isStateError)
+            (this.store.currentState().isStateSuccess || this.store.currentState().isStateError) &&
+            list_all(this.additionalStores, p => p.currentState().isStateSuccess || p.currentState().isStateError)
         )
             this.reload();
+
+        this.ngOnInitCalled$.next(true);
     }
 
     private _state$?: Observable<TViewModel>;
@@ -138,17 +139,17 @@ export abstract class PlatformVmStoreComponent<
         return this._vm$;
     }
 
-    private _vm?: Signal<TViewModel>;
+    private _vm?: Signal<TViewModel | undefined>;
     /**
      * Vm signal from vm$
      */
-    public get vm(): Signal<TViewModel> {
+    public get vm(): Signal<TViewModel | undefined> {
         if (this._vm == undefined) {
             //untracked to fix NG0602: A disallowed function is called inside a reactive context
             untracked(() => {
                 // toSignal must be used in an injection context
                 runInInjectionContext(this.environmentInjector, () => {
-                    this._vm = toSignal(this.vm$, { initialValue: this.currentState });
+                    this._vm = toSignal(this.vm$);
                 });
             });
         }
@@ -211,8 +212,8 @@ export abstract class PlatformVmStoreComponent<
         return this._isStateError!;
     }
 
-    public get currentState(): TViewModel {
-        return this.store.currentState;
+    public currentVm(): TViewModel {
+        return this.store.currentState();
     }
 
     /**
@@ -273,9 +274,10 @@ export abstract class PlatformVmStoreComponent<
         partialStateOrUpdaterFn:
             | PartialDeep<TViewModel>
             | Partial<TViewModel>
-            | ((state: TViewModel) => void | PartialDeep<TViewModel> | Partial<TViewModel>)
+            | ((state: TViewModel) => void | PartialDeep<TViewModel> | Partial<TViewModel>),
+        options?: { updaterNotDeepMutate?: boolean; assignDeepLevel?: number }
     ): void {
-        this.store.updateState(partialStateOrUpdaterFn);
+        this.store.updateState(partialStateOrUpdaterFn, options);
     }
 
     public override isLoading$(requestKey: string = requestStateDefaultKey): Signal<boolean | null> {
@@ -308,7 +310,7 @@ export abstract class PlatformVmStoreComponent<
      * @returns {void}
      */
     public reload(): void {
-        this.store.reloadOrInitData();
-        this.additionalStores.forEach(p => p.reloadOrInitData());
+        this.store.reload();
+        this.additionalStores.forEach(p => p.reload());
     }
 }

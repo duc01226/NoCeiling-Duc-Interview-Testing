@@ -1,0 +1,44 @@
+@import 'variables';
+@import 'mixins';
+
+platform-example-web-text-snippet-detail {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  position: relative;
+}
+
+%form-field {
+  min-width: calculateRem(200px);
+  width: calculateRem(500px);
+  max-width: 100%;
+}
+
+.text-snippet-detail {
+  &__main-form {
+    width: 100%;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+  }
+  &__snippet-text-form-field {
+    @extend %form-field;
+  }
+  &__full-text-form-field {
+    @extend %form-field;
+  }
+  &__error {
+    margin-bottom: calculateRem(10px);
+  }
+  &__btn-container {
+    display: flex;
+    > button + button {
+      margin-left: calculateRem(10px);
+    }
+  }
+  &__full-text-input {
+    height: calculateRem(200px);
+  }
+}

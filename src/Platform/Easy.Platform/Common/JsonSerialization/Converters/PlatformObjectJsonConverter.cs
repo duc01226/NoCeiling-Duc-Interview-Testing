@@ -4,6 +4,7 @@ using Easy.Platform.Common.Extensions;
 
 namespace Easy.Platform.Common.JsonSerialization.Converters;
 
+// TODO: Dotnet core 8 api return IAsyncEnumerable => resolve type is object which cause error when serialized. Because SystemTextJsonOutputFormatter => (declaredTypeJsonInfo.ShouldUseWith(runtimeType)) is false. Following issues: https://github.com/dotnet/aspnetcore/issues/54374
 /// <summary>
 /// This is used to fix deserialize object add ValueKind to value
 /// https://github.com/dotnet/runtime/issues/31408
@@ -121,8 +122,9 @@ public class PlatformObjectJsonConverter : JsonConverter<object>
     {
         // We do not handle write object, so we remove itself to prevent stack overflow
         var removedItSelfOptions = options.Clone()
-            .With(p => p.Converters.RemoveWhere(p => p is PlatformObjectJsonConverter, out _));
+            .With(options => options.Converters.RemoveWhere(p => p is PlatformObjectJsonConverter, out _));
 
-        JsonSerializer.Serialize(writer, value, removedItSelfOptions);
+        // Let the default.NET behavior handle write object
+        JsonSerializer.Serialize(writer, value, value.GetType(), removedItSelfOptions);
     }
 }

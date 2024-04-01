@@ -16,6 +16,7 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Pyroscope;
 
 namespace Easy.Platform.Common;
 
@@ -35,7 +36,15 @@ public interface IPlatformModule
     public IServiceCollection ServiceCollection { get; }
     public IServiceProvider ServiceProvider { get; }
     public IConfiguration Configuration { get; }
+
+    /// <summary>
+    /// A child module is a module which exist other module depend on it
+    /// </summary>
     public bool IsChildModule { get; set; }
+
+    /// <summary>
+    /// A module is root when it's the entry module, when there's not any module depend on it. Usually it's PlatformAspNetCoreModule or PlatformApplicationModule
+    /// </summary>
     public bool IsRootModule => CheckIsRootModule(this);
 
     /// <summary>
@@ -169,7 +178,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
     protected virtual bool AutoScanAssemblyRegisterCqrs => false;
 
-    protected IApplicationBuilder CurrentApp { get; set; }
+    protected IApplicationBuilder CurrentAppBuilder { get; set; }
 
     public void Dispose()
     {
@@ -269,7 +278,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
     {
         try
         {
-            if (currentApp != null) CurrentApp = currentApp;
+            if (currentApp != null) CurrentAppBuilder = currentApp;
 
             await InitLockAsync.WaitAsync();
 
@@ -279,6 +288,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
             Logger.LogInformation("[PlatformModule] {Module} Init STARTED", GetType().Name);
 
             await InitAllModuleDependencies();
+            await InitPerformanceProfiling();
 
             using (var scope = ServiceProvider.CreateScope())
             {
@@ -336,6 +346,23 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
     public virtual List<Func<IConfiguration, Type>> ModuleTypeDependencies()
     {
         return [];
+    }
+
+    /// <summary>
+    /// Initializes the performance profiling settings for the platform module.
+    /// </summary>
+    protected async Task InitPerformanceProfiling()
+    {
+        if (!IsRootModule) return;
+
+        var config = ConfigPerformanceProfiling();
+
+        Logger.LogInformation("[PlatformModule] InitPerformanceProfiling. Config:{Config}", config.ToJson());
+
+        Profiler.Instance.SetCPUTrackingEnabled(config.Enabled == true && (config.CPUTrackingEnabled ?? true));
+        Profiler.Instance.SetAllocationTrackingEnabled(config.Enabled == true && (config.AllocationTrackingEnabled ?? true));
+        Profiler.Instance.SetContentionTrackingEnabled(config.Enabled == true && (config.ContentionTrackingEnabled ?? false));
+        Profiler.Instance.SetExceptionTrackingEnabled(config.Enabled == true && (config.ExceptionTrackingEnabled ?? false));
     }
 
     protected virtual void Dispose(bool disposing)
@@ -473,7 +500,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
         await AllDependencyChildModules()
             .GroupBy(p => p.ExecuteInitPriority)
             .OrderByDescending(p => p.Key)
-            .ForEachAsync(p => p.ParallelAsync(module => module.Init(CurrentApp)));
+            .ForEachAsync(p => p.ParallelAsync(module => module.Init(CurrentAppBuilder)));
     }
 
     protected virtual void RegisterHelpers(IServiceCollection serviceCollection)
@@ -493,6 +520,20 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
     protected virtual DistributedTracingConfig ConfigDistributedTracing()
     {
         return new DistributedTracingConfig();
+    }
+
+    /// <summary>
+    /// Configures the performance profiling settings for the platform module. THIS SHOULD ONLY BE CONFIGURED ON ROOT MODULE (USUALLY API OR APPLICATION MODULE, MODULE IS INIT IN PROGRAM)
+    /// </summary>
+    /// <returns>
+    /// A <see cref="PerformanceProfilingConfig" /> object that contains the configuration settings for performance profiling.
+    /// </returns>
+    /// <remarks>
+    /// This method can be overridden in derived classes to provide custom configuration for performance profiling.
+    /// </remarks>
+    protected virtual PerformanceProfilingConfig ConfigPerformanceProfiling()
+    {
+        return new PerformanceProfilingConfig();
     }
 
     protected void RegisterDefaultLogs(IServiceCollection serviceCollection)
@@ -548,5 +589,39 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
         /// Gets or sets the name of the application.
         /// </summary>
         public string AppName { get; set; }
+    }
+
+    public class PerformanceProfilingConfig
+    {
+        public bool? Enabled { get; set; } = false;
+
+        /// <summary>
+        /// Enables or disables CPU/wall profiling dynamically.
+        /// This function works in conjunction with the PYROSCOPE_PROFILING_CPU_ENABLED and
+        /// PYROSCOPE_PROFILING_WALLTIME_ENABLED environment variables. If CPU/wall profiling is not
+        /// configured, this function will have no effect.
+        /// </summary>
+        public bool? CPUTrackingEnabled { get; set; } = true;
+
+        /// <summary>
+        /// Enables or disables allocation profiling dynamically.
+        /// This function works in conjunction with the PYROSCOPE_PROFILING_ALLOCATION_ENABLED environment variable.
+        /// If allocation profiling is not configured, this function will have no effect.
+        /// </summary>
+        public bool? AllocationTrackingEnabled { get; set; } = true;
+
+        /// <summary>
+        /// Enables or disables allocation profiling dynamically.
+        /// This function works in conjunction with the PYROSCOPE_PROFILING_LOCK_ENABLED environment variable.
+        /// If allocation profiling is not configured, this function will have no effect.
+        /// </summary>
+        public bool? ContentionTrackingEnabled { get; set; } = false;
+
+        /// <summary>
+        /// Enables or disables allocation profiling dynamically.
+        /// This function works in conjunction with the PYROSCOPE_PROFILING_EXCEPTION_ENABLED environment variable.
+        /// If allocation profiling is not configured, this function will have no effect.
+        /// </summary>
+        public bool? ExceptionTrackingEnabled { get; set; } = false;
     }
 }

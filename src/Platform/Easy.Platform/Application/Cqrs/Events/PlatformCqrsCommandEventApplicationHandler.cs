@@ -1,12 +1,15 @@
 using Easy.Platform.Common;
+using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Commands;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.Cqrs.Events;
 
-public abstract class PlatformCqrsCommandEventApplicationHandler<TCommand> : PlatformCqrsEventApplicationHandler<PlatformCqrsCommandEvent<TCommand>>
-    where TCommand : class, IPlatformCqrsCommand, new()
+public abstract class PlatformCqrsCommandEventApplicationHandler<TCommand, TCommandResult>
+    : PlatformCqrsEventApplicationHandler<PlatformCqrsCommandEvent<TCommand, TCommandResult>>
+    where TCommand : PlatformCqrsCommand<TCommandResult>, IPlatformCqrsRequest, new()
+    where TCommandResult : PlatformCqrsCommandResult, new()
 {
     protected PlatformCqrsCommandEventApplicationHandler(
         ILoggerFactory loggerFactory,
@@ -20,8 +23,20 @@ public abstract class PlatformCqrsCommandEventApplicationHandler<TCommand> : Pla
     {
     }
 
-    protected override bool HandleWhen(PlatformCqrsCommandEvent<TCommand> @event)
+    protected override bool HandleWhen(PlatformCqrsCommandEvent<TCommand, TCommandResult> @event)
     {
         return @event.Action == PlatformCqrsCommandEventAction.Executed;
+    }
+}
+
+public abstract class PlatformCqrsCommandEventApplicationHandler<TCommand> : PlatformCqrsCommandEventApplicationHandler<TCommand, PlatformCqrsCommandResult>
+    where TCommand : PlatformCqrsCommand<PlatformCqrsCommandResult>, IPlatformCqrsRequest, new()
+{
+    protected PlatformCqrsCommandEventApplicationHandler(
+        ILoggerFactory loggerFactory,
+        IUnitOfWorkManager unitOfWorkManager,
+        IServiceProvider serviceProvider,
+        IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, unitOfWorkManager, serviceProvider, rootServiceProvider)
+    {
     }
 }

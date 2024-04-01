@@ -17,8 +17,10 @@ public interface IPlatformApplicationBusMessageProducer
     /// <typeparam name="TMessagePayload">Message payload type</typeparam>
     /// <param name="trackId">A random unique string to be used to track the message history, where is it from or for logging</param>
     /// <param name="messagePayload">Message payload</param>
+    /// <param name="messageGroup">messageGroup</param>
     /// <param name="messageAction">Optional message action to be used as routing key for consumer filtering</param>
     /// <param name="autoSaveOutboxMessage">If true, auto save message as outbox message if outbox message is supported</param>
+    /// <param name="forceUseDefaultRoutingKey">If forceUseDefaultRoutingKey = true or message is not IPlatformSelfRoutingKeyBusMessage then Use Default RoutingKey PlatformBusMessageRoutingKey.BuildDefaultRoutingKey</param>
     /// <param name="cancellationToken">CancellationToken</param>
     /// <returns>Return sent Message</returns>
     Task<TMessage> SendAsync<TMessage, TMessagePayload>(

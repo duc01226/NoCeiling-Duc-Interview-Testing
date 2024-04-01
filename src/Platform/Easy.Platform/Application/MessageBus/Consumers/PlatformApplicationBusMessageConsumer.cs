@@ -78,11 +78,16 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                     nameof(PlatformCqrsEvent.RequestContext));
     }
 
-    public virtual bool AutoBeginUow => true;
+    public virtual bool AutoBeginUow => false;
     public bool IsInjectingUserContextAccessor { get; set; }
 
     protected IPlatformApplicationRequestContextAccessor UserContextAccessor =>
         ServiceProvider.GetRequiredService<IPlatformApplicationRequestContextAccessor>();
+
+    /// <summary>
+    /// Default is True. Set to False to not allow use inbox message, just consume directly.
+    /// </summary>
+    public virtual bool AllowUseInboxMessage => true;
 
     public PlatformInboxBusMessage HandleDirectlyExistingInboxMessage { get; set; }
     public bool AutoDeleteProcessedInboxEventMessage { get; set; }
@@ -94,7 +99,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
     {
         if (message is IPlatformTrackableBusMessage trackableBusMessage) UserContextAccessor.Current.UpsertMany(trackableBusMessage.RequestContext);
 
-        if (InboxBusMessageRepo != null && !IsInstanceExecutingFromInboxHelper)
+        if (InboxBusMessageRepo != null && !IsInstanceExecutingFromInboxHelper && AllowUseInboxMessage)
         {
             await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
                 RootServiceProvider,
@@ -120,7 +125,14 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                     await uow.CompleteAsync();
                 }
             else
+            {
                 await HandleLogicAsync(message, routingKey);
+
+                // Support if legacy app begin uow somewhere without complete it
+                // Auto complete current active uow if any to save database.
+                if (UowManager.HasCurrentActiveUow())
+                    await UowManager.CurrentActiveUow().CompleteAsync();
+            }
         }
     }
 

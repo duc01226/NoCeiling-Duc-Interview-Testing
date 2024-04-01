@@ -5,6 +5,7 @@ using Easy.Platform.Common.Exceptions.Extensions;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
+using Easy.Platform.Domain.Exceptions;
 using Easy.Platform.Domain.Repositories;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.DependencyInjection;
@@ -360,6 +361,8 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     {
         if (entities.IsEmpty()) return entities;
 
+        EnsureNoDuplicatedUniqueCompositeIdEntities(entities);
+
         if (IsDistributedTracingEnabled)
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateManyAsync)}"))
             {
@@ -395,6 +398,8 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         CancellationToken cancellationToken = default)
     {
         if (entities.IsEmpty()) return entities;
+
+        EnsureNoDuplicatedUniqueCompositeIdEntities(entities);
 
         if (IsDistributedTracingEnabled)
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateManyAsync)}"))
@@ -516,6 +521,8 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     {
         if (entities.IsEmpty()) return entities;
 
+        EnsureNoDuplicatedUniqueCompositeIdEntities(entities);
+
         if (IsDistributedTracingEnabled)
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateManyAsync)}"))
             {
@@ -530,6 +537,20 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             uow => GetUowDbContext(uow).CreateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));
     }
 
+    private void EnsureNoDuplicatedUniqueCompositeIdEntities(List<TEntity> entities)
+    {
+        if (entities.FirstOrDefault()?.As<IUniqueCompositeIdSupport<TEntity>>()?.UniqueCompositeId() == null) return;
+
+        var duplicatedByCompositeIdEntityGroup = entities
+            .Select(p => p.Cast<IUniqueCompositeIdSupport<TEntity>>())
+            .GroupBy(p => p.UniqueCompositeId())
+            .FirstOrDefault(p => p.Count() > 1);
+
+        if (duplicatedByCompositeIdEntityGroup != null)
+            throw new PlatformDomainException(
+                $"DuplicatedCompositeId {duplicatedByCompositeIdEntityGroup.First().UniqueCompositeId()} to create/update {typeof(TEntity).Name} entity");
+    }
+
     public override async Task<List<TEntity>> CreateManyAsync(
         IUnitOfWork uow,
         List<TEntity> entities,
@@ -538,6 +559,8 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         CancellationToken cancellationToken = default)
     {
         if (entities.IsEmpty()) return entities;
+
+        EnsureNoDuplicatedUniqueCompositeIdEntities(entities);
 
         if (IsDistributedTracingEnabled)
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateManyAsync)}"))

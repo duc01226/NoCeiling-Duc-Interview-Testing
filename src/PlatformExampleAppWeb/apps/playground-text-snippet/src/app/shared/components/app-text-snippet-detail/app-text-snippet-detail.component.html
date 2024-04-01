@@ -1,0 +1,59 @@
+<ng-container *ngIf="vm() as vm">
+    <form *ngIf="vm.toSaveTextSnippet" class="text-snippet-detail__main-form">
+        <mat-error *ngIf="vm.saveTextSnippetError" class="text-snippet-detail__error">{{
+            vm.saveTextSnippetError
+        }}</mat-error>
+        <h2>{{ vm.isCreateNew() ? 'Create New' : 'Update Selected Item' }}</h2>
+        <mat-form-field class="text-snippet-detail__snippet-text-form-field" appearance="fill">
+            <mat-label>Snippet Text</mat-label>
+            <input
+                name="snippetText"
+                [(ngModel)]="vm.toSaveTextSnippetSnippetText"
+                [ngModelOptions]="{ updateOn: 'blur' }"
+                matInput
+                placeholder="Snippet text here"
+            />
+        </mat-form-field>
+
+        <mat-form-field class="text-snippet-detail__full-text-form-field" appearance="fill">
+            <mat-label>Full Text</mat-label>
+            <textarea
+                name="fullText"
+                [(ngModel)]="vm.toSaveTextSnippetFullText"
+                [ngModelOptions]="{ updateOn: 'blur' }"
+                matInput
+                placeholder="Full text here"
+            ></textarea>
+        </mat-form-field>
+
+        <div class="text-snippet-detail__btn-container">
+            <button
+                class="text-snippet-detail__main-form-submit-btn"
+                [disabled]="
+                    isLoading$('saveTextSnippet')() ||
+                    (vm.toSaveTextSnippetId != null && !vm.hasSelectedSnippetItemChanged)
+                "
+                (click)="onSaveSelectedTextSnippetItem()"
+                mat-flat-button
+                color="primary"
+            >
+                {{ vm.isCreateNew() ? 'Create' : 'Update' }}
+            </button>
+            <button
+                class="text-snippet-detail__main-form-reset-btn"
+                [disabled]="isLoading$('saveTextSnippet')() || !vm.hasSelectedSnippetItemChanged"
+                (click)="vm.resetSelectedSnippetItem()"
+                mat-stroked-button
+            >
+                Reset
+            </button>
+        </div>
+    </form>
+    <div *ngIf="isLoading$('loadSelectedTextSnippetItem')()" class="platform-mat-mdc-spinner -with-backdrop">
+        <mat-spinner></mat-spinner>
+    </div>
+    <div *ngIf="isLoading$('saveTextSnippet')()" class="platform-mat-mdc-spinner -with-backdrop">
+        <mat-spinner></mat-spinner>
+    </div>
+    <mat-error *ngIf="vm.error" class="text-snippet-detail__error">{{ vm.error }}</mat-error>
+</ng-container>

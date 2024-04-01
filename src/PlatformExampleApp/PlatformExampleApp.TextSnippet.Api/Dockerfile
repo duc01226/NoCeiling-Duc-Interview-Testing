@@ -62,4 +62,9 @@ FROM base AS final
 RUN apt-get update && apt-get install -y curl
 WORKDIR /app
 COPY --from=publish /app .
+
+# Config Pyroscope Dotnet Profiler
+COPY --from=pyroscope/pyroscope-dotnet:0.8.14-glibc /Pyroscope.Profiler.Native.so ./Pyroscope.Profiler.Native.so
+COPY --from=pyroscope/pyroscope-dotnet:0.8.14-glibc /Pyroscope.Linux.ApiWrapper.x64.so ./Pyroscope.Linux.ApiWrapper.x64.so
+
 ENTRYPOINT ["/bin/sh", "-c" , "update-ca-certificates && dotnet PlatformExampleApp.TextSnippet.Api.dll"]

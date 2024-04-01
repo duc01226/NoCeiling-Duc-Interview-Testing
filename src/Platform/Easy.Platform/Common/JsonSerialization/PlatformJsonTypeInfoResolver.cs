@@ -7,7 +7,7 @@ namespace Easy.Platform.Common.JsonSerialization;
 /// <summary>
 /// Custom JSON type information resolver for platform-specific JSON serialization.
 /// </summary>
-public class PlatformPrivateConstructorContractResolver : DefaultJsonTypeInfoResolver
+public class PlatformJsonTypeInfoResolver : DefaultJsonTypeInfoResolver
 {
     /// <summary>
     /// Gets the JSON type information for the specified type and JSON serialization options.

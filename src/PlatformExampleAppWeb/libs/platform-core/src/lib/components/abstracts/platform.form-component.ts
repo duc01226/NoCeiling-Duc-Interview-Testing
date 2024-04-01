@@ -17,6 +17,7 @@ import { FormArray, FormControl, FormGroup } from '@angular/forms';
 import { asyncScheduler, distinctUntilChanged, filter, map, merge, Observable, throttleTime } from 'rxjs';
 import { ArrayElement } from 'type-fest/source/exact';
 
+import { PartialDeep } from 'type-fest';
 import { IPlatformFormValidationError } from '../../form-validators';
 import { FormHelpers } from '../../helpers';
 import { distinctUntilObjectValuesChanged } from '../../rxjs';
@@ -96,7 +97,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 
         if (prevMode == 'view' && (v == 'create' || v == 'update')) {
             this.form.enable();
-            this.patchVmValuesToForm(this._vm);
+            this.patchVmValuesToForm(this.currentVm());
             this.validateForm();
         }
     }
@@ -137,6 +138,20 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     public isFormLoading = computed(() => this.isFormPending() || this.loadingState$() == LoadingState.Loading);
 
     protected cachedFormLoading$: Dictionary<Signal<boolean | null>> = {};
+
+    protected override updateVm(
+        partialStateOrUpdaterFn:
+            | PartialDeep<TViewModel>
+            | Partial<TViewModel>
+            | ((state: TViewModel) => void | PartialDeep<TViewModel>),
+        onVmChanged?: (vm: TViewModel) => unknown,
+        markFormDirty: boolean = true
+    ): TViewModel {
+        return super.updateVm(partialStateOrUpdaterFn, vm => {
+            if (onVmChanged != undefined) onVmChanged(vm);
+            if (markFormDirty && this.form != undefined) this.form.markAsDirty();
+        });
+    }
     /**
      * Returns an Signal that emits the form loading state (true or false) associated with the specified request key.
      * @param [requestKey=requestStateDefaultKey] (optional): A key to identify the request. Default is requestStateDefaultKey.
@@ -208,6 +223,8 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
                 this.setUpInputForm();
             }
         });
+
+        this.ngOnInitCalled$.next(true);
     }
 
     public onFormInputChanged() {
@@ -221,7 +238,11 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
         this.setUpIsFormPending();
         this.isFormGivenFromInput = true;
 
-        if (!this.isViewMode) this.validateForm();
+        if (!this.isViewMode) {
+            // First time try validate form just to show errors but still want to imark form as pristine like it's never touched
+            this.validateForm();
+            this.form.markAsPristine();
+        }
     }
 
     protected setUpIsFormPending() {
@@ -285,11 +306,10 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
      * platformForm.reload(); // Reloads the form to its initial state.
      */
     public override reload() {
+        this.clearAllErrorMsgs();
         this.initVm(true, () => {
             this.initForm(true);
         });
-
-        this.clearAllErrorMsgs();
     }
 
     /**
@@ -377,7 +397,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
             );
         });
 
-        this.patchVmValuesToForm(this._vm, false);
+        this.patchVmValuesToForm(this.currentVm(), false);
 
         if (this.isViewMode) this.form.disable();
 
@@ -388,7 +408,11 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
         }
     }
 
-    protected override internalSetVm = (v: TViewModel, shallowCheckDiff: boolean = true): void => {
+    protected override internalSetVm = (
+        v: TViewModel,
+        shallowCheckDiff: boolean = true,
+        onVmChanged?: (vm: TViewModel) => unknown
+    ): boolean => {
         if (shallowCheckDiff == false || this._vm != v) {
             this._vm = v;
             this.vm.set(v);
@@ -398,7 +422,12 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
                 this.detectChanges();
                 this.vmChangeEvent.emit(v);
             }
+            if (onVmChanged != undefined) onVmChanged(this._vm);
+
+            return true;
         }
+
+        return false;
     };
 
     public isFormValid(): boolean {
@@ -411,7 +440,11 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     }
 
     public canSubmitForm() {
-        return this.isFormValid() && !this.isFormLoading();
+        return this.isFormValid() && !this.isFormLoading() && (this.canSubmitPristineForm || !this.form.pristine);
+    }
+
+    public get canSubmitPristineForm() {
+        return false;
     }
 
     public isAllChildFormsValid(
@@ -1019,7 +1052,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     }
 
     protected updateVmOnFormValuesChange(values: Partial<TViewModel>) {
-        const newUpdatedVm: TViewModel = immutableUpdate(this._vm, values);
+        const newUpdatedVm: TViewModel = immutableUpdate(this.currentVm(), values);
 
         if (newUpdatedVm != this._vm) {
             this.internalSetVm(newUpdatedVm, false);

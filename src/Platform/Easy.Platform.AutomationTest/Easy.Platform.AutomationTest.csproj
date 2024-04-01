@@ -18,18 +18,18 @@
     <PackageReference Include="AutoFixture.Xunit2" Version="4.18.1" />
     <PackageReference Include="DotNetSeleniumExtras.WaitHelpers" Version="3.11.0" />
     <PackageReference Include="FluentAssertions" Version="6.12.0" />
-    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="8.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="8.0.2" />
     <PackageReference Include="Roslyn.Analyzers" Version="1.0.3.4" />
-    <PackageReference Include="Selenium.Support" Version="4.16.2" />
-    <PackageReference Include="Selenium.WebDriver" Version="4.16.2" />
+    <PackageReference Include="Selenium.Support" Version="4.18.1" />
+    <PackageReference Include="Selenium.WebDriver" Version="4.18.1" />
     <PackageReference Include="SolidToken.SpecFlow.DependencyInjection" Version="3.9.3" />
-    <PackageReference Include="SonarAnalyzer.CSharp" Version="9.15.0.81779">
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="9.20.0.85982">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="SpecFlow.Assist.Dynamic" Version="1.4.2" />
-    <PackageReference Include="WebDriverManager" Version="2.17.1" />
-    <PackageReference Include="xunit" Version="2.6.3" />
+    <PackageReference Include="WebDriverManager" Version="2.17.2" />
+    <PackageReference Include="xunit" Version="2.7.0" />
     <PackageReference Include="Xunit.DependencyInjection" Version="8.9.1" />
   </ItemGroup>
 

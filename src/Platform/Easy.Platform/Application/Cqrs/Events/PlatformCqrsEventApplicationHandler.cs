@@ -272,7 +272,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             !eventSourceUow.IsPseudoTransactionUow() &&
             !CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository, @event) &&
             !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()))
-            eventSourceUow.OnCompletedActions.Add(async () => await DoExecuteInstanceInNewScope(@event));
+            eventSourceUow.OnCompletedActions.Add(async () => await ExecuteRetryHandleInNewScopeAsync(@event, cancellationToken));
         else
             await base.DoHandle(@event, cancellationToken, !IsInjectingUserContextAccessor);
     }

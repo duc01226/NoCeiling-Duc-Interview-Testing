@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
+
+import { Observable } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
+
 import {
     PlatformCoreModuleConfig,
     PlatformEventManager,
     PlatformPagedResultDto,
     PlatformRepository
 } from '@libs/platform-core';
-import { Observable } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
 
 import { SaveTextSnippetCommand, SaveTextSnippetCommandResult, SearchTextSnippetQuery, TextSnippetApi } from '../apis';
 import { TextSnippetRepositoryContext } from '../apps-text-snippet.repository-context';
@@ -30,7 +32,9 @@ export class TextSnippetRepository extends PlatformRepository<TextSnippetReposit
             requestPayload: query,
             strategy: 'implicitReload',
             finalResultBuilder: (repoData, apiResult) => {
-                apiResult.items = apiResult.items.map(item => repoData[<string>item.id]).filter(_ => _ != null);
+                apiResult.items = <TextSnippetDataModel[]>(
+                    apiResult.items.map(item => repoData[<string>item.id]).filter(_ => _ != null)
+                );
                 return apiResult;
             },
             modelDataExtractor: apiResult => apiResult.items,

@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 
 namespace Easy.Platform.MongoDB.Extensions;
 
@@ -25,5 +26,11 @@ public static class MongoCollectionExtensions
             {
                 IsOrdered = false
             });
+    }
+
+    public static string? TryToMongoQueryString<TItem>(
+        this IEnumerable<TItem> source)
+    {
+        return source.As<IMongoQueryable<TItem>>()?.ToQueryString();
     }
 }

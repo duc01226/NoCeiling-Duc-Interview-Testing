@@ -70,10 +70,10 @@ export abstract class PlatformCachingService {
                 tap(this.tapCacheDataObserver<T>(customSetCachedRequestDataFn, requestCacheKey, options))
             );
         } else {
-            // delay(10ms) a little to mimic the real async rxjs observable => the next will be async => the flow is corrected if before call api
+            // delay(1ms) a little to mimic the real async rxjs observable => the next will be async => the flow is corrected if before call api
             // do update something in store
             return concat(
-                of(cachedData).pipe(delay(10, asyncScheduler)),
+                of(cachedData).pipe(delay(1, asyncScheduler)),
                 request().pipe(
                     tap(this.tapCacheDataObserver<T>(customSetCachedRequestDataFn, requestCacheKey, options))
                 )

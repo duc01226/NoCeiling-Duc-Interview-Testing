@@ -9,7 +9,7 @@ using PlatformExampleApp.TextSnippet.Application.UseCaseQueries;
 
 namespace PlatformExampleApp.TextSnippet.Application.UseCaseEvents;
 
-internal sealed class ClearCacheOnSaveSnippetTextCommandEventHandler : PlatformCqrsCommandEventApplicationHandler<SaveSnippetTextCommand>
+internal sealed class ClearCacheOnSaveSnippetTextCommandEventHandler : PlatformCqrsCommandEventApplicationHandler<SaveSnippetTextCommand, SaveSnippetTextCommandResult>
 {
     private readonly IPlatformCacheRepositoryProvider cacheRepositoryProvider;
 
@@ -24,7 +24,7 @@ internal sealed class ClearCacheOnSaveSnippetTextCommandEventHandler : PlatformC
     }
 
     // Demo can override to config either this handler run in a background thread
-    protected override bool AllowHandleInBackgroundThread(PlatformCqrsCommandEvent<SaveSnippetTextCommand> @event)
+    protected override bool AllowHandleInBackgroundThread(PlatformCqrsCommandEvent<SaveSnippetTextCommand, SaveSnippetTextCommandResult> @event)
     {
         return true;
     }
@@ -33,9 +33,11 @@ internal sealed class ClearCacheOnSaveSnippetTextCommandEventHandler : PlatformC
     // protected override bool EnableHandleEventFromInboxBusMessage => false;
 
     protected override async Task HandleAsync(
-        PlatformCqrsCommandEvent<SaveSnippetTextCommand> @event,
+        PlatformCqrsCommandEvent<SaveSnippetTextCommand, SaveSnippetTextCommandResult> @event,
         CancellationToken cancellationToken)
     {
+        CreateLogger(LoggerFactory).LogInformation("CommandResult : {CommandResult}", @event.CommandResult.ToJson());
+
         // Test slow event do not affect main command
         await Task.Delay(5.Seconds(), cancellationToken);
 

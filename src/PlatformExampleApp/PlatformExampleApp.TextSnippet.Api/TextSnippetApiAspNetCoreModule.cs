@@ -72,4 +72,15 @@ public class TextSnippetApiAspNetCoreModule : PlatformAspNetCoreModule
     //        AddOtlpExporterConfig = opt => { opt.Endpoint = new Uri(Configuration["DistributedTracingConfig:AddOtlpExporterConfig:Endpoint"]!); }
     //    };
     //}
+
+    //protected override PerformanceProfilingConfig ConfigPerformanceProfiling()
+    //{
+    //    return new PerformanceProfilingConfig
+    //    {
+    //        CPUTrackingEnabled = Configuration.GetValue<bool?>("PerformanceProfilingConfig:CPUTrackingEnabled"),
+    //        AllocationTrackingEnabled = Configuration.GetValue<bool?>("PerformanceProfilingConfig:AllocationTrackingEnabled"),
+    //        ContentionTrackingEnabled = Configuration.GetValue<bool?>("PerformanceProfilingConfig:ContentionTrackingEnabled"),
+    //        ExceptionTrackingEnabled = Configuration.GetValue<bool?>("PerformanceProfilingConfig:ExceptionTrackingEnabled")
+    //    };
+    //}
 }

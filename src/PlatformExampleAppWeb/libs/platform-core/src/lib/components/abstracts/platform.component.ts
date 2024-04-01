@@ -18,20 +18,24 @@ import { ToastrService } from 'ngx-toastr';
 import {
     asyncScheduler,
     BehaviorSubject,
+    combineLatest,
     defer,
+    isObservable,
     MonoTypeOperatorFunction,
     Observable,
+    Observer,
     of,
     Subject,
     Subscription
 } from 'rxjs';
-import { filter, finalize, takeUntil, tap, TapObserver, throttleTime } from 'rxjs/operators';
+import { delay, filter, finalize, map, share, switchMap, takeUntil, tap, throttleTime } from 'rxjs/operators';
 
 import { PlatformApiServiceErrorResponse } from '../../api-services';
 import { LifeCycleHelper } from '../../helpers';
-import { onCancel, tapOnce } from '../../rxjs';
+import { PLATFORM_CORE_GLOBAL_ENV } from '../../platform-core-global-environment';
+import { distinctUntilObjectValuesChanged, onCancel, subscribeUntil, tapOnce } from '../../rxjs';
 import { PlatformTranslateService } from '../../translations';
-import { clone, guid_generate, immutableUpdate, keys, list_remove, task_delay } from '../../utils';
+import { clone, guid_generate, immutableUpdate, isDifferent, keys, list_remove, task_delay } from '../../utils';
 import { requestStateDefaultKey } from '../../view-models';
 
 export const enum LoadingState {
@@ -58,6 +62,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     public translateSrv: PlatformTranslateService = inject(PlatformTranslateService);
 
     public initiated$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+    public ngOnInitCalled$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
     public viewInitiated$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
     public destroyed$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
     // General loadingState when not specific requestKey, requestKey = requestStateDefaultKey;
@@ -161,6 +166,38 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     }
 
     /**
+     * Creates an RxJS operator function that subscribes to the observable until the component is destroyed.
+     */
+    public subscribeUntilDestroyed<T>(
+        observerOrNext?: Partial<Observer<T>> | ((value: T) => void)
+    ): MonoTypeOperatorFunction<T> {
+        const next = typeof observerOrNext === 'function' ? observerOrNext : observerOrNext?.next;
+        const error = typeof observerOrNext === 'function' ? undefined : observerOrNext?.error;
+        const complete = typeof observerOrNext === 'function' ? undefined : observerOrNext?.complete;
+
+        return subscribeUntil(this.destroyed$.pipe(filter(destroyed => destroyed == true)), {
+            next: v => {
+                if (next) {
+                    next(v);
+                    this.detectChanges();
+                }
+            },
+            error: e => {
+                if (error) {
+                    error(e);
+                    this.detectChanges();
+                }
+            },
+            complete: () => {
+                if (complete) {
+                    complete();
+                    this.detectChanges();
+                }
+            }
+        });
+    }
+
+    /**
      * Creates an RxJS operator function that triggers change detection after the observable completes.
      */
     public finalDetectChanges<T>(): MonoTypeOperatorFunction<T> {
@@ -168,8 +205,9 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     }
 
     public ngOnInit(): void {
-        this.detectChangesThrottle$.pipe(this.untilDestroyed()).subscribe();
+        this.detectChangesThrottle$.pipe(this.subscribeUntilDestroyed());
         this.initiated$.next(true);
+        if (PLATFORM_CORE_GLOBAL_ENV.isLocalDev) this.ngOnInitCalled$.next(true);
     }
 
     public ngOnChanges(changes: SimpleChanges): void {
@@ -184,6 +222,19 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
 
     public ngAfterViewInit(): void {
         this.viewInitiated$.next(true);
+        // Handle for case parent input ngTemplate for child onPush component. Child activate change detection on init, then parent init ngTemplate view later
+        // but template rendered inside child component => need to trigger change detection again for the template from parent to render
+        this.detectChanges();
+
+        if (PLATFORM_CORE_GLOBAL_ENV.isLocalDev && this.ngOnInitCalled$.getValue() == false) {
+            const msg =
+                'Base Platform Component ngOnInit is not called. Please call super.ngOnInit() in the child component ngOnInit() method or manually ngOnInitCalled$.next(true) in the child component ngOnInit() method';
+
+            if (PLATFORM_CORE_GLOBAL_ENV.isLocalDev) {
+                alert(msg);
+                throw new Error(msg);
+            }
+        }
     }
 
     public ngOnDestroy(): void {
@@ -247,7 +298,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
      * @usage
      * // Example: Subscribe to an API request, managing loading and error states
      * apiService.loadData()
-     *   .pipe(observerLoadingState())
+     *   .pipe(observerLoadingErrorState())
      *   .subscribe(
      *     data => {
      *       // Handle successful response
@@ -257,9 +308,9 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
      *     }
      *   );
      */
-    public observerLoadingState<T>(
+    public observerLoadingErrorState<T>(
         requestKey: string = requestStateDefaultKey,
-        options?: PlatformObserverLoadingStateOptions<T>
+        options?: PlatformObserverLoadingErrorStateOptions<T>
     ): (source: Observable<T>) => Observable<T> {
         const setLoadingState = () => {
             if (!this.isForSetReloadingState(options) && this.loadingState$() != LoadingState.Loading)
@@ -324,7 +375,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         };
     }
 
-    private isForSetReloadingState<T>(options: PlatformObserverLoadingStateOptions<T> | undefined) {
+    private isForSetReloadingState<T>(options: PlatformObserverLoadingErrorStateOptions<T> | undefined) {
         return options?.isReloading && this.getErrorMsg() == null && !this.isStateLoading();
     }
 
@@ -333,13 +384,17 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
      * * @param [requestKey=requestStateDefaultKey] (optional): A key to identify the request. Default is
      * requestStateDefaultKey.
      */
-    public getErrorMsg$(requestKey: string = requestStateDefaultKey): Signal<string | undefined> {
-        if (this.cachedErrorMsg$[requestKey] == null) {
-            this.cachedErrorMsg$[requestKey] = computed(() => {
-                return this.getErrorMsg(requestKey);
+    public getErrorMsg$(requestKey?: string, excludeKeys?: string[]): Signal<string | undefined> {
+        requestKey ??= requestStateDefaultKey;
+
+        const combinedCacheRequestKey = `${requestKey}_excludeKeys:${JSON.stringify(excludeKeys ?? '')}`;
+
+        if (this.cachedErrorMsg$[combinedCacheRequestKey] == null) {
+            this.cachedErrorMsg$[combinedCacheRequestKey] = computed(() => {
+                return this.getErrorMsg(requestKey, excludeKeys);
             });
         }
-        return this.cachedErrorMsg$[requestKey]!;
+        return this.cachedErrorMsg$[combinedCacheRequestKey]!;
     }
 
     /**
@@ -347,9 +402,13 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
      * * @param [requestKey=requestStateDefaultKey] (optional): A key to identify the request. Default is
      * requestStateDefaultKey.
      */
-    public getErrorMsg(requestKey: string = requestStateDefaultKey): string | undefined {
+    public getErrorMsg(requestKey?: string, excludeKeys?: string[]): string | undefined {
+        requestKey ??= requestStateDefaultKey;
+        const excludeKeysSet = excludeKeys != undefined ? new Set(excludeKeys) : undefined;
+
         if (this.errorMsgMap$()[requestKey] == null && requestKey == requestStateDefaultKey)
             return Object.keys(this.errorMsgMap$())
+                .filter(key => excludeKeysSet?.has(key) != true)
                 .map(key => this.errorMsgMap$()[key])
                 .find(errorMsg => errorMsg != null);
 
@@ -433,64 +492,179 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     }
 
     /**
-     * Creates an effect, which return a function when called will subscribe to the RXJS observable returned
-     * by the given generator. This used to the define loading/updating data method in the component.
+     * This method is a higher-order function that creates and manages side effects in an application.
+     * Side effects are actions that interact with the outside world, such as making API calls or updating the UI.
      *
-     * This effect is subscribed to throughout the lifecycle of the Component.
-     * @param generator A function that takes an origin Observable input and
-     *     returns an Observable. The Observable that is returned will be
-     *     subscribed to for the life of the component.
-     * @return A function that, when called, will trigger the origin Observable.
-     * @usage
-     * Ex1: public loadData = this.effect(() => this.someApi.load()); Use function: this.loadData();
+     * @template ProvidedType - The type of value provided to the effect.
+     * @template OriginType - The type of the origin observable.
+     * @template ObservableType - The inferred type of the origin observable.
+     * @template ReturnObservableType - The type of the observable returned by the generator function.
+     * @template ReturnType - The type of the return value of the `effect` method.
      *
-     * Ex2: public loadData = this.effect((query$: Observable<TQuery>) => query$.pipe(switchMap(query =>
-     *     this.someApi.load(query)))); Use function: this.loadData(<TQuery>query param here);
+     * @param {function(origin$: OriginType, isReloading?: boolean): Observable<ReturnObservableType>} generator - The generator function that defines the effect.
+     * @param { throttleTimeMs?: number} [options] - An optional object that can contain a throttle time in milliseconds for the effect and a function to handle the effect subscription.
+     *
+     * @returns {ReturnType} - The function that can be used to trigger the effect. The function params including: observableOrValue, isReloading, otherOptions. In otherOptions including: effectSubscriptionHandleFn - a function to handle the effect subscription.
+     *
+     * @example this.effect((query$: Observable<(any type here, can be void too)>, isReloading?: boolean) => { return $query.pipe(switchMap(query => callApi(query)), this.tapResponse(...), this.observerLoadingState('key', {isReloading:isReloading})) }, {throttleTimeMs: 300}).
+     * The returned function could be used like: effectFunc(query, isLoading, {effectSubscriptionHandleFn: sub => this.storeSubscription('key', sub)})
      */
-    public effect<TOrigin, TReturn>(
-        generator: (
-            origin: TOrigin | Observable<TOrigin | null> | null,
-            isReloading?: boolean,
-            tapRequestObserverOrNext?:
-                | Partial<TapObserver<TOrigin | null | undefined>>
-                | ((value: TOrigin | null | undefined) => void)
-        ) => Observable<TReturn> | TReturn | unknown,
-        throttleTimeMs?: number
-    ) {
-        let previousEffectSub: Subscription = new Subscription();
+    public effect<
+        ProvidedType,
+        OriginType extends Observable<ProvidedType> = Observable<ProvidedType>,
+        ObservableType = OriginType extends Observable<infer A> ? A : never,
+        ReturnObservableType = unknown,
+        ReturnType = [ObservableType] extends [void]
+            ? (
+                  observableOrValue?: null | undefined | void | Observable<null | undefined | void>,
+                  isReloading?: boolean,
+                  options?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
+              ) => Observable<ReturnObservableType>
+            : (
+                  observableOrValue: ObservableType | Observable<ObservableType>,
+                  isReloading?: boolean,
+                  options?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
+              ) => Observable<ReturnObservableType>
+    >(
+        generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
+        effectOptions?: { throttleTimeMs?: number }
+    ): ReturnType {
+        const effectRequestSubject = new Subject<{
+            request: ProvidedType;
+            isReloading?: boolean;
+        }>();
+        let effectRequestSelfSubscription = new Subscription();
 
-        return (
-            observableOrValue: TOrigin | Observable<TOrigin> | null = null,
+        const returnFunc = (
+            observableOrValue?: ObservableType | Observable<ObservableType> | null,
             isReloading?: boolean,
-            tapRequestObserverOrNext?:
-                | Partial<TapObserver<TOrigin | null | undefined>>
-                | ((value: TOrigin | null | undefined) => void)
+            otherOptions?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
         ) => {
-            previousEffectSub.unsubscribe();
+            const newResultObservable = subscribeNewRequestEffectResultObservable.bind(this)();
+            const { newRequestObservable, newRequestItemCount, newRequestObservableStopped } =
+                setupAddingNewRequestIntoEffectRequestSubject();
 
-            // ThrottleTime explain: Delay to enhance performance
-            // { leading: true, trailing: true } <=> emit the first item to ensure not delay, but also ignore the
-            // sub-sequence, and still emit the latest item to ensure data is latest
-            const generatorResult = generator(observableOrValue, isReloading);
-            const newEffectSub: Subscription = (
-                generatorResult instanceof Observable ? generatorResult : of(<TReturn>null)
-            )
-                .pipe(
-                    throttleTime(throttleTimeMs ?? defaultThrottleDurationMs, asyncScheduler, {
-                        leading: true,
-                        trailing: true
-                    }),
-                    this.untilDestroyed(),
-                    tap(tapRequestObserverOrNext ?? {}),
-                    finalize(() => this.detectChanges())
-                )
-                .subscribe();
+            // Return new effect request result observable
+            const effectResultObservableCompletedSubject = new Subject<unknown>();
+            let newResultItemCount = 0;
 
-            this.storeAnonymousSubscription(newEffectSub);
-            previousEffectSub = newEffectSub;
+            return combineLatest([newRequestObservable, newResultObservable]).pipe(
+                filter(([request, result]) => !isDifferent(request, <ObservableType>result.request.request)),
+                tap(() => newResultItemCount++),
+                tap(v => {
+                    if (newRequestObservableStopped() && newResultItemCount >= newRequestItemCount()) {
+                        // Delay setTimeout to mimic the async behavior of the effect, which when new item emit, the takeUntil will work. If not delay and next immediately, the takeUntil will not work
+                        setTimeout(() => {
+                            effectResultObservableCompletedSubject.next(null);
+                        });
+                    }
+                }),
+                takeUntil(effectResultObservableCompletedSubject),
+                map(([request, result]) => result.result),
+                share()
+            );
 
-            return newEffectSub;
+            function setupAddingNewRequestIntoEffectRequestSubject() {
+                const newRequestObservable = isObservable(observableOrValue)
+                    ? observableOrValue.pipe(distinctUntilObjectValuesChanged())
+                    : of(observableOrValue).pipe(delay(1, asyncScheduler));
+
+                let newRequestItemCount = 0;
+                let newRequestObservableStopped = false;
+
+                const newRequestSub = newRequestObservable.subscribe({
+                    next: request => {
+                        effectRequestSubject.next({ request: <ProvidedType>request, isReloading: isReloading });
+                        newRequestItemCount++;
+                    },
+                    error: err => {
+                        newRequestObservableStopped = true;
+                    },
+                    complete: () => {
+                        newRequestObservableStopped = true;
+                    }
+                });
+                const newRequestItemCountFn = () => newRequestItemCount;
+                const newRequestObservableStoppedFn = () => newRequestObservableStopped;
+
+                if (otherOptions?.effectSubscriptionHandleFn) otherOptions.effectSubscriptionHandleFn(newRequestSub);
+
+                return {
+                    newRequestObservable,
+                    newRequestItemCount: newRequestItemCountFn,
+                    newRequestObservableStopped: newRequestObservableStoppedFn
+                };
+            }
+
+            function subscribeNewRequestEffectResultObservable(this: PlatformComponent) {
+                effectRequestSelfSubscription.unsubscribe();
+
+                const newResultObservable = this.createNewEffectResultObservable(
+                    effectRequestSubject.asObservable(),
+                    generator,
+                    {
+                        throttleTimeMs: effectOptions?.throttleTimeMs
+                    }
+                );
+
+                effectRequestSelfSubscription = newResultObservable.subscribe({
+                    error: err => {
+                        // If error, resubscribe so that effect still works when observableOrValue is observable
+                        // new item from request observable still be subscribed
+                        subscribeNewRequestEffectResultObservable.bind(this)();
+                    }
+                });
+
+                return newResultObservable;
+            }
         };
+
+        return returnFunc as unknown as ReturnType;
+    }
+    /**
+     * * ThrottleTime explain: Delay to enhance performance
+     * { leading: true, trailing: true } <=> emit the first item to ensure not delay, but also ignore the sub-sequence,
+     * and still emit the latest item to ensure data is latest
+     */
+    private createNewEffectResultObservable<
+        ObservableType,
+        ReturnObservableType,
+        OriginType extends Observable<ObservableType>
+    >(
+        request$: Observable<{
+            request: ObservableType | null | undefined;
+            isReloading?: boolean;
+        }>,
+        generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
+        options?: { throttleTimeMs?: number }
+    ): Observable<{
+        request: {
+            request: ObservableType | null | undefined;
+            isReloading?: boolean;
+        };
+        result: ReturnObservableType;
+    }> {
+        // (III)
+        // Delay to make the next api call asynchronous. When call an effect1 => loading. Call again => previousEffectSub.unsubscribe => cancel => back to success => call next api (async) => set loading again correctly.
+        // If not delay => call next api is sync => set loading is sync but previous cancel is not activated successfully yet, which status is not updated back to Success => which this new effect call skip set status to loading => but then the previous api cancel executing => update status to Success but actually it's loading => create incorrectly status
+        // (IV)
+        // Share so that later subscriber can receive the result, this will help component call
+        // effect could subscribe to do some action like show loading, hide loading, etc.
+        return request$.pipe(
+            delay(1, asyncScheduler), // (III)
+            distinctUntilObjectValuesChanged(),
+            throttleTime(options?.throttleTimeMs ?? defaultThrottleDurationMs, asyncScheduler, {
+                leading: true,
+                trailing: true
+            }),
+            switchMap(request =>
+                generator(<OriginType>of(request.request), request.isReloading).pipe(
+                    map(result => ({ request, result }))
+                )
+            ),
+            this.untilDestroyed(),
+            share() // (IV)
+        );
     }
 
     protected get canDetectChanges(): boolean {
@@ -579,9 +753,13 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         const currentErrorMsgMap = this.errorMsgMap$();
 
         this.errorMsgMap$.set(
-            immutableUpdate(currentErrorMsgMap, p => {
-                delete p[requestKey];
-            })
+            immutableUpdate(
+                currentErrorMsgMap,
+                p => {
+                    delete p[requestKey];
+                },
+                { updaterNotDeepMutate: true }
+            )
         );
     };
 
@@ -673,7 +851,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     }
 }
 
-export interface PlatformObserverLoadingStateOptions<T> {
+export interface PlatformObserverLoadingErrorStateOptions<T> {
     onSuccess?: (value: T) => any;
     onError?: (err: PlatformApiServiceErrorResponse | Error) => any;
     isReloading?: boolean;
