@@ -423,7 +423,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                     this.clonedDeepStateToCheckDataMutationJson
                 }\n###\n[CurrentState Mutated Value]:\n${JSON.stringify(this.currentState())}`
             );
-            throw new Error(msg);
+            console.error(new Error(msg));
         }
     }
 

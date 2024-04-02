@@ -232,7 +232,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
 
             if (PLATFORM_CORE_GLOBAL_ENV.isLocalDev) {
                 alert(msg);
-                throw new Error(msg);
+                console.error(new Error(msg));
             }
         }
     }
