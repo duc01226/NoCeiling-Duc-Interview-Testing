@@ -120,7 +120,7 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
      */
     public override get<T>(key: string, objectConstuctor?: (data?: Partial<T>) => T): T | undefined {
         try {
-            const cachedItem = this.cache.get(key);
+            const cachedItem = this.cache.get(this.buildFinalCacheKey(key));
 
             if (cachedItem != null) {
                 if (this.isItemExpired(cachedItem)) {
@@ -174,12 +174,16 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
             if (oldestKey != null) this.cache.delete(oldestKey);
         }
 
-        this.cache.set(`${this.cacheKeyPrefix}` + key, newItem);
+        this.cache.set(this.buildFinalCacheKey(key), newItem);
         this.saveCache(debounceSaveCache);
     }
 
+    private buildFinalCacheKey(key: string): string {
+        return `${this.cacheKeyPrefix}` + key;
+    }
+
     public override delete(key: string): void {
-        this.cache.delete(`${this.cacheKeyPrefix}` + key);
+        this.cache.delete(this.buildFinalCacheKey(key));
         this.saveCache();
     }
 
