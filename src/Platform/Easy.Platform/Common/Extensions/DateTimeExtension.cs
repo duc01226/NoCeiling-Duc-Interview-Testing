@@ -292,6 +292,17 @@ public static class DateTimeExtension
     }
 
     /// <summary>
+    /// Trims the milliseconds from the specified DateTime.
+    /// </summary>
+    /// <param name="dateTime">The DateTime to trim the milliseconds from.</param>
+    /// <returns>The DateTime without milliseconds.</returns>
+    public static DateTime TrimMilliseconds(this DateTime dateTime)
+    {
+        var time = new TimeOnly(dateTime.Hour, dateTime.Minute, dateTime.Second);
+        return dateTime.SetTime(time);
+    }
+
+    /// <summary>
     /// Return the next occurrence of a specified day of the week after the specified number of weeks
     /// Ex: currentDate = new DateTime(2022, 1, 1)
     /// Next Thursday after 2 weeks: currentDate.GetNextDayOfWeeks(DayOfWeek.Thursday, 2) 

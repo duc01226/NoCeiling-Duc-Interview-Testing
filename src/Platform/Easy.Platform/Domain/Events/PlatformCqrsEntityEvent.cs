@@ -68,6 +68,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         IServiceProvider serviceProvider,
         [AllowNull] IUnitOfWork mappedToDbContextUow,
         TEntity entity,
+        TEntity? existingEntity,
         PlatformCqrsEntityEventCrudAction crudAction,
         Action<PlatformCqrsEntityEvent> eventCustomConfig,
         Func<IDictionary<string, object>> requestContext,
@@ -77,7 +78,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         await SendEvent(
             serviceProvider,
             mappedToDbContextUow,
-            () => new PlatformCqrsEntityEvent<TEntity>(entity, crudAction),
+            () => new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(
+                @event => @event.ExistingEntityData = existingEntity),
             eventCustomConfig,
             requestContext,
             cancellationToken);
@@ -121,6 +123,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                             serviceProvider,
                             mappedToDbContextUow,
                             entity,
+                            entity,
                             PlatformCqrsEntityEventCrudAction.Deleted,
                             eventCustomConfig: eventCustomConfig,
                             requestContext: requestContext,
@@ -149,6 +152,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                             serviceProvider,
                             mappedToDbContextUow,
                             entity,
+                            null,
                             PlatformCqrsEntityEventCrudAction.Created,
                             eventCustomConfig: eventCustomConfig,
                             requestContext: requestContext,
@@ -181,6 +185,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                             serviceProvider,
                             unitOfWork,
                             entity,
+                            existingEntity,
                             PlatformCqrsEntityEventCrudAction.Updated,
                             eventCustomConfig: eventCustomConfig,
                             requestContext: requestContext,
@@ -232,6 +237,11 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent
     public override string EventAction => CrudAction.ToString();
 
     public TEntity EntityData { get; set; }
+
+    /// <summary>
+    /// Existing entity data before update/delete.
+    /// </summary>
+    public TEntity? ExistingEntityData { get; set; }
 
     public PlatformCqrsEntityEventCrudAction CrudAction { get; set; }
 
@@ -327,14 +337,16 @@ public class PlatformCqrsBulkEntitiesEvent<TEntity, TPrimaryKey> : PlatformCqrsE
         CrudAction = crudAction;
 
         if (typeof(TEntity).IsAssignableTo(typeof(ISupportDomainEventsEntity)))
-            DomainEvents = entities.GroupBy(p => p.Id).ToDictionary(
-                group => group.Key,
-                group => group
-                    .AsEnumerable()
-                    .SelectMany(
-                        entity => entity.As<ISupportDomainEventsEntity>().GetDomainEvents()
-                            .Select(p => new KeyValuePair<string, string>(p.Key, PlatformJsonSerializer.Serialize(p.Value))))
-                    .ToList());
+            DomainEvents = entities.GroupBy(p => p.Id)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group
+                        .AsEnumerable()
+                        .SelectMany(
+                            entity => entity.As<ISupportDomainEventsEntity>()
+                                .GetDomainEvents()
+                                .Select(p => new KeyValuePair<string, string>(p.Key, PlatformJsonSerializer.Serialize(p.Value))))
+                        .ToList());
     }
 
     public override string EventType => EventTypeValue;

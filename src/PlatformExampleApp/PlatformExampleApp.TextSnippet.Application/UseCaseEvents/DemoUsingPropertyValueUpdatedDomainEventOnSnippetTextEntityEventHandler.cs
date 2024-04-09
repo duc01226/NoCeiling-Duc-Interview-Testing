@@ -42,13 +42,18 @@ internal sealed class DemoUsingFieldUpdatedDomainEventOnSnippetTextEntityEventHa
                     snippetTextPropUpdatedEvent.OriginalValue,
                     snippetTextPropUpdatedEvent.NewValue);
 
-        var fullTextPropUpdatedEvent = @event.FindFieldUpdatedEvent(p => p.FullText);
-        if (fullTextPropUpdatedEvent != null)
+        if (@event.HasAnyFieldUpdatedEvents(p => p.Address, p => p.AddressStrings, p => p.Addresses) &&
+            SomeCustomBuildMessageResult(@event.ExistingEntityData).IsValuesDifferent(SomeCustomBuildMessageResult(@event.EntityData)))
+        {
             CreateGlobalLogger()
                 .LogInformation(
-                    "TextSnippetEntity Id:'{Id}' FullText updated. Prev: {OriginalValue}. New: {NewValue}",
-                    @event.EntityData.Id,
-                    fullTextPropUpdatedEvent.OriginalValue,
-                    fullTextPropUpdatedEvent.NewValue);
+                    "TextSnippetEntity Id:'{Id}' FullText Address Info updated",
+                    @event.EntityData.Id);
+        }
+    }
+
+    private static object SomeCustomBuildMessageResult(TextSnippetEntity entityData)
+    {
+        return new { entityData.Address, entityData.AddressStrings, entityData.Addresses };
     }
 }
