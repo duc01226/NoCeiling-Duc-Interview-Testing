@@ -166,7 +166,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         IServiceProvider serviceProvider,
         IUnitOfWork unitOfWork,
         TEntity entity,
-        TEntity existingEntity,
+        TEntity? existingEntity,
         Func<TEntity, Task<TResult>> updateEntityAction,
         bool dismissSendEvent,
         Action<PlatformCqrsEntityEvent> eventCustomConfig,
@@ -239,7 +239,7 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent
     public TEntity EntityData { get; set; }
 
     /// <summary>
-    /// Existing entity data before update/delete.
+    /// Existing entity data before update/delete. Only available for entity implement <see cref="IRowVersionEntity"/> or entity with attribute <see cref="TrackFieldUpdatedDomainEventAttribute"/>
     /// </summary>
     public TEntity? ExistingEntityData { get; set; }
 
