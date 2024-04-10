@@ -540,82 +540,94 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
             isReloading?: boolean,
             otherOptions?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
         ) => {
-            const newResultObservable = subscribeNewRequestEffectResultObservable.bind(this)();
-            const { newRequestObservable, newRequestItemCount, newRequestObservableStopped } =
-                setupAddingNewRequestIntoEffectRequestSubject();
+            const newRequestObservableCompletedSubject = new Subject<unknown>();
+            const newRequestObservable = setupAddingNewRequestIntoEffectRequestSubject(() => {
+                newRequestObservableCompletedSubject.next(undefined);
+                newRequestObservableCompletedSubject.complete();
+            });
 
-            // Return new effect request result observable
-            const effectResultObservableCompletedSubject = new Subject<unknown>();
-            let newResultItemCount = 0;
+            const newResultObservable = subscribeNewRequestEffectResultObservable.bind(this)(
+                newRequestObservableCompletedSubject
+            );
 
             return combineLatest([newRequestObservable, newResultObservable]).pipe(
                 filter(([request, result]) => !isDifferent(request, <ObservableType>result.request.request)),
-                tap(() => newResultItemCount++),
-                tap(v => {
-                    if (newRequestObservableStopped() && newResultItemCount >= newRequestItemCount()) {
-                        // Delay setTimeout to mimic the async behavior of the effect, which when new item emit, the takeUntil will work. If not delay and next immediately, the takeUntil will not work
-                        setTimeout(() => {
-                            effectResultObservableCompletedSubject.next(null);
-                        });
-                    }
-                }),
-                takeUntil(effectResultObservableCompletedSubject),
                 map(([request, result]) => result.result),
                 share()
             );
 
-            function setupAddingNewRequestIntoEffectRequestSubject() {
+            function setupAddingNewRequestIntoEffectRequestSubject(onCompleted?: () => unknown) {
                 const newRequestObservable = isObservable(observableOrValue)
                     ? observableOrValue.pipe(distinctUntilObjectValuesChanged())
                     : of(observableOrValue).pipe(delay(1, asyncScheduler));
 
-                let newRequestItemCount = 0;
-                let newRequestObservableStopped = false;
-
                 const newRequestSub = newRequestObservable.subscribe({
                     next: request => {
                         effectRequestSubject.next({ request: <ProvidedType>request, isReloading: isReloading });
-                        newRequestItemCount++;
-                    },
-                    error: err => {
-                        newRequestObservableStopped = true;
                     },
                     complete: () => {
-                        newRequestObservableStopped = true;
+                        if (onCompleted != null) onCompleted();
                     }
                 });
-                const newRequestItemCountFn = () => newRequestItemCount;
-                const newRequestObservableStoppedFn = () => newRequestObservableStopped;
 
                 if (otherOptions?.effectSubscriptionHandleFn) otherOptions.effectSubscriptionHandleFn(newRequestSub);
 
-                return {
-                    newRequestObservable,
-                    newRequestItemCount: newRequestItemCountFn,
-                    newRequestObservableStopped: newRequestObservableStoppedFn
-                };
+                return newRequestObservable;
             }
 
-            function subscribeNewRequestEffectResultObservable(this: PlatformComponent) {
+            function subscribeNewRequestEffectResultObservable(
+                this: PlatformComponent,
+                newRequestObservableCompletedSubject: Subject<unknown>
+            ) {
                 effectRequestSelfSubscription.unsubscribe();
+
+                let newInnerGeneratorResultObservableCompleted = false;
+                let newRequestObservableCompletedSubjectCompleted = false;
+                let newResultObservableCompletedSubjectCompleted = false;
+
+                const newResultObservableCompletedSubject = new Subject<unknown>();
 
                 const newResultObservable = this.createNewEffectResultObservable(
                     effectRequestSubject.asObservable(),
                     generator,
                     {
-                        throttleTimeMs: effectOptions?.throttleTimeMs
+                        throttleTimeMs: effectOptions?.throttleTimeMs,
+                        onInnerGeneratorObservableCompleted: request => {
+                            newInnerGeneratorResultObservableCompleted = true;
+                            if (newRequestObservableCompletedSubjectCompleted) {
+                                newResultObservableCompletedSubject.next(undefined);
+                                newResultObservableCompletedSubject.complete();
+                            }
+                        }
                     }
                 );
+                newResultObservableCompletedSubject.subscribe({
+                    complete: () => {
+                        newResultObservableCompletedSubjectCompleted = true;
+                    }
+                });
+                newRequestObservableCompletedSubject.subscribe({
+                    complete: () => {
+                        newRequestObservableCompletedSubjectCompleted = true;
+                        if (
+                            newInnerGeneratorResultObservableCompleted &&
+                            !newResultObservableCompletedSubjectCompleted
+                        ) {
+                            newResultObservableCompletedSubject.next(undefined);
+                            newResultObservableCompletedSubject.complete();
+                        }
+                    }
+                });
 
                 effectRequestSelfSubscription = newResultObservable.subscribe({
                     error: err => {
                         // If error, resubscribe so that effect still works when observableOrValue is observable
                         // new item from request observable still be subscribed
-                        subscribeNewRequestEffectResultObservable.bind(this)();
+                        subscribeNewRequestEffectResultObservable.bind(this)(newRequestObservableCompletedSubject);
                     }
                 });
 
-                return newResultObservable;
+                return newResultObservable.pipe(takeUntil(newResultObservableCompletedSubject));
             }
         };
 
@@ -636,7 +648,10 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
             isReloading?: boolean;
         }>,
         generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
-        options?: { throttleTimeMs?: number }
+        options?: {
+            throttleTimeMs?: number;
+            onInnerGeneratorObservableCompleted?: (request: ObservableType | null | undefined) => unknown;
+        }
     ): Observable<{
         request: {
             request: ObservableType | null | undefined;
@@ -659,7 +674,16 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
             }),
             switchMap(request =>
                 generator(<OriginType>of(request.request), request.isReloading).pipe(
-                    map(result => ({ request, result }))
+                    map(result => ({ request, result })),
+                    tap({
+                        complete: () => {
+                            // Delay to mimic async operation, ensure this run only after previous request observable completed
+                            setTimeout(() => {
+                                if (options?.onInnerGeneratorObservableCompleted != null)
+                                    options.onInnerGeneratorObservableCompleted(request.request);
+                            });
+                        }
+                    })
                 )
             ),
             this.untilDestroyed(),
