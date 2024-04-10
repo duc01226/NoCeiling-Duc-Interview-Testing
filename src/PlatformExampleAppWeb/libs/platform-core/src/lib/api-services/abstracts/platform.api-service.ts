@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams, HttpStatusCode } from '@angular/common/http';
-import { inject, Injectable, Optional } from '@angular/core';
+import { Injectable, Optional, inject } from '@angular/core';
 
 import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
@@ -22,7 +22,9 @@ const UNAUTHORIZATION_STATUSES: HttpStatusCode[] = [HttpStatusCode.Unauthorized,
 
 @Injectable()
 export abstract class PlatformApiService extends PlatformHttpService {
-    public static DefaultHeaders: HttpHeaders = new HttpHeaders({ 'Content-Type': 'application/json; charset=utf-8' });
+    public static readonly DefaultHeaders: HttpHeaders = new HttpHeaders({
+        'Content-Type': 'application/json; charset=utf-8'
+    });
 
     private readonly cacheService = inject(PlatformCachingService);
 
@@ -202,7 +204,7 @@ export abstract class PlatformApiService extends PlatformHttpService {
         }
 
         const apiErrorResponse = <IPlatformApiServiceErrorResponse | null>errorResponse.error;
-        if (apiErrorResponse?.error != null && apiErrorResponse.error.code != null) {
+        if (apiErrorResponse?.error?.code != null) {
             return this.throwError(
                 {
                     error: apiErrorResponse.error,
@@ -263,7 +265,7 @@ export abstract class PlatformApiService extends PlatformHttpService {
     }
 
     protected setDefaultOptions(options?: HttpClientOptions): HttpClientOptions {
-        options = options != null ? options : {};
+        options = options ?? {};
         if (options.headers == null) {
             const httpHeaders = PlatformApiService.DefaultHeaders;
             options.headers = httpHeaders;
@@ -292,13 +294,14 @@ export abstract class PlatformApiService extends PlatformHttpService {
 
     private flattenHttpGetParam(
         inputParams: IApiGetParams | FormData,
-        returnParam: IApiGetParams = {},
+        returnParam: Dictionary<ApiGetParamItemSingleValue | ApiGetParamItemSingleValue[]> = {},
         prefix?: string
-    ): IApiGetParams {
+    ): Dictionary<ApiGetParamItemSingleValue | ApiGetParamItemSingleValue[]> {
         // eslint-disable-next-line guard-for-in
         for (const paramKey in inputParams ?? {}) {
             const inputParamValue = inputParams instanceof FormData ? inputParams.get(paramKey) : inputParams[paramKey];
             const inputParamFinalKey = prefix != null ? `${prefix}.${paramKey}` : paramKey;
+
             if (inputParamValue instanceof Array) {
                 // eslint-disable-next-line no-param-reassign
                 returnParam[inputParamFinalKey] = inputParamValue;
@@ -310,7 +313,7 @@ export abstract class PlatformApiService extends PlatformHttpService {
                 inputParamValue != null
             ) {
                 this.flattenHttpGetParam(inputParamValue, returnParam, paramKey);
-            } else if (inputParamValue != null) {
+            } else if (inputParamValue != null && !(inputParamValue instanceof File)) {
                 // eslint-disable-next-line no-param-reassign
                 returnParam[inputParamFinalKey] = inputParamValue.toString();
             }
@@ -323,10 +326,10 @@ export abstract class PlatformApiService extends PlatformHttpService {
         let returnParam = new HttpParams();
         const flattenedInputParams = this.flattenHttpGetParam(inputParams);
         for (const paramKey in flattenedInputParams) {
-            if (Object.prototype.hasOwnProperty.call(flattenedInputParams, paramKey) == true) {
+            if (Object.hasOwn(flattenedInputParams, paramKey)) {
                 const inputParamValue = flattenedInputParams[paramKey]!;
                 if (inputParamValue instanceof Array) {
-                    inputParamValue.forEach((p: IApiGetParamItemSingleValue) => {
+                    inputParamValue.forEach((p: ApiGetParamItemSingleValue) => {
                         returnParam = returnParam.append(paramKey, p);
                     });
                 } else {
@@ -339,9 +342,10 @@ export abstract class PlatformApiService extends PlatformHttpService {
 
     private requestCacheKeySeperator: string = '___';
     private buildRequestCacheKey(requestPath: string, requestPayload: unknown): string {
-        return `${this.apiUrl}${requestPath}${
-            requestPayload != null ? this.requestCacheKeySeperator + JSON.stringify(requestPayload) : ''
-        }`;
+        const requestPayloadCacheKeyPart =
+            requestPayload != null ? this.requestCacheKeySeperator + JSON.stringify(requestPayload) : '';
+
+        return `${this.apiUrl}${requestPath}${requestPayloadCacheKeyPart}`;
     }
 
     private getRequestPathFromCacheKey(requestCacheKey: string): string {
@@ -350,9 +354,9 @@ export abstract class PlatformApiService extends PlatformHttpService {
 }
 
 export interface IApiGetParams {
-    [param: string]: IApiGetParamItem;
+    [param: string]: ApiGetParamItem;
 }
 
-declare type IApiGetParamItemSingleValue = string | boolean | number;
+declare type ApiGetParamItemSingleValue = string | boolean | number;
 
-declare type IApiGetParamItem = IApiGetParamItemSingleValue | IApiGetParams | IApiGetParamItemSingleValue[];
+declare type ApiGetParamItem = ApiGetParamItemSingleValue | IApiGetParams | ApiGetParamItemSingleValue[];

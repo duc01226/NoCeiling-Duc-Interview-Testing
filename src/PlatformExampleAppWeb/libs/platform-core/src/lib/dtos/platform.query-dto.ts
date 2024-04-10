@@ -7,8 +7,8 @@ export interface IPlatformQueryDto {}
 export class PlatformQueryDto implements IPlatformQueryDto {}
 
 export interface IPlatformRepositoryPagedQuery extends IPlatformQueryDto {
-    skipCount: number;
-    maxResultCount: number;
+    skipCount?: number | null;
+    maxResultCount?: number | null;
     orderBy?: string;
     orderDirection?: OrderDirection;
 }
@@ -22,17 +22,17 @@ export class PlatformPagedQueryDto extends PlatformQueryDto implements IPlatform
 
         if (data == null) return;
 
-        if (data.skipCount != null) this.skipCount = data.skipCount;
-        if (data.maxResultCount != null) this.maxResultCount = data.maxResultCount;
-        if (data.orderDirection != null) this.orderDirection = data.orderDirection;
-        if (data.orderBy != null) this.orderBy = data.orderBy;
+        if (data.skipCount !== undefined) this.skipCount = data.skipCount;
+        if (data.maxResultCount !== undefined) this.maxResultCount = data.maxResultCount;
+        if (data.orderDirection !== undefined) this.orderDirection = data.orderDirection;
+        if (data.orderBy !== undefined) this.orderBy = data.orderBy;
     }
 
-    public skipCount: number = 0;
-    public maxResultCount: number = 20;
+    public skipCount?: number | null = 0;
+    public maxResultCount?: number | null = 20;
 
     public withPageIndex(pageIndex: number) {
-        const newSkipCount = pageIndex * this.maxResultCount;
+        const newSkipCount = pageIndex * (this.maxResultCount ?? 0);
 
         if (this.skipCount == newSkipCount) return this;
         return clone(this, _ => {
@@ -49,11 +49,12 @@ export class PlatformPagedQueryDto extends PlatformQueryDto implements IPlatform
     }
 
     public pageIndex(): number {
-        if (this.maxResultCount == 0) return 0;
+        if (this.maxResultCount == 0 || this.maxResultCount == null || this.skipCount == null) return 0;
+
         return Math.floor(this.skipCount / this.maxResultCount);
     }
 
     public pageSize(): number {
-        return this.maxResultCount;
+        return this.maxResultCount ?? Number.MAX_SAFE_INTEGER;
     }
 }
