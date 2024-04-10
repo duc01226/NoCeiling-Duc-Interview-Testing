@@ -15,16 +15,26 @@ export interface IPlatformPagedResultDto<TItem> {
     selectedItems?: TItem[];
 }
 
+export interface PlatformPagedResultDtoOptions<
+    TData extends PlatformPagedResultDto<TItem>,
+    TItem extends IPlatformDataModel
+> {
+    data: Partial<TData> | undefined;
+    itemInstanceCreator: (item: TItem | Partial<TItem>) => TItem;
+}
+
 export class PlatformPagedResultDto<TItem extends IPlatformDataModel>
     extends PlatformResultDto
     implements IPlatformPagedResultDto<TItem>
 {
-    public constructor(data?: Partial<IPlatformPagedResultDto<TItem>>, itemInstanceCreator?: (item: TItem) => TItem) {
+    public constructor(options?: PlatformPagedResultDtoOptions<PlatformPagedResultDto<TItem>, TItem>) {
         super();
+
+        const data = options?.data;
+        const itemInstanceCreator = options?.itemInstanceCreator;
 
         this.items = data?.items?.map(item => (itemInstanceCreator != null ? itemInstanceCreator(item) : item)) ?? [];
         if (data?.totalCount != undefined) this.totalCount = data?.totalCount;
-
         if (data?.pageSize != undefined) this.pageSize = data?.pageSize;
 
         this.skipCount = data?.skipCount;
@@ -41,8 +51,8 @@ export class PlatformPagedResultDto<TItem extends IPlatformDataModel>
     public pageIndex?: number;
     public selectedItems?: TItem[] = [];
 
-    public withItems<TNewItem extends IPlatformDataModel>(items: TNewItem[]): PlatformPagedResultDto<TNewItem> {
-        return immutableUpdate(new PlatformPagedResultDto<TNewItem>(<IPlatformPagedResultDto<TNewItem>>(<any>this)), {
+    public withItems(items: TItem[]): PlatformPagedResultDto<TItem> {
+        return immutableUpdate(<PlatformPagedResultDto<TItem>>this, {
             items: items
         });
     }

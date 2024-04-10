@@ -38,7 +38,10 @@ export class TextSnippetApi extends PlatformApiService {
         return this.get<IPlatformPagedResultDto<TextSnippetDataModel>>('/search', query).pipe(
             map(_ => {
                 _.items = _.items.map(item => new TextSnippetDataModel(item));
-                return new PlatformPagedResultDto(_);
+                return new PlatformPagedResultDto({
+                    data: _,
+                    itemInstanceCreator: item => new TextSnippetDataModel(item)
+                });
             })
         );
     }

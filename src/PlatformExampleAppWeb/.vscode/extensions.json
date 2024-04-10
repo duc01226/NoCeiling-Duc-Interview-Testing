@@ -1,21 +1,21 @@
 {
-  "recommendations": [
-    "angular.ng-template",
-    "nrwl.angular-console",
-    "esbenp.prettier-vscode",
-    "firsttris.vscode-jest-runner",
-    "dbaeumer.vscode-eslint",
-    "emeraldwalk.runonsave",
-    "vscode-icons-team.vscode-icons",
-    "pkief.material-icon-theme",
-    "christian-kohler.npm-intellisense",
-    "christian-kohler.path-intellisense",
-    "streetsidesoftware.code-spell-checker",
-    "alefragnani.bookmarks",
-    "eamodio.gitlens",
-    "sonarsource.sonarlint-vscode",
-    "dozerg.tsimportsorter",
-    "richie5um2.vscode-sort-json",
-    "rvest.vs-code-prettier-eslint"
-  ]
+    "recommendations": [
+        "alefragnani.bookmarks",
+        "angular.ng-template",
+        "christian-kohler.npm-intellisense",
+        "christian-kohler.path-intellisense",
+        "dbaeumer.vscode-eslint",
+        "dozerg.tsimportsorter",
+        "eamodio.gitlens",
+        "emeraldwalk.runonsave",
+        "esbenp.prettier-vscode",
+        "firsttris.vscode-jest-runner",
+        "nrwl.angular-console",
+        "pkief.material-icon-theme",
+        "rvest.vs-code-prettier-eslint",
+        "sonarsource.sonarlint-vscode",
+        "streetsidesoftware.code-spell-checker",
+        "thinker.sort-json",
+        "vscode-icons-team.vscode-icons"
+    ]
 }

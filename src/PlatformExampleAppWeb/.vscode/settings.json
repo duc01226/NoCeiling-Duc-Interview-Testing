@@ -1,56 +1,26 @@
 {
-    // Editor Options
-    // When opening a file, `editor.tabSize` and `editor.insertSpaces` will NOT be detected based on the file contents.
-    "editor.detectIndentation": false,
-    "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-        "source.organizeImports": "explicit",
-        "source.fixAll": "explicit"
+    "[csharp]": {
+        "editor.defaultFormatter": "ms-dotnettools.csharp"
     },
-    "editor.fontLigatures": true,
-    // Controls if the editor will insert spaces for tabs.
-    "editor.insertSpaces": true,
-    // Controls whether the editor should render whitespace characters
-    // "editor.renderWhitespace": "all",
-    // Controls the rendering size of tabs in characters.
-    "editor.tabSize": 2,
-    // Without this setting, editor.wordWrapColumn is not used.
-    "editor.wordWrap": "on",
-    // Controls after how many characters the editor will wrap to the next line. Setting this to 0 turns on viewport width wrapping
-    "editor.wordWrapColumn": 120,
-    // Format Options
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    // "editor.codeActionsOnSave": ["source.formatDocument", "source.fixAll.eslint"],
-    // Files Options
-    "files.encoding": "utf8",
-    "files.insertFinalNewline": true,
-    // When enabled, will trim trailing whitespace when you save a file.
-    "files.trimTrailingWhitespace": true,
-    "files.exclude": {
-        "**/.git": true
+    "[dockerfile]": {
+        "editor.defaultFormatter": "ms-azuretools.vscode-docker"
     },
-    "files.watcherExclude": {
-        "**/.git": true,
-        "**/node_modules": true,
-        "**/lib": true,
-        "**/temp": true,
-        "**/dist": true,
-        "**/coverage": true
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
-    // Configure glob patterns for excluding files and folders in searches. Inherits all glob patterns from the file.exclude setting.
-    "search.exclude": {
-        "**/node_modules": true,
-        "**/lib": true,
-        "**/dist": true
+    "[typescript]": {
+        "editor.formatOnSave": true
     },
-    // Others
-    "typescript.preferences.quoteStyle": "single",
-    "workbench.iconTheme": "vscode-icons",
+    "angular.enable-strict-mode-prompt": false,
+    "cSpell.ignorePaths": [
+        ".git/objects",
+        ".vscode",
+        ".vscode-insiders",
+        "node_modules",
+        "package-lock.json",
+        "vscode-extension"
+    ],
     "cSpell.words": [
-        "bravo",
-        "bravogrowth",
-        "bravosuite",
-        "bravotalents",
         "buildable",
         "Chev",
         "devkit",
@@ -73,32 +43,81 @@
         "timesheet",
         "toastr"
     ],
-    "tslint.alwaysShowRuleFailuresAsWarnings": false,
+    "editor.codeActionsOnSave": {
+        "source.fixAll": "explicit",
+        "source.fixAll.sortJSON": "never",
+        "source.organizeImports": "explicit"
+    },
+    // Format Options
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    // Editor Options
+    // When opening a file, `editor.tabSize` and `editor.insertSpaces` will NOT be detected based on the file contents.
+    "editor.detectIndentation": false,
+    "editor.fontLigatures": true,
+    "editor.formatOnPaste": true, // optional
+    "editor.formatOnSave": true, // optional
+    "editor.formatOnSaveMode": "file", // required to format on save
+    "editor.formatOnType": false, // required
+    // Controls if the editor will insert spaces for tabs.
+    "editor.insertSpaces": true,
+    // Controls whether the editor should render whitespace characters
+    // "editor.renderWhitespace": "all",
+    // Controls the rendering size of tabs in characters.
+    "editor.tabSize": 2,
+    // Without this setting, editor.wordWrapColumn is not used.
+    "editor.wordWrap": "on",
+    // Controls after how many characters the editor will wrap to the next line. Setting this to 0 turns on viewport width wrapping
+    "editor.wordWrapColumn": 120,
     "emeraldwalk.runonsave": {
         "commands": [
             {
-                "match": "\\.component.html$",
-                "cmd": "node ./scripts/format-angular-template.js --staged=true ${file}"
+                "cmd": "node ./scripts/format-angular-template.js --staged=true ${file}",
+                "match": "\\.component.html$"
             }
         ]
     },
-    "material-icon-theme.activeIconPack": "angular_ngrx",
-    "angular.enable-strict-mode-prompt": false,
     "eslint.alwaysShowStatus": true,
-    "[typescript]": {
-        "editor.formatOnSave": true
+    // "editor.codeActionsOnSave": ["source.formatDocument", "source.fixAll.eslint"],
+    // Files Options
+    "files.encoding": "utf8",
+    "files.exclude": {
+        "**/.git": true
     },
-    "cSpell.ignorePaths": [
-        "package-lock.json",
-        "node_modules",
-        "vscode-extension",
-        ".git/objects",
-        ".vscode",
-        ".vscode-insiders",
-        "apps/playground-ui/src/app/app.component.ts"
-    ],
-    "[dockerfile]": {
-        "editor.defaultFormatter": "ms-azuretools.vscode-docker"
+    "files.insertFinalNewline": true,
+    // When enabled, will trim trailing whitespace when you save a file.
+    "files.trimTrailingWhitespace": true,
+    "files.watcherExclude": {
+        "**/.git": true,
+        "**/coverage": true,
+        "**/dist": true,
+        "**/lib": true,
+        "**/node_modules": true,
+        "**/temp": true
     },
-    "sortJSON.excludedPaths": []
+    "material-icon-theme.activeIconPack": "angular_ngrx",
+    // Configure glob patterns for excluding files and folders in searches. Inherits all glob patterns from the file.exclude setting.
+    "search.exclude": {
+        "**/dist": true,
+        "**/lib": true,
+        "**/node_modules": true
+    },
+    "sort-json.settings.isCaseSensitive": false,
+    "sortJSON.contextMenu": {
+        "sortJSON": true,
+        "sortJSONAlphaNum": false,
+        "sortJSONAlphaNumReverse": false,
+        "sortJSONKeyLength": false,
+        "sortJSONKeyLengthReverse": false,
+        "sortJSONReverse": false,
+        "sortJSONType": false,
+        "sortJSONTypeReverse": false,
+        "sortJSONValues": false,
+        "sortJSONValuesReverse": false
+    },
+    "sortJSON.excludedPaths": [],
+    "tslint.alwaysShowRuleFailuresAsWarnings": false,
+    "typescript.preferences.quoteStyle": "single",
+    "vs-code-prettier-eslint.prettierLast": true, // set as "true" to run 'prettier' last not first
+    // Others
+    "workbench.iconTheme": "vscode-icons"
 }
