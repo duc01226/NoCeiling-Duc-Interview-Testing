@@ -8,7 +8,11 @@ namespace Easy.Platform.Common.Extensions;
 
 public static class ListExtension
 {
-    public const int DefaultParallelAsyncMaxConcurrent = 5;
+    public const int DefaultParallelAsyncMaxConcurrentProcessorCountDivideRatio = 2;
+
+    public static readonly int DefaultParallelAsyncMaxConcurrent = Environment.ProcessorCount >= DefaultParallelAsyncMaxConcurrentProcessorCountDivideRatio
+        ? Environment.ProcessorCount / DefaultParallelAsyncMaxConcurrentProcessorCountDivideRatio
+        : Environment.ProcessorCount;
 
     /// <summary>
     /// Removes all elements from the list that satisfy the provided predicate.
@@ -391,7 +395,7 @@ public static class ListExtension
     public static async Task ParallelAsync<T>(
         this IEnumerable<T> items,
         Func<T, int, Task> action,
-        int maxConcurrent = DefaultParallelAsyncMaxConcurrent)
+        int? maxConcurrent = null)
     {
         await ParallelAsync(
             items,
@@ -415,8 +419,10 @@ public static class ListExtension
     public static async Task<List<TResult>> ParallelAsync<T, TResult>(
         this IEnumerable<T> items,
         Func<T, int, Task<TResult>> action,
-        int maxConcurrent = DefaultParallelAsyncMaxConcurrent)
+        int? maxConcurrent = null)
     {
+        maxConcurrent ??= DefaultParallelAsyncMaxConcurrent;
+
         var itemsList = items.As<IList<T>>() ?? items.ToList();
         var itemResultsList = new List<TResult>();
 
@@ -433,7 +439,7 @@ public static class ListExtension
                 itemResultsList.AddRange(await Task.WhenAll(taskActionList));
             },
             itemsList.Count,
-            maxConcurrent);
+            maxConcurrent.Value);
 
         return itemResultsList;
     }
@@ -515,7 +521,7 @@ public static class ListExtension
     /// </remarks>
     /// <exception cref="ArgumentNullException">Thrown when the items collection or the action is null.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when maxConcurrent is less than 1.</exception>
-    public static Task ParallelAsync<T>(this IEnumerable<T> items, Func<T, Task> action, int maxConcurrent = DefaultParallelAsyncMaxConcurrent)
+    public static Task ParallelAsync<T>(this IEnumerable<T> items, Func<T, Task> action, int? maxConcurrent = null)
     {
         return items.ParallelAsync((item, index) => action(item), maxConcurrent);
     }
@@ -535,7 +541,7 @@ public static class ListExtension
     public static Task<List<TResult>> ParallelAsync<T, TResult>(
         this IEnumerable<T> items,
         Func<T, Task<TResult>> action,
-        int maxConcurrent = DefaultParallelAsyncMaxConcurrent)
+        int? maxConcurrent = null)
     {
         return items.ParallelAsync((item, index) => action(item), maxConcurrent);
     }

@@ -5,6 +5,8 @@ namespace Easy.Platform.Common.Extensions;
 
 public static class DateTimeExtension
 {
+    public const double DaysPerYear = 365.25;
+
     /// <summary>
     /// Returns the first date of the month for the specified date.
     /// </summary>
@@ -67,6 +69,26 @@ public static class DateTimeExtension
     public static DateTime EndOfDate(this DateTime dateTime)
     {
         return dateTime.Date.AddDays(1).AddTicks(-1);
+    }
+
+    public static DateTime EndDateOfYear(this DateTime dateTime)
+    {
+        var startOfNextYear = new DateTime(dateTime.Year + 1, 1, 1);
+        var endOfYearDate = startOfNextYear.AddDays(-1);
+
+        return endOfYearDate;
+    }
+
+    public static double CalculateTotalMonths(this DateTime starDate, DateTime endDate)
+    {
+        if (starDate > endDate)
+            throw new ArgumentOutOfRangeException(
+                nameof(starDate),
+                "The start date must be before the end date.");
+        var totalDays = (endDate - starDate).TotalDays;
+
+        var averageDaysPerMonth = DaysPerYear / 12;
+        return totalDays / averageDaysPerMonth;
     }
 
     /// <summary>
@@ -305,7 +327,7 @@ public static class DateTimeExtension
     /// <summary>
     /// Return the next occurrence of a specified day of the week after the specified number of weeks
     /// Ex: currentDate = new DateTime(2022, 1, 1)
-    /// Next Thursday after 2 weeks: currentDate.GetNextDayOfWeeks(DayOfWeek.Thursday, 2) 
+    /// Next Thursday after 2 weeks: currentDate.GetNextDayOfWeeks(DayOfWeek.Thursday, 2)
     /// </summary>
     public static DateTime GetNextDateWithDayOfWeek(this DateTime dateTime, DayOfWeek dayOfWeek, int numberOfWeeks)
     {
@@ -318,13 +340,13 @@ public static class DateTimeExtension
         return nextDay;
     }
 
-    public static bool AreDatesInSameWeek(DateTime date1, DateTime date2)
+    public static bool AreDatesInSameWeek(this DateTime date1, DateTime date2)
     {
         return GetIso8601WeekOfYear(date1) == GetIso8601WeekOfYear(date2) &&
                date1.Year == date2.Year;
     }
 
-    public static bool AreDatesInSameYearAndMonth(DateTime date1, DateTime date2)
+    public static bool AreDatesInSameYearAndMonth(this DateTime date1, DateTime date2)
     {
         return date1.Year == date2.Year &&
                date1.Month == date2.Month;
@@ -334,7 +356,7 @@ public static class DateTimeExtension
     /// Checks whether two DateTime instances represent the same date,
     /// Considering the end of the month as a special case.
     /// </summary>
-    public static bool IsSameDateConsideringMonthEnd(DateTime date1, DateTime date2)
+    public static bool IsSameDateConsideringMonthEnd(this DateTime date1, DateTime date2)
     {
         if (IsEndOfMonth(date1) && IsEndOfMonth(date2))
             return true;
@@ -342,7 +364,7 @@ public static class DateTimeExtension
         return date1.Date == date2.Date;
     }
 
-    public static bool IsEndOfMonth(DateTime date)
+    public static bool IsEndOfMonth(this DateTime date)
     {
         var daysInMonth = DateTime.DaysInMonth(date.Year, date.Month);
 
@@ -373,7 +395,7 @@ public static class DateTimeExtension
     }
 
     /// <summary>
-    /// Return the ISO8601 week number of the year for a specific date 
+    /// Return the ISO8601 week number of the year for a specific date
     /// </summary>
     public static int GetIso8601WeekOfYear(DateTime date)
     {
@@ -413,6 +435,49 @@ public static class DateTimeExtension
             MonToSunDayOfWeeks.Sunday => DayOfWeek.Sunday,
             _ => throw new ArgumentOutOfRangeException(nameof(dayOfWeek), dayOfWeek, null)
         };
+    }
+
+    public static string ToMonthlyString(this int month)
+    {
+        return month switch
+        {
+            1 => "January",
+            2 => "February",
+            3 => "March",
+            4 => "April",
+            5 => "May",
+            6 => "June",
+            7 => "July",
+            8 => "August",
+            9 => "September",
+            10 => "October",
+            11 => "November",
+            12 => "December",
+            _ => throw new ArgumentOutOfRangeException(nameof(month), month, "Invalid month value. Month value should be between 1 and 12.")
+        };
+    }
+
+    public static string ToDayWithOrdinalSuffixString(this int day)
+    {
+        // Check if the day value is outside the valid range of 1 to 31.
+        if (day > 31 || day < 1) throw new ArgumentOutOfRangeException(nameof(day), day, "Invalid day value. Day value should be between 1 and 31.");
+
+        // Check if the day value is between day 4 and 20. In this range, the ordinal suffix is always "th".
+        if (day > 3 && day < 21) return day + "th";
+
+        // For all other cases, determine the ordinal suffix based on the last digit of the day value.
+        return (day % 10) switch
+        {
+            1 => $"{day}st",
+            2 => $"{day}nd",
+            3 => $"{day}rd",
+            _ => $"{day}th"
+        };
+    }
+
+    public static int DaysInYear(int year)
+    {
+        return DateTime.IsLeapYear(year) ? 366 : 365;
     }
 
     /// <summary>
