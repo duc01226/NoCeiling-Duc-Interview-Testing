@@ -15,9 +15,9 @@ import {
 import { FormArray, FormControl, FormGroup } from '@angular/forms';
 
 import { asyncScheduler, distinctUntilChanged, filter, map, merge, Observable, throttleTime } from 'rxjs';
-import { ArrayElement } from 'type-fest/source/exact';
 
 import { PartialDeep } from 'type-fest';
+import { ArrayElement } from 'type-fest/source/internal';
 import { IPlatformFormValidationError } from '../../form-validators';
 import { FormHelpers } from '../../helpers';
 import { distinctUntilObjectValuesChanged } from '../../rxjs';

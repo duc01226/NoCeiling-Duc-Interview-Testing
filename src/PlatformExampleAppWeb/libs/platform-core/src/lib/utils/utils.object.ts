@@ -8,8 +8,8 @@ import {
     values as lodashValues,
     union
 } from 'lodash-es';
-import { PartialDeep } from 'type-fest';
 
+import { PartialDeep } from 'type-fest';
 import { Time } from '../common-types';
 import { PLATFORM_CORE_GLOBAL_ENV } from '../platform-core-global-environment';
 import { any } from './_common-functions';
@@ -131,12 +131,13 @@ export type ImmutableUpdateOptions = {
     maxDeepLevel?: number;
 };
 
+export type ImmutableUpdateUpdaterFn<TObject extends object> = (
+    state: TObject
+) => void | PartialDeep<TObject> | Partial<TObject>;
+
 export function immutableUpdate<TObject extends object>(
     targetObj: TObject,
-    partialStateOrUpdaterFn:
-        | PartialDeep<TObject>
-        | Partial<TObject>
-        | ((state: TObject) => void | PartialDeep<TObject> | Partial<TObject>),
+    partialStateOrUpdaterFn: PartialDeep<TObject> | Partial<TObject> | ImmutableUpdateUpdaterFn<TObject>,
     options?: ImmutableUpdateOptions
 ): TObject {
     const checkDiff = options?.checkDiff == undefined ? true : options.checkDiff;
@@ -161,7 +162,9 @@ export function immutableUpdate<TObject extends object>(
                 ? JSON.stringify(toPlainObj(clonedLocalDevToCheckStateMutation))
                 : undefined;
 
-        const updatedStateResult = partialStateOrUpdaterFn(clonedDeepState ?? clonedObj);
+        const updatedStateResult = (<ImmutableUpdateUpdaterFn<TObject>>partialStateOrUpdaterFn)(
+            clonedDeepState ?? clonedObj
+        );
 
         // toPlainObj before check different to avoid case object has get property auto update value
         if (
