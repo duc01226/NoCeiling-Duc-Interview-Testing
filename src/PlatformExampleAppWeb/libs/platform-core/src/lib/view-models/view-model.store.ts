@@ -17,6 +17,7 @@ import {
     defer,
     delay,
     filter,
+    interval,
     isObservable,
     map,
     MonoTypeOperatorFunction,
@@ -204,12 +205,24 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                     this.vmStateInitiated = true;
                     this.vmStateDataLoaded = true;
 
+                    this.setupIntervalCheckDataMutation();
+
                     return this.vmStateInitiated;
                 })
             );
         }
 
         return of(this.vmStateInitiated);
+    }
+
+    public setupIntervalCheckDataMutation() {
+        if (!PLATFORM_CORE_GLOBAL_ENV.isLocalDev) return;
+
+        interval(5000).pipe(
+            this.subscribeUntilDestroyed(v => {
+                this.ensureStateNotMutated();
+            })
+        );
     }
 
     public initInnerStore(forceReinit: boolean = false) {
@@ -413,7 +426,10 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         // toPlainObj before check different to avoid case object has get property auto update value
         const currentStatePlainObj = toPlainObj(this.currentState());
 
-        if (JSON.stringify(currentStatePlainObj) !== this.clonedDeepStateToCheckDataMutationJson) {
+        if (
+            this.clonedDeepStateToCheckDataMutationJson != undefined &&
+            JSON.stringify(currentStatePlainObj) !== this.clonedDeepStateToCheckDataMutationJson
+        ) {
             const msg =
                 '[DEV_ERROR] Data State mutated by dev in some placed, please check. Do not allow to mutate state directly. See CONSOLE LOG for more detail.';
 
@@ -774,7 +790,9 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
 
             return <Observable<Result>>selectResult$.pipe(
                 map(result => {
-                    this.ensureStateNotMutated();
+                    setTimeout(() => {
+                        this.ensureStateNotMutated();
+                    }, 500);
                     return result;
                 })
             );
