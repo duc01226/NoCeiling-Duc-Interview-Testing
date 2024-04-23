@@ -269,10 +269,20 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
                 exception.GetType().Name));
     }
 
+    /// <summary>
+    /// Override to config PooledDbContext. Default this feature is enabled by default true value of <see cref="PlatformPersistenceConfigurationPooledDbContextOptions.Enabled" />.
+    /// When activated, pooled db context will be used for query/read cases
+    /// </summary>
+    public virtual PlatformPersistenceConfigurationPooledDbContextOptions PooledDbContextOption()
+    {
+        return new PlatformPersistenceConfigurationPooledDbContextOptions();
+    }
+
     protected override void InternalRegister(IServiceCollection serviceCollection)
     {
         serviceCollection.RegisterAllForImplementation<TDbContext>(ServiceLifeTime.Scoped);
         RegisterPersistenceConfiguration(serviceCollection);
+        if (PooledDbContextOption().Enabled) RegisterDbContextPool(serviceCollection);
 
         base.InternalRegister(serviceCollection);
     }
@@ -281,8 +291,9 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
     {
         serviceCollection.Register(
             sp => new PlatformPersistenceConfiguration<TDbContext>()
-                .With(_ => _.ForCrossDbMigrationOnly = ForCrossDbMigrationOnly)
-                .Pipe(_ => ConfigurePersistenceConfiguration(_, Configuration)));
+                .With(config => config.ForCrossDbMigrationOnly = ForCrossDbMigrationOnly)
+                .With(config => config.PooledOptions = PooledDbContextOption())
+                .Pipe(config => ConfigurePersistenceConfiguration(config, Configuration)));
     }
 
     /// <summary>
@@ -296,5 +307,9 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
         IConfiguration configuration)
     {
         return config;
+    }
+
+    protected virtual void RegisterDbContextPool(IServiceCollection serviceCollection)
+    {
     }
 }

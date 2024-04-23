@@ -30,6 +30,11 @@ public interface IUnitOfWork : IDisposable
     /// </summary>
     public IUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
 
+    /// <summary>
+    /// Default is false. When it's true, the uow determine that this is a temporarily created uow for single read/write data action
+    /// </summary>
+    public bool IsUsingOnceTransientUow { get; set; }
+
     public IUnitOfWork ParentUnitOfWork { get; set; }
 
     /// <summary>
@@ -102,6 +107,11 @@ public interface IUnitOfWork : IDisposable
     public void ReleaseLock();
 
     /// <summary>
+    /// It saves all changes and commit transaction if exists.
+    /// </summary>
+    public Task SaveChangesAsync(CancellationToken cancellationToken);
+
+    /// <summary>
     /// Get itself or inner uow which is TUnitOfWork.
     /// </summary>
     /// <remarks>
@@ -166,6 +176,8 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
     protected ILoggerFactory LoggerFactory { get; }
 
     public string Id { get; set; } = Guid.NewGuid().ToString();
+
+    public bool IsUsingOnceTransientUow { get; set; }
 
     public IUnitOfWork ParentUnitOfWork { get; set; }
 
@@ -240,6 +252,13 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
         GC.SuppressFinalize(this);
     }
 
+    public virtual async Task SaveChangesAsync(CancellationToken cancellationToken)
+    {
+        if (InnerUnitOfWorks.IsEmpty()) return;
+
+        await InnerUnitOfWorks.Where(p => p.IsActive()).ParallelAsync(p => p.SaveChangesAsync(cancellationToken));
+    }
+
     ~PlatformUnitOfWork()
     {
         Dispose(false);
@@ -261,11 +280,6 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
             OnDisposedActions.Clear();
             OnDisposedActions = null;
         }
-    }
-
-    protected virtual Task SaveChangesAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
     }
 
     protected virtual async Task InvokeOnCompletedActions()

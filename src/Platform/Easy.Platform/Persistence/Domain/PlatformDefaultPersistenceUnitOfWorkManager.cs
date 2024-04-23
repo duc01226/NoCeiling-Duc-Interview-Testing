@@ -18,7 +18,7 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
         ServiceProvider = serviceProvider;
     }
 
-    public override IUnitOfWork CreateNewUow()
+    public override IUnitOfWork CreateNewUow(bool isUsingOnceTransientUow)
     {
         // Doing create scope because IUnitOfWork resolve with DbContext, and DbContext lifetime is usually scoped to support resolve db context
         // to use it directly in application layer in some project or cases without using repository.
@@ -30,7 +30,10 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
         var uow = new PlatformAggregatedPersistenceUnitOfWork(
                 RootServiceProvider,
                 newScope.ServiceProvider.GetServices<IUnitOfWork>()
-                    .Select(p => p.With(_ => _.CreatedByUnitOfWorkManager = this))
+                    .Select(
+                        p => p
+                            .With(_ => _.CreatedByUnitOfWorkManager = this)
+                            .With(_ => _.IsUsingOnceTransientUow = isUsingOnceTransientUow))
                     .ToList(),
                 associatedServiceScope: newScope)
             .With(uow => uow.CreatedByUnitOfWorkManager = this);

@@ -6,7 +6,6 @@ using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Timing;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Exceptions;
-using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -194,36 +193,31 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
         try
         {
             return await ServiceProvider.ExecuteInjectScopedAsync<List<PlatformInboxBusMessage>>(
-                async (IUnitOfWorkManager uowManager, IPlatformInboxBusMessageRepository inboxEventBusMessageRepo) =>
+                async (IPlatformInboxBusMessageRepository inboxEventBusMessageRepo) =>
                 {
-                    using (var uow = uowManager!.Begin())
-                    {
-                        var toHandleMessages = await inboxEventBusMessageRepo.GetAllAsync(
-                            queryBuilder: query => query
-                                .Where(PlatformInboxBusMessage.CanHandleMessagesExpr(InboxConfig.MessageProcessingMaxSeconds))
-                                .OrderBy(p => p.LastConsumeDate)
-                                .Take(InboxConfig.NumberOfProcessConsumeInboxMessagesBatch),
-                            cancellationToken);
+                    var toHandleMessages = await inboxEventBusMessageRepo.GetAllAsync(
+                        queryBuilder: query => query
+                            .Where(PlatformInboxBusMessage.CanHandleMessagesExpr(InboxConfig.MessageProcessingMaxSeconds))
+                            .OrderBy(p => p.LastConsumeDate)
+                            .Take(InboxConfig.NumberOfProcessConsumeInboxMessagesBatch),
+                        cancellationToken);
 
-                        if (toHandleMessages.IsEmpty()) return toHandleMessages;
+                    if (toHandleMessages.IsEmpty()) return toHandleMessages;
 
-                        toHandleMessages.ForEach(
-                            p =>
-                            {
-                                p.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Processing;
-                                p.LastConsumeDate = Clock.UtcNow;
-                            });
+                    toHandleMessages.ForEach(
+                        p =>
+                        {
+                            p.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Processing;
+                            p.LastConsumeDate = Clock.UtcNow;
+                        });
 
-                        await inboxEventBusMessageRepo.UpdateManyAsync(
-                            toHandleMessages,
-                            dismissSendEvent: true,
-                            eventCustomConfig: null,
-                            cancellationToken);
+                    await inboxEventBusMessageRepo.UpdateManyAsync(
+                        toHandleMessages,
+                        dismissSendEvent: true,
+                        eventCustomConfig: null,
+                        cancellationToken);
 
-                        await uow.CompleteAsync(cancellationToken);
-
-                        return toHandleMessages;
-                    }
+                    return toHandleMessages;
                 });
         }
         catch (PlatformDomainRowVersionConflictException conflictDomainException)

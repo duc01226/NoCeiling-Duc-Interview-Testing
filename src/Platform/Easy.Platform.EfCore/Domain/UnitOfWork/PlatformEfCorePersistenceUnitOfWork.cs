@@ -4,6 +4,8 @@ using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Easy.Platform.EfCore.Domain.UnitOfWork;
 
@@ -15,17 +17,22 @@ public interface IPlatformEfCorePersistenceUnitOfWork<out TDbContext> : IPlatfor
 public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
     : PlatformPersistenceUnitOfWork<TDbContext>, IPlatformEfCorePersistenceUnitOfWork<TDbContext> where TDbContext : PlatformEfCoreDbContext<TDbContext>
 {
+    private readonly Lazy<PooledDbContextFactory<TDbContext>> lazyPooledDbContextFactoryLazy;
+
     public PlatformEfCorePersistenceUnitOfWork(
         IPlatformRootServiceProvider rootServiceProvider,
-        TDbContext dbContext,
+        IServiceProvider serviceProvider,
         PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
-        DbContextOptions<TDbContext> dbContextOptions) : base(rootServiceProvider, dbContext)
+        DbContextOptions<TDbContext> dbContextOptions) : base(rootServiceProvider, serviceProvider)
     {
         PersistenceConfiguration = persistenceConfiguration;
         DbContextOptions = dbContextOptions;
+        lazyPooledDbContextFactoryLazy = new Lazy<PooledDbContextFactory<TDbContext>>(
+            serviceProvider.GetService<PooledDbContextFactory<TDbContext>>,
+            true);
     }
 
-    protected IPlatformPersistenceConfiguration PersistenceConfiguration { get; }
+    protected IPlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration { get; }
 
     protected DbContextOptions<TDbContext> DbContextOptions { get; }
 
@@ -81,8 +88,23 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
         return false;
     }
 
-    protected override async Task SaveChangesAsync(CancellationToken cancellationToken)
+    protected override TDbContext DbContextFactory(IServiceProvider serviceProvider)
     {
-        await DbContext.SaveChangesAsync(cancellationToken);
+        if (CanUsePooledDbContext())
+            return lazyPooledDbContextFactoryLazy.Value.CreateDbContext();
+
+        return base.DbContextFactory(serviceProvider);
+    }
+
+    private bool CanUsePooledDbContext()
+    {
+        return (PersistenceConfiguration.PooledOptions.UsePooledDbContextForUsingOnceTransientUowOnly == false || IsUsingOnceTransientUow) &&
+               lazyPooledDbContextFactoryLazy.Value != null;
+    }
+
+    protected override void BeforeDisposeDbContext(TDbContext dbContext)
+    {
+        if (CanUsePooledDbContext())
+            dbContext.As<DbContext>().ChangeTracker.Clear();
     }
 }

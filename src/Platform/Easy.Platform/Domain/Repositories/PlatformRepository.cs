@@ -426,34 +426,45 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     {
         if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
         {
-            var uow = UnitOfWorkManager.CreateNewUow();
+            var uow = UnitOfWorkManager.CreateNewUow(true);
+            TResult result = default;
 
-            var result = await ExecuteReadData(uow, readDataFn, loadRelatedEntities);
+            try
+            {
+                result = await ExecuteReadData(uow, readDataFn, loadRelatedEntities);
 
-            HandleDisposeUsingOnceTimeContextLogic(uow, DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result, uow), loadRelatedEntities, result);
+                await uow.CompleteAsync();
 
-            return result;
+                return result;
+            }
+            finally
+            {
+                HandleDisposeUsingOnceTimeContextLogic(uow, DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result, uow), loadRelatedEntities, result);
+            }
         }
 
-        var currentUow = UnitOfWorkManager.CurrentActiveUow();
+        return await ExecuteUowThreadSafe(UnitOfWorkManager.CurrentActiveUow(), uow => ExecuteReadData(uow, readDataFn, loadRelatedEntities));
+    }
 
+    protected async Task<TResult> ExecuteUowThreadSafe<TResult>(IUnitOfWork uow, Func<IUnitOfWork, Task<TResult>> executeFn)
+    {
         // Do retry if the uow do not support parallel query so that if there's other uow running query in parallel, it could retry get data again to have chance to make it work
-        if (currentUow.UowOfType<TUow>().DoesSupportParallelQuery() == false)
+        if (uow.UowOfType<TUow>().DoesSupportParallelQuery() == false)
             try
             {
                 //Asynchronously wait to enter the Semaphore. If no-one has been granted access to the Semaphore, code execution will proceed, otherwise this thread waits here until the semaphore is released 
-                await currentUow.UowOfType<TUow>().LockAsync();
+                await uow.UowOfType<TUow>().LockAsync();
 
-                return await ExecuteReadData(currentUow, readDataFn, loadRelatedEntities);
+                return await executeFn(uow);
             }
             finally
             {
                 //When the task is ready, release the semaphore. It is vital to ALWAYS release the semaphore when we are ready, or else we will end up with a Semaphore that is forever locked.
                 //This is why it is important to do the Release within a try...finally clause; program execution may crash or take a different path, this way you are guaranteed execution
-                currentUow.UowOfType<TUow>().ReleaseLock();
+                uow.UowOfType<TUow>().ReleaseLock();
             }
 
-        return await ExecuteReadData(currentUow, readDataFn, loadRelatedEntities);
+        return await executeFn(uow);
     }
 
     protected async Task<TResult> ExecuteReadData<TResult>(
@@ -462,16 +473,6 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
         return await readDataFn(uow, GetQuery(uow, loadRelatedEntities));
-    }
-
-    protected virtual int SupportParallelQueryRetryCount()
-    {
-        return 20;
-    }
-
-    protected virtual TimeSpan SupportParallelQueryRetrySleepTime()
-    {
-        return 300.Milliseconds();
     }
 
     protected virtual Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(
@@ -494,15 +495,21 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
         if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
         {
-            var uow = UnitOfWorkManager.CreateNewUow();
+            var uow = UnitOfWorkManager.CreateNewUow(true);
+            TResult result = default;
 
-            var result = await ExecuteWriteData(action, uow);
+            try
+            {
+                result = await ExecuteWriteData(action, uow);
 
-            await uow.CompleteAsync();
+                await uow.CompleteAsync();
 
-            if (!DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result, uow)) uow.Dispose();
-
-            return result;
+                return result;
+            }
+            finally
+            {
+                if (!DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result, uow)) uow.Dispose();
+            }
         }
 
         return await ExecuteWriteData(action, UnitOfWorkManager.CurrentActiveUow());

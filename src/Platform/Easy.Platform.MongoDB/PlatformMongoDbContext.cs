@@ -33,7 +33,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
     protected readonly IPlatformRootServiceProvider RootServiceProvider;
     protected readonly IPlatformApplicationRequestContextAccessor UserContextAccessor;
+
     private bool disposed;
+    private readonly Lazy<ILogger> lazyLogger;
 
     public PlatformMongoDbContext(
         IOptions<PlatformMongoOptions<TDbContext>> options,
@@ -43,12 +45,14 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
         IPlatformRootServiceProvider rootServiceProvider)
     {
+        Database = client.MongoClient.GetDatabase(options.Value.Database);
+
         UserContextAccessor = userContextAccessor;
         PersistenceConfiguration = persistenceConfiguration;
         RootServiceProvider = rootServiceProvider;
-        Database = client.MongoClient.GetDatabase(options.Value.Database);
+        lazyLogger = new Lazy<ILogger>(() => CreateLogger(loggerFactory));
+
         EntityTypeToCollectionNameDictionary = new Lazy<Dictionary<Type, string>>(BuildEntityTypeToCollectionNameDictionary);
-        Logger = CreateLogger(loggerFactory);
     }
 
     /// <summary>
@@ -74,13 +78,57 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryCollection.AsQueryable();
 
-    public async Task InsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity)
+    public async Task UpsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity)
     {
-        await ApplicationDataMigrationHistoryCollection.InsertOneAsync(entity);
+        var existingEntity = await ApplicationDataMigrationHistoryQuery.Where(p => p.Name == entity.Name).FirstOrDefaultAsync();
+
+        if (existingEntity == null)
+        {
+            await ApplicationDataMigrationHistoryCollection.InsertOneAsync(entity);
+        }
+        else
+        {
+            if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })
+                entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = existingEntity.As<IRowVersionEntity>().ConcurrencyUpdateToken;
+
+            var toBeUpdatedEntity = entity;
+
+            var currentInMemoryConcurrencyUpdateToken = toBeUpdatedEntity.ConcurrencyUpdateToken;
+            var newUpdateConcurrencyUpdateToken = Guid.NewGuid();
+
+            toBeUpdatedEntity.ConcurrencyUpdateToken = newUpdateConcurrencyUpdateToken;
+
+            var result = await ApplicationDataMigrationHistoryCollection
+                .ReplaceOneAsync(
+                    p => p.Name == entity.Name &&
+                         (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
+                          ((IRowVersionEntity)p).ConcurrencyUpdateToken == Guid.Empty ||
+                          ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken),
+                    entity,
+                    new ReplaceOptions { IsUpsert = false });
+
+            if (result.MatchedCount <= 0)
+            {
+                if (await ApplicationDataMigrationHistoryCollection.AsQueryable().AnyAsync(p => p.Name == entity.Name))
+                    throw new PlatformDomainRowVersionConflictException(
+                        $"Update {nameof(PlatformDataMigrationHistory)} with Name:{toBeUpdatedEntity.Name} has conflicted version.");
+                throw new PlatformDomainEntityNotFoundException<PlatformDataMigrationHistory>(toBeUpdatedEntity.Name);
+            }
+        }
+    }
+
+    public IQueryable<PlatformDataMigrationHistory> DataMigrationHistoryQuery()
+    {
+        return ApplicationDataMigrationHistoryQuery;
+    }
+
+    public async Task ExecuteWithNewDbContextInstanceAsync(Func<IPlatformDbContext, Task> fn)
+    {
+        await RootServiceProvider.ExecuteInjectScopedAsync(async (TDbContext context) => await fn(context));
     }
 
     public IUnitOfWork MappedUnitOfWork { get; set; }
-    public ILogger Logger { get; }
+    public ILogger Logger => lazyLogger.Value;
 
     public virtual async Task Initialize(IServiceProvider serviceProvider)
     {
@@ -615,7 +663,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                     new CreateIndexOptions
                     {
                         Unique = true
-                    })
+                    }),
+                new CreateIndexModel<PlatformDataMigrationHistory>(
+                    Builders<PlatformDataMigrationHistory>.IndexKeys.Ascending(p => p.ConcurrencyUpdateToken)),
+                new CreateIndexModel<PlatformDataMigrationHistory>(
+                    Builders<PlatformDataMigrationHistory>.IndexKeys.Ascending(p => p.Status))
             ]);
     }
 

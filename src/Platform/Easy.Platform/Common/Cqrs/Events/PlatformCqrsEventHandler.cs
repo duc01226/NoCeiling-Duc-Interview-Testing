@@ -36,7 +36,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     public virtual int RetryOnFailedTimes => 3;
 
-    public virtual double RetryOnFailedDelaySeconds => 0.5;
+    public virtual double RetryOnFailedDelaySeconds => 1;
 
     public bool ForceCurrentInstanceHandleInCurrentThread { get; set; }
 

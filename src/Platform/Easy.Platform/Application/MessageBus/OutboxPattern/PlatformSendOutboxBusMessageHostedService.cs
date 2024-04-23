@@ -4,7 +4,6 @@ using Easy.Platform.Common.HostingBackgroundServices;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Exceptions;
-using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -173,31 +172,26 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
         try
         {
             return await ServiceProvider.ExecuteInjectScopedAsync<List<PlatformOutboxBusMessage>>(
-                async (IUnitOfWorkManager uowManager, IPlatformOutboxBusMessageRepository outboxEventBusMessageRepo) =>
+                async (IPlatformOutboxBusMessageRepository outboxEventBusMessageRepo) =>
                 {
-                    using (var uow = uowManager.Begin())
-                    {
-                        var toHandleMessages = await outboxEventBusMessageRepo.GetAllAsync(
-                            queryBuilder: query => query
-                                .Where(PlatformOutboxBusMessage.CanHandleMessagesExpr(MessageProcessingMaximumTimeInSeconds()))
-                                .OrderBy(p => p.LastSendDate)
-                                .Take(NumberOfProcessSendOutboxMessagesBatch()),
-                            cancellationToken);
+                    var toHandleMessages = await outboxEventBusMessageRepo.GetAllAsync(
+                        queryBuilder: query => query
+                            .Where(PlatformOutboxBusMessage.CanHandleMessagesExpr(MessageProcessingMaximumTimeInSeconds()))
+                            .OrderBy(p => p.LastSendDate)
+                            .Take(NumberOfProcessSendOutboxMessagesBatch()),
+                        cancellationToken);
 
-                        toHandleMessages.ForEach(
-                            p =>
-                            {
-                                p.SendStatus = PlatformOutboxBusMessage.SendStatuses.Processing;
-                            });
+                    toHandleMessages.ForEach(
+                        p =>
+                        {
+                            p.SendStatus = PlatformOutboxBusMessage.SendStatuses.Processing;
+                        });
 
-                        await outboxEventBusMessageRepo.UpdateManyAsync(
-                            toHandleMessages,
-                            cancellationToken: cancellationToken);
+                    await outboxEventBusMessageRepo.UpdateManyAsync(
+                        toHandleMessages,
+                        cancellationToken: cancellationToken);
 
-                        await uow.CompleteAsync(cancellationToken);
-
-                        return toHandleMessages;
-                    }
+                    return toHandleMessages;
                 });
         }
         catch (PlatformDomainRowVersionConflictException conflictDomainException)

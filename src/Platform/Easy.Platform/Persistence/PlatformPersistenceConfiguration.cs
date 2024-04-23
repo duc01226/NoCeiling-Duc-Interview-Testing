@@ -14,6 +14,30 @@ public interface IPlatformPersistenceConfiguration
     public bool? MustKeepUowForQuery { get; set; }
 }
 
+public interface IPlatformPersistenceConfiguration<TDbContext> : IPlatformPersistenceConfiguration
+{
+    public PlatformPersistenceConfigurationPooledDbContextOptions PooledOptions { get; set; }
+}
+
+public struct PlatformPersistenceConfigurationPooledDbContextOptions
+{
+    public PlatformPersistenceConfigurationPooledDbContextOptions()
+    {
+    }
+
+    /// <summary>
+    /// Default is true
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// Sets the maximum number of instances retained by the pool. Defaults to 100.
+    /// </summary>
+    public int PoolSize { get; set; } = 100;
+
+    public bool UsePooledDbContextForUsingOnceTransientUowOnly { get; set; }
+}
+
 public class PlatformPersistenceConfiguration : IPlatformPersistenceConfiguration
 {
     public bool ForCrossDbMigrationOnly { get; set; }
@@ -23,8 +47,9 @@ public class PlatformPersistenceConfiguration : IPlatformPersistenceConfiguratio
     public PlatformPersistenceConfigurationBadQueryWarningConfig BadQueryWarning { get; set; } = new();
 }
 
-public class PlatformPersistenceConfiguration<TDbContext> : PlatformPersistenceConfiguration
+public class PlatformPersistenceConfiguration<TDbContext> : PlatformPersistenceConfiguration, IPlatformPersistenceConfiguration<TDbContext>
 {
+    public PlatformPersistenceConfigurationPooledDbContextOptions PooledOptions { get; set; }
 }
 
 public class PlatformPersistenceConfigurationBadQueryWarningConfig

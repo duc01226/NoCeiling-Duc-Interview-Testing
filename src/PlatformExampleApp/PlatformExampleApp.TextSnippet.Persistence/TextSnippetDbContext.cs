@@ -12,12 +12,7 @@ namespace PlatformExampleApp.TextSnippet.Persistence;
 public sealed class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDbContext>, ITextSnippetDbContext
 {
     public TextSnippetDbContext(
-        DbContextOptions<TextSnippetDbContext> options,
-        ILoggerFactory loggerFactory,
-        IPlatformCqrs cqrs,
-        PlatformPersistenceConfiguration<TextSnippetDbContext> persistenceConfiguration,
-        IPlatformApplicationRequestContextAccessor userContextAccessor,
-        IPlatformRootServiceProvider rootServiceProvider) : base(options, loggerFactory, cqrs, persistenceConfiguration, userContextAccessor, rootServiceProvider)
+        DbContextOptions<TextSnippetDbContext> options) : base(options)
     {
     }
 
@@ -33,13 +28,7 @@ public sealed class TextSnippetDbContext : PlatformEfCoreDbContext<TextSnippetDb
             var optionsBuilder = new DbContextOptionsBuilder<TextSnippetDbContext>();
             optionsBuilder.UseSqlServer("Data Source=localhost,14330;Initial Catalog=TextSnippedDb;User ID=sa;Password=123456Abc; Encrypt=False;");
 
-            return new TextSnippetDbContext(
-                optionsBuilder.Options,
-                new LoggerFactory(),
-                null,
-                new PlatformPersistenceConfiguration<TextSnippetDbContext>(),
-                new PlatformDefaultApplicationRequestContextAccessor(),
-                new PlatformRootServiceProvider(null));
+            return new TextSnippetDbContext(optionsBuilder.Options);
         }
     }
 

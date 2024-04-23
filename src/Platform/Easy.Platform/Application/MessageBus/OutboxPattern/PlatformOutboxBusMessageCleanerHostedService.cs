@@ -3,7 +3,6 @@ using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.HostingBackgroundServices;
 using Easy.Platform.Common.Utils;
-using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -165,33 +164,26 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
         {
             await ServiceProvider.ExecuteInjectScopedScrollingPagingAsync<PlatformOutboxBusMessage>(
                 maxExecutionCount: toCleanMessageCount / NumberOfDeleteMessagesBatch(),
-                async (IUnitOfWorkManager uowManager, IPlatformOutboxBusMessageRepository outboxEventBusMessageRepo) =>
+                async (IPlatformOutboxBusMessageRepository outboxEventBusMessageRepo) =>
                 {
-                    using (var uow = uowManager!.Begin())
-                    {
-                        var expiredMessages = await outboxEventBusMessageRepo.GetAllAsync(
-                            queryBuilder: query => query
-                                .Where(
-                                    PlatformOutboxBusMessage.ToCleanExpiredMessagesByTimeExpr(
-                                        DeleteProcessedMessageInSeconds(),
-                                        DeleteExpiredFailedMessageInSeconds()))
-                                .OrderBy(p => p.LastSendDate)
-                                .Take(NumberOfDeleteMessagesBatch()),
+                    var expiredMessages = await outboxEventBusMessageRepo.GetAllAsync(
+                        queryBuilder: query => query
+                            .Where(
+                                PlatformOutboxBusMessage.ToCleanExpiredMessagesByTimeExpr(
+                                    DeleteProcessedMessageInSeconds(),
+                                    DeleteExpiredFailedMessageInSeconds()))
+                            .OrderBy(p => p.LastSendDate)
+                            .Take(NumberOfDeleteMessagesBatch()),
+                        cancellationToken);
+
+                    if (expiredMessages.Count > 0)
+                        await outboxEventBusMessageRepo.DeleteManyAsync(
+                            expiredMessages,
+                            dismissSendEvent: true,
+                            eventCustomConfig: null,
                             cancellationToken);
 
-                        if (expiredMessages.Count > 0)
-                        {
-                            await outboxEventBusMessageRepo.DeleteManyAsync(
-                                expiredMessages,
-                                dismissSendEvent: true,
-                                eventCustomConfig: null,
-                                cancellationToken);
-
-                            await uow.CompleteAsync(cancellationToken);
-                        }
-
-                        return expiredMessages;
-                    }
+                    return expiredMessages;
                 });
 
             Logger.LogInformation("CleanOutboxEventBusMessage success. Number of deleted messages: {ToCleanMessageCount}", toCleanMessageCount);

@@ -29,7 +29,7 @@ public interface IUnitOfWorkManager : IDisposable
     /// <summary>
     /// Just create and return a new instance of uow without manage it. It will not affect to <see cref="HasCurrentActiveUow" /> result
     /// </summary>
-    public IUnitOfWork CreateNewUow();
+    public IUnitOfWork CreateNewUow(bool isUsingOnceTransientUow);
 
     /// <summary>
     /// Gets last unit of work (or null if not exists).
@@ -126,7 +126,7 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
 
     public IPlatformCqrs CurrentSameScopeCqrs { get; } = currentSameScopeCqrs;
 
-    public abstract IUnitOfWork CreateNewUow();
+    public abstract IUnitOfWork CreateNewUow(bool isUsingOnceTransientUow);
 
     public virtual IUnitOfWork CurrentUow()
     {
@@ -185,7 +185,7 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
     {
         RemoveAllInactiveUow();
 
-        if (suppressCurrentUow || CurrentUnitOfWorks.IsEmpty()) CurrentUnitOfWorks.Add(CreateNewUow());
+        if (suppressCurrentUow || CurrentUnitOfWorks.IsEmpty()) CurrentUnitOfWorks.Add(CreateNewUow(false));
 
         return CurrentUow();
     }
@@ -203,7 +203,7 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
                 $"Current unit of work of type {typeof(TUnitOfWork).FullName} has been completed or disposed.");
     }
 
-    public IUnitOfWork GlobalUow => globalUow ??= CreateNewUow();
+    public IUnitOfWork GlobalUow => globalUow ??= CreateNewUow(false);
 
     public void Dispose()
     {
@@ -305,33 +305,5 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
     ~PlatformUnitOfWorkManager()
     {
         Dispose(false);
-    }
-}
-
-public static class UnitOfWorkManagerExtension
-{
-    public static async Task ExecuteInNewUow(this IUnitOfWorkManager unitOfWorkManager, Func<IUnitOfWork, Task> actionFn, bool suppressCurrentUow = true)
-    {
-        using (var uow = unitOfWorkManager.Begin(suppressCurrentUow))
-        {
-            await actionFn(uow);
-
-            await uow.CompleteAsync();
-        }
-    }
-
-    public static async Task<TResult> ExecuteInNewUow<TResult>(
-        this IUnitOfWorkManager unitOfWorkManager,
-        Func<IUnitOfWork, Task<TResult>> actionFn,
-        bool suppressCurrentUow = true)
-    {
-        using (var uow = unitOfWorkManager.Begin(suppressCurrentUow))
-        {
-            var result = await actionFn(uow);
-
-            await uow.CompleteAsync();
-
-            return result;
-        }
     }
 }

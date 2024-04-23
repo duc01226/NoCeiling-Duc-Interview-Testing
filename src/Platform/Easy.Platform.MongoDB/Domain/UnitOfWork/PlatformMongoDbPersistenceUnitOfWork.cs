@@ -11,7 +11,9 @@ public interface IPlatformMongoDbPersistenceUnitOfWork<out TDbContext> : IPlatfo
 public class PlatformMongoDbPersistenceUnitOfWork<TDbContext>
     : PlatformPersistenceUnitOfWork<TDbContext>, IPlatformMongoDbPersistenceUnitOfWork<TDbContext> where TDbContext : PlatformMongoDbContext<TDbContext>
 {
-    public PlatformMongoDbPersistenceUnitOfWork(IPlatformRootServiceProvider rootServiceProvider, TDbContext dbContext) : base(rootServiceProvider, dbContext)
+    public PlatformMongoDbPersistenceUnitOfWork(IPlatformRootServiceProvider rootServiceProvider, IServiceProvider serviceProvider) : base(
+        rootServiceProvider,
+        serviceProvider)
     {
     }
 

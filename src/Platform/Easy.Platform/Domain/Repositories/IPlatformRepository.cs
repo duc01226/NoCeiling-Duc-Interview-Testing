@@ -120,7 +120,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        using (var immediatelyUow = UowManager().CreateNewUow())
+        using (var immediatelyUow = UowManager().CreateNewUow(true))
         {
             var result = await CreateAsync(
                 immediatelyUow,
@@ -206,7 +206,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        using (var immediatelyUow = UowManager().CreateNewUow())
+        using (var immediatelyUow = UowManager().CreateNewUow(true))
         {
             var result = await UpdateAsync(
                 immediatelyUow,
@@ -249,7 +249,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        using (var immediatelyUow = UowManager().CreateNewUow())
+        using (var immediatelyUow = UowManager().CreateNewUow(true))
         {
             var result = await DeleteAsync(
                 immediatelyUow,
@@ -270,7 +270,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        using (var immediatelyUow = UowManager().CreateNewUow())
+        using (var immediatelyUow = UowManager().CreateNewUow(true))
         {
             var toDeleteEntities = await GetAllAsync(predicate, cancellationToken);
 
@@ -319,7 +319,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        using (var immediatelyUow = UowManager().CreateNewUow())
+        using (var immediatelyUow = UowManager().CreateNewUow(true))
         {
             var result = await CreateManyAsync(
                 immediatelyUow,
@@ -359,7 +359,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        using (var immediatelyUow = UowManager().CreateNewUow())
+        using (var immediatelyUow = UowManager().CreateNewUow(true))
         {
             var result = await UpdateManyAsync(
                 immediatelyUow,
@@ -412,7 +412,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        using (var immediatelyUow = UowManager().CreateNewUow())
+        using (var immediatelyUow = UowManager().CreateNewUow(true))
         {
             var result = await DeleteManyAsync(
                 immediatelyUow,
@@ -745,7 +745,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
         await Util.Pager.ExecuteScrollingPagingAsync(
             async () =>
             {
-                using (var uow = UowManager().CreateNewUow())
+                using (var uow = UowManager().CreateNewUow(true))
                 {
                     var pagingDeleteItems = await GetAllAsync(
                         GetQuery(uow).Where(predicate).Take(pageSize),
@@ -783,7 +783,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
         await Util.Pager.ExecutePagingAsync(
             async (skipCount, pageSize) =>
             {
-                using (var uow = UowManager().CreateNewUow())
+                using (var uow = UowManager().CreateNewUow(true))
                 {
                     var pagingUpdateItems = await GetAllAsync(
                             GetQuery(uow).Where(predicate).Skip(skipCount).Take(pageSize),
@@ -821,7 +821,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
         await Util.Pager.ExecuteScrollingPagingAsync(
             async () =>
             {
-                using (var uow = UowManager().CreateNewUow())
+                using (var uow = UowManager().CreateNewUow(true))
                 {
                     var pagingUpdateItems = await GetAllAsync(
                             GetQuery(uow).Where(predicate).Take(pageSize),

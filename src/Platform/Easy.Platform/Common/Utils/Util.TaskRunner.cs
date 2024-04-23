@@ -12,7 +12,7 @@ public static partial class Util
     public static class TaskRunner
     {
         public const int DefaultWaitUntilMaxSeconds = 60;
-        public const double DefaultWaitIntervalSeconds = 0.3;
+        public const double DefaultWaitIntervalSeconds = 1;
 
         /// <summary>
         /// Execute an action after a given of time.

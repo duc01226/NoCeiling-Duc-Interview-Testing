@@ -78,11 +78,11 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
         if (AutoBeginUow)
             using (var uow = UnitOfWorkManager.Begin())
             {
-                await InternalSeedData();
+                await InternalSeedData(isReplaceNewSeedData);
                 await uow.CompleteAsync();
             }
         else
-            await InternalSeedData();
+            await InternalSeedData(isReplaceNewSeedData);
     }
 
     public virtual int SeedOrder => 0;

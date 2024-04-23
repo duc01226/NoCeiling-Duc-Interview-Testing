@@ -128,11 +128,9 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
         allDataMigrationExecutors.ForEach(
             dataMigrationExecutor =>
             {
-                if (applicationDataMigrationExecutionNames.Contains(dataMigrationExecutor.Name))
+                if (!applicationDataMigrationExecutionNames.Add(dataMigrationExecutor.Name))
                     throw new Exception(
                         $"Application DataMigration Executor Names is duplicated. Duplicated name: {dataMigrationExecutor.Name}");
-
-                applicationDataMigrationExecutionNames.Add(dataMigrationExecutor.Name);
 
                 dataMigrationExecutor.Dispose();
             });
@@ -145,7 +143,9 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
     {
         var dbInitializedMigrationHistory = allApplicationDataMigrationHistoryQuery
             .First(p => p.Name == PlatformDataMigrationHistory.DbInitializedMigrationHistoryName);
-        var executedMigrationNames = allApplicationDataMigrationHistoryQuery.Select(p => p.Name).ToHashSet();
+        var executedOrProcessingMigrationNames = allApplicationDataMigrationHistoryQuery.Where(PlatformDataMigrationHistory.ProcessedOrProcessingExpr())
+            .Select(p => p.Name)
+            .ToHashSet();
 
         var canExecutedMigrations = new List<PlatformDataMigrationExecutor<TDbContext>>();
 
@@ -154,7 +154,7 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
             .ForEach(
                 migrationExecution =>
                 {
-                    if (!executedMigrationNames.Contains(migrationExecution.Name) &&
+                    if (!executedOrProcessingMigrationNames.Contains(migrationExecution.Name) &&
                         !migrationExecution.IsExpired() &&
                         migrationExecution.CreationDate >= dbInitializedMigrationHistory.CreatedDate.Date)
                         canExecutedMigrations.Add(migrationExecution);

@@ -1,3 +1,4 @@
+using Easy.Platform.MongoDB.Mapping;
 using MongoDB.Bson.Serialization;
 
 namespace Easy.Platform.MongoDB.Helpers;
@@ -8,6 +9,9 @@ internal static class BsonClassMapHelper
     {
         cm.AutoMap();
         cm.SetIgnoreExtraElements(true);
+        PlatformMongoClassMapping.ApplyEnumAsStringMappingConvention(cm);
+        PlatformMongoClassMapping.ApplyGuidAsStringMappingConvention(cm);
+        PlatformMongoClassMapping.ApplyTimeOnlyAsStringMappingConvention(cm);
     }
 
     public static void TryRegisterClassMapWithDefaultInitializer<TClassMap>()

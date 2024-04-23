@@ -22,6 +22,15 @@ public class TextSnippetSqlEfCorePersistenceModule : PlatformEfCorePersistenceMo
         return new TextSnippetSqlEfCorePlatformFullTextSearchPersistenceService(serviceProvider);
     }
 
+    public override PlatformPersistenceConfigurationPooledDbContextOptions PooledDbContextOption()
+    {
+        return new PlatformPersistenceConfigurationPooledDbContextOptions
+        {
+            Enabled = true,
+            PoolSize = 100
+        };
+    }
+
     protected override bool EnableInboxBusMessage()
     {
         return true;
@@ -81,7 +90,7 @@ public class TextSnippetSqlEfCorePersistenceModule : PlatformEfCorePersistenceMo
                     .With(conn => conn.MaxPoolSize = 80) // Setup max pool size depend on the database maximum connections available
                     .ToString(),
                 options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
-            .UseLazyLoadingProxies()
+            .EnableThreadSafetyChecks(false) // improve performance. Only disable after testing ensure no such concurrency bugs.
             .EnableDetailedErrors(detailedErrorsEnabled: PlatformEnvironment.IsDevelopment || Configuration.GetSection("SeedDummyData").Get<bool>());
     }
 }

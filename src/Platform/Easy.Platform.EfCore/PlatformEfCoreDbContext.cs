@@ -1,9 +1,7 @@
-using System.Diagnostics;
 using System.Linq.Expressions;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
-using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.UnitOfWork;
@@ -11,6 +9,7 @@ using Easy.Platform.EfCore.EntityConfiguration;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.EfCore;
@@ -20,32 +19,34 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 {
     public const int ContextMaxConcurrentThreadLock = 1;
 
-    protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
-    protected readonly IPlatformRootServiceProvider RootServiceProvider;
-    protected readonly IPlatformApplicationRequestContextAccessor UserContextAccessor;
+    private readonly Lazy<ILogger> lazyLogger;
+    private readonly Lazy<PlatformPersistenceConfiguration<TDbContext>> lazyPersistenceConfiguration;
+    private readonly Lazy<IPlatformRootServiceProvider> lazyRootServiceProvider;
+    private readonly Lazy<IPlatformApplicationRequestContextAccessor> lazyUserContextAccessor;
 
     public PlatformEfCoreDbContext(
-        DbContextOptions<TDbContext> options,
-        ILoggerFactory loggerFactory,
-        IPlatformCqrs cqrs,
-        PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
-        IPlatformApplicationRequestContextAccessor userContextAccessor,
-        IPlatformRootServiceProvider rootServiceProvider) : base(options)
+        DbContextOptions<TDbContext> options) : base(options)
     {
-        PersistenceConfiguration = persistenceConfiguration;
-        UserContextAccessor = userContextAccessor;
-        RootServiceProvider = rootServiceProvider;
-        Logger = CreateLogger(loggerFactory);
+        // Use lazy because we are using this.GetService to support EfCore pooling => force constructor must take only DbContextOptions<TDbContext>
+        lazyPersistenceConfiguration = new Lazy<PlatformPersistenceConfiguration<TDbContext>>(this.GetService<PlatformPersistenceConfiguration<TDbContext>>);
+        lazyUserContextAccessor = new Lazy<IPlatformApplicationRequestContextAccessor>(this.GetService<IPlatformApplicationRequestContextAccessor>);
+        lazyRootServiceProvider = new Lazy<IPlatformRootServiceProvider>(this.GetService<IPlatformRootServiceProvider>);
+        lazyLogger = new Lazy<ILogger>(() => CreateLogger(this.GetService<ILoggerFactory>()));
     }
 
-    /// <summary>
-    /// If true enable show query to Debug output
-    /// </summary>
-    public virtual bool EnableDebugQueryLog { get; set; } = true;
+    public DbSet<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryDbSet => Set<PlatformDataMigrationHistory>();
+
+    protected PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration => lazyPersistenceConfiguration.Value;
+
+    protected IPlatformRootServiceProvider RootServiceProvider => lazyRootServiceProvider.Value;
+
+    protected IPlatformApplicationRequestContextAccessor UserContextAccessor => lazyUserContextAccessor.Value;
 
     protected SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(ContextMaxConcurrentThreadLock, ContextMaxConcurrentThreadLock);
 
-    public DbSet<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryDbSet => Set<PlatformDataMigrationHistory>();
+    public IUnitOfWork MappedUnitOfWork { get; set; }
+
+    public ILogger Logger => lazyLogger.Value;
 
     public Task MigrateApplicationDataAsync(IServiceProvider serviceProvider)
     {
@@ -54,13 +55,40 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryDbSet.AsQueryable();
 
-    public async Task InsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity)
+    public async Task UpsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity)
     {
-        await ApplicationDataMigrationHistoryDbSet.AddAsync(entity);
+        var existingEntity = await ApplicationDataMigrationHistoryDbSet.AsNoTracking().Where(p => p.Name == entity.Name).FirstOrDefaultAsync();
+
+        if (existingEntity == null)
+        {
+            await ApplicationDataMigrationHistoryDbSet.AddAsync(entity);
+        }
+        else
+        {
+            if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })
+                entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = existingEntity.As<IRowVersionEntity>().ConcurrencyUpdateToken;
+
+            // Run DetachLocalIfAny to prevent
+            // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
+            var toBeUpdatedEntity = entity
+                .Pipe(entity => DetachLocalIfAnyDifferentTrackedEntity(entity, p => p.Name == entity.Name));
+
+            ApplicationDataMigrationHistoryDbSet
+                .Update(toBeUpdatedEntity)
+                .Entity
+                .Pipe(p => p.With(dataMigrationHistory => dataMigrationHistory.ConcurrencyUpdateToken = Guid.NewGuid()));
+        }
     }
 
-    public IUnitOfWork MappedUnitOfWork { get; set; }
-    public ILogger Logger { get; }
+    public IQueryable<PlatformDataMigrationHistory> DataMigrationHistoryQuery()
+    {
+        return ApplicationDataMigrationHistoryDbSet.AsQueryable().AsNoTracking();
+    }
+
+    public async Task ExecuteWithNewDbContextInstanceAsync(Func<IPlatformDbContext, Task> fn)
+    {
+        await RootServiceProvider.ExecuteInjectScopedAsync(async (TDbContext context) => await fn(context));
+    }
 
     public new Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -422,13 +450,6 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         return entities;
     }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        base.OnConfiguring(optionsBuilder);
-
-        if (Debugger.IsAttached && EnableDebugQueryLog) optionsBuilder.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddDebug()));
-    }
-
     public ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
         return loggerFactory.CreateLogger(typeof(IPlatformDbContext));
@@ -499,7 +520,13 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     protected TEntity DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(TEntity entity) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        var local = GetTable<TEntity>().Local.FirstOrDefault(entry => entry.Id.Equals(entity.Id));
+        return DetachLocalIfAnyDifferentTrackedEntity(entity, entry => entry.Id.Equals(entity.Id));
+    }
+
+    protected TEntity DetachLocalIfAnyDifferentTrackedEntity<TEntity>(TEntity entity, Func<TEntity, bool> findExistingEntityPredicate)
+        where TEntity : class, IEntity, new()
+    {
+        var local = GetTable<TEntity>().Local.FirstOrDefault(findExistingEntityPredicate);
 
         if (local != null && local != entity) GetTable<TEntity>().Entry(local).State = EntityState.Detached;
 
@@ -541,8 +568,6 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         modelBuilder.ApplyConfiguration(new PlatformDataMigrationHistoryEntityConfiguration());
         modelBuilder.ApplyConfiguration(new PlatformInboxEventBusMessageEntityConfiguration());
         modelBuilder.ApplyConfiguration(new PlatformOutboxEventBusMessageEntityConfiguration());
-
-        base.OnModelCreating(modelBuilder);
     }
 
     protected void ApplyEntityConfigurationsFromAssembly(ModelBuilder modelBuilder)

@@ -58,9 +58,9 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
             await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs.SendEvent(entityEvent, cancellationToken);
         else
             await serviceProvider.ExecuteInjectScopedAsync(
-                (IPlatformCqrs cqrs) =>
+                async (IPlatformCqrs cqrs) =>
                 {
-                    cqrs.SendEvent(entityEvent, cancellationToken);
+                    await cqrs.SendEvent(entityEvent, cancellationToken);
                 });
     }
 
@@ -239,7 +239,7 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent
     public TEntity EntityData { get; set; }
 
     /// <summary>
-    /// Existing entity data before update/delete. Only available for entity implement <see cref="IRowVersionEntity"/> or entity with attribute <see cref="TrackFieldUpdatedDomainEventAttribute"/>
+    /// Existing entity data before update/delete. Only available for entity implement <see cref="IRowVersionEntity" /> or entity with attribute <see cref="TrackFieldUpdatedDomainEventAttribute" />
     /// </summary>
     public TEntity? ExistingEntityData { get; set; }
 

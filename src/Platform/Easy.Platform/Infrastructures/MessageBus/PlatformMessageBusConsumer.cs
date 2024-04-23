@@ -193,7 +193,7 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
 
     public virtual int RetryOnFailedTimes => 3;
 
-    public virtual double RetryOnFailedDelaySeconds => 0.5;
+    public virtual double RetryOnFailedDelaySeconds => 1;
 
     public override Task HandleAsync(object message, string routingKey)
     {

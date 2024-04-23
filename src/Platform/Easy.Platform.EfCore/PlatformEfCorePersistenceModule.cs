@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Application.MessageBus.OutboxPattern;
+using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.EfCore.Domain.Repositories;
 using Easy.Platform.EfCore.Domain.UnitOfWork;
@@ -10,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using OpenTelemetry.Trace;
 
@@ -32,15 +35,33 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
             .AddSqlClientInstrumentation(options => options.SetDbStatementForText = true)
             .AddNpgsql();
 
+    /// <summary>
+    /// If true enable show query to Debug output
+    /// </summary>
+    public virtual bool EnableDebugQueryLog { get; set; } = true;
+
     protected override void InternalRegister(IServiceCollection serviceCollection)
     {
         base.InternalRegister(serviceCollection);
 
         RegisterDbContextOptions(serviceCollection);
+
         if (!ForCrossDbMigrationOnly) RegisterEfCoreUow(serviceCollection);
 
         if (!ForCrossDbMigrationOnly || serviceCollection.All(p => p.ServiceType != typeof(IPlatformFullTextSearchPersistenceService)))
             serviceCollection.Register<IPlatformFullTextSearchPersistenceService>(FullTextSearchPersistenceServiceProvider);
+    }
+
+    protected override void RegisterDbContextPool(IServiceCollection serviceCollection)
+    {
+        var options = PooledDbContextOption();
+
+        serviceCollection.Register(
+            sp => new PooledDbContextFactory<TDbContext>(sp.GetRequiredService<DbContextOptions<TDbContext>>(), options.PoolSize),
+            ServiceLifeTime.Singleton);
+        serviceCollection.AddDbContextPool<TDbContext>(
+            o => ConfigureDbContextOptionsBuilder(serviceCollection.BuildServiceProvider(), o),
+            options.PoolSize);
     }
 
     /// <summary>
@@ -92,9 +113,7 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
 
     private void RegisterDbContextOptions(IServiceCollection serviceCollection)
     {
-        serviceCollection.Register(CreateDbContextOptions);
-
-        serviceCollection.Register<DbContextOptions, DbContextOptions<TDbContext>>();
+        serviceCollection.Register(CreateDbContextOptions, ServiceLifeTime.Singleton);
     }
 
     private void RegisterEfCoreUow(IServiceCollection serviceCollection)
@@ -118,10 +137,17 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
         var builder = new DbContextOptionsBuilder<TDbContext>(
             new DbContextOptions<TDbContext>(new Dictionary<Type, IDbContextOptionsExtension>()));
 
+        ConfigureDbContextOptionsBuilder(serviceProvider, builder);
+
+        return builder.Options;
+    }
+
+    private void ConfigureDbContextOptionsBuilder(IServiceProvider serviceProvider, DbContextOptionsBuilder builder)
+    {
         builder.UseApplicationServiceProvider(serviceProvider);
 
         DbContextOptionsBuilderActionProvider(serviceProvider).Invoke(builder);
 
-        return builder.Options;
+        if (Debugger.IsAttached && EnableDebugQueryLog) builder.UseLoggerFactory(Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddDebug()));
     }
 }

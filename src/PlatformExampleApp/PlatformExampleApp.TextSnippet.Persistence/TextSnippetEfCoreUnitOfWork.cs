@@ -4,7 +4,6 @@
 namespace PlatformExampleApp.TextSnippet.Persistence;
 #pragma warning restore S3261 // Namespaces should not be empty
 
-
 // This file is optional for demo.
 // If you want to implement or override your own custom uow, just define a uow implement
 // IPlatformEfCoreUnitOfWork or PlatformEfCoreUnitOfWork
@@ -19,22 +18,6 @@ namespace PlatformExampleApp.TextSnippet.Persistence;
 
 //    public override async Task CompleteAsync(CancellationToken cancellationToken = default)
 //    {
-//        if (Completed)
-//            throw new Exception("This unit of work is completed");
-
-//        try
-//        {
-//            await DbContext.SaveChangesAsync(cancellationToken);
-
-//            // Some custom code for example after save changes log something
-
-//            Completed = true;
-//            OnCompleted?.Invoke(this, EventArgs.Empty);
-//        }
-//        catch (Exception e)
-//        {
-//            OnFailed?.Invoke(this, new UnitOfWorkFailedArgs(e));
-//            throw;
-//        }
+//        return base.CompleteAsync(cancellationToken);
 //    }
 //}
