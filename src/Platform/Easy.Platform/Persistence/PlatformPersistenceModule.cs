@@ -293,7 +293,8 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
             sp => new PlatformPersistenceConfiguration<TDbContext>()
                 .With(config => config.ForCrossDbMigrationOnly = ForCrossDbMigrationOnly)
                 .With(config => config.PooledOptions = PooledDbContextOption())
-                .Pipe(config => ConfigurePersistenceConfiguration(config, Configuration)));
+                .Pipe(config => ConfigurePersistenceConfiguration(config, Configuration)),
+            ServiceLifeTime.Singleton);
     }
 
     /// <summary>

@@ -125,9 +125,7 @@ public interface IUnitOfWork : IDisposable
     /// </remarks>
     public TUnitOfWork UowOfType<TUnitOfWork>() where TUnitOfWork : class, IUnitOfWork
     {
-        return this is TUnitOfWork
-            ? this.As<TUnitOfWork>()
-            : InnerUnitOfWorks.FirstUowOfType<TUnitOfWork>();
+        return this.As<TUnitOfWork>() ?? InnerUnitOfWorks.FirstOrDefaultUowOfType<TUnitOfWork>();
     }
 
     /// <summary>
@@ -278,7 +276,6 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
 
             OnDisposedActions.ForEachAsync(p => p.Invoke()).WaitResult();
             OnDisposedActions.Clear();
-            OnDisposedActions = null;
         }
     }
 

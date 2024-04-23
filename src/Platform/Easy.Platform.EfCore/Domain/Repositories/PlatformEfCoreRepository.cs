@@ -58,7 +58,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
     {
         return GetTable(uow)
             .AsQueryable()
-            .PipeIf(UowManager().HasCurrentActiveUow() == false, query => query.AsNoTracking())
+            .PipeIf(uow.IsUsingOnceTransientUow, query => query.AsNoTracking())
             .PipeIf(
                 loadRelatedEntities.Any(),
                 query => loadRelatedEntities.Aggregate(query, (query, loadRelatedEntityFn) => query.Include(loadRelatedEntityFn).DefaultIfEmpty()));
@@ -197,7 +197,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
             result.GetType().IsAssignableToGenericType(typeof(IAsyncEnumerable<>))) return true;
 
         var matchedDbContextUow = uow.UowOfType<IPlatformEfCorePersistenceUnitOfWork<TDbContext>>();
-        if (matchedDbContextUow.MustKeepUowForQuery() == false || matchedDbContextUow.IsPseudoTransactionUow())
+        if (matchedDbContextUow != null && (matchedDbContextUow.MustKeepUowForQuery() == false || matchedDbContextUow.IsPseudoTransactionUow()))
             return false;
 
         // Not need to keep uow for lazy-loading If the result is primitive-type/value-object or Enumerable of primitive type/value-object
