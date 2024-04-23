@@ -28,15 +28,32 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         DbContextOptions<TDbContext> options) : base(options)
     {
         // Use lazy because we are using this.GetService to support EfCore pooling => force constructor must take only DbContextOptions<TDbContext>
-        lazyPersistenceConfiguration = new Lazy<PlatformPersistenceConfiguration<TDbContext>>(this.GetService<PlatformPersistenceConfiguration<TDbContext>>);
+        lazyPersistenceConfiguration = new Lazy<PlatformPersistenceConfiguration<TDbContext>>(
+            () => Util.TaskRunner.CatchException(
+                this.GetService<PlatformPersistenceConfiguration<TDbContext>>,
+                (PlatformPersistenceConfiguration<TDbContext>)null));
         lazyUserContextAccessor = new Lazy<IPlatformApplicationRequestContextAccessor>(this.GetService<IPlatformApplicationRequestContextAccessor>);
         lazyRootServiceProvider = new Lazy<IPlatformRootServiceProvider>(this.GetService<IPlatformRootServiceProvider>);
         lazyLogger = new Lazy<ILogger>(() => CreateLogger(this.GetService<ILoggerFactory>()));
     }
 
+    public PlatformEfCoreDbContext(
+        DbContextOptions<TDbContext> options,
+        PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
+        IPlatformApplicationRequestContextAccessor requestContextAccessor,
+        IPlatformRootServiceProvider rootServiceProvider,
+        ILoggerFactory loggerFactory) : base(options)
+    {
+        // Use lazy because we are using this.GetService to support EfCore pooling => force constructor must take only DbContextOptions<TDbContext>
+        lazyPersistenceConfiguration = new Lazy<PlatformPersistenceConfiguration<TDbContext>>(() => persistenceConfiguration);
+        lazyUserContextAccessor = new Lazy<IPlatformApplicationRequestContextAccessor>(() => requestContextAccessor);
+        lazyRootServiceProvider = new Lazy<IPlatformRootServiceProvider>(() => rootServiceProvider);
+        lazyLogger = new Lazy<ILogger>(() => CreateLogger(loggerFactory));
+    }
+
     public DbSet<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryDbSet => Set<PlatformDataMigrationHistory>();
 
-    protected PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration => lazyPersistenceConfiguration.Value;
+    protected PlatformPersistenceConfiguration<TDbContext>? PersistenceConfiguration => lazyPersistenceConfiguration.Value;
 
     protected IPlatformRootServiceProvider RootServiceProvider => lazyRootServiceProvider.Value;
 
@@ -44,7 +61,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     protected SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(ContextMaxConcurrentThreadLock, ContextMaxConcurrentThreadLock);
 
-    public IUnitOfWork MappedUnitOfWork { get; set; }
+    public IUnitOfWork? MappedUnitOfWork { get; set; }
 
     public ILogger Logger => lazyLogger.Value;
 
@@ -575,7 +592,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         // Auto apply configuration by convention for the current dbcontext (usually persistence layer) assembly.
         var applyForLimitedEntityTypes = ApplyForLimitedEntityTypes();
 
-        if (applyForLimitedEntityTypes == null && PersistenceConfiguration.ForCrossDbMigrationOnly) return;
+        if (applyForLimitedEntityTypes == null && PersistenceConfiguration?.ForCrossDbMigrationOnly == true) return;
 
         modelBuilder.ApplyConfigurationsFromAssembly(
             GetType().Assembly,

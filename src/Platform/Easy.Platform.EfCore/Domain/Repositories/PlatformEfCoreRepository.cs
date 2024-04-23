@@ -56,9 +56,11 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
 
     public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
+        // Not apply .PipeIf(uow.IsUsingOnceTransientUow, query => query.AsNoTracking())
+        // If EF Core finds an existing entity, then the same instance is returned, which can potentially use less memory and be faster than a no-tracking.
+        // Actual after benchmark see that AsNoTracking ACTUALLY SLOWER
         return GetTable(uow)
             .AsQueryable()
-            .PipeIf(uow.IsUsingOnceTransientUow, query => query.AsNoTracking())
             .PipeIf(
                 loadRelatedEntities.Any(),
                 query => loadRelatedEntities.Aggregate(query, (query, loadRelatedEntityFn) => query.Include(loadRelatedEntityFn).DefaultIfEmpty()));
