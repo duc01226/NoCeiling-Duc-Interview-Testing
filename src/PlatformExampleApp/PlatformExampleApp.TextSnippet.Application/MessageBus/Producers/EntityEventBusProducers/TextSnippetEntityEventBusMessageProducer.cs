@@ -1,7 +1,6 @@
 using Easy.Platform.Application;
 using Easy.Platform.Application.MessageBus.Producers;
 using Easy.Platform.Application.MessageBus.Producers.CqrsEventProducers;
-using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Logging;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
@@ -13,18 +12,16 @@ public class TextSnippetEntityEventBusMessageProducer
 {
     public TextSnippetEntityEventBusMessageProducer(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
-        IPlatformApplicationRequestContextAccessor userContextAccessor,
         IPlatformApplicationSettingContext applicationSettingContext) : base(
         loggerFactory,
         unitOfWorkManager,
         serviceProvider,
         rootServiceProvider,
         applicationBusMessageProducer,
-        userContextAccessor,
         applicationSettingContext)
     {
     }

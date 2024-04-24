@@ -18,7 +18,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
     where TDbContext : PlatformEfCoreDbContext<TDbContext>
 {
     public PlatformEfCoreRepository(
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
         DbContextOptions<TDbContext> dbContextOptions,
         IServiceProvider serviceProvider) : base(
@@ -27,40 +27,43 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         serviceProvider)
     {
         DbContextOptions = dbContextOptions;
-        AllAvailableEntityTypes = typeof(TEntity).Assembly.GetTypes().Where(p => p.IsClass && !p.IsAbstract && p.IsAssignableTo(typeof(IEntity))).ToHashSet();
-        ToCheckNoNeedKeepUowPrimitiveTypes =
-        [
-            typeof(string),
-            typeof(Guid),
-            typeof(DateTime),
-            typeof(int),
-            typeof(long),
-            typeof(double),
-            typeof(float),
-            typeof(DateOnly)
-        ];
+        AllAvailableEntityTypes = new Lazy<HashSet<Type>>(
+            () => typeof(TEntity).Assembly.GetTypes().Where(p => p.IsClass && !p.IsAbstract && p.IsAssignableTo(typeof(IEntity))).ToHashSet());
+        ToCheckNoNeedKeepUowPrimitiveTypes = new Lazy<Type[]>(
+            () =>
+            [
+                typeof(string),
+                typeof(Guid),
+                typeof(DateTime),
+                typeof(int),
+                typeof(long),
+                typeof(double),
+                typeof(float),
+                typeof(DateOnly)
+            ]);
     }
 
     protected DbContextOptions<TDbContext> DbContextOptions { get; }
 
-    protected HashSet<Type> AllAvailableEntityTypes { get; }
+    protected Lazy<HashSet<Type>> AllAvailableEntityTypes { get; }
 
-    protected Type[] ToCheckNoNeedKeepUowPrimitiveTypes { get; }
+    protected Lazy<Type[]> ToCheckNoNeedKeepUowPrimitiveTypes { get; }
 
     public virtual DbSet<TEntity> Table => DbContext.Set<TEntity>();
 
-    public virtual DbSet<TEntity> GetTable(IUnitOfWork uow)
+    public virtual DbSet<TEntity> GetTable(IPlatformUnitOfWork uow)
     {
         return GetUowDbContext(uow).Set<TEntity>();
     }
 
-    public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
+    public override IQueryable<TEntity> GetQuery(IPlatformUnitOfWork uow, params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        // Not apply .PipeIf(uow.IsUsingOnceTransientUow, query => query.AsNoTracking())
+        // Note: apply .PipeIf(uow.IsUsingOnceTransientUow, query => query.AsNoTracking())
         // If EF Core finds an existing entity, then the same instance is returned, which can potentially use less memory and be faster than a no-tracking.
-        // Actual after benchmark see that AsNoTracking ACTUALLY SLOWER
+        // Actual after benchmark see that AsNoTracking ACTUALLY SLOWER. Still apply to fix case select OwnedEntities without parents work
         return GetTable(uow)
             .AsQueryable()
+            .PipeIf(uow.IsUsingOnceTransientUow, query => query.AsNoTracking())
             .PipeIf(
                 loadRelatedEntities.Any(),
                 query => loadRelatedEntities.Aggregate(query, (query, loadRelatedEntityFn) => query.Include(loadRelatedEntityFn).DefaultIfEmpty()));
@@ -163,7 +166,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
     }
 
     protected override void HandleDisposeUsingOnceTimeContextLogic<TResult>(
-        IUnitOfWork uow,
+        IPlatformUnitOfWork uow,
         bool doesNeedKeepUowForQueryOrEnumerableExecutionLater,
         Expression<Func<TEntity, object>>[] loadRelatedEntities,
         TResult result)
@@ -191,12 +194,9 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
 
     // If result has entity instance and MustKeepUowForQuery == true => ef core might use lazy-loading => need to keep the uow for db context
     // to help the entity could load lazy navigation property. If uow disposed => context disposed => lazy-loading proxy failed because db-context disposed
-    protected override bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IUnitOfWork uow)
+    protected override bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IPlatformUnitOfWork uow)
     {
         if (result == null) return false;
-
-        if (result.GetType().IsAssignableToGenericType(typeof(IQueryable<>)) ||
-            result.GetType().IsAssignableToGenericType(typeof(IAsyncEnumerable<>))) return true;
 
         var matchedDbContextUow = uow.UowOfType<IPlatformEfCorePersistenceUnitOfWork<TDbContext>>();
         if (matchedDbContextUow != null && (matchedDbContextUow.MustKeepUowForQuery() == false || matchedDbContextUow.IsPseudoTransactionUow()))
@@ -204,9 +204,11 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
 
         // Not need to keep uow for lazy-loading If the result is primitive-type/value-object or Enumerable of primitive type/value-object
         if (IsPrimitiveOrValueObjectType(result) ||
-            (result.GetType().IsAssignableToGenericType(typeof(IEnumerable<>)) &&
-             ToCheckNoNeedKeepUowPrimitiveTypes.Any(primitiveType => result.GetType().IsAssignableTo(typeof(IEnumerable<>).MakeGenericType(primitiveType)))))
+            IsCollectionOfPrimitiveOrValueObjectType(result))
             return false;
+
+        if (result.GetType().IsAssignableToGenericType(typeof(IQueryable<>)) ||
+            result.GetType().IsAssignableToGenericType(typeof(IAsyncEnumerable<>))) return true;
 
         // Keep uow for lazy-loading if the result is entity, Dictionary or Grouped result of entity or list entities
         return IsEntityOrListEntity(result) ||
@@ -231,13 +233,13 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
             return result;
         }
 
-        static bool IsDictionaryOfValueOfEntityOrListEntity(TResult data, Type[] allAvailableEntityDictionaryKeyTypes, HashSet<Type> allAvailableEntityTypes)
+        static bool IsDictionaryOfValueOfEntityOrListEntity(TResult data, Lazy<Type[]> allAvailableEntityDictionaryKeyTypes, Lazy<HashSet<Type>> allAvailableEntityTypes)
         {
             if (!data.GetType().IsAssignableToGenericType(typeof(IDictionary<,>)))
                 return false;
 
-            var result = allAvailableEntityDictionaryKeyTypes.Any(
-                keyType => allAvailableEntityTypes.Any(
+            var result = allAvailableEntityDictionaryKeyTypes.Value.Any(
+                keyType => allAvailableEntityTypes.Value.Any(
                     entityType => IsDictionaryOfValueOfEntityOrListEntity(data, keyType, typeof(TEntity)) ||
                                   IsDictionaryOfValueOfEntityOrListEntity(data, keyType, entityType)));
 
@@ -253,6 +255,12 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
             }
         }
     }
+
+    private bool IsCollectionOfPrimitiveOrValueObjectType<TResult>(TResult result)
+    {
+        return result.GetType().IsAssignableToGenericType(typeof(IEnumerable<>)) &&
+               ToCheckNoNeedKeepUowPrimitiveTypes.Value.Any(primitiveType => result.GetType().IsAssignableTo(typeof(IEnumerable<>).MakeGenericType(primitiveType)));
+    }
 }
 
 public abstract class PlatformEfCoreRootRepository<TEntity, TPrimaryKey, TDbContext>
@@ -261,7 +269,7 @@ public abstract class PlatformEfCoreRootRepository<TEntity, TPrimaryKey, TDbCont
     where TDbContext : PlatformEfCoreDbContext<TDbContext>
 {
     public PlatformEfCoreRootRepository(
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
         DbContextOptions<TDbContext> dbContextOptions,
         IServiceProvider serviceProvider) : base(

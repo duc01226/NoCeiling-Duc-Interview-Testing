@@ -23,7 +23,8 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
     {
         this.applicationSettingContext = applicationSettingContext;
         redisCache = new Lazy<Microsoft.Extensions.Caching.StackExchangeRedis.RedisCache>(
-            () => new Microsoft.Extensions.Caching.StackExchangeRedis.RedisCache(optionsAccessor));
+            () => new Microsoft.Extensions.Caching.StackExchangeRedis.RedisCache(optionsAccessor),
+            LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
     public void Dispose()
@@ -151,11 +152,12 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
     {
         var toUpdateRequestCachedKeys = await LoadGlobalAllRequestCachedKeys();
 
-        await toUpdateRequestCachedKeys.SelectList(p => p.Key).ForEachAsync(
-            async key =>
-            {
-                if (await redisCache.Value.GetAsync(key) == null) toUpdateRequestCachedKeys.Remove(key, out _);
-            });
+        await toUpdateRequestCachedKeys.SelectList(p => p.Key)
+            .ForEachAsync(
+                async key =>
+                {
+                    if (await redisCache.Value.GetAsync(key) == null) toUpdateRequestCachedKeys.Remove(key, out _);
+                });
 
         await SetGlobalCachedKeysAsync(toUpdateRequestCachedKeys);
     }

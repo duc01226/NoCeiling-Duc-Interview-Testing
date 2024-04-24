@@ -15,7 +15,7 @@ internal sealed class ClearCacheOnSaveSnippetTextCommandEventHandler : PlatformC
 
     public ClearCacheOnSaveSnippetTextCommandEventHandler(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider,
         IPlatformCacheRepositoryProvider cacheRepositoryProvider) : base(loggerFactory, unitOfWorkManager, serviceProvider, rootServiceProvider)

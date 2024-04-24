@@ -18,7 +18,7 @@ internal sealed class DemoAskDoSomethingRequestBusMessageConsumer : PlatformAppl
 {
     public DemoAskDoSomethingRequestBusMessageConsumer(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager uowManager,
+        IPlatformUnitOfWorkManager uowManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, uowManager, serviceProvider, rootServiceProvider)
     {

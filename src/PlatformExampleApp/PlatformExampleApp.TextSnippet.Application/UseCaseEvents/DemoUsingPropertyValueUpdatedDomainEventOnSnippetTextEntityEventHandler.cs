@@ -10,7 +10,7 @@ internal sealed class DemoUsingFieldUpdatedDomainEventOnSnippetTextEntityEventHa
 {
     public DemoUsingFieldUpdatedDomainEventOnSnippetTextEntityEventHandler(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(
         loggerFactory,
@@ -44,12 +44,10 @@ internal sealed class DemoUsingFieldUpdatedDomainEventOnSnippetTextEntityEventHa
 
         if (@event.HasAnyFieldUpdatedEvents(p => p.Address, p => p.AddressStrings, p => p.Addresses) &&
             SomeCustomBuildMessageResult(@event.ExistingEntityData).IsValuesDifferent(SomeCustomBuildMessageResult(@event.EntityData)))
-        {
             CreateGlobalLogger()
                 .LogInformation(
                     "TextSnippetEntity Id:'{Id}' FullText Address Info updated",
                     @event.EntityData.Id);
-        }
     }
 
     private static object SomeCustomBuildMessageResult(TextSnippetEntity entityData)

@@ -34,7 +34,8 @@ public abstract class BaseStartup
 
         startUp.ConfigureHostConfiguration(hostBuilder);
         hostBuilder.ConfigureServices(services => startUp.ConfigureServices(services));
-        hostBuilder.ConfigureServices(services => services.Register<IPlatformRootServiceProvider, PlatformRootServiceProvider>(ServiceLifeTime.Singleton));
+        hostBuilder.ConfigureServices(
+            services => services.Register<IPlatformRootServiceProvider>(sp => new PlatformRootServiceProvider(sp, services), ServiceLifeTime.Singleton));
 
         // Populate ServiceCollection to ExposeServiceCollectionFactory through UseServiceProviderFactory
         // and hostBuilder.Build() => trigger CreateBuilder => expose ServiceCollection

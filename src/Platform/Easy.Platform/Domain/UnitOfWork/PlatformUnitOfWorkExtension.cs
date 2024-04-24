@@ -2,10 +2,10 @@ using Easy.Platform.Common.Extensions;
 
 namespace Easy.Platform.Domain.UnitOfWork;
 
-public static class UnitOfWorkExtension
+public static class PlatformUnitOfWorkExtension
 {
-    public static TUnitOfWork FirstOrDefaultUowOfType<TUnitOfWork>(this IEnumerable<IUnitOfWork> unitOfWorks)
-        where TUnitOfWork : class, IUnitOfWork
+    public static TUnitOfWork FirstOrDefaultUowOfType<TUnitOfWork>(this IEnumerable<IPlatformUnitOfWork> unitOfWorks)
+        where TUnitOfWork : class, IPlatformUnitOfWork
     {
         return unitOfWorks
             .Select(

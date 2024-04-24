@@ -10,7 +10,6 @@ using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Logging;
 using PlatformExampleApp.TextSnippet.Application.EntityDtos;
 using PlatformExampleApp.TextSnippet.Application.Infrastructures;
-using PlatformExampleApp.TextSnippet.Application.UseCaseEvents;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
@@ -66,7 +65,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
 
     public SaveSnippetTextCommandHandler(
         IPlatformApplicationRequestContextAccessor requestContextAccessor,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider,

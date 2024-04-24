@@ -46,12 +46,12 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                     (
                         IPlatformOutboxBusMessageRepository outboxBusMessageRepository,
                         IPlatformMessageBusProducer messageBusProducer,
-                        IUnitOfWorkManager unitOfWorkManager) => SendOutboxMessageAsync(
+                        IPlatformUnitOfWorkManager unitOfWorkManager) => SendOutboxMessageAsync(
                         message,
                         routingKey,
                         retryProcessFailedMessageInSecondsUnit,
                         handleExistingOutboxMessage,
-                        sourceOutboxUowId,
+                        null,
                         cancellationToken,
                         CreateLogger(),
                         outboxBusMessageRepository,
@@ -62,7 +62,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                     (
                         IPlatformOutboxBusMessageRepository outboxBusMessageRepository,
                         IPlatformMessageBusProducer messageBusProducer,
-                        IUnitOfWorkManager unitOfWorkManager) => SendOutboxMessageAsync(
+                        IPlatformUnitOfWorkManager unitOfWorkManager) => SendOutboxMessageAsync(
                         message,
                         routingKey,
                         retryProcessFailedMessageInSecondsUnit,
@@ -90,7 +90,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         ILogger logger,
         IPlatformOutboxBusMessageRepository outboxBusMessageRepository,
         IPlatformMessageBusProducer messageBusProducer,
-        IUnitOfWorkManager unitOfWorkManager) where TMessage : class, new()
+        IPlatformUnitOfWorkManager unitOfWorkManager) where TMessage : class, new()
     {
         if (handleExistingOutboxMessage != null &&
             PlatformOutboxBusMessage.CanHandleMessagesExpr(outboxConfig.MessageProcessingMaxSeconds).Compile()(handleExistingOutboxMessage))
@@ -157,7 +157,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         double retryProcessFailedMessageInSecondsUnit,
         CancellationToken cancellationToken,
         ILogger logger,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider)
         where TMessage : class, new()
     {
@@ -286,7 +286,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         string sourceOutboxUowId,
         CancellationToken cancellationToken,
         ILogger logger,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IPlatformOutboxBusMessageRepository outboxBusMessageRepository)
         where TMessage : class, new()
     {
@@ -318,10 +318,18 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 if (existedOutboxMessage == null ||
                     PlatformOutboxBusMessage.CanHandleMessagesExpr(outboxConfig.MessageProcessingMaxSeconds).Compile()(existedOutboxMessage))
                 {
-                    var currentActiveUow = sourceOutboxUowId != null ? unitOfWorkManager.TryGetCurrentOrCreatedActiveUow(sourceOutboxUowId) : null;
+                    var currentActiveUow = sourceOutboxUowId != null
+                        ? unitOfWorkManager.TryGetCurrentOrCreatedActiveUow(sourceOutboxUowId)
+                        : null;
                     // WHY: Do not need to wait for uow completed if the uow for db do not handle actually transaction.
                     // Can execute it immediately without waiting for uow to complete
                     if (currentActiveUow == null || currentActiveUow.IsPseudoTransactionUow())
+                    {
+                        // Check try CompleteAsync current active uow if any to ensure that newOutboxMessage will be saved
+                        // Do this to fix if someone open uow without complete/save it for some legacy project
+                        if (outboxBusMessageRepository.UowManager().TryGetCurrentActiveUow() != null)
+                            await outboxBusMessageRepository.UowManager().CurrentActiveUow().SaveChangesAsync(cancellationToken);
+
                         Util.TaskRunner.QueueActionInBackground(
                             async () => await rootServiceProvider.ExecuteInjectScopedAsync(
                                 SendExistingOutboxMessageAsync<TMessage>,
@@ -333,8 +341,10 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                                 logger),
                             loggerFactory: CreateLogger,
                             cancellationToken: cancellationToken);
+                    }
                     else
-                        currentActiveUow.OnCompletedActions.Add(
+                    {
+                        currentActiveUow.OnSaveChangesCompletedActions.Add(
                             async () =>
                             {
                                 // Try to process sending newProcessingOutboxMessage first time immediately after task completed
@@ -349,6 +359,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                                     cancellationToken,
                                     logger);
                             });
+                    }
                 }
             },
             sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),

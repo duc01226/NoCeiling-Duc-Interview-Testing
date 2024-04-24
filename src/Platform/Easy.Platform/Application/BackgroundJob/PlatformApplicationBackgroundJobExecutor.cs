@@ -15,10 +15,10 @@ public interface IPlatformApplicationBackgroundJobExecutor
 public abstract class PlatformApplicationBackgroundJobExecutor<TParam> : PlatformBackgroundJobExecutor<TParam>, IPlatformApplicationBackgroundJobExecutor
     where TParam : class
 {
-    protected readonly IUnitOfWorkManager UnitOfWorkManager;
+    protected readonly IPlatformUnitOfWorkManager UnitOfWorkManager;
 
     public PlatformApplicationBackgroundJobExecutor(
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, rootServiceProvider)
     {
@@ -54,7 +54,7 @@ public abstract class PlatformApplicationBackgroundJobExecutor<TParam> : Platfor
 public abstract class PlatformApplicationBackgroundJobExecutor : PlatformApplicationBackgroundJobExecutor<object>
 {
     protected PlatformApplicationBackgroundJobExecutor(
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider) : base(unitOfWorkManager, loggerFactory, rootServiceProvider)
     {

@@ -20,7 +20,7 @@ public abstract class PlatformCqrsEntityEventBusMessageConsumer<TMessage, TEntit
 {
     protected PlatformCqrsEntityEventBusMessageConsumer(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager uowManager,
+        IPlatformUnitOfWorkManager uowManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, uowManager, serviceProvider, rootServiceProvider)
     {

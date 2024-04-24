@@ -33,20 +33,17 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
     where TMessage : class, new()
 {
     protected readonly IPlatformApplicationBusMessageProducer ApplicationBusMessageProducer;
-    protected readonly IPlatformApplicationRequestContextAccessor UserContext;
 
     public PlatformCqrsEventBusMessageProducer(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
-        IPlatformApplicationRequestContextAccessor userContextAccessor,
         IPlatformApplicationSettingContext applicationSettingContext) : base(loggerFactory, unitOfWorkManager, serviceProvider, rootServiceProvider)
     {
         ApplicationBusMessageProducer = applicationBusMessageProducer;
         ApplicationSettingContext = applicationSettingContext;
-        UserContext = userContextAccessor;
     }
 
     public override bool EnableInboxEventBusMessage => false;
@@ -55,9 +52,16 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
 
     protected override bool AllowUsingUserContextAccessor => true;
 
+    protected override bool MustWaitHandlerExecutionFinishedImmediately => ApplicationBusMessageProducer.HasOutboxMessageSupport();
+
     protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
 
     protected abstract TMessage BuildMessage(TEvent @event);
+
+    protected override bool AllowHandleInBackgroundThread(TEvent @event)
+    {
+        return base.AllowHandleInBackgroundThread(@event) && !ApplicationBusMessageProducer.HasOutboxMessageSupport();
+    }
 
     protected override async Task HandleAsync(
         TEvent @event,
@@ -96,13 +100,13 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
         return false;
     }
 
-    protected PlatformBusMessageIdentity BuildPlatformEventBusMessageIdentity()
+    protected PlatformBusMessageIdentity BuildPlatformEventBusMessageIdentity(IDictionary<string, object> eventRequestContext)
     {
         return new PlatformBusMessageIdentity
         {
-            UserId = UserContextAccessor.Current.UserId(),
-            RequestId = UserContextAccessor.Current.RequestId(),
-            UserName = UserContextAccessor.Current.UserName()
+            UserId = eventRequestContext.UserId(),
+            RequestId = eventRequestContext.RequestId(),
+            UserName = eventRequestContext.UserName()
         };
     }
 }

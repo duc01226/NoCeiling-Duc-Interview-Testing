@@ -10,7 +10,7 @@ public class PlatformDefaultEfCoreInboxBusMessageRepository<TDbContext>
     where TDbContext : PlatformEfCoreDbContext<TDbContext>
 {
     public PlatformDefaultEfCoreInboxBusMessageRepository(
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
         DbContextOptions<TDbContext> dbContextOptions,
         IServiceProvider serviceProvider) : base(
@@ -23,7 +23,7 @@ public class PlatformDefaultEfCoreInboxBusMessageRepository<TDbContext>
 
     protected override bool IsDistributedTracingEnabled => false;
 
-    protected override bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IUnitOfWork uow)
+    protected override bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IPlatformUnitOfWork uow)
     {
         return false;
     }

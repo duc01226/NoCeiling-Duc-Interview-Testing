@@ -12,7 +12,7 @@ public sealed class DummyPerformanceTestTextSnippetApplicationDataSeeder : Platf
     private readonly ITextSnippetRootRepository<TextSnippetEntity> textSnippetRepository;
 
     public DummyPerformanceTestTextSnippetApplicationDataSeeder(
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IConfiguration configuration,
         ILoggerFactory loggerFactory,

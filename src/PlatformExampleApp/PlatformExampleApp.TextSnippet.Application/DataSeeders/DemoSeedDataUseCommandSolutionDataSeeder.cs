@@ -17,7 +17,7 @@ namespace PlatformExampleApp.TextSnippet.Application.DataSeeders;
 public sealed class DemoSeedDataUseCommandSolutionDataSeeder : PlatformApplicationDataSeeder
 {
     public DemoSeedDataUseCommandSolutionDataSeeder(
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IConfiguration configuration,
         ILoggerFactory loggerFactory,

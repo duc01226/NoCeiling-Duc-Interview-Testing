@@ -27,15 +27,15 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     public const string PlatformOutboxBusMessageCollectionName = "OutboxEventBusMessage";
     public const string PlatformDataMigrationHistoryCollectionName = "MigrationHistory";
 
-    public readonly IMongoDatabase Database;
-
     protected readonly Lazy<Dictionary<Type, string>> EntityTypeToCollectionNameDictionary;
     protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
     protected readonly IPlatformRootServiceProvider RootServiceProvider;
     protected readonly IPlatformApplicationRequestContextAccessor UserContextAccessor;
 
-    private bool disposed;
+    private readonly Lazy<IMongoDatabase> databaseLazy;
     private readonly Lazy<ILogger> lazyLogger;
+
+    private bool disposed;
 
     public PlatformMongoDbContext(
         IOptions<PlatformMongoOptions<TDbContext>> options,
@@ -45,7 +45,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
         IPlatformRootServiceProvider rootServiceProvider)
     {
-        Database = client.MongoClient.GetDatabase(options.Value.Database);
+        databaseLazy = new Lazy<IMongoDatabase>(() => client.MongoClient.GetDatabase(options.Value.Database), LazyThreadSafetyMode.ExecutionAndPublication);
 
         UserContextAccessor = userContextAccessor;
         PersistenceConfiguration = persistenceConfiguration;
@@ -54,6 +54,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
         EntityTypeToCollectionNameDictionary = new Lazy<Dictionary<Type, string>>(BuildEntityTypeToCollectionNameDictionary);
     }
+
+    public IMongoDatabase Database => databaseLazy.Value;
 
     /// <summary>
     /// If true enable show query to Debug output
@@ -127,13 +129,13 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         await RootServiceProvider.ExecuteInjectScopedAsync(async (TDbContext context) => await fn(context));
     }
 
-    public IUnitOfWork MappedUnitOfWork { get; set; }
+    public IPlatformUnitOfWork MappedUnitOfWork { get; set; }
     public ILogger Logger => lazyLogger.Value;
 
     public virtual async Task Initialize(IServiceProvider serviceProvider)
     {
         // Store stack trace before call Migrate() to keep the original stack trace to log
-        // after Migrate() will lose full stack trace (may because it connect async to other external service)
+        // after Migrate() will lose full stack trace (may because it connects async to other external service)
         var fullStackTrace = Environment.StackTrace;
 
         try

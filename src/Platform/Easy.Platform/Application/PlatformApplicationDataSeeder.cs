@@ -35,10 +35,10 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
     protected readonly ILoggerFactory LoggerFactory;
     protected readonly IPlatformRootServiceProvider RootServiceProvider;
     protected readonly IServiceProvider ServiceProvider;
-    protected readonly IUnitOfWorkManager UnitOfWorkManager;
+    protected readonly IPlatformUnitOfWorkManager UnitOfWorkManager;
 
     public PlatformApplicationDataSeeder(
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IConfiguration configuration,
         ILoggerFactory loggerFactory,

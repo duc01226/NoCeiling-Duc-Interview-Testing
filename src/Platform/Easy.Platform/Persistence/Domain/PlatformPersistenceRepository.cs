@@ -18,13 +18,15 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     where TUow : class, IPlatformPersistenceUnitOfWork<TDbContext>
     where TDbContext : IPlatformDbContext
 {
+    private readonly Lazy<ILogger> loggerLazy;
+
     protected PlatformPersistenceRepository(
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
         IServiceProvider serviceProvider) : base(unitOfWorkManager, cqrs, serviceProvider)
     {
         PersistenceConfiguration = serviceProvider.GetRequiredService<PlatformPersistenceConfiguration<TDbContext>>();
-        Logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(PlatformPersistenceRepository<,,,>));
+        loggerLazy = new Lazy<ILogger>(() => serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(PlatformPersistenceRepository<,,,>)));
     }
 
     /// <summary>
@@ -35,15 +37,16 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     protected virtual TDbContext DbContext => GetUowDbContext(TryGetCurrentActiveUow() ?? UnitOfWorkManager.GlobalUow);
 
     protected PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration { get; }
+    protected ILogger Logger => loggerLazy.Value;
 
-    protected ILogger Logger { get; }
-
-    protected override async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForWrite<TResult>(Func<IUnitOfWork, Task<TResult>> action, IUnitOfWork forceUseUow = null)
+    protected override async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForWrite<TResult>(
+        Func<IPlatformUnitOfWork, Task<TResult>> action,
+        IPlatformUnitOfWork forceUseUow = null)
     {
         return await ExecuteWithBadQueryWarningForWriteHandling(_ => base.ExecuteAutoOpenUowUsingOnceTimeForWrite(action, forceUseUow), null);
     }
 
-    protected async Task<TResult> ExecuteWithBadQueryWarningForWriteHandling<TResult>(Func<IUnitOfWork, Task<TResult>> action, IUnitOfWork uow)
+    protected async Task<TResult> ExecuteWithBadQueryWarningForWriteHandling<TResult>(Func<IPlatformUnitOfWork, Task<TResult>> action, IPlatformUnitOfWork uow)
     {
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling<TResult, TEntity>(
@@ -57,7 +60,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         return await action(uow);
     }
 
-    public TDbContext GetUowDbContext(IUnitOfWork uow)
+    public TDbContext GetUowDbContext(IPlatformUnitOfWork uow)
     {
         return uow.UowOfType<TUow>().DbContext;
     }
@@ -145,7 +148,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     }
 
     public override IAsyncEnumerable<TSelector> GetAllAsyncEnumerable<TSelector>(
-        Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
+        Func<IPlatformUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
@@ -209,7 +212,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     }
 
     public override Task<int> CountAsync<TQueryItemResult>(
-        Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TQueryItemResult>> queryBuilder,
+        Func<IPlatformUnitOfWork, IQueryable<TEntity>, IQueryable<TQueryItemResult>> queryBuilder,
         CancellationToken cancellationToken = default)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
@@ -228,7 +231,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     }
 
     public override Task<List<TSelector>> GetAllAsync<TSelector>(
-        Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
+        Func<IPlatformUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
@@ -248,7 +251,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     }
 
     public override Task<List<TSelector>> GetAllAsync<TSelector>(
-        Func<IUnitOfWork, IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
+        Func<IPlatformUnitOfWork, IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
@@ -268,7 +271,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     }
 
     public override Task<TSelector> FirstOrDefaultAsync<TSelector>(
-        Func<IUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
+        Func<IPlatformUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities) where TSelector : default
     {
@@ -287,7 +290,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     }
 
     public override async Task<TEntity> CreateAsync(
-        IUnitOfWork uow,
+        IPlatformUnitOfWork uow,
         TEntity entity,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
@@ -390,7 +393,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     }
 
     public override async Task<List<TEntity>> CreateOrUpdateManyAsync(
-        IUnitOfWork uow,
+        IPlatformUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
         Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
@@ -439,7 +442,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     }
 
     public override async Task<TEntity> UpdateAsync(
-        IUnitOfWork uow,
+        IPlatformUnitOfWork uow,
         TEntity entity,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
@@ -471,7 +474,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     }
 
     public override async Task<TEntity> DeleteAsync(
-        IUnitOfWork uow,
+        IPlatformUnitOfWork uow,
         TPrimaryKey entityId,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
@@ -552,7 +555,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     }
 
     public override async Task<List<TEntity>> CreateManyAsync(
-        IUnitOfWork uow,
+        IPlatformUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
@@ -601,7 +604,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     }
 
     public override async Task<List<TEntity>> UpdateManyAsync(
-        IUnitOfWork uow,
+        IPlatformUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
@@ -648,7 +651,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     }
 
     public override async Task<List<TEntity>> DeleteManyAsync(
-        IUnitOfWork uow,
+        IPlatformUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
@@ -701,7 +704,7 @@ public abstract class PlatformPersistenceRootRepository<TEntity, TPrimaryKey, TU
     where TUow : class, IPlatformPersistenceUnitOfWork<TDbContext>
     where TDbContext : IPlatformDbContext
 {
-    protected PlatformPersistenceRootRepository(IUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
+    protected PlatformPersistenceRootRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
         unitOfWorkManager,
         cqrs,
         serviceProvider)

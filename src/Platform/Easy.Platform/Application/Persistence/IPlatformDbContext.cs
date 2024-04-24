@@ -25,7 +25,7 @@ public interface IPlatformDbContext : IDisposable
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery { get; }
 
-    public IUnitOfWork MappedUnitOfWork { get; set; }
+    public IPlatformUnitOfWork MappedUnitOfWork { get; set; }
 
     public ILogger Logger { get; }
 

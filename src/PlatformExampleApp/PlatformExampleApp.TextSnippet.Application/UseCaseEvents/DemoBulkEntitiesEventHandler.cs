@@ -10,7 +10,7 @@ internal sealed class DemoBulkEntitiesEventHandler : PlatformCqrsBulkEntitiesEve
 {
     public DemoBulkEntitiesEventHandler(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(
         loggerFactory,

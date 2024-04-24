@@ -71,6 +71,11 @@ public interface IPlatformMessageBusConsumer<in TMessage> : IPlatformMessageBusC
     Task HandleAsync(TMessage message, string routingKey);
 
     /// <summary>
+    /// This method is executed in <see cref="HandleAsync" /> when conditional logic is met
+    /// </summary>
+    Task ExecuteHandleLogicAsync(TMessage message, string routingKey);
+
+    /// <summary>
     /// Main handle logic only method of the consumer
     /// </summary>
     Task HandleLogicAsync(TMessage message, string routingKey);
@@ -182,14 +187,16 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
 public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusConsumer, IPlatformMessageBusConsumer<TMessage>
     where TMessage : class, new()
 {
-    protected readonly ILogger Logger;
     protected readonly ILoggerFactory LoggerFactory;
+    private readonly Lazy<ILogger> loggerLazy;
 
     public PlatformMessageBusConsumer(ILoggerFactory loggerFactory)
     {
         LoggerFactory = loggerFactory;
-        Logger = CreateLogger(loggerFactory);
+        loggerLazy = new Lazy<ILogger>(() => CreateLogger(loggerFactory));
     }
+
+    protected ILogger Logger => loggerLazy.Value;
 
     public virtual int RetryOnFailedTimes => 3;
 
@@ -233,7 +240,7 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
 
     public abstract Task HandleLogicAsync(TMessage message, string routingKey);
 
-    protected virtual Task ExecuteHandleLogicAsync(TMessage message, string routingKey)
+    public virtual Task ExecuteHandleLogicAsync(TMessage message, string routingKey)
     {
         return HandleLogicAsync(message, routingKey);
     }

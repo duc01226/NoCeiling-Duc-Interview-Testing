@@ -75,7 +75,6 @@ public abstract class PlatformIntervalHostingBackgroundService : PlatformHosting
             }
             finally
             {
-                // Run three times to ensure memory gets cleaned
                 if (AutoCleanMemory)
                     Util.GarbageCollector.Collect(aggressiveImmediately: true);
             }

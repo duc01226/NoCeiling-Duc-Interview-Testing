@@ -15,24 +15,26 @@ public interface IPlatformCqrsEventHandler
 }
 
 public interface IPlatformCqrsEventHandler<in TEvent> : INotificationHandler<TEvent>, IPlatformCqrsEventHandler
-    where TEvent : IPlatformCqrsEvent, new()
+    where TEvent : IPlatformCqrsEvent
 {
 }
 
 public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandler<TEvent>
-    where TEvent : IPlatformCqrsEvent, new()
+    where TEvent : IPlatformCqrsEvent
 {
     protected readonly ILoggerFactory LoggerFactory;
     protected readonly IPlatformRootServiceProvider RootServiceProvider;
+
+    private readonly Lazy<bool> isDistributedTracingEnabledLazy;
 
     protected PlatformCqrsEventHandler(ILoggerFactory loggerFactory, IPlatformRootServiceProvider rootServiceProvider)
     {
         LoggerFactory = loggerFactory;
         RootServiceProvider = rootServiceProvider;
-        IsDistributedTracingEnabled = rootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled == true;
+        isDistributedTracingEnabledLazy = new Lazy<bool>(() => rootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled == true);
     }
 
-    protected bool IsDistributedTracingEnabled { get; }
+    protected bool IsDistributedTracingEnabled => isDistributedTracingEnabledLazy.Value;
 
     public virtual int RetryOnFailedTimes => 3;
 
@@ -42,10 +44,10 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     public virtual Task Handle(TEvent notification, CancellationToken cancellationToken)
     {
-        return DoHandle(notification, cancellationToken, true);
+        return DoHandle(notification, cancellationToken, () => true);
     }
 
-    protected virtual async Task DoHandle(TEvent @event, CancellationToken cancellationToken, bool couldRunInBackgroundThread)
+    protected virtual async Task DoHandle(TEvent @event, CancellationToken cancellationToken, Func<bool> couldRunInBackgroundThread)
     {
         if (!HandleWhen(@event)) return;
 
@@ -54,9 +56,9 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         if (AllowHandleInBackgroundThread(@event) &&
             !ForceCurrentInstanceHandleInCurrentThread &&
             !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()) &&
-            couldRunInBackgroundThread)
+            couldRunInBackgroundThread())
             Util.TaskRunner.QueueActionInBackground(
-                async () => await ExecuteRetryHandleInNewScopeAsync(@event, cancellationToken),
+                async () => await ExecuteHandleInNewScopeAsync(@event, cancellationToken),
                 () => LoggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>)),
                 cancellationToken: default);
         else
@@ -72,36 +74,31 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         return true;
     }
 
-    protected async Task ExecuteRetryHandleInNewScopeAsync(
+    protected async Task ExecuteHandleInNewScopeAsync(
         TEvent notification,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            // Retry RetryOnFailedTimes to help resilient PlatformCqrsEventHandler. Sometime parallel, create/update concurrency could lead to error
-            if (RetryOnFailedTimes > 0)
-                await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                    async () =>
-                    {
-                        await RootServiceProvider.ExecuteInjectScopedAsync(
-                            async (IServiceProvider sp) =>
-                            {
-                                var thisHandlerNewInstance = sp.GetRequiredService(GetType())
-                                    .As<PlatformCqrsEventHandler<TEvent>>()
-                                    .With(newInstance => CopyPropertiesToNewInstanceBeforeExecution(this, newInstance));
+            await RootServiceProvider.ExecuteInjectScopedAsync(
+                async (IServiceProvider sp) =>
+                {
+                    var thisHandlerNewInstance = sp.GetRequiredService(GetType())
+                        .As<PlatformCqrsEventHandler<TEvent>>()
+                        .With(newInstance => CopyPropertiesToNewInstanceBeforeExecution(this, newInstance));
 
-                                await thisHandlerNewInstance.ExecuteHandleAsync(notification, cancellationToken);
-                            });
-                    },
-                    retryCount: RetryOnFailedTimes,
-                    sleepDurationProvider: retryAttempt => RetryOnFailedDelaySeconds.Seconds(),
-                    cancellationToken: cancellationToken);
-            else
-                await ExecuteHandleAsync(notification, cancellationToken);
+                    await thisHandlerNewInstance
+                        .With(_ => _.ForceCurrentInstanceHandleInCurrentThread = true)
+                        .Handle(notification, cancellationToken);
+                });
         }
         catch (Exception e)
         {
             LogError(notification, e, LoggerFactory);
+        }
+        finally
+        {
+            Util.GarbageCollector.Collect(aggressiveImmediately: false);
         }
     }
 
@@ -124,6 +121,10 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         {
             handlerNewInstance.LogError(notification, e, LoggerFactory);
         }
+        finally
+        {
+            Util.GarbageCollector.Collect(aggressiveImmediately: false);
+        }
     }
 
     protected virtual void CopyPropertiesToNewInstanceBeforeExecution(
@@ -135,7 +136,14 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     public virtual async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
     {
-        await ExecuteHandleWithTracingAsync(@event, () => HandleAsync(@event, cancellationToken));
+        try
+        {
+            await ExecuteHandleWithTracingAsync(@event, () => HandleAsync(@event, cancellationToken));
+        }
+        finally
+        {
+            Util.GarbageCollector.Collect(aggressiveImmediately: false);
+        }
     }
 
     protected async Task ExecuteHandleWithTracingAsync(TEvent @event, Func<Task> handleAsync)

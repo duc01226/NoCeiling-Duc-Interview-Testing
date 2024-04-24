@@ -12,7 +12,7 @@ public abstract class PlatformCqrsBulkEntitiesEventApplicationHandler<TEntity, T
 {
     protected PlatformCqrsBulkEntitiesEventApplicationHandler(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(
         loggerFactory,

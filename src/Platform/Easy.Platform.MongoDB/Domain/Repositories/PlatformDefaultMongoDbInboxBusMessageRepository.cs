@@ -8,7 +8,7 @@ public class PlatformDefaultMongoDbInboxBusMessageRepository<TDbContext>
     : PlatformMongoDbRootRepository<PlatformInboxBusMessage, string, TDbContext>, IPlatformInboxBusMessageRepository
     where TDbContext : PlatformMongoDbContext<TDbContext>
 {
-    public PlatformDefaultMongoDbInboxBusMessageRepository(IUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
+    public PlatformDefaultMongoDbInboxBusMessageRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
         unitOfWorkManager,
         cqrs,
         serviceProvider)
@@ -17,7 +17,7 @@ public class PlatformDefaultMongoDbInboxBusMessageRepository<TDbContext>
 
     protected override bool IsDistributedTracingEnabled => false;
 
-    protected override bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IUnitOfWork uow)
+    protected override bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IPlatformUnitOfWork uow)
     {
         return false;
     }

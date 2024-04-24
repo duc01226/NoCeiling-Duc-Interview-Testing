@@ -21,8 +21,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     private readonly Lazy<ILogger> lazyLogger;
     private readonly Lazy<PlatformPersistenceConfiguration<TDbContext>> lazyPersistenceConfiguration;
+    private readonly Lazy<IPlatformApplicationRequestContextAccessor> lazyRequestContextAccessor;
     private readonly Lazy<IPlatformRootServiceProvider> lazyRootServiceProvider;
-    private readonly Lazy<IPlatformApplicationRequestContextAccessor> lazyUserContextAccessor;
 
     public PlatformEfCoreDbContext(
         DbContextOptions<TDbContext> options) : base(options)
@@ -32,7 +32,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             () => Util.TaskRunner.CatchException(
                 this.GetService<PlatformPersistenceConfiguration<TDbContext>>,
                 (PlatformPersistenceConfiguration<TDbContext>)null));
-        lazyUserContextAccessor = new Lazy<IPlatformApplicationRequestContextAccessor>(this.GetService<IPlatformApplicationRequestContextAccessor>);
+        lazyRequestContextAccessor = new Lazy<IPlatformApplicationRequestContextAccessor>(this.GetService<IPlatformApplicationRequestContextAccessor>);
         lazyRootServiceProvider = new Lazy<IPlatformRootServiceProvider>(this.GetService<IPlatformRootServiceProvider>);
         lazyLogger = new Lazy<ILogger>(() => CreateLogger(this.GetService<ILoggerFactory>()));
     }
@@ -46,7 +46,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     {
         // Use lazy because we are using this.GetService to support EfCore pooling => force constructor must take only DbContextOptions<TDbContext>
         lazyPersistenceConfiguration = new Lazy<PlatformPersistenceConfiguration<TDbContext>>(() => persistenceConfiguration);
-        lazyUserContextAccessor = new Lazy<IPlatformApplicationRequestContextAccessor>(() => requestContextAccessor);
+        lazyRequestContextAccessor = new Lazy<IPlatformApplicationRequestContextAccessor>(() => requestContextAccessor);
         lazyRootServiceProvider = new Lazy<IPlatformRootServiceProvider>(() => rootServiceProvider);
         lazyLogger = new Lazy<ILogger>(() => CreateLogger(loggerFactory));
     }
@@ -57,11 +57,11 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     protected IPlatformRootServiceProvider RootServiceProvider => lazyRootServiceProvider.Value;
 
-    protected IPlatformApplicationRequestContextAccessor UserContextAccessor => lazyUserContextAccessor.Value;
+    protected IPlatformApplicationRequestContextAccessor RequestContextAccessor => lazyRequestContextAccessor.Value;
 
     protected SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(ContextMaxConcurrentThreadLock, ContextMaxConcurrentThreadLock);
 
-    public IUnitOfWork? MappedUnitOfWork { get; set; }
+    public IPlatformUnitOfWork? MappedUnitOfWork { get; set; }
 
     public ILogger Logger => lazyLogger.Value;
 
@@ -125,7 +125,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     public virtual async Task Initialize(IServiceProvider serviceProvider)
     {
         // Store stack trace before call Database.MigrateAsync() to keep the original stack trace to log
-        // after Database.MigrateAsync() will lose full stack trace (may because it connect async to other external service)
+        // after Database.MigrateAsync() will lose full stack trace (may because it connects async to other external service)
         var fullStackTrace = Environment.StackTrace;
 
         try
@@ -279,7 +279,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 },
                 dismissSendEvent,
                 eventCustomConfig: eventCustomConfig,
-                requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
+                requestContext: () => RequestContextAccessor.Current.GetAllKeyValues(),
                 cancellationToken);
         }
         catch (Exception)
@@ -333,7 +333,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 .PipeIf(
                     entity.IsAuditedUserEntity(),
                     p => p.As<IUserAuditedEntity>()
-                        .SetCreatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
+                        .SetCreatedBy(RequestContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
                         .As<TEntity>())
                 .WithIf(
                     entity is IRowVersionEntity { ConcurrencyUpdateToken: null },
@@ -353,7 +353,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 },
                 dismissSendEvent,
                 eventCustomConfig: eventCustomConfig,
-                requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
+                requestContext: () => RequestContextAccessor.Current.GetAllKeyValues(),
                 cancellationToken);
 
             return result;
@@ -501,7 +501,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 .PipeIf(
                     entity.IsAuditedUserEntity(),
                     p => p.As<IUserAuditedEntity>()
-                        .SetLastUpdatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
+                        .SetLastUpdatedBy(RequestContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
                         .As<TEntity>());
 
             var result = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, TEntity>(
@@ -522,7 +522,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 },
                 dismissSendEvent,
                 eventCustomConfig: eventCustomConfig,
-                requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
+                requestContext: () => RequestContextAccessor.Current.GetAllKeyValues(),
                 cancellationToken);
 
             return result;
@@ -569,7 +569,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             entities,
             crudAction,
             eventCustomConfig,
-            requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
+            requestContext: () => RequestContextAccessor.Current.GetAllKeyValues(),
             cancellationToken);
     }
 

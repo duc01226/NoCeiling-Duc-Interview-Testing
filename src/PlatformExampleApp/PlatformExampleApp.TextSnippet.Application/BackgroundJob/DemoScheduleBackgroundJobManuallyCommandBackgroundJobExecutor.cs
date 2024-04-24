@@ -12,7 +12,7 @@ public sealed class DemoScheduleBackgroundJobManuallyCommandBackgroundJobExecuto
     private readonly ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository;
 
     public DemoScheduleBackgroundJobManuallyCommandBackgroundJobExecutor(
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider,
         ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository) : base(

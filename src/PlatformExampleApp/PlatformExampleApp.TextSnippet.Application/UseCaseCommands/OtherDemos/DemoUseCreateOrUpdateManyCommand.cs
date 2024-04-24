@@ -24,11 +24,16 @@ internal sealed class DemoUseCreateOrUpdateManyCommandHandler
 
     public DemoUseCreateOrUpdateManyCommandHandler(
         IPlatformApplicationRequestContextAccessor requestContextAccessor,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider,
-        ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository) : base(requestContextAccessor, unitOfWorkManager, cqrs, loggerFactory, rootServiceProvider)
+        ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository) : base(
+        requestContextAccessor,
+        unitOfWorkManager,
+        cqrs,
+        loggerFactory,
+        rootServiceProvider)
     {
         this.textSnippetEntityRepository = textSnippetEntityRepository;
     }

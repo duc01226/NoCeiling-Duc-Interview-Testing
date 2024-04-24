@@ -29,7 +29,7 @@ internal sealed class DemoScheduleBackgroundJobManuallyCommandHandler
 
     public DemoScheduleBackgroundJobManuallyCommandHandler(
         IPlatformApplicationRequestContextAccessor requestContextAccessor,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider,

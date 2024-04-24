@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.Extensions;
@@ -41,14 +42,16 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
     public string SourceUowId { get; set; }
 
     private static async Task SendEvent<TEvent>(
-        IServiceProvider serviceProvider,
-        [AllowNull] IUnitOfWork mappedToDbContextUow,
+        IPlatformRootServiceProvider rootServiceProvider,
+        [AllowNull] IPlatformUnitOfWork mappedToDbContextUow,
         Func<TEvent> eventBuilder,
         Action<TEvent> eventCustomConfig,
         Func<IDictionary<string, object>> requestContext,
         CancellationToken cancellationToken)
         where TEvent : PlatformCqrsEntityEvent
     {
+        if (!rootServiceProvider.CheckAssignableToServiceRegistered(typeof(IPlatformCqrsEventHandler<TEvent>))) return;
+
         var entityEvent = eventBuilder()
             .With(@event => eventCustomConfig?.Invoke(@event))
             .With(@event => @event.SourceUowId = mappedToDbContextUow?.Id)
@@ -57,7 +60,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         if (mappedToDbContextUow != null)
             await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs.SendEvent(entityEvent, cancellationToken);
         else
-            await serviceProvider.ExecuteInjectScopedAsync(
+            await rootServiceProvider.ExecuteInjectScopedAsync(
                 async (IPlatformCqrs cqrs) =>
                 {
                     await cqrs.SendEvent(entityEvent, cancellationToken);
@@ -65,8 +68,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
     }
 
     public static async Task SendEvent<TEntity, TPrimaryKey>(
-        IServiceProvider serviceProvider,
-        [AllowNull] IUnitOfWork mappedToDbContextUow,
+        IPlatformRootServiceProvider rootServiceProvider,
+        [AllowNull] IPlatformUnitOfWork mappedToDbContextUow,
         TEntity entity,
         TEntity? existingEntity,
         PlatformCqrsEntityEventCrudAction crudAction,
@@ -75,8 +78,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        await SendEvent(
-            serviceProvider,
+        await SendEvent<PlatformCqrsEntityEvent<TEntity>>(
+            rootServiceProvider,
             mappedToDbContextUow,
             () => new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(
                 @event => @event.ExistingEntityData = existingEntity),
@@ -86,8 +89,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
     }
 
     public static async Task SendBulkEntitiesEvent<TEntity, TPrimaryKey>(
-        IServiceProvider serviceProvider,
-        [AllowNull] IUnitOfWork mappedToDbContextUow,
+        IPlatformRootServiceProvider rootServiceProvider,
+        [AllowNull] IPlatformUnitOfWork mappedToDbContextUow,
         List<TEntity> entities,
         PlatformCqrsEntityEventCrudAction crudAction,
         Action<PlatformCqrsEntityEvent> eventCustomConfig,
@@ -95,8 +98,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        await SendEvent(
-            serviceProvider,
+        await SendEvent<PlatformCqrsBulkEntitiesEvent<TEntity, TPrimaryKey>>(
+            rootServiceProvider,
             mappedToDbContextUow,
             () => new PlatformCqrsBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, crudAction),
             eventCustomConfig,
@@ -105,8 +108,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
     }
 
     public static async Task<TResult> ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TResult>(
-        IServiceProvider serviceProvider,
-        IUnitOfWork mappedToDbContextUow,
+        IPlatformRootServiceProvider rootServiceProvider,
+        IPlatformUnitOfWork mappedToDbContextUow,
         TEntity entity,
         Func<TEntity, Task<TResult>> deleteEntityAction,
         bool dismissSendEvent,
@@ -120,7 +123,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                 {
                     if (!dismissSendEvent)
                         await SendEvent<TEntity, TPrimaryKey>(
-                            serviceProvider,
+                            rootServiceProvider,
                             mappedToDbContextUow,
                             entity,
                             entity,
@@ -134,8 +137,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
     }
 
     public static async Task<TResult> ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TResult>(
-        IServiceProvider serviceProvider,
-        IUnitOfWork mappedToDbContextUow,
+        IPlatformRootServiceProvider rootServiceProvider,
+        IPlatformUnitOfWork mappedToDbContextUow,
         TEntity entity,
         Func<TEntity, Task<TResult>> createEntityAction,
         bool dismissSendEvent,
@@ -149,7 +152,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                 {
                     if (!dismissSendEvent)
                         await SendEvent<TEntity, TPrimaryKey>(
-                            serviceProvider,
+                            rootServiceProvider,
                             mappedToDbContextUow,
                             entity,
                             null,
@@ -163,8 +166,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
     }
 
     public static async Task<TResult> ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, TResult>(
-        IServiceProvider serviceProvider,
-        IUnitOfWork unitOfWork,
+        IPlatformRootServiceProvider rootServiceProvider,
+        IPlatformUnitOfWork unitOfWork,
         TEntity entity,
         TEntity? existingEntity,
         Func<TEntity, Task<TResult>> updateEntityAction,
@@ -182,7 +185,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                 {
                     if (!dismissSendEvent)
                         await SendEvent<TEntity, TPrimaryKey>(
-                            serviceProvider,
+                            rootServiceProvider,
                             unitOfWork,
                             entity,
                             existingEntity,

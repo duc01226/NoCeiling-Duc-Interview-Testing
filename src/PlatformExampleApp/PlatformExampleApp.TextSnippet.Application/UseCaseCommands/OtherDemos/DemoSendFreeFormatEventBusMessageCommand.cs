@@ -26,7 +26,7 @@ internal sealed class DemoSendFreeFormatEventBusMessageCommandHandler
 
     public DemoSendFreeFormatEventBusMessageCommandHandler(
         IPlatformApplicationRequestContextAccessor requestContextAccessor,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider,

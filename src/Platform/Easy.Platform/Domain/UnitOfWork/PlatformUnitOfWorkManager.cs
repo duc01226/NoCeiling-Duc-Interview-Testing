@@ -11,9 +11,9 @@ namespace Easy.Platform.Domain.UnitOfWork;
 /// Unit of work manager.
 /// Used to begin and control a unit of work.
 /// </summary>
-public interface IUnitOfWorkManager : IDisposable
+public interface IPlatformUnitOfWorkManager : IDisposable
 {
-    public static readonly ActivitySource ActivitySource = new($"{nameof(IUnitOfWorkManager)}");
+    public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformUnitOfWorkManager)}");
 
     /// <summary>
     /// A single separated global uow in current scoped is used by repository for read data using query, usually when need to return data
@@ -22,32 +22,32 @@ public interface IUnitOfWorkManager : IDisposable
     /// This uow is auto created once per scope when access it. <br />
     /// This won't affect the normal current uow queue list when Begin a new uow.
     /// </summary>
-    public IUnitOfWork GlobalUow { get; }
+    public IPlatformUnitOfWork GlobalUow { get; }
 
     public IPlatformCqrs CurrentSameScopeCqrs { get; }
 
     /// <summary>
     /// Just create and return a new instance of uow without manage it. It will not affect to <see cref="HasCurrentActiveUow" /> result
     /// </summary>
-    public IUnitOfWork CreateNewUow(bool isUsingOnceTransientUow);
+    public IPlatformUnitOfWork CreateNewUow(bool isUsingOnceTransientUow);
 
     /// <summary>
     /// Gets last unit of work (or null if not exists).
     /// </summary>
     [return: MaybeNull]
-    public IUnitOfWork CurrentUow();
+    public IPlatformUnitOfWork CurrentUow();
 
     /// <summary>
     /// Gets currently latest active unit of work.
     /// <exception cref="Exception">Throw exception if there is not active unit of work.</exception>
     /// </summary>
-    public IUnitOfWork CurrentActiveUow();
+    public IPlatformUnitOfWork CurrentActiveUow();
 
     /// <summary>
     /// Gets currently latest or created active unit of work has id equal uowId.
     /// <exception cref="Exception">Throw exception if there is not active unit of work.</exception>
     /// </summary>
-    public IUnitOfWork CurrentOrCreatedActiveUow(string uowId);
+    public IPlatformUnitOfWork CurrentOrCreatedActiveUow(string uowId);
 
     /// <summary>
     /// Gets currently latest active unit of work of type <see cref="TUnitOfWork" />.
@@ -62,19 +62,19 @@ public interface IUnitOfWorkManager : IDisposable
     /// <br />
     /// In the PlatformUnitOfWorkManager class, this method is implemented by first retrieving the current unit of work and then checking if it is of the specified type and if it is active. If these conditions are not met, an exception is thrown.
     /// </remarks>
-    public TUnitOfWork CurrentActiveUowOfType<TUnitOfWork>() where TUnitOfWork : class, IUnitOfWork;
+    public TUnitOfWork CurrentActiveUowOfType<TUnitOfWork>() where TUnitOfWork : class, IPlatformUnitOfWork;
 
     /// <summary>
     /// Gets currently latest active unit of work. Return null if no active uow
     /// </summary>
     [return: MaybeNull]
-    public IUnitOfWork TryGetCurrentActiveUow();
+    public IPlatformUnitOfWork TryGetCurrentActiveUow();
 
     /// <summary>
     /// Gets currently latest or created active unit of work has id equal uowId. Return null if no active uow
     /// </summary>
     [return: MaybeNull]
-    public IUnitOfWork TryGetCurrentOrCreatedActiveUow(string uowId);
+    public IPlatformUnitOfWork TryGetCurrentOrCreatedActiveUow(string uowId);
 
     /// <summary>
     /// Check that is there any currently latest active unit of work
@@ -104,7 +104,7 @@ public interface IUnitOfWorkManager : IDisposable
     /// <br />
     /// In these classes, the Begin method is used to start a unit of work, after which various operations are performed. Once all operations are completed, the unit of work is completed by calling the CompleteAsync method on the unit of work instance. This ensures that all operations within the unit of work are executed as a single transaction.
     /// </remarks>
-    public IUnitOfWork Begin(bool suppressCurrentUow = true);
+    public IPlatformUnitOfWork Begin(bool suppressCurrentUow = true);
 
     /// <summary>
     /// Remove all managed inactive uow to clear memory
@@ -113,29 +113,29 @@ public interface IUnitOfWorkManager : IDisposable
 }
 
 public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCqrs, IPlatformRootServiceProvider rootServiceProvider)
-    : IUnitOfWorkManager
+    : IPlatformUnitOfWorkManager
 {
-    protected readonly List<IUnitOfWork> CurrentUnitOfWorks = [];
-    protected readonly ConcurrentDictionary<string, IUnitOfWork> FreeCreatedUnitOfWorks = new();
+    protected readonly List<IPlatformUnitOfWork> CurrentUnitOfWorks = [];
+    protected readonly ConcurrentDictionary<string, IPlatformUnitOfWork> FreeCreatedUnitOfWorks = new();
     protected readonly SemaphoreSlim RemoveAllInactiveUowLock = new(1, 1);
     protected readonly IPlatformRootServiceProvider RootServiceProvider = rootServiceProvider;
     private bool disposed;
 
-    private IUnitOfWork globalUow;
+    private IPlatformUnitOfWork globalUow;
     private bool isDisposing;
 
     public IPlatformCqrs CurrentSameScopeCqrs { get; } = currentSameScopeCqrs;
 
-    public abstract IUnitOfWork CreateNewUow(bool isUsingOnceTransientUow);
+    public abstract IPlatformUnitOfWork CreateNewUow(bool isUsingOnceTransientUow);
 
-    public virtual IUnitOfWork CurrentUow()
+    public virtual IPlatformUnitOfWork CurrentUow()
     {
         RemoveAllInactiveUow();
 
         return CurrentUnitOfWorks.LastOrDefault();
     }
 
-    public IUnitOfWork CurrentActiveUow()
+    public IPlatformUnitOfWork CurrentActiveUow()
     {
         var currentUow = CurrentUow();
 
@@ -144,7 +144,7 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
         return currentUow;
     }
 
-    public IUnitOfWork CurrentOrCreatedActiveUow(string uowId)
+    public IPlatformUnitOfWork CurrentOrCreatedActiveUow(string uowId)
     {
         var currentUow = CurrentOrCreatedUow(uowId);
 
@@ -153,14 +153,14 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
         return currentUow;
     }
 
-    public IUnitOfWork TryGetCurrentActiveUow()
+    public IPlatformUnitOfWork TryGetCurrentActiveUow()
     {
         return CurrentUow()?.IsActive() == true
             ? CurrentUow()
             : null;
     }
 
-    public IUnitOfWork TryGetCurrentOrCreatedActiveUow(string uowId)
+    public IPlatformUnitOfWork TryGetCurrentOrCreatedActiveUow(string uowId)
     {
         if (uowId == null) return TryGetCurrentActiveUow();
 
@@ -181,7 +181,7 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
         return CurrentOrCreatedUow(uowId)?.IsActive() == true;
     }
 
-    public virtual IUnitOfWork Begin(bool suppressCurrentUow = true)
+    public virtual IPlatformUnitOfWork Begin(bool suppressCurrentUow = true)
     {
         RemoveAllInactiveUow();
 
@@ -190,7 +190,7 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
         return CurrentUow();
     }
 
-    public TUnitOfWork CurrentActiveUowOfType<TUnitOfWork>() where TUnitOfWork : class, IUnitOfWork
+    public TUnitOfWork CurrentActiveUowOfType<TUnitOfWork>() where TUnitOfWork : class, IPlatformUnitOfWork
     {
         var uowOfType = CurrentUow()?.UowOfType<TUnitOfWork>();
 
@@ -203,7 +203,7 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
                 $"Current unit of work of type {typeof(TUnitOfWork).FullName} has been completed or disposed.");
     }
 
-    public IUnitOfWork GlobalUow => globalUow ??= CreateNewUow(false);
+    public IPlatformUnitOfWork GlobalUow => globalUow ??= CreateNewUow(false);
 
     public void Dispose()
     {
@@ -215,7 +215,7 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
     {
         if (disposed || isDisposing) return;
 
-        List<IUnitOfWork> removedUOWs = [];
+        List<IPlatformUnitOfWork> removedUOWs = [];
         try
         {
             RemoveAllInactiveUowLock.Wait();
@@ -241,13 +241,13 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
         }
     }
 
-    public virtual IUnitOfWork CurrentOrCreatedUow(string uowId)
+    public virtual IPlatformUnitOfWork CurrentOrCreatedUow(string uowId)
     {
         RemoveAllInactiveUow();
 
         return LastOrDefaultMatchedUowOfId(CurrentUnitOfWorks, uowId) ?? LastOrDefaultMatchedUowOfId(FreeCreatedUnitOfWorks.Values.ToList(), uowId);
 
-        static IUnitOfWork LastOrDefaultMatchedUowOfId(List<IUnitOfWork> unitOfWorks, string uowId)
+        static IPlatformUnitOfWork LastOrDefaultMatchedUowOfId(List<IPlatformUnitOfWork> unitOfWorks, string uowId)
         {
             for (var i = unitOfWorks.Count - 1; i >= 0; i--)
             {
@@ -260,7 +260,7 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
         }
     }
 
-    private static void EnsureUowActive(IUnitOfWork currentUow)
+    private static void EnsureUowActive(IPlatformUnitOfWork currentUow)
     {
         currentUow
             .Ensure(

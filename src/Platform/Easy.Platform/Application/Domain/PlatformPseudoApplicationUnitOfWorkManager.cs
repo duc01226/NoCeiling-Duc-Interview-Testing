@@ -13,7 +13,7 @@ internal sealed class PlatformPseudoApplicationUnitOfWorkManager : PlatformUnitO
     {
     }
 
-    public override IUnitOfWork CreateNewUow(bool isUsingOnceTransientUow)
+    public override IPlatformUnitOfWork CreateNewUow(bool isUsingOnceTransientUow)
     {
         return new PlatformPseudoApplicationUnitOfWork(RootServiceProvider)
             .With(_ => _.CreatedByUnitOfWorkManager = this)
@@ -40,5 +40,10 @@ internal sealed class PlatformPseudoApplicationUnitOfWork : PlatformUnitOfWork
     public override bool DoesSupportParallelQuery()
     {
         return true;
+    }
+
+    protected override Task InternalSaveChangesAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
     }
 }

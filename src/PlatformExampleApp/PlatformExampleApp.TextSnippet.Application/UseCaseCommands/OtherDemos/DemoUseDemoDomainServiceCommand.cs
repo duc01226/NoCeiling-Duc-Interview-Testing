@@ -30,11 +30,16 @@ internal sealed class DemoUseDemoDomainServiceCommandHandler
 
     public DemoUseDemoDomainServiceCommandHandler(
         IPlatformApplicationRequestContextAccessor requestContextAccessor,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider,
-        TransferSnippetTextToMultiDbDemoEntityNameService transferSnippetTextToMultiDbDemoEntityNameService) : base(requestContextAccessor, unitOfWorkManager, cqrs, loggerFactory, rootServiceProvider)
+        TransferSnippetTextToMultiDbDemoEntityNameService transferSnippetTextToMultiDbDemoEntityNameService) : base(
+        requestContextAccessor,
+        unitOfWorkManager,
+        cqrs,
+        loggerFactory,
+        rootServiceProvider)
     {
         this.transferSnippetTextToMultiDbDemoEntityNameService = transferSnippetTextToMultiDbDemoEntityNameService;
     }

@@ -20,7 +20,7 @@ public sealed class TestRecurringBackgroundJobExecutor : PlatformApplicationBack
 
     public TestRecurringBackgroundJobExecutor(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IPlatformRootServiceProvider rootServiceProvider,
         ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository,
         IPlatformCqrs cqrs,

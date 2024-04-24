@@ -68,32 +68,35 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     where TEvent : PlatformCqrsEvent, new()
 {
     protected readonly IServiceProvider ServiceProvider;
-    protected readonly IUnitOfWorkManager UnitOfWorkManager;
+    protected readonly IPlatformUnitOfWorkManager UnitOfWorkManager;
+
+    private readonly Lazy<bool> isInjectingApplicationBusMessageProducerLazy;
+
+    private readonly Lazy<bool> isInjectingUserContextAccessorLazy;
 
     public PlatformCqrsEventApplicationHandler(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, rootServiceProvider)
     {
         UnitOfWorkManager = unitOfWorkManager;
         ServiceProvider = serviceProvider;
-        IsInjectingApplicationBusMessageProducer = GetType().IsUsingGivenTypeViaConstructor<IPlatformApplicationBusMessageProducer>();
-        IsInjectingUserContextAccessor = GetType().IsUsingGivenTypeViaConstructor<IPlatformApplicationRequestContextAccessor>();
+        isInjectingUserContextAccessorLazy = new Lazy<bool>(() => GetType().IsUsingGivenTypeViaConstructor<IPlatformApplicationBusMessageProducer>());
+        isInjectingApplicationBusMessageProducerLazy = new Lazy<bool>(() => GetType().IsUsingGivenTypeViaConstructor<IPlatformApplicationRequestContextAccessor>());
+        RequestContextAccessor = ServiceProvider.GetRequiredService<IPlatformApplicationRequestContextAccessor>();
     }
 
     protected virtual bool AllowUsingUserContextAccessor => false;
 
     protected virtual bool AutoOpenUow => false;
 
-    protected IPlatformApplicationRequestContextAccessor UserContextAccessor =>
-        ServiceProvider.GetRequiredService<IPlatformApplicationRequestContextAccessor>();
+    protected virtual bool MustWaitHandlerExecutionFinishedImmediately => false;
 
-    protected IPlatformApplicationRequestContext RequestContext => UserContextAccessor.Current;
+    private IPlatformApplicationRequestContextAccessor RequestContextAccessor { get; }
 
-    public bool IsInjectingUserContextAccessor { get; }
-
-    public bool IsInjectingApplicationBusMessageProducer { get; }
+    public bool IsInjectingUserContextAccessor => isInjectingUserContextAccessorLazy.Value;
+    public bool IsInjectingApplicationBusMessageProducer => isInjectingApplicationBusMessageProducerLazy.Value;
 
     public virtual bool AutoDeleteProcessedInboxEventMessage => true;
 
@@ -122,7 +125,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     public Task Handle(object @event, CancellationToken cancellationToken)
     {
-        return DoHandle(@event.As<TEvent>(), cancellationToken, !IsInjectingUserContextAccessor);
+        return DoHandle(@event.As<TEvent>(), cancellationToken, () => !IsInjectingUserContextAccessor);
     }
 
     public bool CanExecuteHandlingEventUsingInboxConsumer(bool hasInboxMessageSupport, object @event)
@@ -132,28 +135,28 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     public override async Task Handle(TEvent notification, CancellationToken cancellationToken)
     {
+        if (IsInjectingUserContextAccessor && !AllowUsingUserContextAccessor)
+            CreateLogger(LoggerFactory)
+                .LogError(
+                    "{EventHandlerType} is injecting and using {IPlatformApplicationRequestContextAccessor}, which will make the event handler could not run in background thread. " +
+                    "The event sender must wait the handler to be finished. Should use the {RequestContext} info in the event instead.",
+                    GetType().Name,
+                    nameof(IPlatformApplicationRequestContextAccessor),
+                    nameof(PlatformCqrsEvent.RequestContext));
+
+        await DoHandle(notification, cancellationToken, () => !IsInjectingUserContextAccessor);
+    }
+
+    public override async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
+    {
         try
         {
-            if (IsInjectingUserContextAccessor && !AllowUsingUserContextAccessor)
-                CreateLogger(LoggerFactory)
-                    .LogError(
-                        "{EventHandlerType} is injecting and using {IPlatformApplicationRequestContextAccessor}, which will make the event handler could not run in background thread. " +
-                        "The event sender must wait the handler to be finished. Should use the {RequestContext} info in the event instead.",
-                        GetType().Name,
-                        nameof(IPlatformApplicationRequestContextAccessor),
-                        nameof(PlatformCqrsEvent.RequestContext));
-
-            await DoHandle(notification, cancellationToken, !IsInjectingUserContextAccessor);
+            await ExecuteHandleWithTracingAsync(@event, () => DoExecuteHandleAsync(@event, cancellationToken));
         }
         finally
         {
             Util.GarbageCollector.Collect(aggressiveImmediately: false);
         }
-    }
-
-    public override async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
-    {
-        await ExecuteHandleWithTracingAsync(@event, () => DoExecuteHandleAsync(@event, cancellationToken));
     }
 
     /// <summary>
@@ -204,7 +207,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     /// </remarks>
     protected override bool AllowHandleInBackgroundThread(TEvent @event)
     {
-        return TryGetEventCurrentActiveSourceUow(@event) == null &&
+        return TryGetCurrentOrCreatedActiveUow(@event) == null &&
                !CanExecuteHandlingEventUsingInboxConsumer(HasInboxMessageSupport(), @event) &&
                !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()) &&
                !(IsInjectingApplicationBusMessageProducer && HasOutboxMessageSupport()) &&
@@ -254,27 +257,27 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     /// <remarks>
     /// If the RequestContext of the event is null or empty, it sets the RequestContext values from the UserContextAccessor.
     /// If the event passes the HandleWhen condition, it tries to get the current active source unit of work of the event.
-    /// If the conditions are met, it adds the DoExecuteInstanceInNewScope action to the OnCompletedActions of the unit of work.
+    /// If the conditions are met, it adds the DoExecuteInstanceInNewScope action to the OnSaveChangesCompletedActions of the unit of work.
     /// Otherwise, it calls the base DoHandle method.
     /// </remarks>
-    protected override async Task DoHandle(TEvent @event, CancellationToken cancellationToken, bool couldRunInBackgroundThread)
+    protected override async Task DoHandle(TEvent @event, CancellationToken cancellationToken, Func<bool> couldRunInBackgroundThread)
     {
         if (@event.RequestContext == null || @event.RequestContext.IsEmpty())
-            @event.SetRequestContextValues(UserContextAccessor.Current.GetAllKeyValues());
+            @event.SetRequestContextValues(RequestContextAccessor.Current.GetAllKeyValues());
 
         if (!HandleWhen(@event)) return;
 
-        var eventSourceUow = TryGetEventCurrentActiveSourceUow(@event);
-        var hasInboxMessageRepository = RootServiceProvider.CheckHasRegisteredScopedService<IPlatformInboxBusMessageRepository>();
+        var eventSourceUow = TryGetCurrentOrCreatedActiveUow(@event);
 
         if (!ForceInSameEventTriggerUow &&
             eventSourceUow != null &&
             !eventSourceUow.IsPseudoTransactionUow() &&
-            !CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository, @event) &&
-            !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()))
-            eventSourceUow.OnCompletedActions.Add(async () => await ExecuteRetryHandleInNewScopeAsync(@event, cancellationToken));
+            !CanExecuteHandlingEventUsingInboxConsumer(RootServiceProvider.CheckServiceRegistered(typeof(IPlatformInboxBusMessageRepository)), @event) &&
+            !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()) &&
+            !MustWaitHandlerExecutionFinishedImmediately)
+            eventSourceUow.OnSaveChangesCompletedActions.Add(async () => await ExecuteHandleInNewScopeAsync(@event, cancellationToken));
         else
-            await base.DoHandle(@event, cancellationToken, !IsInjectingUserContextAccessor);
+            await base.DoHandle(@event, cancellationToken, () => !IsInjectingUserContextAccessor);
     }
 
     /// <summary>
@@ -291,8 +294,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     /// <returns>A Task representing the asynchronous operation.</returns>
     protected virtual async Task DoExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
     {
-        if (AllowHandleInBackgroundThread(@event) && @event.RequestContext != null)
-            UserContextAccessor.Current.SetValues(@event.RequestContext);
+        if (AllowHandleInBackgroundThread(@event) && @event.RequestContext?.Any() == true)
+            RequestContextAccessor.Current.SetValues(@event.RequestContext);
 
         var hasInboxMessageRepository = RootServiceProvider.CheckHasRegisteredScopedService<IPlatformInboxBusMessageRepository>();
 
@@ -301,9 +304,9 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             !IsInjectingUserContextAccessor &&
             !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()))
         {
-            var eventSourceUow = TryGetEventCurrentActiveSourceUow(@event);
+            var eventSourceUow = TryGetCurrentOrCreatedActiveUow(@event);
             var currentBusMessageIdentity =
-                BuildCurrentBusMessageIdentity(UserContextAccessor);
+                BuildCurrentBusMessageIdentity(@event.RequestContext);
 
             if (@event is IPlatformUowEvent && eventSourceUow != null && !eventSourceUow.IsPseudoTransactionUow())
             {
@@ -372,7 +375,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                 else
                     using (var newScope = RootServiceProvider.CreateScope())
                     {
-                        using (var uow = newScope.ServiceProvider.GetRequiredService<IUnitOfWorkManager>().Begin())
+                        using (var uow = newScope.ServiceProvider.GetRequiredService<IPlatformUnitOfWorkManager>().Begin())
                         {
                             await newScope.ServiceProvider.GetRequiredService(GetType())
                                 .As<PlatformCqrsEventApplicationHandler<TEvent>>()
@@ -403,23 +406,23 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             producerContext: applicationSettingContext.ApplicationName,
             messageGroup: nameof(PlatformCqrsEvent),
             messageAction: @event.EventAction,
-            requestContext: UserContextAccessor.Current.GetAllKeyValues());
+            requestContext: @event.RequestContext);
     }
 
-    protected IUnitOfWork TryGetEventCurrentActiveSourceUow(TEvent notification)
+    protected IPlatformUnitOfWork TryGetCurrentOrCreatedActiveUow(TEvent notification)
     {
         if (notification.As<IPlatformUowEvent>() == null) return null;
 
         return UnitOfWorkManager.TryGetCurrentOrCreatedActiveUow(notification.As<IPlatformUowEvent>().SourceUowId);
     }
 
-    public virtual PlatformBusMessageIdentity BuildCurrentBusMessageIdentity(IPlatformApplicationRequestContextAccessor userContextAccessor)
+    public virtual PlatformBusMessageIdentity BuildCurrentBusMessageIdentity(IDictionary<string, object> eventRequestContext)
     {
         return new PlatformBusMessageIdentity
         {
-            UserId = userContextAccessor.Current.UserId(),
-            RequestId = userContextAccessor.Current.RequestId(),
-            UserName = userContextAccessor.Current.UserName()
+            UserId = eventRequestContext.UserId(),
+            RequestId = eventRequestContext.RequestId(),
+            UserName = eventRequestContext.UserName()
         };
     }
 

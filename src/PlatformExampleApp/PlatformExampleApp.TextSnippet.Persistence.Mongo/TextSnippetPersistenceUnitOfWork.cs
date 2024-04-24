@@ -13,7 +13,7 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Mongo;
 //    }
 
 //    public new event EventHandler OnCompleted;
-//    public new event EventHandler<UnitOfWorkFailedArgs> OnFailed;
+//    public new event EventHandler<PlatformUnitOfWorkFailedArgs> OnFailed;
 
 //    public override Task CompleteAsync(CancellationToken cancellationToken = default)
 //    {

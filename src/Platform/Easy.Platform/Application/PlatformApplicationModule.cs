@@ -299,7 +299,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         RegisterMessageBus(serviceCollection);
         RegisterApplicationSettingContext(serviceCollection);
         RegisterDefaultApplicationRequestContext(serviceCollection);
-        serviceCollection.RegisterIfServiceNotExist<IUnitOfWorkManager, PlatformPseudoApplicationUnitOfWorkManager>(ServiceLifeTime.Scoped);
+        serviceCollection.RegisterIfServiceNotExist<IPlatformUnitOfWorkManager, PlatformPseudoApplicationUnitOfWorkManager>(ServiceLifeTime.Scoped);
         serviceCollection.RegisterAllFromType<IPlatformApplicationService>(Assembly);
 
         serviceCollection.RegisterAllFromType<IPlatformDbContext>(Assembly, ServiceLifeTime.Scoped);
@@ -412,7 +412,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         serviceCollection.Register(
             typeof(PlatformInboxConfig),
             InboxConfigProvider,
-            ServiceLifeTime.Transient,
+            ServiceLifeTime.Singleton,
             true,
             DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
 
@@ -421,7 +421,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         serviceCollection.Register(
             typeof(PlatformOutboxConfig),
             OutboxConfigProvider,
-            ServiceLifeTime.Transient,
+            ServiceLifeTime.Singleton,
             true,
             DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
     }

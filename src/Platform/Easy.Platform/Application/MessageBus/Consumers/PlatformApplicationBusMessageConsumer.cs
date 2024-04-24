@@ -1,7 +1,6 @@
 using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
-using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
@@ -10,15 +9,15 @@ using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.MessageBus.Consumers;
 
-// <summary>
+/// <summary>
 /// Represents a message bus consumer for platform applications.
 /// </summary>
 public interface IPlatformApplicationMessageBusConsumer : IPlatformMessageBusConsumer
 {
     /// <summary>
-    /// Gets or sets the message to be handled directly if it exists in the inbox.
+    /// Gets or sets the message to be handled if it exists in the inbox.
     /// </summary>
-    public PlatformInboxBusMessage HandleDirectlyExistingInboxMessage { get; set; }
+    public PlatformInboxBusMessage HandleExistingInboxMessage { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the processed inbox event message should be automatically deleted.
@@ -26,9 +25,9 @@ public interface IPlatformApplicationMessageBusConsumer : IPlatformMessageBusCon
     public bool AutoDeleteProcessedInboxEventMessage { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the instance is executing from the inbox helper.
+    /// Gets or sets a value indicating whether the instance is called to execute handling logic for an inbox message.
     /// </summary>
-    public bool IsInstanceExecutingFromInboxHelper { get; set; }
+    public bool IsHandlingLogicForInboxMessage { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether to allow processing the inbox message in a background thread.
@@ -49,81 +48,72 @@ public interface IPlatformApplicationMessageBusConsumer<in TMessage> : IPlatform
 public abstract class PlatformApplicationMessageBusConsumer<TMessage> : PlatformMessageBusConsumer<TMessage>, IPlatformApplicationMessageBusConsumer<TMessage>
     where TMessage : class, new()
 {
-    protected readonly IPlatformInboxBusMessageRepository InboxBusMessageRepo;
+    protected readonly Lazy<IPlatformInboxBusMessageRepository> InboxBusMessageRepo;
     protected readonly PlatformInboxConfig InboxConfig;
     protected readonly IPlatformRootServiceProvider RootServiceProvider;
     protected readonly IServiceProvider ServiceProvider;
-    protected readonly IUnitOfWorkManager UowManager;
+    protected readonly IPlatformUnitOfWorkManager UowManager;
 
     protected PlatformApplicationMessageBusConsumer(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager uowManager,
+        IPlatformUnitOfWorkManager uowManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory)
     {
         UowManager = uowManager;
-        InboxBusMessageRepo = serviceProvider.GetService<IPlatformInboxBusMessageRepository>();
-        InboxConfig = serviceProvider.GetRequiredService<PlatformInboxConfig>();
         ServiceProvider = serviceProvider;
         RootServiceProvider = rootServiceProvider;
-
-        IsInjectingUserContextAccessor = GetType().IsUsingGivenTypeViaConstructor<IPlatformApplicationRequestContextAccessor>();
-        if (IsInjectingUserContextAccessor)
-            CreateLogger(loggerFactory)
-                .LogError(
-                    "{EventHandlerType} is injecting and using {IPlatformApplicationRequestContextAccessor}, which will make the event handler could not run in background thread. " +
-                    "The event sender must wait the handler to be finished. Should use the {RequestContext} info in the event instead.",
-                    GetType().Name,
-                    nameof(IPlatformApplicationRequestContextAccessor),
-                    nameof(PlatformCqrsEvent.RequestContext));
+        InboxBusMessageRepo = new Lazy<IPlatformInboxBusMessageRepository>(() => serviceProvider.GetService<IPlatformInboxBusMessageRepository>());
+        InboxConfig = serviceProvider.GetRequiredService<PlatformInboxConfig>();
+        RequestContextAccessor = ServiceProvider.GetRequiredService<IPlatformApplicationRequestContextAccessor>();
     }
 
     public virtual bool AutoBeginUow => false;
-    public bool IsInjectingUserContextAccessor { get; set; }
 
-    protected IPlatformApplicationRequestContextAccessor UserContextAccessor =>
-        ServiceProvider.GetRequiredService<IPlatformApplicationRequestContextAccessor>();
+    protected IPlatformApplicationRequestContextAccessor RequestContextAccessor { get; }
 
     /// <summary>
     /// Default is True. Set to False to not allow use inbox message, just consume directly.
     /// </summary>
     public virtual bool AllowUseInboxMessage => true;
 
-    public PlatformInboxBusMessage HandleDirectlyExistingInboxMessage { get; set; }
+    public PlatformInboxBusMessage HandleExistingInboxMessage { get; set; }
     public bool AutoDeleteProcessedInboxEventMessage { get; set; }
-    public bool IsInstanceExecutingFromInboxHelper { get; set; }
+    public bool IsHandlingLogicForInboxMessage { get; set; }
     public bool AllowProcessInboxMessageInBackgroundThread { get; set; }
     public TimeSpan? InboxProcessingMaxTimeout { get; set; }
 
-    protected override async Task ExecuteHandleLogicAsync(TMessage message, string routingKey)
+    public override async Task ExecuteHandleLogicAsync(TMessage message, string routingKey)
     {
-        if (message is IPlatformTrackableBusMessage trackableBusMessage) UserContextAccessor.Current.UpsertMany(trackableBusMessage.RequestContext);
-
-        if (InboxBusMessageRepo != null && !IsInstanceExecutingFromInboxHelper && AllowUseInboxMessage)
+        if (InboxBusMessageRepo != null && AllowUseInboxMessage && !IsHandlingLogicForInboxMessage)
         {
             await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
                 RootServiceProvider,
                 ServiceProvider,
                 consumer: this,
-                inboxBusMessageRepository: InboxBusMessageRepo,
+                inboxBusMessageRepository: InboxBusMessageRepo.Value,
                 inboxConfig: InboxConfig,
                 message: message,
                 routingKey: routingKey,
                 loggerFactory: CreateGlobalLogger,
                 retryProcessFailedMessageInSecondsUnit: InboxConfig.RetryProcessFailedMessageInSecondsUnit,
                 allowProcessInBackgroundThread: AllowProcessInboxMessageInBackgroundThread,
-                handleExistingInboxMessage: HandleDirectlyExistingInboxMessage,
+                handleExistingInboxMessage: HandleExistingInboxMessage,
                 autoDeleteProcessedMessage: AutoDeleteProcessedInboxEventMessage,
                 handleInUow: null);
         }
         else
         {
+            if (message is IPlatformTrackableBusMessage trackableBusMessage) RequestContextAccessor.Current.UpsertMany(trackableBusMessage.RequestContext);
+
             if (AutoBeginUow)
+            {
                 using (var uow = UowManager.Begin())
                 {
                     await HandleLogicAsync(message, routingKey);
                     await uow.CompleteAsync();
                 }
+            }
             else
             {
                 await HandleLogicAsync(message, routingKey);

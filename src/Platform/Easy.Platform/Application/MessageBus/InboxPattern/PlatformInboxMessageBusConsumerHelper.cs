@@ -33,12 +33,12 @@ public static class PlatformInboxMessageBusConsumerHelper
         double retryProcessFailedMessageInSecondsUnit,
         bool allowProcessInBackgroundThread,
         PlatformInboxBusMessage handleExistingInboxMessage,
-        IUnitOfWork handleInUow,
+        IPlatformUnitOfWork handleInUow,
         bool autoDeleteProcessedMessage = false,
         CancellationToken cancellationToken = default) where TMessage : class, new()
     {
         if (handleExistingInboxMessage != null && handleExistingInboxMessage.ConsumeStatus != PlatformInboxBusMessage.ConsumeStatuses.Processed)
-            await ExecuteDirectlyConsumerWithExistingInboxMessage(
+            await HandleConsumerLogicDirectlyForExistingInboxMessage(
                 handleExistingInboxMessage,
                 consumer,
                 inboxConfig,
@@ -73,7 +73,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         string routingKey,
         Func<ILogger> loggerFactory,
         bool allowProcessInBackgroundThread,
-        IUnitOfWork handleInUow,
+        IPlatformUnitOfWork handleInUow,
         bool autoDeleteProcessedMessage,
         CancellationToken cancellationToken) where TMessage : class, new()
     {
@@ -85,10 +85,11 @@ public static class PlatformInboxMessageBusConsumerHelper
         {
             if (handleInUow != null && !handleInUow.IsPseudoTransactionUow())
             {
-                handleInUow.OnCompletedActions.Add(
+                handleInUow.OnSaveChangesCompletedActions.Add(
                     async () => await ExecuteConsumerForNewInboxMessage(
                         rootServiceProvider,
                         consumer.GetType(),
+                        inboxConfig,
                         message,
                         toProcessInboxMessage,
                         routingKey,
@@ -98,15 +99,16 @@ public static class PlatformInboxMessageBusConsumerHelper
             else
             {
                 // Check try CompleteAsync current active uow if any to ensure that newInboxMessage will be saved
-                // Do this to fix if someone open uow without complete it for some legacy project
+                // Do this to fix if someone open uow without complete/save it for some legacy project
                 if (inboxBusMessageRepository.UowManager().TryGetCurrentActiveUow() != null)
-                    await inboxBusMessageRepository.UowManager().CurrentActiveUow().CompleteAsync(cancellationToken);
+                    await inboxBusMessageRepository.UowManager().CurrentActiveUow().SaveChangesAsync(cancellationToken);
 
                 if (allowProcessInBackgroundThread || toProcessInboxMessage == existedInboxMessage)
                     Util.TaskRunner.QueueActionInBackground(
                         () => ExecuteConsumerForNewInboxMessage(
                             rootServiceProvider,
                             consumer.GetType(),
+                            inboxConfig,
                             message,
                             toProcessInboxMessage,
                             routingKey,
@@ -118,6 +120,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                     await ExecuteConsumerForNewInboxMessage(
                         rootServiceProvider,
                         consumer.GetType(),
+                        inboxConfig,
                         message,
                         toProcessInboxMessage,
                         routingKey,
@@ -167,6 +170,7 @@ public static class PlatformInboxMessageBusConsumerHelper
     public static async Task ExecuteConsumerForNewInboxMessage<TMessage>(
         IPlatformRootServiceProvider rootServiceProvider,
         Type consumerType,
+        PlatformInboxConfig inboxConfig,
         TMessage message,
         PlatformInboxBusMessage newInboxMessage,
         string routingKey,
@@ -178,11 +182,14 @@ public static class PlatformInboxMessageBusConsumerHelper
             {
                 try
                 {
-                    await serviceProvider.GetService(consumerType)
+                    var consumer = serviceProvider.GetService(consumerType)
                         .Cast<IPlatformApplicationMessageBusConsumer<TMessage>>()
-                        .With(_ => _.HandleDirectlyExistingInboxMessage = newInboxMessage)
-                        .With(_ => _.AutoDeleteProcessedInboxEventMessage = autoDeleteProcessedMessage)
-                        .HandleAsync(message, routingKey);
+                        .With(_ => _.HandleExistingInboxMessage = newInboxMessage)
+                        .With(_ => _.AutoDeleteProcessedInboxEventMessage = autoDeleteProcessedMessage);
+
+                    await consumer
+                        .HandleAsync(message, routingKey)
+                        .Timeout(consumer.InboxProcessingMaxTimeout ?? inboxConfig.MessageProcessingMaxSeconds.Seconds());
                 }
                 catch (Exception e)
                 {
@@ -196,7 +203,7 @@ public static class PlatformInboxMessageBusConsumerHelper
             });
     }
 
-    public static async Task ExecuteDirectlyConsumerWithExistingInboxMessage<TMessage>(
+    public static async Task HandleConsumerLogicDirectlyForExistingInboxMessage<TMessage>(
         PlatformInboxBusMessage existingInboxMessage,
         IPlatformApplicationMessageBusConsumer<TMessage> consumer,
         PlatformInboxConfig inboxConfig,
@@ -211,7 +218,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         try
         {
             await consumer
-                .With(_ => _.IsInstanceExecutingFromInboxHelper = true)
+                .With(_ => _.IsHandlingLogicForInboxMessage = true)
                 .With(_ => _.AutoDeleteProcessedInboxEventMessage = autoDeleteProcessedMessage)
                 .HandleAsync(message, routingKey)
                 .Timeout(consumer.InboxProcessingMaxTimeout ?? inboxConfig.MessageProcessingMaxSeconds.Seconds());
@@ -271,7 +278,7 @@ public static class PlatformInboxMessageBusConsumerHelper
             consumerType,
             consumeStatus);
 
-        var result = await inboxBusMessageRepository.CreateAsync(
+        var result = await inboxBusMessageRepository.CreateImmediatelyAsync(
             newInboxMessage,
             dismissSendEvent: true,
             eventCustomConfig: null,

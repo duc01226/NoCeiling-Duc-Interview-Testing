@@ -5,11 +5,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Easy.Platform.Persistence.Domain;
 
-public interface IPlatformAggregatedPersistenceUnitOfWork : IUnitOfWork
+public interface IPlatformAggregatedPersistenceUnitOfWork : IPlatformUnitOfWork
 {
-    public bool IsPseudoTransactionUow<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IUnitOfWork;
-    public bool MustKeepUowForQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IUnitOfWork;
-    public bool DoesSupportParallelQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IUnitOfWork;
+    public bool IsPseudoTransactionUow<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork;
+    public bool MustKeepUowForQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork;
+    public bool DoesSupportParallelQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork;
 }
 
 /// <summary>
@@ -25,7 +25,7 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
 
     public PlatformAggregatedPersistenceUnitOfWork(
         IPlatformRootServiceProvider rootServiceProvider,
-        List<IUnitOfWork> innerUnitOfWorks,
+        List<IPlatformUnitOfWork> innerUnitOfWorks,
         IServiceScope associatedServiceScope) : base(rootServiceProvider)
     {
         InnerUnitOfWorks = innerUnitOfWorks?
@@ -50,17 +50,17 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
         return InnerUnitOfWorks.All(p => p.DoesSupportParallelQuery());
     }
 
-    public bool IsPseudoTransactionUow<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IUnitOfWork
+    public bool IsPseudoTransactionUow<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork
     {
         return InnerUnitOfWorks.FirstOrDefault(p => p.Equals(uow))?.IsPseudoTransactionUow() == true;
     }
 
-    public bool MustKeepUowForQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IUnitOfWork
+    public bool MustKeepUowForQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork
     {
         return InnerUnitOfWorks.FirstOrDefault(p => p.Equals(uow))?.MustKeepUowForQuery() == true;
     }
 
-    public bool DoesSupportParallelQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IUnitOfWork
+    public bool DoesSupportParallelQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork
     {
         return InnerUnitOfWorks.FirstOrDefault(p => p.Equals(uow))?.DoesSupportParallelQuery() == true;
     }
@@ -68,6 +68,11 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
     public override bool IsActive()
     {
         return base.IsActive() && InnerUnitOfWorks.Any(p => p.IsActive());
+    }
+
+    protected override Task InternalSaveChangesAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
     }
 
     protected override void Dispose(bool disposing)

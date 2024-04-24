@@ -73,8 +73,8 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
     {
         return Util.ListBuilder.NewArray(
             IPlatformRepository.ActivitySource.Name,
-            IUnitOfWork.ActivitySource.Name,
-            IUnitOfWorkManager.ActivitySource.Name);
+            IPlatformUnitOfWork.ActivitySource.Name,
+            IPlatformUnitOfWorkManager.ActivitySource.Name);
     }
 
     /// <summary>
@@ -139,7 +139,7 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
         if (!ForCrossDbMigrationOnly)
         {
             RegisterUnitOfWorkManager(serviceCollection);
-            serviceCollection.RegisterAllFromType<IUnitOfWork>(Assembly);
+            serviceCollection.RegisterAllFromType<IPlatformUnitOfWork>(Assembly);
             RegisterRepositories(serviceCollection);
 
             RegisterInboxEventBusMessageRepository(serviceCollection);
@@ -194,10 +194,10 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
 
     protected virtual void RegisterUnitOfWorkManager(IServiceCollection serviceCollection)
     {
-        serviceCollection.Register<IUnitOfWorkManager, PlatformDefaultPersistenceUnitOfWorkManager>(ServiceLifeTime.Scoped);
+        serviceCollection.Register<IPlatformUnitOfWorkManager, PlatformDefaultPersistenceUnitOfWorkManager>(ServiceLifeTime.Scoped);
 
         serviceCollection.RegisterAllFromType(
-            typeof(IUnitOfWorkManager),
+            typeof(IPlatformUnitOfWorkManager),
             Assembly,
             ServiceLifeTime.Scoped,
             replaceIfExist: true,

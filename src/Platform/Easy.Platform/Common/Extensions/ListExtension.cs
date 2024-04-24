@@ -1035,11 +1035,11 @@ public static class ListExtension
     }
 
     /// <summary>
-    /// Generates a sequence of integers from 0 to the specified number.
+    /// Generates a sequence of integers from 0 to the specified number (less than, not include).
     /// </summary>
     /// <typeparam name="TNumber">The type of the number. Must implement INumber&lt;TNumber&gt;.</typeparam>
     /// <param name="number">The number to generate the sequence to.</param>
-    /// <returns>An IEnumerable sequence of integers from 0 to the specified number.</returns>
+    /// <returns>An IEnumerable sequence of integers from 0 to the specified number (less than, not include).</returns>
     public static IEnumerable<int> ToRange<TNumber>(this TNumber number) where TNumber : INumber<TNumber>
     {
         for (var i = 0; number.CompareTo(i) > 0; i++) yield return i;

@@ -18,7 +18,7 @@ public class TransferSnippetTextToMultiDbDemoEntityNameService : PlatformDomainS
 
     public TransferSnippetTextToMultiDbDemoEntityNameService(
         IPlatformCqrs cqrs,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         ITextSnippetRootRepository<TextSnippetEntity> textSnippetRepository,
         ITextSnippetRootRepository<MultiDbDemoEntity> multiDbDemoEntityRepository) : base(cqrs, unitOfWorkManager)
     {

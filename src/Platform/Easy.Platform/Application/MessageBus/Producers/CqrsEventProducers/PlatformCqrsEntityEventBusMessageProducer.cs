@@ -1,4 +1,3 @@
-using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
@@ -15,18 +14,16 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
 {
     protected PlatformCqrsEntityEventBusMessageProducer(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider,
         IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
-        IPlatformApplicationRequestContextAccessor userContextAccessor,
         IPlatformApplicationSettingContext applicationSettingContext) : base(
         loggerFactory,
         unitOfWorkManager,
         serviceProvider,
         rootServiceProvider,
         applicationBusMessageProducer,
-        userContextAccessor,
         applicationSettingContext)
     {
     }
@@ -36,11 +33,11 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
         return PlatformCqrsEntityEventBusMessage<TEntity>.New<TMessage>(
             trackId: @event.Id,
             payload: @event,
-            identity: BuildPlatformEventBusMessageIdentity(),
+            identity: BuildPlatformEventBusMessageIdentity(@event.RequestContext),
             producerContext: ApplicationSettingContext.ApplicationName,
             messageGroup: PlatformCqrsEntityEvent.EventTypeValue,
             messageAction: @event.EventAction,
-            requestContext: UserContextAccessor.Current.GetAllKeyValues());
+            requestContext: @event.RequestContext);
     }
 }
 

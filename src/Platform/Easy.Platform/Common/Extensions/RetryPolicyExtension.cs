@@ -121,7 +121,7 @@ public static class RetryPolicyExtension
     {
         try
         {
-            await retryPolicy.ExecuteAsync(ct => Task.Run(action, ct), cancellationToken);
+            await retryPolicy.ExecuteAsync(async ct => await action(), cancellationToken);
         }
         catch (Exception e)
         {
@@ -149,7 +149,7 @@ public static class RetryPolicyExtension
     {
         try
         {
-            return await retryPolicy.ExecuteAsync(ct => Task.Run(action, ct), cancellationToken);
+            return await retryPolicy.ExecuteAsync(async ct => await action(), cancellationToken);
         }
         catch (Exception e)
         {

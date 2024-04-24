@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Easy.Platform.Application.Cqrs.Events;
 using Easy.Platform.Application.Exceptions.Extensions;
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
@@ -36,7 +37,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
     /// <summary>
     /// The unit of work manager for managing database transactions.
     /// </summary>
-    protected readonly IUnitOfWorkManager UnitOfWorkManager;
+    protected readonly IPlatformUnitOfWorkManager UnitOfWorkManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlatformCqrsCommandApplicationHandler{TCommand, TResult}" /> class.
@@ -48,7 +49,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
     /// <param name="rootServiceProvider">The root service provider for resolving dependencies.</param>
     protected PlatformCqrsCommandApplicationHandler(
         IPlatformApplicationRequestContextAccessor requestContextAccessor,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider)
@@ -106,10 +107,11 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                                     RequestContext.GetAllKeyValues().ToJson());
                         });
 
-                    await Cqrs.SendEvent(
-                        new PlatformCqrsCommandEvent<TCommand, TResult>(request, result, PlatformCqrsCommandEventAction.Executed).With(
-                            p => p.SetRequestContextValues(RequestContext.GetAllKeyValues())),
-                        cancellationToken);
+                    if (RootServiceProvider.CheckAssignableToServiceRegistered(typeof(IPlatformCqrsEventApplicationHandler<PlatformCqrsCommandEvent<TCommand, TResult>>)))
+                        await Cqrs.SendEvent(
+                            new PlatformCqrsCommandEvent<TCommand, TResult>(request, result, PlatformCqrsCommandEventAction.Executed)
+                                .With(p => p.SetRequestContextValues(RequestContext.GetAllKeyValues())),
+                            cancellationToken);
 
                     return result;
                 });
@@ -203,7 +205,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand> : Platform
     /// <param name="rootServiceProvider">The root service provider for resolving dependencies.</param>
     protected PlatformCqrsCommandApplicationHandler(
         IPlatformApplicationRequestContextAccessor requestContextAccessor,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IPlatformCqrs cqrs,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider)

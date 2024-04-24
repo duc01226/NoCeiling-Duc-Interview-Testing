@@ -16,11 +16,11 @@ public interface IPlatformDomainService
 public abstract class PlatformDomainService : IPlatformDomainService
 {
     protected readonly IPlatformCqrs Cqrs;
-    protected readonly IUnitOfWorkManager UnitOfWorkManager;
+    protected readonly IPlatformUnitOfWorkManager UnitOfWorkManager;
 
     public PlatformDomainService(
         IPlatformCqrs cqrs,
-        IUnitOfWorkManager unitOfWorkManager)
+        IPlatformUnitOfWorkManager unitOfWorkManager)
     {
         Cqrs = cqrs;
         UnitOfWorkManager = unitOfWorkManager;

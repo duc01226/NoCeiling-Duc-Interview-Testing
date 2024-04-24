@@ -13,7 +13,7 @@ public sealed class TextSnippetApplicationDataSeeder : PlatformApplicationDataSe
     private readonly ITextSnippetRootRepository<TextSnippetEntity> textSnippetRepository;
 
     public TextSnippetApplicationDataSeeder(
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IConfiguration configuration,
         ILoggerFactory loggerFactory,

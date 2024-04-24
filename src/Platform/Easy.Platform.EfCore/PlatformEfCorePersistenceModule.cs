@@ -123,12 +123,12 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
         if (serviceCollection.NotExist(p => p.ServiceType == typeof(IPlatformEfCorePersistenceUnitOfWork<TDbContext>)))
             serviceCollection.RegisterAllForImplementation<PlatformEfCorePersistenceUnitOfWork<TDbContext>>();
 
-        serviceCollection.RegisterAllFromType<IUnitOfWork>(Assembly);
+        serviceCollection.RegisterAllFromType<IPlatformUnitOfWork>(Assembly);
         // Register default PlatformEfCoreUnitOfWork for IUnitOfWork if not existing register for IUnitOfWork
         if (serviceCollection.NotExist(
-            p => p.ServiceType == typeof(IUnitOfWork) &&
+            p => p.ServiceType == typeof(IPlatformUnitOfWork) &&
                  p.ImplementationType?.IsAssignableTo(typeof(IPlatformEfCorePersistenceUnitOfWork<TDbContext>)) == true))
-            serviceCollection.Register<IUnitOfWork, PlatformEfCorePersistenceUnitOfWork<TDbContext>>();
+            serviceCollection.Register<IPlatformUnitOfWork, PlatformEfCorePersistenceUnitOfWork<TDbContext>>();
     }
 
     private DbContextOptions<TDbContext> CreateDbContextOptions(

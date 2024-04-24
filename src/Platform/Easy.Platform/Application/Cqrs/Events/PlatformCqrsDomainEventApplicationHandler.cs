@@ -10,7 +10,7 @@ public abstract class PlatformCqrsDomainEventApplicationHandler<TEvent> : Platfo
 {
     protected PlatformCqrsDomainEventApplicationHandler(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(
         loggerFactory,

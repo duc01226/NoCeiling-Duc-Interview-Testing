@@ -1,6 +1,7 @@
 using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -57,7 +58,8 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
         ILogger<PlatformApplicationBusMessageProducer> logger,
         IPlatformApplicationSettingContext applicationSettingContext,
         IPlatformApplicationRequestContextAccessor userContextAccessor,
-        PlatformOutboxConfig outboxConfig)
+        PlatformOutboxConfig outboxConfig,
+        IPlatformUnitOfWorkManager unitOfWorkManager)
     {
         ServiceProvider = serviceProvider;
         Logger = logger;
@@ -65,6 +67,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
         ApplicationSettingContext = applicationSettingContext;
         UserContextAccessor = userContextAccessor;
         OutboxConfig = outboxConfig;
+        UnitOfWorkManager = unitOfWorkManager;
     }
 
     protected IServiceProvider ServiceProvider { get; }
@@ -73,6 +76,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
     protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
     protected IPlatformApplicationRequestContextAccessor UserContextAccessor { get; }
     protected PlatformOutboxConfig OutboxConfig { get; }
+    protected IPlatformUnitOfWorkManager UnitOfWorkManager { get; }
 
     public async Task<TMessage> SendAsync<TMessage, TMessagePayload>(
         string trackId,
@@ -93,7 +97,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
                 ? PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(message.GetType(), ApplicationSettingContext.ApplicationName)
                 : message.RoutingKey(),
             autoSaveOutboxMessage,
-            null,
+            UnitOfWorkManager.TryGetCurrentActiveUow()?.Id,
             cancellationToken);
     }
 
@@ -110,7 +114,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
                 ? PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(message.GetType(), ApplicationSettingContext.ApplicationName)
                 : message.As<IPlatformSelfRoutingKeyBusMessage>().RoutingKey(),
             autoSaveOutboxMessage,
-            sourceOutboxUowId,
+            sourceOutboxUowId ?? UnitOfWorkManager.TryGetCurrentActiveUow()?.Id,
             cancellationToken);
     }
 

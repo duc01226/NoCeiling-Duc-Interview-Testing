@@ -11,7 +11,7 @@ internal sealed class TextSnippetMultiDbDemoRepository<TEntity>
         ITextSnippetRepository<TEntity>
     where TEntity : class, IEntity<Guid>, new()
 {
-    public TextSnippetMultiDbDemoRepository(IUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
+    public TextSnippetMultiDbDemoRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
         unitOfWorkManager,
         cqrs,
         serviceProvider)
@@ -24,7 +24,7 @@ internal sealed class TextSnippetMultiDbDemoRootRepository<TEntity>
         ITextSnippetRootRepository<TEntity>
     where TEntity : class, IRootEntity<Guid>, new()
 {
-    public TextSnippetMultiDbDemoRootRepository(IUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
+    public TextSnippetMultiDbDemoRootRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
         unitOfWorkManager,
         cqrs,
         serviceProvider)

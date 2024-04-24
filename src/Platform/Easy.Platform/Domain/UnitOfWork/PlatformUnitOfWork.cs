@@ -3,15 +3,14 @@ using System.Diagnostics.CodeAnalysis;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
-using Easy.Platform.Domain.Exceptions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Domain.UnitOfWork;
 
-public interface IUnitOfWork : IDisposable
+public interface IPlatformUnitOfWork : IDisposable
 {
-    public static readonly ActivitySource ActivitySource = new($"{nameof(IUnitOfWork)}");
+    public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformUnitOfWork)}");
 
     /// <summary>
     /// Generated Unique Uow Id
@@ -23,25 +22,25 @@ public interface IUnitOfWork : IDisposable
     /// Some application could use multiple db in one service, which then the current uow could be a aggregation uow of multiple db context uow. <br />
     /// Then the InnerUnitOfWorks will hold list of all uow present all db context
     /// </summary>
-    public List<IUnitOfWork> InnerUnitOfWorks { get; }
+    public List<IPlatformUnitOfWork> InnerUnitOfWorks { get; }
 
     /// <summary>
     /// Indicate it's created by UnitOfWorkManager
     /// </summary>
-    public IUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
+    public IPlatformUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
 
     /// <summary>
     /// Default is false. When it's true, the uow determine that this is a temporarily created uow for single read/write data action
     /// </summary>
     public bool IsUsingOnceTransientUow { get; set; }
 
-    public IUnitOfWork ParentUnitOfWork { get; set; }
+    public IPlatformUnitOfWork ParentUnitOfWork { get; set; }
 
     /// <summary>
-    /// Gets or sets a list of actions to be executed upon the completion of the UnitOfWork.
+    /// Gets or sets a list of actions to be executed upon the completion of the UnitOfWork save changes.
     /// Each action in the list is a function returning a Task, allowing for asynchronous operations.
     /// </summary>
-    public List<Func<Task>> OnCompletedActions { get; set; }
+    public List<Func<Task>> OnSaveChangesCompletedActions { get; set; }
 
     /// <summary>
     /// Gets or sets the list of actions to be executed when the unit of work is disposed.
@@ -50,10 +49,10 @@ public interface IUnitOfWork : IDisposable
     public List<Func<Task>> OnDisposedActions { get; set; }
 
     /// <summary>
-    /// Gets or sets the list of actions to be executed when the unit of work fails.
-    /// Each action is a function that takes a UnitOfWorkFailedArgs object and returns a Task.
+    /// Gets or sets the list of actions to be executed when the unit of work save changes fails.
+    /// Each action is a function that takes a PlatformUnitOfWorkFailedArgs object and returns a Task.
     /// </summary>
-    public List<Func<UnitOfWorkFailedArgs, Task>> OnFailedActions { get; set; }
+    public List<Func<PlatformUnitOfWorkFailedArgs, Task>> OnSaveChangesFailedActions { get; set; }
 
     /// <summary>
     /// Completes this unit of work.
@@ -81,7 +80,7 @@ public interface IUnitOfWork : IDisposable
     /// <br />
     /// In the provided code, different implementations of the IUnitOfWork interface override the IsPseudoTransactionUow method to specify whether they handle real transactions or pseudo-transactions. For example, the PlatformEfCorePersistenceUnitOfWork class returns false, indicating it handles real transactions, while the PlatformMongoDbPersistenceUnitOfWork class returns true, indicating it handles pseudo-transactions.
     /// <br />
-    /// This method is used in various parts of the code to decide how to handle certain operations. For example, in the PlatformCqrsEventApplicationHandler class, the IsPseudoTransactionUow method is used to determine whether to execute certain actions immediately or add them to the OnCompletedActions list to be executed when the UoW is completed.
+    /// This method is used in various parts of the code to decide how to handle certain operations. For example, in the PlatformCqrsEventApplicationHandler class, the IsPseudoTransactionUow method is used to determine whether to execute certain actions immediately or add them to the OnSaveChangesCompletedActions list to be executed when the UoW is completed.
     /// </remarks>
     public bool IsPseudoTransactionUow();
 
@@ -109,7 +108,7 @@ public interface IUnitOfWork : IDisposable
     /// <summary>
     /// It saves all changes and commit transaction if exists.
     /// </summary>
-    public Task SaveChangesAsync(CancellationToken cancellationToken);
+    public Task SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get itself or inner uow which is TUnitOfWork.
@@ -123,7 +122,7 @@ public interface IUnitOfWork : IDisposable
     /// <br />
     /// This method is useful in scenarios where you have nested units of work and you need to retrieve a specific unit of work by its type. For example, in the provided code, UowOfType[TUnitOfWork]() is used to retrieve the current active unit of work of type IUnitOfWork to perform operations like SaveChangesAsync().
     /// </remarks>
-    public TUnitOfWork UowOfType<TUnitOfWork>() where TUnitOfWork : class, IUnitOfWork
+    public TUnitOfWork UowOfType<TUnitOfWork>() where TUnitOfWork : class, IPlatformUnitOfWork
     {
         return this.As<TUnitOfWork>() ?? InnerUnitOfWorks.FirstOrDefaultUowOfType<TUnitOfWork>();
     }
@@ -132,7 +131,7 @@ public interface IUnitOfWork : IDisposable
     /// Get itself or inner uow which is has Id equal uowId.
     /// </summary>
     [return: MaybeNull]
-    public IUnitOfWork UowOfId(string uowId)
+    public IPlatformUnitOfWork UowOfId(string uowId)
     {
         if (Id == uowId) return this;
 
@@ -148,9 +147,9 @@ public interface IUnitOfWork : IDisposable
     }
 }
 
-public class UnitOfWorkFailedArgs
+public class PlatformUnitOfWorkFailedArgs
 {
-    public UnitOfWorkFailedArgs(Exception exception)
+    public PlatformUnitOfWorkFailedArgs(Exception exception)
     {
         Exception = exception;
     }
@@ -158,7 +157,7 @@ public class UnitOfWorkFailedArgs
     public Exception Exception { get; set; }
 }
 
-public abstract class PlatformUnitOfWork : IUnitOfWork
+public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 {
     private const int ContextMaxConcurrentThreadLock = 1;
 
@@ -177,46 +176,23 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
 
     public bool IsUsingOnceTransientUow { get; set; }
 
-    public IUnitOfWork ParentUnitOfWork { get; set; }
+    public IPlatformUnitOfWork ParentUnitOfWork { get; set; }
 
-    public List<Func<Task>> OnCompletedActions { get; set; } = [];
+    public List<Func<Task>> OnSaveChangesCompletedActions { get; set; } = [];
     public List<Func<Task>> OnDisposedActions { get; set; } = [];
-    public List<Func<UnitOfWorkFailedArgs, Task>> OnFailedActions { get; set; } = [];
-    public List<IUnitOfWork> InnerUnitOfWorks { get; protected set; } = [];
-    public IUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
+    public List<Func<PlatformUnitOfWorkFailedArgs, Task>> OnSaveChangesFailedActions { get; set; } = [];
+    public List<IPlatformUnitOfWork> InnerUnitOfWorks { get; protected set; } = [];
+    public IPlatformUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
 
     public virtual async Task CompleteAsync(CancellationToken cancellationToken = default)
     {
         if (Completed) return;
 
-        // Store stack trace before save changes so that if something went wrong in save into db, stack trace could
-        // be tracked. Because call to db if failed lose stack trace
-        var fullStackTrace = Environment.StackTrace;
+        await InnerUnitOfWorks.Where(p => p.IsActive()).ParallelAsync(p => p.CompleteAsync(cancellationToken));
 
-        try
-        {
-            await InnerUnitOfWorks.Where(p => p.IsActive()).ParallelAsync(p => p.CompleteAsync(cancellationToken));
+        await SaveChangesAsync(cancellationToken);
 
-            await SaveChangesAsync(cancellationToken);
-
-            Completed = true;
-
-            await InvokeOnCompletedActions();
-        }
-        catch (PlatformDomainRowVersionConflictException ex)
-        {
-            throw new Exception(
-                $"{GetType().Name} complete uow failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
-                ex);
-        }
-        catch (Exception ex)
-        {
-            await InvokeOnFailedActions(new UnitOfWorkFailedArgs(ex));
-
-            throw new Exception(
-                $"{GetType().Name} complete uow failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
-                ex);
-        }
+        Completed = true;
     }
 
     public virtual bool IsActive()
@@ -250,12 +226,31 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
         GC.SuppressFinalize(this);
     }
 
-    public virtual async Task SaveChangesAsync(CancellationToken cancellationToken)
+    public virtual async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        if (InnerUnitOfWorks.IsEmpty()) return;
+        // Store stack trace before save changes so that if something went wrong in save into db, stack trace could
+        // be tracked. Because call to db if failed lose stack trace
+        var fullStackTrace = Environment.StackTrace;
 
-        await InnerUnitOfWorks.Where(p => p.IsActive()).ParallelAsync(p => p.SaveChangesAsync(cancellationToken));
+        try
+        {
+            await InnerUnitOfWorks.Where(p => p.IsActive()).ParallelAsync(p => p.SaveChangesAsync(cancellationToken));
+
+            await InternalSaveChangesAsync(cancellationToken);
+
+            await InvokeOnSaveChangesCompletedActions();
+        }
+        catch (Exception ex)
+        {
+            await InvokeOnSaveChangesFailedActions(new PlatformUnitOfWorkFailedArgs(ex));
+
+            throw new Exception(
+                $"{GetType().Name} save changes uow failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
+                ex);
+        }
     }
+
+    protected abstract Task InternalSaveChangesAsync(CancellationToken cancellationToken);
 
     ~PlatformUnitOfWork()
     {
@@ -274,29 +269,40 @@ public abstract class PlatformUnitOfWork : IUnitOfWork
 
             Disposed = true;
 
-            OnDisposedActions.ForEachAsync(p => p.Invoke()).WaitResult();
+            OnDisposedActions
+                .ForEachAsync(
+                    p => Util.TaskRunner.CatchException(
+                        p.Invoke,
+                        ex => LoggerFactory.CreateLogger(GetType()).LogError(ex, "Invoke DisposedActions error.")))
+                .WaitResult();
             OnDisposedActions.Clear();
         }
     }
 
-    protected virtual async Task InvokeOnCompletedActions()
+    protected virtual async Task InvokeOnSaveChangesCompletedActions()
     {
-        if (OnCompletedActions.IsEmpty()) return;
+        if (OnSaveChangesCompletedActions.IsEmpty()) return;
 
         Util.TaskRunner.QueueActionInBackground(
             async () =>
             {
-                await OnCompletedActions.ForEachAsync(p => p.Invoke());
+                await OnSaveChangesCompletedActions.ForEachAsync(
+                    p => Util.TaskRunner.CatchException(
+                        p.Invoke,
+                        ex => LoggerFactory.CreateLogger(GetType()).LogError(ex, "Invoke CompletedActions error.")));
 
-                OnCompletedActions.Clear();
+                OnSaveChangesCompletedActions.Clear();
             },
             () => LoggerFactory.CreateLogger(GetType()));
     }
 
-    protected async Task InvokeOnFailedActions(UnitOfWorkFailedArgs e)
+    protected async Task InvokeOnSaveChangesFailedActions(PlatformUnitOfWorkFailedArgs e)
     {
-        await OnFailedActions.ForEachAsync(p => p.Invoke(e));
+        await OnSaveChangesFailedActions.ForEachAsync(
+            p => Util.TaskRunner.CatchException(
+                () => p.Invoke(e),
+                ex => LoggerFactory.CreateLogger(GetType()).LogError(ex, "Invoke FailedActions error.")));
 
-        OnFailedActions.Clear();
+        OnSaveChangesFailedActions.Clear();
     }
 }

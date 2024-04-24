@@ -261,7 +261,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
             RegisterHelpers(serviceCollection);
             RegisterDistributedTracing(serviceCollection);
             InternalRegister(serviceCollection);
-            serviceCollection.Register<IPlatformRootServiceProvider, PlatformRootServiceProvider>(ServiceLifeTime.Singleton);
+            serviceCollection.Register<IPlatformRootServiceProvider>(sp => new PlatformRootServiceProvider(sp, ServiceCollection), ServiceLifeTime.Singleton);
 
             RegisterServicesExecuted = true;
 

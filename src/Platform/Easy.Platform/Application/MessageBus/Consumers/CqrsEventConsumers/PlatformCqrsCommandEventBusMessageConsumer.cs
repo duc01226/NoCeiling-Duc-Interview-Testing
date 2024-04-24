@@ -17,7 +17,7 @@ public abstract class PlatformCqrsCommandEventBusMessageConsumer<TCommand>
 {
     protected PlatformCqrsCommandEventBusMessageConsumer(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager uowManager,
+        IPlatformUnitOfWorkManager uowManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, uowManager, serviceProvider, rootServiceProvider)
     {

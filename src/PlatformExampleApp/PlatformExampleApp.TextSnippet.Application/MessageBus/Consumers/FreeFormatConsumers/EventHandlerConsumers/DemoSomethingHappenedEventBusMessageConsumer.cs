@@ -18,7 +18,7 @@ internal sealed class DemoSomethingHappenedEventBusMessageConsumer : PlatformApp
 {
     public DemoSomethingHappenedEventBusMessageConsumer(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager uowManager,
+        IPlatformUnitOfWorkManager uowManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, uowManager, serviceProvider, rootServiceProvider)
     {

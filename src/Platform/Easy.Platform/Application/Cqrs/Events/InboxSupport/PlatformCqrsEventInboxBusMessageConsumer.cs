@@ -15,7 +15,7 @@ public class PlatformCqrsEventInboxBusMessageConsumer : PlatformApplicationMessa
 {
     public PlatformCqrsEventInboxBusMessageConsumer(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager uowManager,
+        IPlatformUnitOfWorkManager uowManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(
         loggerFactory,

@@ -11,7 +11,7 @@ public abstract class PlatformCqrsEntityEventApplicationHandler<TEntity> : Platf
 {
     protected PlatformCqrsEntityEventApplicationHandler(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(
         loggerFactory,

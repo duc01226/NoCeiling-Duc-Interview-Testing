@@ -184,12 +184,12 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
         if (serviceCollection.NotExist(p => p.ServiceType == typeof(IPlatformMongoDbPersistenceUnitOfWork<TDbContext>)))
             serviceCollection.RegisterAllForImplementation<PlatformMongoDbPersistenceUnitOfWork<TDbContext>>();
 
-        serviceCollection.RegisterAllFromType<IUnitOfWork>(Assembly);
+        serviceCollection.RegisterAllFromType<IPlatformUnitOfWork>(Assembly);
         // Register default PlatformMongoDbUnitOfWork for IUnitOfWork if not existing register for IUnitOfWork
         if (serviceCollection.NotExist(
-            p => p.ServiceType == typeof(IUnitOfWork) &&
+            p => p.ServiceType == typeof(IPlatformUnitOfWork) &&
                  p.ImplementationType?.IsAssignableTo(typeof(IPlatformMongoDbPersistenceUnitOfWork<TDbContext>)) == true))
-            serviceCollection.Register<IUnitOfWork, PlatformMongoDbPersistenceUnitOfWork<TDbContext>>();
+            serviceCollection.Register<IPlatformUnitOfWork, PlatformMongoDbPersistenceUnitOfWork<TDbContext>>();
     }
 }
 

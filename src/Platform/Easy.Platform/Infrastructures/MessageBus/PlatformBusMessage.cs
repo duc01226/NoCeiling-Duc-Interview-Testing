@@ -50,7 +50,7 @@ public class PlatformBusMessage<TPayload> : IPlatformTrackableBusMessage, IPlatf
     public string TrackingId { get; set; } = Guid.NewGuid().ToString();
     public DateTime? CreatedUtcDate { get; set; } = Clock.UtcNow;
     public string ProduceFrom { get; set; } = Assembly.GetEntryAssembly()?.FullName;
-    public Dictionary<string, object> RequestContext { get; set; } = [];
+    public IDictionary<string, object> RequestContext { get; set; } = new Dictionary<string, object>();
     public TPayload Payload { get; set; }
 
     public static TBusMessage New<TBusMessage>(
@@ -60,7 +60,7 @@ public class PlatformBusMessage<TPayload> : IPlatformTrackableBusMessage, IPlatf
         string producerContext,
         string messageGroup,
         string messageAction,
-        Dictionary<string, object> requestContext = null)
+        IDictionary<string, object> requestContext = null)
         where TBusMessage : class, IPlatformWithPayloadBusMessage<TPayload>, IPlatformSelfRoutingKeyBusMessage, IPlatformTrackableBusMessage, new()
     {
         var message = Activator.CreateInstance<TBusMessage>();
@@ -75,7 +75,7 @@ public class PlatformBusMessage<TPayload> : IPlatformTrackableBusMessage, IPlatf
         if (messageAction != null)
             message.MessageAction = messageAction;
         message.MessageType ??= GetDefaultMessageType();
-        message.RequestContext = requestContext ?? [];
+        message.RequestContext = requestContext ?? new Dictionary<string, object>();
 
         return message;
     }

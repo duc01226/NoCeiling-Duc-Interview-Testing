@@ -20,7 +20,7 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
     where TEntity : class, IEntity<TPrimaryKey>, new()
     where TDbContext : PlatformMongoDbContext<TDbContext>
 {
-    public PlatformMongoDbRepository(IUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
+    public PlatformMongoDbRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
         unitOfWorkManager,
         cqrs,
         serviceProvider)
@@ -29,12 +29,12 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
 
     public virtual IMongoCollection<TEntity> Table => DbContext.GetCollection<TEntity>();
 
-    public virtual IMongoCollection<TEntity> GetTable(IUnitOfWork uow)
+    public virtual IMongoCollection<TEntity> GetTable(IPlatformUnitOfWork uow)
     {
         return GetUowDbContext(uow).GetCollection<TEntity>();
     }
 
-    public override IQueryable<TEntity> GetQuery(IUnitOfWork uow, params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
+    public override IQueryable<TEntity> GetQuery(IPlatformUnitOfWork uow, params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return GetTable(uow).AsQueryable();
     }
@@ -178,13 +178,18 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         return await source.As<IMongoQueryable<TSource>>().AnyAsync(cancellationToken);
     }
 
-    protected override bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IUnitOfWork uow)
+    protected override bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IPlatformUnitOfWork uow)
     {
+        if (result == null) return false;
+
+        if (result.GetType().IsAssignableToGenericType(typeof(IQueryable<>)) ||
+            result.GetType().IsAssignableToGenericType(typeof(IAsyncEnumerable<>))) return true;
+
         return false;
     }
 
     protected override void HandleDisposeUsingOnceTimeContextLogic<TResult>(
-        IUnitOfWork uow,
+        IPlatformUnitOfWork uow,
         bool doesNeedKeepUowForQueryOrEnumerableExecutionLater,
         Expression<Func<TEntity, object>>[] loadRelatedEntities,
         TResult result)
@@ -198,7 +203,7 @@ public abstract class PlatformMongoDbRootRepository<TEntity, TPrimaryKey, TDbCon
     where TEntity : class, IRootEntity<TPrimaryKey>, new()
     where TDbContext : PlatformMongoDbContext<TDbContext>
 {
-    public PlatformMongoDbRootRepository(IUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
+    public PlatformMongoDbRootRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
         unitOfWorkManager,
         cqrs,
         serviceProvider)

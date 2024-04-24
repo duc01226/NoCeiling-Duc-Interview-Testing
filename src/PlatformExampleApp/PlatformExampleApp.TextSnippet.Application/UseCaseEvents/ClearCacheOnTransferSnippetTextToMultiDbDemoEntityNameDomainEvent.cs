@@ -15,7 +15,7 @@ internal sealed class ClearCacheOnTransferSnippetTextToMultiDbDemoEntityNameDoma
 
     public ClearCacheOnTransferSnippetTextToMultiDbDemoEntityNameDomainEvent(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider,
         IPlatformCacheRepositoryProvider cacheRepositoryProvider) : base(loggerFactory, unitOfWorkManager, serviceProvider, rootServiceProvider)

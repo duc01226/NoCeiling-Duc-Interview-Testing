@@ -13,7 +13,7 @@ public abstract class PlatformCqrsCommandEventApplicationHandler<TCommand, TComm
 {
     protected PlatformCqrsCommandEventApplicationHandler(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(
         loggerFactory,
@@ -34,7 +34,7 @@ public abstract class PlatformCqrsCommandEventApplicationHandler<TCommand> : Pla
 {
     protected PlatformCqrsCommandEventApplicationHandler(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, unitOfWorkManager, serviceProvider, rootServiceProvider)
     {

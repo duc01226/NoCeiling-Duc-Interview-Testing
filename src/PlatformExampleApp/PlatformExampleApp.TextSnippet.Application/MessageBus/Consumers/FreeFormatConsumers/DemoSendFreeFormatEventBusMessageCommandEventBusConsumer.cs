@@ -10,7 +10,7 @@ internal sealed class DemoSendFreeFormatEventBusMessageCommandEventBusConsumer
 {
     public DemoSendFreeFormatEventBusMessageCommandEventBusConsumer(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager uowManager,
+        IPlatformUnitOfWorkManager uowManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, uowManager, serviceProvider, rootServiceProvider)
     {
@@ -38,7 +38,7 @@ internal sealed class DemoSendFreeFormatInboxEventBusMessageCommandApplicationEv
 {
     public DemoSendFreeFormatInboxEventBusMessageCommandApplicationEventBusConsumer(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager uowManager,
+        IPlatformUnitOfWorkManager uowManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, uowManager, serviceProvider, rootServiceProvider)
     {

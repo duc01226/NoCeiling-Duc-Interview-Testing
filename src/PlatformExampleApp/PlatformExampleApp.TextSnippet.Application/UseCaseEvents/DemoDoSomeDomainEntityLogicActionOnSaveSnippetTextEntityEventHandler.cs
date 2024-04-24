@@ -10,7 +10,7 @@ internal sealed class DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEv
 {
     public DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEventHandler(
         ILoggerFactory loggerFactory,
-        IUnitOfWorkManager unitOfWorkManager,
+        IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(
         loggerFactory,

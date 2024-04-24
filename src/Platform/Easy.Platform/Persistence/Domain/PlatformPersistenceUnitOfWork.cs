@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Easy.Platform.Persistence.Domain;
 
-public interface IPlatformPersistenceUnitOfWork<out TDbContext> : IUnitOfWork
+public interface IPlatformPersistenceUnitOfWork<out TDbContext> : IPlatformUnitOfWork
     where TDbContext : IPlatformDbContext
 {
     public TDbContext DbContext { get; }
@@ -28,12 +28,10 @@ public abstract class PlatformPersistenceUnitOfWork<TDbContext> : PlatformUnitOf
     protected IServiceProvider ServiceProvider { get; }
     public TDbContext DbContext => lazyDbContext.Value;
 
-    public override async Task SaveChangesAsync(CancellationToken cancellationToken)
+    protected override async Task InternalSaveChangesAsync(CancellationToken cancellationToken)
     {
         if (lazyDbContext.IsValueCreated)
             await DbContext.SaveChangesAsync(cancellationToken);
-
-        await base.SaveChangesAsync(cancellationToken);
     }
 
     // Protected implementation of Dispose pattern.
@@ -43,7 +41,7 @@ public abstract class PlatformPersistenceUnitOfWork<TDbContext> : PlatformUnitOf
         {
             base.Dispose(disposing);
 
-            // Dispose managed state (managed objects).
+            // Release managed resources
             if (disposing)
             {
                 if (lazyDbContext.IsValueCreated)

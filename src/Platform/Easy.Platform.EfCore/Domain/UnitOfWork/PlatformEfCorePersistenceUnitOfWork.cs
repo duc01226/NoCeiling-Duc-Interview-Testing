@@ -1,6 +1,4 @@
 using Easy.Platform.Common;
-using Easy.Platform.Domain.Exceptions;
-using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +15,7 @@ public interface IPlatformEfCorePersistenceUnitOfWork<out TDbContext> : IPlatfor
 public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
     : PlatformPersistenceUnitOfWork<TDbContext>, IPlatformEfCorePersistenceUnitOfWork<TDbContext> where TDbContext : PlatformEfCoreDbContext<TDbContext>
 {
-    private readonly Lazy<PooledDbContextFactory<TDbContext>> lazyPooledDbContextFactoryLazy;
+    private readonly PooledDbContextFactory<TDbContext> pooledDbContextFactory;
 
     public PlatformEfCorePersistenceUnitOfWork(
         IPlatformRootServiceProvider rootServiceProvider,
@@ -27,48 +25,12 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
     {
         PersistenceConfiguration = persistenceConfiguration;
         DbContextOptions = dbContextOptions;
-        lazyPooledDbContextFactoryLazy = new Lazy<PooledDbContextFactory<TDbContext>>(
-            serviceProvider.GetService<PooledDbContextFactory<TDbContext>>,
-            true);
+        pooledDbContextFactory = serviceProvider.GetService<PooledDbContextFactory<TDbContext>>();
     }
 
     protected IPlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration { get; }
 
     protected DbContextOptions<TDbContext> DbContextOptions { get; }
-
-    public override async Task CompleteAsync(CancellationToken cancellationToken = default)
-    {
-        if (Completed) return;
-
-        // Store stack trace before save changes so that if something went wrong in save into db, stack trace could
-        // be tracked. Because call to db if failed lose stack trace
-        var fullStackTrace = Environment.StackTrace;
-
-        try
-        {
-            await InnerUnitOfWorks.Where(p => p.IsActive()).ParallelAsync(p => p.CompleteAsync(cancellationToken));
-
-            await SaveChangesAsync(cancellationToken);
-
-            Completed = true;
-
-            await InvokeOnCompletedActions();
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            throw new PlatformDomainRowVersionConflictException(
-                $"{GetType().Name} complete uow failed because of {nameof(DbUpdateConcurrencyException)}. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
-                ex);
-        }
-        catch (Exception ex)
-        {
-            await InvokeOnFailedActions(new UnitOfWorkFailedArgs(ex));
-
-            throw new Exception(
-                $"{GetType().Name} complete uow failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
-                ex);
-        }
-    }
 
     public override bool IsPseudoTransactionUow()
     {
@@ -91,7 +53,7 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
     protected override TDbContext DbContextFactory(IServiceProvider serviceProvider)
     {
         if (CanUsePooledDbContext())
-            return lazyPooledDbContextFactoryLazy.Value.CreateDbContext();
+            return pooledDbContextFactory.CreateDbContext();
 
         return base.DbContextFactory(serviceProvider);
     }
@@ -99,7 +61,7 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
     private bool CanUsePooledDbContext()
     {
         return (PersistenceConfiguration.PooledOptions.UsePooledDbContextForUsingOnceTransientUowOnly == false || IsUsingOnceTransientUow) &&
-               lazyPooledDbContextFactoryLazy.Value != null;
+               pooledDbContextFactory != null;
     }
 
     protected override void BeforeDisposeDbContext(TDbContext dbContext)
