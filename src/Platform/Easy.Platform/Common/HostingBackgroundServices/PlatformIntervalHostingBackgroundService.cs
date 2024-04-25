@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Common.HostingBackgroundServices;
@@ -42,11 +41,6 @@ public abstract class PlatformIntervalHostingBackgroundService : PlatformHosting
     }
 
     /// <summary>
-    /// Gets a value indicating whether automatic memory cleanup is enabled after each interval process execution.
-    /// </summary>
-    public virtual bool AutoCleanMemory => true;
-
-    /// <summary>
     /// Gets a value indicating whether to log interval process information.
     /// </summary>
     public virtual bool LogIntervalProcessInformation => true;
@@ -72,11 +66,6 @@ public abstract class PlatformIntervalHostingBackgroundService : PlatformHosting
             catch (Exception e)
             {
                 Logger.LogError(e, "IntervalProcessHostedService {TargetName} FAILED. Error: {Error}", GetType().Name, e.Message);
-            }
-            finally
-            {
-                if (AutoCleanMemory)
-                    Util.GarbageCollector.Collect(aggressiveImmediately: true);
             }
 
             await Task.Delay(ProcessTriggerIntervalTime(), cancellationToken);

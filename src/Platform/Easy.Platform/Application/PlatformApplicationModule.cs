@@ -3,7 +3,6 @@ using Easy.Platform.Application.Cqrs.Commands;
 using Easy.Platform.Application.Cqrs.Events;
 using Easy.Platform.Application.Cqrs.Queries;
 using Easy.Platform.Application.Domain;
-using Easy.Platform.Application.HostingBackgroundServices;
 using Easy.Platform.Application.MessageBus;
 using Easy.Platform.Application.MessageBus.Consumers;
 using Easy.Platform.Application.MessageBus.InboxPattern;
@@ -310,8 +309,6 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             RegisterRuntimeModuleDependencies<PlatformCachingModule>(serviceCollection);
 
         serviceCollection.RegisterHostedServicesFromType(Assembly, typeof(PlatformHostingBackgroundService));
-        // Register default built-in background services
-        serviceCollection.RegisterHostedService<PlatformAutoClearMemoryHostingBackgroundService>();
     }
 
     protected override async Task InternalInit(IServiceScope serviceScope)

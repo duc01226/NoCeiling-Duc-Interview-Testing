@@ -12,6 +12,6 @@ public static class TextSnippetApplicationCustomUserContextKeys
 
     public static List<string> GetOrganization(this IDictionary<string, object> context)
     {
-        return context.GetUserContextValue<List<string>>(Organizations);
+        return context.GetRequestContextValue<List<string>>(Organizations);
     }
 }

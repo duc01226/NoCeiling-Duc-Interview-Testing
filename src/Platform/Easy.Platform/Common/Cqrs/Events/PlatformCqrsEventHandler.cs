@@ -96,10 +96,6 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         {
             LogError(notification, e, LoggerFactory);
         }
-        finally
-        {
-            Util.GarbageCollector.Collect(aggressiveImmediately: false);
-        }
     }
 
     protected async Task ExecuteRetryHandleAsync(
@@ -121,10 +117,6 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         {
             handlerNewInstance.LogError(notification, e, LoggerFactory);
         }
-        finally
-        {
-            Util.GarbageCollector.Collect(aggressiveImmediately: false);
-        }
     }
 
     protected virtual void CopyPropertiesToNewInstanceBeforeExecution(
@@ -136,14 +128,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     public virtual async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
     {
-        try
-        {
-            await ExecuteHandleWithTracingAsync(@event, () => HandleAsync(@event, cancellationToken));
-        }
-        finally
-        {
-            Util.GarbageCollector.Collect(aggressiveImmediately: false);
-        }
+        await ExecuteHandleWithTracingAsync(@event, () => HandleAsync(@event, cancellationToken));
     }
 
     protected async Task ExecuteHandleWithTracingAsync(TEvent @event, Func<Task> handleAsync)

@@ -232,10 +232,6 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
             IPlatformMessageBusConsumer.LogError(Logger, GetType(), message, routingKey, e);
             throw;
         }
-        finally
-        {
-            Util.GarbageCollector.Collect(aggressiveImmediately: false);
-        }
     }
 
     public abstract Task HandleLogicAsync(TMessage message, string routingKey);

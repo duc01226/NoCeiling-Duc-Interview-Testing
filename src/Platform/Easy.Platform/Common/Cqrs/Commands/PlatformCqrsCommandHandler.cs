@@ -1,5 +1,4 @@
 using Easy.Platform.Application.Cqrs.Events;
-using Easy.Platform.Common.Utils;
 using Easy.Platform.Common.Validations.Exceptions.Extensions;
 using MediatR;
 
@@ -21,23 +20,16 @@ public abstract class PlatformCqrsCommandHandler<TCommand, TResult>
 
     public virtual async Task<TResult> Handle(TCommand request, CancellationToken cancellationToken)
     {
-        try
-        {
-            request.Validate().WithValidationException().EnsureValid();
+        request.Validate().WithValidationException().EnsureValid();
 
-            var result = await ExecuteHandleAsync(request, cancellationToken);
+        var result = await ExecuteHandleAsync(request, cancellationToken);
 
-            if (RootServiceProvider.CheckAssignableToServiceRegistered(typeof(IPlatformCqrsEventApplicationHandler<PlatformCqrsCommandEvent<TCommand, TResult>>)))
-                await Cqrs.SendEvent(
-                    new PlatformCqrsCommandEvent<TCommand, TResult>(request, result, PlatformCqrsCommandEventAction.Executed),
-                    cancellationToken);
+        if (RootServiceProvider.CheckAssignableToServiceRegistered(typeof(IPlatformCqrsEventApplicationHandler<PlatformCqrsCommandEvent<TCommand, TResult>>)))
+            await Cqrs.SendEvent(
+                new PlatformCqrsCommandEvent<TCommand, TResult>(request, result, PlatformCqrsCommandEventAction.Executed),
+                cancellationToken);
 
-            return result;
-        }
-        finally
-        {
-            Util.GarbageCollector.Collect(aggressiveImmediately: false);
-        }
+        return result;
     }
 
     protected abstract Task<TResult> HandleAsync(TCommand request, CancellationToken cancellationToken);

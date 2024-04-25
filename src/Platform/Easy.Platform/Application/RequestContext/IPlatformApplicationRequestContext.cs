@@ -68,10 +68,8 @@ public static class PlatformApplicationRequestContextExtensions
         return context;
     }
 
-    public static T GetUserContextValue<T>(this IDictionary<string, object> context, string contextKey)
+    public static T GetRequestContextValue<T>(this IDictionary<string, object> context, string contextKey)
     {
-        ArgumentNullException.ThrowIfNull(contextKey);
-
         if (context is IPlatformApplicationRequestContext userContext)
             return userContext.GetValue<T>(contextKey);
         if (PlatformRequestContextHelper.TryGetValue(context, contextKey, out T item))
@@ -80,10 +78,8 @@ public static class PlatformApplicationRequestContextExtensions
         return default;
     }
 
-    public static void SetUserContextValue(this IDictionary<string, object> context, object value, string contextKey)
+    public static void SetRequestContextValue(this IDictionary<string, object> context, object value, string contextKey)
     {
-        ArgumentNullException.ThrowIfNull(contextKey);
-
         if (context is IPlatformApplicationRequestContext userContext)
             userContext.SetValue(value, contextKey);
         else

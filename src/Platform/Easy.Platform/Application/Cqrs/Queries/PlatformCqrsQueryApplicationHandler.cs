@@ -65,39 +65,32 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
     /// <returns>The result of handling the CQRS query.</returns>
     public async Task<TResult> Handle(TQuery request, CancellationToken cancellationToken)
     {
-        try
-        {
-            return await HandleWithTracing(
-                request,
-                async () =>
-                {
-                    request.SetAuditInfo<TQuery>(BuildRequestAuditInfo(request));
+        return await HandleWithTracing(
+            request,
+            async () =>
+            {
+                request.SetAuditInfo<TQuery>(BuildRequestAuditInfo(request));
 
-                    await ValidateRequestAsync(request.Validate().Of<TQuery>(), cancellationToken).EnsureValidAsync();
+                await ValidateRequestAsync(request.Validate().Of<TQuery>(), cancellationToken).EnsureValidAsync();
 
-                    var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
-                        () => HandleAsync(request, cancellationToken),
-                        onException: ex =>
-                        {
-                            LoggerFactory.CreateLogger(typeof(PlatformCqrsQueryApplicationHandler<,>))
-                                .Log(
-                                    ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
-                                    ex,
-                                    "[{Tag1}] Query:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. UserContext:{UserContext}",
-                                    ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
-                                    request.GetType().Name,
-                                    request.AuditInfo.AuditTrackId,
-                                    request.ToJson(),
-                                    RequestContext.GetAllKeyValues().ToJson());
-                        });
+                var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
+                    () => HandleAsync(request, cancellationToken),
+                    onException: ex =>
+                    {
+                        LoggerFactory.CreateLogger(typeof(PlatformCqrsQueryApplicationHandler<,>))
+                            .Log(
+                                ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
+                                ex,
+                                "[{Tag1}] Query:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. UserContext:{UserContext}",
+                                ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
+                                request.GetType().Name,
+                                request.AuditInfo?.AuditTrackId,
+                                request.ToJson(),
+                                RequestContext.GetAllKeyValues().ToJson());
+                    });
 
-                    return result;
-                });
-        }
-        finally
-        {
-            Util.GarbageCollector.Collect(aggressiveImmediately: false);
-        }
+                return result;
+            });
     }
 
     /// <summary>

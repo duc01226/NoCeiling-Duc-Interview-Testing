@@ -1,6 +1,5 @@
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
-using Easy.Platform.Common.Utils;
 
 namespace Easy.Platform.Common.RequestContext;
 
@@ -17,7 +16,7 @@ public static class PlatformRequestContextHelper
         {
             if (originalValue is string originalValueStr && typeof(T) != typeof(string))
             {
-                var isParsedSuccess = TryGetParsedValuesFromStringValues(out item, Util.ListBuilder.New(originalValueStr));
+                var isParsedSuccess = TryGetParsedValuesFromStringValues(out item, [originalValueStr]);
 
                 return isParsedSuccess;
             }

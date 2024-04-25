@@ -56,10 +56,6 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
                     Logger.LogError(exception, "Exception {Exception}", exception.GetType().Name);
             }
         }
-        finally
-        {
-            Util.GarbageCollector.Collect(aggressiveImmediately: false);
-        }
     }
 
     protected virtual Task OnException(HttpContext context, Exception exception)

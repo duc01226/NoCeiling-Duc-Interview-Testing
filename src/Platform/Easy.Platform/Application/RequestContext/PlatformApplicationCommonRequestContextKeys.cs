@@ -17,17 +17,17 @@ public static class PlatformApplicationCommonRequestContextKeys
 
     public static string RequestId(this IDictionary<string, object> context)
     {
-        return context.GetUserContextValue<string>(RequestIdContextKey);
+        return context.GetRequestContextValue<string>(RequestIdContextKey);
     }
 
     public static string UserId(this IDictionary<string, object> context)
     {
-        return context.GetUserContextValue<string>(UserIdContextKey);
+        return context.GetRequestContextValue<string>(UserIdContextKey);
     }
 
     public static bool IsSeedingTestingData(this IDictionary<string, object> context)
     {
-        return context.GetUserContextValue<bool?>(IsSeedingTestingDataKey) == true;
+        return context.GetRequestContextValue<bool?>(IsSeedingTestingDataKey) == true;
     }
 
     public static T UserId<T>(this IDictionary<string, object> context)
@@ -42,22 +42,22 @@ public static class PlatformApplicationCommonRequestContextKeys
 
     public static string UserName(this IDictionary<string, object> context)
     {
-        return context.GetUserContextValue<string>(UserNameContextKey);
+        return context.GetRequestContextValue<string>(UserNameContextKey);
     }
 
     public static string Email(this IDictionary<string, object> context)
     {
-        return context.GetUserContextValue<string>(EmailContextKey);
+        return context.GetRequestContextValue<string>(EmailContextKey);
     }
 
     public static List<string> UserRoles(this IDictionary<string, object> context)
     {
-        return context.GetUserContextValue<List<string>>(UserRolesContextKey) ?? [];
+        return context.GetRequestContextValue<List<string>>(UserRolesContextKey) ?? [];
     }
 
     public static string UserFullName(this IDictionary<string, object> context)
     {
-        return context.GetUserContextValue<string>(UserFullNameContextKey) ?? context.UserCalculatedFullName();
+        return context.GetRequestContextValue<string>(UserFullNameContextKey) ?? context.UserCalculatedFullName();
     }
 
     public static string UserCalculatedFullName(this IDictionary<string, object> context)
@@ -71,74 +71,74 @@ public static class PlatformApplicationCommonRequestContextKeys
 
     public static string UserFirstName(this IDictionary<string, object> context)
     {
-        return context.GetUserContextValue<string>(UserFirstNameContextKey);
+        return context.GetRequestContextValue<string>(UserFirstNameContextKey);
     }
 
     public static string UserMiddleName(this IDictionary<string, object> context)
     {
-        return context.GetUserContextValue<string>(UserMiddleNameContextKey);
+        return context.GetRequestContextValue<string>(UserMiddleNameContextKey);
     }
 
     public static string UserLastName(this IDictionary<string, object> context)
     {
-        return context.GetUserContextValue<string>(UserLastNameContextKey);
+        return context.GetRequestContextValue<string>(UserLastNameContextKey);
     }
 
     public static TContext SetRequestId<TContext>(this TContext context, string value) where TContext : IDictionary<string, object>
     {
-        context?.SetUserContextValue(value, RequestIdContextKey);
+        context?.SetRequestContextValue(value, RequestIdContextKey);
 
         return context;
     }
 
     public static TContext SetUserId<TContext>(this TContext context, string value) where TContext : IDictionary<string, object>
     {
-        context?.SetUserContextValue(value, UserIdContextKey);
+        context?.SetRequestContextValue(value, UserIdContextKey);
 
         return context;
     }
 
     public static TContext SetUserRoles<TContext>(this TContext context, List<string> value) where TContext : IDictionary<string, object>
     {
-        context.SetUserContextValue(value, UserRolesContextKey);
+        context.SetRequestContextValue(value, UserRolesContextKey);
 
         return context;
     }
 
     public static TContext SetEmail<TContext>(this TContext context, string value) where TContext : IDictionary<string, object>
     {
-        context.SetUserContextValue(value, EmailContextKey);
+        context.SetRequestContextValue(value, EmailContextKey);
 
         return context;
     }
 
     public static void SetUserName(this IDictionary<string, object> context, string value)
     {
-        context.SetUserContextValue(value, UserNameContextKey);
+        context.SetRequestContextValue(value, UserNameContextKey);
     }
 
     public static void SetUserFullName(this IDictionary<string, object> context, string value)
     {
-        context.SetUserContextValue(value, UserFullNameContextKey);
+        context.SetRequestContextValue(value, UserFullNameContextKey);
     }
 
     public static void SetUserLastName(this IDictionary<string, object> context, string value)
     {
-        context.SetUserContextValue(value, UserLastNameContextKey);
+        context.SetRequestContextValue(value, UserLastNameContextKey);
     }
 
     public static void SetUserMiddleName(this IDictionary<string, object> context, string value)
     {
-        context.SetUserContextValue(value, UserMiddleNameContextKey);
+        context.SetRequestContextValue(value, UserMiddleNameContextKey);
     }
 
     public static void SetUserFirstName(this IDictionary<string, object> context, string value)
     {
-        context.SetUserContextValue(value, UserFirstNameContextKey);
+        context.SetRequestContextValue(value, UserFirstNameContextKey);
     }
 
     public static void SetIsSeedingTestingData(this IDictionary<string, object> context, bool value)
     {
-        context.SetUserContextValue(value, IsSeedingTestingDataKey);
+        context.SetRequestContextValue(value, IsSeedingTestingDataKey);
     }
 }

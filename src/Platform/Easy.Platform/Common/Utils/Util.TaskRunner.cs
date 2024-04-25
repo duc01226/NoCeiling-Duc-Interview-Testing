@@ -1696,8 +1696,17 @@ public static partial class Util
         /// </remarks>
         public class Throttler : IDisposable
         {
-            private CancellationTokenSource cts;
+            private readonly CancellationTokenSource cts = new();
+            private readonly object lockObj = new();
             private bool disposed;
+            private DateTime? lastExecutionTime;
+
+            public Throttler(TimeSpan throttleWindow)
+            {
+                ThrottleWindow = throttleWindow;
+            }
+
+            public TimeSpan ThrottleWindow { get; init; }
 
             public void Dispose()
             {
@@ -1706,43 +1715,20 @@ public static partial class Util
             }
 
             /// <summary>
-            /// Creates a throttled execution function.
-            /// </summary>
-            /// <param name="function">The function to be executed.</param>
-            /// <param name="throttleWindow">The time span to wait before the next execution.</param>
-            /// <returns>A function that when invoked, executes the provided function in a throttled manner.</returns>
-            /// <remarks>
-            /// This method returns a function that, when called, will execute the provided function in a throttled manner.
-            /// The throttling mechanism ensures that the function does not execute more frequently than the specified throttle window.
-            /// </remarks>
-            public static Func<Task> CreateThrottleExecutionFunc(Func<Task> function, TimeSpan throttleWindow)
-            {
-                var throttler = new Throttler();
-
-                return () => throttler.ThrottleExecuteAsync(function, throttleWindow);
-            }
-
-            /// <summary>
             /// Executes the provided function in a throttled manner.
             /// </summary>
-            /// <param name="function">The function to be executed.</param>
-            /// <param name="throttleWindow">The time span to wait before the next execution.</param>
-            /// <returns>A task that represents the asynchronous operation.</returns>
-            /// <remarks>
-            /// This method ensures that the provided function does not execute more frequently than the specified throttle window.
-            /// If a previous execution is still waiting for its throttle window, it will be cancelled and the new execution will be scheduled.
-            /// </remarks>
-            public async Task ThrottleExecuteAsync(Func<Task> function, TimeSpan throttleWindow)
+            public void ThrottleExecute(Action action)
             {
-                if (cts != null) await cts.CancelAsync();
-                cts?.Dispose();
+                lock (lockObj)
+                {
+                    var now = DateTime.UtcNow;
 
-                cts = new CancellationTokenSource();
-                var cancellationToken = cts.Token;
-
-                await Task.Delay(throttleWindow, cancellationToken);
-
-                if (!cancellationToken.IsCancellationRequested) await function();
+                    if (lastExecutionTime == null || lastExecutionTime.Value.Add(ThrottleWindow) < now)
+                    {
+                        lastExecutionTime = now;
+                        action();
+                    }
+                }
             }
 
             protected virtual void Dispose(bool disposing)

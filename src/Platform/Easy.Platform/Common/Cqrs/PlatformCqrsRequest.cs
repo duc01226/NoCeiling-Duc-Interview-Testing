@@ -33,7 +33,7 @@ public class PlatformCqrsRequest : IPlatformCqrsRequest
         return PlatformValidationResult<IPlatformCqrsRequest>.Valid(value: this);
     }
 
-    public IPlatformCqrsRequestAuditInfo AuditInfo { get; set; } = new PlatformCqrsRequestAuditInfo();
+    public IPlatformCqrsRequestAuditInfo AuditInfo { get; set; }
 
     public TRequest SetAuditInfo<TRequest>(
         Guid auditTrackId,

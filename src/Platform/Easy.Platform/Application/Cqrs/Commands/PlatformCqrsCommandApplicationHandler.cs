@@ -83,43 +83,36 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
     /// <returns>The result of handling the CQRS command.</returns>
     public virtual async Task<TResult> Handle(TCommand request, CancellationToken cancellationToken)
     {
-        try
-        {
-            return await HandleWithTracing(
-                request,
-                async () =>
-                {
-                    await ValidateRequestAsync(request.Validate().Of<TCommand>(), cancellationToken).EnsureValidAsync();
+        return await HandleWithTracing(
+            request,
+            async () =>
+            {
+                await ValidateRequestAsync(request.Validate().Of<TCommand>(), cancellationToken).EnsureValidAsync();
 
-                    var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
-                        () => ExecuteHandleAsync(request, cancellationToken),
-                        onException: ex =>
-                        {
-                            LoggerFactory.CreateLogger(typeof(PlatformCqrsCommandApplicationHandler<>))
-                                .Log(
-                                    ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
-                                    ex,
-                                    "[{Tag1}] Command:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. UserContext:{UserContext}",
-                                    ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
-                                    request.GetType().Name,
-                                    request.AuditInfo.AuditTrackId,
-                                    request.ToJson(),
-                                    RequestContext.GetAllKeyValues().ToJson());
-                        });
+                var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
+                    () => ExecuteHandleAsync(request, cancellationToken),
+                    onException: ex =>
+                    {
+                        LoggerFactory.CreateLogger(typeof(PlatformCqrsCommandApplicationHandler<>))
+                            .Log(
+                                ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
+                                ex,
+                                "[{Tag1}] Command:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. UserContext:{UserContext}",
+                                ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
+                                request.GetType().Name,
+                                request.AuditInfo?.AuditTrackId,
+                                request.ToJson(),
+                                RequestContext.GetAllKeyValues().ToJson());
+                    });
 
-                    if (RootServiceProvider.CheckAssignableToServiceRegistered(typeof(IPlatformCqrsEventApplicationHandler<PlatformCqrsCommandEvent<TCommand, TResult>>)))
-                        await Cqrs.SendEvent(
-                            new PlatformCqrsCommandEvent<TCommand, TResult>(request, result, PlatformCqrsCommandEventAction.Executed)
-                                .With(p => p.SetRequestContextValues(RequestContext.GetAllKeyValues())),
-                            cancellationToken);
+                if (RootServiceProvider.CheckAssignableToServiceRegistered(typeof(IPlatformCqrsEventApplicationHandler<PlatformCqrsCommandEvent<TCommand, TResult>>)))
+                    await Cqrs.SendEvent(
+                        new PlatformCqrsCommandEvent<TCommand, TResult>(request, result, PlatformCqrsCommandEventAction.Executed)
+                            .With(p => p.SetRequestContextValues(RequestContext.GetAllKeyValues())),
+                        cancellationToken);
 
-                    return result;
-                });
-        }
-        finally
-        {
-            Util.GarbageCollector.Collect(aggressiveImmediately: false);
-        }
+                return result;
+            });
     }
 
     /// <summary>

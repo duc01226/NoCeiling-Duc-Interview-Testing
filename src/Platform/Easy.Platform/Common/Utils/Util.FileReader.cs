@@ -1,5 +1,8 @@
 using System.IO;
+using System.IO.Compression;
 using System.Reflection;
+using System.Text;
+using Easy.Platform.Common.Extensions;
 
 namespace Easy.Platform.Common.Utils;
 
@@ -148,6 +151,54 @@ public static partial class Util
                 PathBuilder.ConcatRelativePath(
                     Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
                     applicationRelativeFilePath));
+        }
+
+        public static async Task<List<T>> GetUnzipFiles<T>(Stream zipFileStream, Func<ZipArchiveEntry, Task<T>> readFileFn)
+        {
+            using (var newZipArchive = new ZipArchive(zipFileStream, ZipArchiveMode.Read))
+            {
+                return await newZipArchive.Entries.SelectAsync(readFileFn);
+            }
+        }
+
+        public static async Task<Stream> ZipFilesAsStream<TFileContent>(
+            List<ZipFilesAsStreamFileItem<TFileContent>> files,
+            Func<TFileContent, char[]> readFileAsCharsFn)
+        {
+            var returnZipFileStream = new MemoryStream();
+
+            using (var newZipArchive = new ZipArchive(returnZipFileStream, ZipArchiveMode.Create, true))
+            {
+                foreach (var file in files)
+                {
+                    var fileZipEntry = newZipArchive.CreateEntry(file.FileName);
+
+                    // Write not-zip file content to a zip file item
+                    using (var writer = new StreamWriter(fileZipEntry.Open(), file.FileEncoding))
+                    {
+                        await writer.WriteAsync(readFileAsCharsFn(file.FileContent));
+                    }
+                }
+            }
+
+            //Set the MemoryStream to the beginning
+            returnZipFileStream.Seek(0, SeekOrigin.Begin);
+
+            return returnZipFileStream;
+        }
+
+        public class ZipFilesAsStreamFileItem<TFileContent>
+        {
+            public ZipFilesAsStreamFileItem(string fileName, TFileContent fileContent, Encoding fileEncoding)
+            {
+                FileName = fileName;
+                FileContent = fileContent;
+                FileEncoding = fileEncoding;
+            }
+
+            public string FileName { get; init; }
+            public TFileContent FileContent { get; init; }
+            public Encoding FileEncoding { get; set; }
         }
     }
 }

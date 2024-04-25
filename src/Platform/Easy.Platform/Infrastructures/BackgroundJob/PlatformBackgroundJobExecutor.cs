@@ -99,10 +99,6 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
             Logger.LogError(e, "[BackgroundJob] Job {BackgroundJobType_Name} execution was failed.", GetType().Name);
             throw;
         }
-        finally
-        {
-            Util.GarbageCollector.Collect(aggressiveImmediately: false);
-        }
     }
 
     public virtual void Execute()

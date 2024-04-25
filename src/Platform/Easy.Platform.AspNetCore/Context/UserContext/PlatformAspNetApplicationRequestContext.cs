@@ -26,21 +26,17 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
     {
         this.httpContextAccessor = httpContextAccessor;
         this.claimTypeMapper = claimTypeMapper;
-
-        InitCachedUserContextData();
     }
 
     public ConcurrentDictionary<string, object> CachedUserContextData { get; } = new();
 
     public T GetValue<T>(string contextKey)
     {
-        return GetValue<T>(contextKey, CurrentHttpContext(), CachedUserContextData, claimTypeMapper);
+        return GetValue<T>(contextKey, CurrentHttpContext(), CachedUserContextData, out _, claimTypeMapper);
     }
 
     public void SetValue(object value, string contextKey)
     {
-        ArgumentNullException.ThrowIfNull(contextKey);
-
         CachedUserContextData.Upsert(contextKey, value);
     }
 
@@ -51,7 +47,7 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
 
     public Dictionary<string, object> GetAllKeyValues()
     {
-        InitCachedUserContextData();
+        InitAllKeyValuesForCachedUserContextData();
 
         return GetAllKeyValues(CurrentHttpContext());
     }
@@ -69,19 +65,18 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
 
     public bool Contains(KeyValuePair<string, object> item)
     {
-        InitCachedUserContextData();
+        InitAllKeyValuesForCachedUserContextData();
         return CachedUserContextData.Contains(item);
     }
 
     public void CopyTo(KeyValuePair<string, object>[] array, int arrayIndex)
     {
-        InitCachedUserContextData();
+        InitAllKeyValuesForCachedUserContextData();
         CachedUserContextData.ToList().CopyTo(array, arrayIndex);
     }
 
     public bool Remove(KeyValuePair<string, object> item)
     {
-        InitCachedUserContextData();
         return CachedUserContextData.Remove(item.Key, out _);
     }
 
@@ -97,56 +92,62 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
 
     public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
     {
-        InitCachedUserContextData();
+        InitAllKeyValuesForCachedUserContextData();
         return CachedUserContextData.GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()
     {
-        InitCachedUserContextData();
+        InitAllKeyValuesForCachedUserContextData();
         return GetEnumerator();
     }
 
     public void Add(string key, object value)
     {
-        InitCachedUserContextData();
         CachedUserContextData.Upsert(key, value);
     }
 
     public bool ContainsKey(string key)
     {
-        InitCachedUserContextData();
+        InitAllKeyValuesForCachedUserContextData();
         return CachedUserContextData.ContainsKey(key);
     }
 
     public bool Remove(string key)
     {
-        InitCachedUserContextData();
+        InitAllKeyValuesForCachedUserContextData();
         return CachedUserContextData.Remove(key, out _);
     }
 
     public bool TryGetValue(string key, out object value)
     {
-        InitCachedUserContextData();
-        return CachedUserContextData.TryGetValue(key, out value);
+        value = GetValue<object>(key, CurrentHttpContext(), CachedUserContextData, out var hasFoundValue, claimTypeMapper);
+        return hasFoundValue;
     }
 
     public object this[string key]
     {
+        get => GetValue<object>(key);
+        set => SetValue(value, key);
+    }
+
+    public ICollection<string> Keys
+    {
         get
         {
-            InitCachedUserContextData();
-            return CachedUserContextData[key];
-        }
-        set
-        {
-            InitCachedUserContextData();
-            CachedUserContextData[key] = value;
+            InitAllKeyValuesForCachedUserContextData();
+            return CachedUserContextData.Keys;
         }
     }
 
-    public ICollection<string> Keys => CachedUserContextData.Keys;
-    public ICollection<object> Values => CachedUserContextData.Values;
+    public ICollection<object> Values
+    {
+        get
+        {
+            InitAllKeyValuesForCachedUserContextData();
+            return CachedUserContextData.Values;
+        }
+    }
 
     /// <summary>
     /// Retrieves the value associated with the specified context key.
@@ -170,24 +171,28 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
     public static T GetValue<T>(
         string contextKey,
         HttpContext useHttpContext,
-        ConcurrentDictionary<string, object> cachedUserContextData = null,
+        ConcurrentDictionary<string, object> cachedUserContextData,
+        out bool hasFoundValue,
         IPlatformApplicationRequestContextKeyToClaimTypeMapper claimTypeMapper = null)
     {
         ArgumentNullException.ThrowIfNull(contextKey);
 
-        if (cachedUserContextData != null && PlatformRequestContextHelper.TryGetValue(cachedUserContextData, contextKey, out T item)) return item;
+        hasFoundValue = PlatformRequestContextHelper.TryGetValue(cachedUserContextData, contextKey, out T item);
+        if (hasFoundValue) return item;
 
-        if (TryGetValueFromHttpContext(useHttpContext, contextKey, claimTypeMapper, out T foundValue))
+        hasFoundValue = TryGetValueFromHttpContext(useHttpContext, contextKey, claimTypeMapper, out T foundValue);
+        if (hasFoundValue)
         {
-            cachedUserContextData?.Upsert(contextKey, foundValue);
+            cachedUserContextData.TryAdd(contextKey, foundValue);
 
             return foundValue;
         }
 
+        hasFoundValue = false;
         return default;
     }
 
-    public List<string> GetAllKeys(HttpContext useHttpContext)
+    protected List<string> GetAllKeys(HttpContext useHttpContext)
     {
         var manuallySetValueItemsDicKeys = CachedUserContextData.Select(p => p.Key);
         var userClaimsTypeKeys = useHttpContext?.User.Claims.Select(p => p.Type) ?? [];
@@ -201,17 +206,17 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
             .ToList();
     }
 
-    public Dictionary<string, object> GetAllKeyValues(HttpContext useHttpContext)
+    protected Dictionary<string, object> GetAllKeyValues(HttpContext useHttpContext)
     {
         return GetAllKeys(useHttpContext)
-            .Select(key => new KeyValuePair<string, object>(key, GetValue<object>(key, useHttpContext, CachedUserContextData, claimTypeMapper)))
+            .Select(key => new KeyValuePair<string, object>(key, GetValue<object>(key, useHttpContext, CachedUserContextData, out var _, claimTypeMapper)))
             .ToDictionary(p => p.Key, p => p.Value);
     }
 
     /// <summary>
     /// GetAllKeyValues also from HttpContext and other source to auto save data into CachedUserContext
     /// </summary>
-    protected void InitCachedUserContextData()
+    protected void InitAllKeyValuesForCachedUserContextData()
     {
         if (cachedUserContextDataInitiated || httpContextAccessor.HttpContext == null) return;
 
@@ -236,8 +241,6 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
     /// <returns>The current HttpContext with thread safe.</returns>
     public HttpContext CurrentHttpContext()
     {
-        InitCachedUserContextData();
-
         return httpContextAccessor.HttpContext;
     }
 
@@ -275,7 +278,10 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
 
         var stringRequestHeaderValues =
             contextKeyMappedToOneOfClaimTypes
-                .Select(contextKeyMappedToJwtClaimType => requestHeaders.Where(p => p.Key == contextKeyMappedToJwtClaimType).SelectList(p => p.Value.ToString()))
+                .Select(
+                    contextKeyMappedToJwtClaimType => requestHeaders
+                        .Where(p => p.Key == contextKeyMappedToJwtClaimType || p.Key == contextKeyMappedToJwtClaimType.ToLower())
+                        .SelectList(p => p.Value.ToString()))
                 .FirstOrDefault(p => p.Any()) ??
             [];
 

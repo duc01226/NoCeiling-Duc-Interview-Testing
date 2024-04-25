@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text;
 
 namespace Easy.Platform.Common.Extensions;
 
@@ -11,6 +12,14 @@ public static class StreamExtensions
             await stream.CopyToAsync(memoryStream);
 
             return memoryStream.ToArray();
+        }
+    }
+
+    public static async Task<string> ReadToEndAsString(this Stream stream, CancellationToken cancellationToken = default)
+    {
+        using (var reader = new StreamReader(stream, Encoding.UTF8))
+        {
+            return await reader.ReadToEndAsync(cancellationToken);
         }
     }
 }

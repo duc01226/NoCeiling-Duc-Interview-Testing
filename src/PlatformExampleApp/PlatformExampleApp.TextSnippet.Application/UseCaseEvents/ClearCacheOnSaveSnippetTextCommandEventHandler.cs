@@ -36,7 +36,7 @@ internal sealed class ClearCacheOnSaveSnippetTextCommandEventHandler : PlatformC
         PlatformCqrsCommandEvent<SaveSnippetTextCommand, SaveSnippetTextCommandResult> @event,
         CancellationToken cancellationToken)
     {
-        CreateLogger(LoggerFactory).LogInformation("CommandResult : {CommandResult}", @event.CommandResult.ToJson());
+        Logger.Value.LogInformation("CommandResult : {CommandResult}", @event.CommandResult.ToJson());
 
         // Test slow event do not affect main command
         await Task.Delay(5.Seconds(), cancellationToken);

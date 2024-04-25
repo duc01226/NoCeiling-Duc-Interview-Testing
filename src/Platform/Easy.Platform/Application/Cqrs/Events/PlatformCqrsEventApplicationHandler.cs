@@ -6,7 +6,6 @@ using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
@@ -82,9 +81,10 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     {
         UnitOfWorkManager = unitOfWorkManager;
         ServiceProvider = serviceProvider;
-        isInjectingUserContextAccessorLazy = new Lazy<bool>(() => GetType().IsUsingGivenTypeViaConstructor<IPlatformApplicationBusMessageProducer>());
-        isInjectingApplicationBusMessageProducerLazy = new Lazy<bool>(() => GetType().IsUsingGivenTypeViaConstructor<IPlatformApplicationRequestContextAccessor>());
+        isInjectingUserContextAccessorLazy = new Lazy<bool>(() => GetType().IsUsingGivenTypeViaConstructor<IPlatformApplicationRequestContextAccessor>());
+        isInjectingApplicationBusMessageProducerLazy = new Lazy<bool>(() => GetType().IsUsingGivenTypeViaConstructor<IPlatformApplicationBusMessageProducer>());
         RequestContextAccessor = ServiceProvider.GetRequiredService<IPlatformApplicationRequestContextAccessor>();
+        Logger = new Lazy<ILogger>(() => CreateLogger(LoggerFactory));
     }
 
     protected virtual bool AllowUsingUserContextAccessor => false;
@@ -93,9 +93,12 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     protected virtual bool MustWaitHandlerExecutionFinishedImmediately => false;
 
+    protected Lazy<ILogger> Logger { get; }
+
     private IPlatformApplicationRequestContextAccessor RequestContextAccessor { get; }
 
     public bool IsInjectingUserContextAccessor => isInjectingUserContextAccessorLazy.Value;
+
     public bool IsInjectingApplicationBusMessageProducer => isInjectingApplicationBusMessageProducerLazy.Value;
 
     public virtual bool AutoDeleteProcessedInboxEventMessage => true;
@@ -136,7 +139,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     public override async Task Handle(TEvent notification, CancellationToken cancellationToken)
     {
         if (IsInjectingUserContextAccessor && !AllowUsingUserContextAccessor)
-            CreateLogger(LoggerFactory)
+            Logger.Value
                 .LogError(
                     "{EventHandlerType} is injecting and using {IPlatformApplicationRequestContextAccessor}, which will make the event handler could not run in background thread. " +
                     "The event sender must wait the handler to be finished. Should use the {RequestContext} info in the event instead.",
@@ -149,14 +152,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     public override async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
     {
-        try
-        {
-            await ExecuteHandleWithTracingAsync(@event, () => DoExecuteHandleAsync(@event, cancellationToken));
-        }
-        finally
-        {
-            Util.GarbageCollector.Collect(aggressiveImmediately: false);
-        }
+        await ExecuteHandleWithTracingAsync(@event, () => DoExecuteHandleAsync(@event, cancellationToken));
     }
 
     /// <summary>
@@ -178,7 +174,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         var hasEnabledInboxFeature = EnableInboxEventBusMessage && hasInboxMessageSupport;
 
         if (usingApplicationRequestContextAccessor && hasEnabledInboxFeature)
-            CreateLogger(LoggerFactory)
+            Logger.Value
                 .LogWarning(
                     "[WARNING] Auto handing event directly, not support using InboxEvent in [EventHandlerType:{EventHandlerType}]. " +
                     "EventHandler using IPlatformApplicationRequestContextAccessor cannot use inbox because user request context is not available when process inbox message. " +
