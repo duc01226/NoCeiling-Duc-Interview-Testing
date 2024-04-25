@@ -11,7 +11,7 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
     protected readonly IServiceProvider ServiceProvider;
 
     public PlatformDefaultPersistenceUnitOfWorkManager(
-        IPlatformCqrs cqrs,
+        Lazy<IPlatformCqrs> cqrs,
         IPlatformRootServiceProvider rootServiceProvider,
         IServiceProvider serviceProvider) : base(cqrs, rootServiceProvider)
     {
@@ -40,7 +40,7 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
 
         uow.OnDisposedActions.Add(async () => await Task.Run(() => uow.CreatedByUnitOfWorkManager.RemoveAllInactiveUow()));
 
-        FreeCreatedUnitOfWorks.TryAdd(uow.Id, uow);
+        FreeCreatedUnitOfWorks.Value.TryAdd(uow.Id, uow);
 
         return uow;
     }

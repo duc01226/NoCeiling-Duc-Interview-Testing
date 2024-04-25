@@ -43,7 +43,8 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
 
         serviceCollection.RegisterAllFromType<IPlatformBackgroundJobScheduler>(
             Assembly,
-            replaceStrategy: DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
+            replaceStrategy: DependencyInjectionExtension.CheckRegisteredStrategy.ByService,
+            lifeTime: ServiceLifeTime.Singleton);
 
         serviceCollection.RegisterAllFromType<IPlatformBackgroundJobProcessingService>(
             Assembly,

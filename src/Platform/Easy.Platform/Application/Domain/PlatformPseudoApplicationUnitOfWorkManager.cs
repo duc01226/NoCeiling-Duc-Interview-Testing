@@ -8,8 +8,8 @@ namespace Easy.Platform.Application.Domain;
 internal sealed class PlatformPseudoApplicationUnitOfWorkManager : PlatformUnitOfWorkManager
 {
     public PlatformPseudoApplicationUnitOfWorkManager(
-        IPlatformCqrs currentSameScopeCqrs,
-        IPlatformRootServiceProvider rootServiceProvider) : base(currentSameScopeCqrs, rootServiceProvider)
+        Lazy<IPlatformCqrs> cqrs,
+        IPlatformRootServiceProvider rootServiceProvider) : base(cqrs, rootServiceProvider)
     {
     }
 

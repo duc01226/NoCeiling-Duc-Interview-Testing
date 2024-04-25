@@ -55,8 +55,8 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
         IPlatformRootServiceProvider rootServiceProvider)
         : base(requestContextAccessor, loggerFactory, rootServiceProvider)
     {
-        UnitOfWorkManager = unitOfWorkManager ?? throw new ArgumentNullException(nameof(unitOfWorkManager));
-        Cqrs = cqrs ?? throw new ArgumentNullException(nameof(cqrs));
+        UnitOfWorkManager = unitOfWorkManager;
+        Cqrs = cqrs;
         IsDistributedTracingEnabled = rootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled == true;
     }
 

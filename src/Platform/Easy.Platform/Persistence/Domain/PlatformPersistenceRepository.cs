@@ -1,6 +1,5 @@
 using System.Linq.Expressions;
 using Easy.Platform.Application.Persistence;
-using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Exceptions.Extensions;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
@@ -22,8 +21,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
 
     protected PlatformPersistenceRepository(
         IPlatformUnitOfWorkManager unitOfWorkManager,
-        IPlatformCqrs cqrs,
-        IServiceProvider serviceProvider) : base(unitOfWorkManager, cqrs, serviceProvider)
+        IServiceProvider serviceProvider) : base(unitOfWorkManager, serviceProvider)
     {
         PersistenceConfiguration = serviceProvider.GetRequiredService<PlatformPersistenceConfiguration<TDbContext>>();
         loggerLazy = new Lazy<ILogger>(() => serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(PlatformPersistenceRepository<,,,>)));
@@ -704,9 +702,8 @@ public abstract class PlatformPersistenceRootRepository<TEntity, TPrimaryKey, TU
     where TUow : class, IPlatformPersistenceUnitOfWork<TDbContext>
     where TDbContext : IPlatformDbContext
 {
-    protected PlatformPersistenceRootRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
+    protected PlatformPersistenceRootRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IServiceProvider serviceProvider) : base(
         unitOfWorkManager,
-        cqrs,
         serviceProvider)
     {
     }

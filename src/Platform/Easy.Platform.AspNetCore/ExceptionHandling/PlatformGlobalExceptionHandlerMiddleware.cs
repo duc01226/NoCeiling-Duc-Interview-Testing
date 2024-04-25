@@ -18,19 +18,21 @@ namespace Easy.Platform.AspNetCore.ExceptionHandling;
 /// </summary>
 public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
 {
+    private readonly Lazy<ILogger> loggerLazy;
+
     public PlatformGlobalExceptionHandlerMiddleware(
         RequestDelegate next,
-        ILogger<PlatformGlobalExceptionHandlerMiddleware> logger,
+        ILoggerFactory loggerFactory,
         IConfiguration configuration,
         IPlatformApplicationRequestContextAccessor userContextAccessor) : base(next)
     {
-        Logger = logger;
+        loggerLazy = new Lazy<ILogger>(() => loggerFactory.CreateLogger<PlatformGlobalExceptionHandlerMiddleware>());
         UserContextAccessor = userContextAccessor;
         Configuration = configuration;
     }
 
     protected IConfiguration Configuration { get; }
-    protected ILogger Logger { get; }
+    protected ILogger Logger => loggerLazy.Value;
     protected IPlatformApplicationRequestContextAccessor UserContextAccessor { get; }
     protected bool DeveloperExceptionEnabled => PlatformEnvironment.IsDevelopment || Configuration.GetValue<bool>("DeveloperExceptionEnabled");
 

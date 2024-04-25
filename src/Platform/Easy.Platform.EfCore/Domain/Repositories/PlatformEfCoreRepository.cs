@@ -1,7 +1,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using Easy.Platform.Application.Persistence;
-using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.ValueObjects.Abstract;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Repositories;
@@ -19,11 +18,9 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
 {
     public PlatformEfCoreRepository(
         IPlatformUnitOfWorkManager unitOfWorkManager,
-        IPlatformCqrs cqrs,
         DbContextOptions<TDbContext> dbContextOptions,
         IServiceProvider serviceProvider) : base(
         unitOfWorkManager,
-        cqrs,
         serviceProvider)
     {
         DbContextOptions = dbContextOptions;
@@ -270,11 +267,9 @@ public abstract class PlatformEfCoreRootRepository<TEntity, TPrimaryKey, TDbCont
 {
     public PlatformEfCoreRootRepository(
         IPlatformUnitOfWorkManager unitOfWorkManager,
-        IPlatformCqrs cqrs,
         DbContextOptions<TDbContext> dbContextOptions,
         IServiceProvider serviceProvider) : base(
         unitOfWorkManager,
-        cqrs,
         dbContextOptions,
         serviceProvider)
     {

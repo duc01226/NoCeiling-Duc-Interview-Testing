@@ -11,8 +11,7 @@ using Serilog;
 
 namespace PlatformExampleApp.Benchmark;
 
-[MemoryDiagnoser]
-[ThreadingDiagnoser]
+[MemoryDiagnoser(false)]
 public class QueryBenchmarkExecutor
 {
     public QueryBenchmarkExecutor()

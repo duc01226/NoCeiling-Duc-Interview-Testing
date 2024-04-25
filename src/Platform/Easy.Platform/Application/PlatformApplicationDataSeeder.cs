@@ -37,6 +37,8 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
     protected readonly IServiceProvider ServiceProvider;
     protected readonly IPlatformUnitOfWorkManager UnitOfWorkManager;
 
+    private readonly Lazy<ILogger> loggerLazy;
+
     public PlatformApplicationDataSeeder(
         IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
@@ -49,7 +51,7 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
         Configuration = configuration;
         LoggerFactory = loggerFactory;
         RootServiceProvider = rootServiceProvider;
-        Logger = loggerFactory.CreateLogger(GetType());
+        loggerLazy = new Lazy<ILogger>(() => loggerFactory.CreateLogger(GetType()));
     }
 
     public static int DefaultSeedingMinimumDummyItemsCount => PlatformEnvironment.IsDevelopment ? 100 : 10000;
@@ -64,8 +66,7 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
     public static int DefaultActiveDelaySeedingInBackgroundBySeconds => 5;
     public static int DefaultDelayRetryCheckSeedDataBySeconds => 5;
     public static int DefaultMaxWaitSeedDataBySyncMessagesBySeconds => 300;
-
-    protected ILogger Logger { get; }
+    protected ILogger Logger => loggerLazy.Value;
 
     /// <summary>
     /// Default is true. Override this if you want to start uow yourself or not want to

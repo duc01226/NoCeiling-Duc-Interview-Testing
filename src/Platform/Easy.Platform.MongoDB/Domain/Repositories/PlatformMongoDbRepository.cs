@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Easy.Platform.Application.Persistence;
-using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Repositories;
 using Easy.Platform.Domain.UnitOfWork;
@@ -20,9 +19,8 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
     where TEntity : class, IEntity<TPrimaryKey>, new()
     where TDbContext : PlatformMongoDbContext<TDbContext>
 {
-    public PlatformMongoDbRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
+    public PlatformMongoDbRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IServiceProvider serviceProvider) : base(
         unitOfWorkManager,
-        cqrs,
         serviceProvider)
     {
     }
@@ -203,9 +201,8 @@ public abstract class PlatformMongoDbRootRepository<TEntity, TPrimaryKey, TDbCon
     where TEntity : class, IRootEntity<TPrimaryKey>, new()
     where TDbContext : PlatformMongoDbContext<TDbContext>
 {
-    public PlatformMongoDbRootRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IPlatformCqrs cqrs, IServiceProvider serviceProvider) : base(
+    public PlatformMongoDbRootRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IServiceProvider serviceProvider) : base(
         unitOfWorkManager,
-        cqrs,
         serviceProvider)
     {
     }

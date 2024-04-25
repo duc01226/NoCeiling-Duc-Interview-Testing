@@ -28,6 +28,9 @@ public abstract class PlatformCqrsRequestApplicationHandler<TRequest> : Platform
     /// </summary>
     protected readonly IPlatformRootServiceProvider RootServiceProvider;
 
+
+    private readonly Lazy<ILogger> loggerLazy;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="PlatformCqrsRequestApplicationHandler{TRequest}" /> class.
     /// </summary>
@@ -42,7 +45,7 @@ public abstract class PlatformCqrsRequestApplicationHandler<TRequest> : Platform
         RequestContextAccessor = requestContextAccessor ?? throw new ArgumentNullException(nameof(requestContextAccessor));
         LoggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
         RootServiceProvider = rootServiceProvider ?? throw new ArgumentNullException(nameof(rootServiceProvider));
-        Logger = loggerFactory.CreateLogger(typeof(PlatformCqrsRequestApplicationHandler<>));
+        loggerLazy = new Lazy<ILogger>(() => loggerFactory.CreateLogger(typeof(PlatformCqrsRequestApplicationHandler<>)));
     }
 
     /// <summary>
@@ -53,7 +56,7 @@ public abstract class PlatformCqrsRequestApplicationHandler<TRequest> : Platform
     /// <summary>
     /// Gets the logger instance for this request handler.
     /// </summary>
-    public ILogger Logger { get; }
+    public ILogger Logger => loggerLazy.Value;
 
     /// <summary>
     /// Builds the audit information for the CQRS request.

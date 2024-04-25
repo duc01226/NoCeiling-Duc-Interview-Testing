@@ -182,7 +182,8 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
     {
         serviceCollection.Register(
             typeof(IPlatformApplicationRequestContextKeyToClaimTypeMapper),
-            UserContextKeyToClaimTypeMapperType());
+            UserContextKeyToClaimTypeMapperType(),
+            ServiceLifeTime.Singleton);
     }
 }
 

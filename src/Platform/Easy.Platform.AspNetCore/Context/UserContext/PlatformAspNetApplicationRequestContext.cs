@@ -11,8 +11,11 @@ namespace Easy.Platform.AspNetCore.Context.UserContext;
 
 public class PlatformAspNetApplicationRequestContext : IPlatformApplicationRequestContext
 {
+    private static readonly MethodInfo GetValueByGenericTypeMethodInfo =
+        typeof(PlatformAspNetApplicationRequestContext).GetMethods()
+            .First(p => p.IsGenericMethod && p.Name == nameof(GetValue) && p.GetGenericArguments().Length == 1 && p.IsPublic);
+
     private readonly IPlatformApplicationRequestContextKeyToClaimTypeMapper claimTypeMapper;
-    private readonly MethodInfo getValueByGenericTypeMethodInfo;
     private readonly IHttpContextAccessor httpContextAccessor;
     private readonly object initCachedUserContextDataLock = new();
     private bool cachedUserContextDataInitiated;
@@ -23,8 +26,6 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
     {
         this.httpContextAccessor = httpContextAccessor;
         this.claimTypeMapper = claimTypeMapper;
-        getValueByGenericTypeMethodInfo =
-            GetType().GetMethods().First(p => p.IsGenericMethod && p.Name == nameof(GetValue) && p.GetGenericArguments().Length == 1 && p.IsPublic);
 
         InitCachedUserContextData();
     }
@@ -89,7 +90,7 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
 
     public object GetValue(Type valueType, string contextKey)
     {
-        return getValueByGenericTypeMethodInfo
+        return GetValueByGenericTypeMethodInfo
             .MakeGenericMethod(valueType)
             .Invoke(this, parameters: [contextKey]);
     }
@@ -313,7 +314,9 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
 
         var matchedClaimStringValues = contextKeyMappedToOneOfClaimTypes
             .Select(contextKeyMappedToJwtClaimType => userClaims.FindAll(contextKeyMappedToJwtClaimType).Select(p => p.Value))
-            .Aggregate((current, next) => current.Concat(next).ToList()).Distinct().ToList();
+            .Aggregate((current, next) => current.Concat(next).ToList())
+            .Distinct()
+            .ToList();
 
         // Try Get Deserialized value from matchedClaimStringValues
         return PlatformRequestContextHelper.TryGetParsedValuesFromStringValues(out foundValue, matchedClaimStringValues);

@@ -39,7 +39,7 @@ public abstract class PlatformAzureFileStorageModule : PlatformFileStorageModule
 
         serviceCollection.TryAddSingleton(sp => new BlobServiceClient(sp.GetService<PlatformAzureFileStorageConfiguration>()?.ConnectionString));
 
-        serviceCollection.TryAddTransient<IPlatformFileStorageService, PlatformAzureFileStorageService>();
+        serviceCollection.TryAddSingleton<IPlatformFileStorageService, PlatformAzureFileStorageService>();
     }
 
     protected abstract void FileStorageConfigurationConfigure(

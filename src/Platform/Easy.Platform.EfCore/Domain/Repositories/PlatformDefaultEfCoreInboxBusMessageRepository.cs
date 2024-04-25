@@ -1,5 +1,4 @@
 using Easy.Platform.Application.MessageBus.InboxPattern;
-using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,11 +10,9 @@ public class PlatformDefaultEfCoreInboxBusMessageRepository<TDbContext>
 {
     public PlatformDefaultEfCoreInboxBusMessageRepository(
         IPlatformUnitOfWorkManager unitOfWorkManager,
-        IPlatformCqrs cqrs,
         DbContextOptions<TDbContext> dbContextOptions,
         IServiceProvider serviceProvider) : base(
         unitOfWorkManager,
-        cqrs,
         dbContextOptions,
         serviceProvider)
     {

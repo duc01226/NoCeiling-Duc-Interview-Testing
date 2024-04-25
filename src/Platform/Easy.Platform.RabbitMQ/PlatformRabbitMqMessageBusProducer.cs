@@ -18,7 +18,7 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
 
     protected readonly PlatformProducerRabbitMqChannelPool ChannelPool;
     protected readonly IPlatformRabbitMqExchangeProvider ExchangeProvider;
-    protected readonly ILogger Logger;
+    protected readonly Lazy<ILogger> Logger;
     protected readonly PlatformRabbitMqOptions Options;
 
     public PlatformRabbitMqMessageBusProducer(
@@ -30,7 +30,7 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
         ChannelPool = channelPool;
         ExchangeProvider = exchangeProvider;
         Options = options;
-        Logger = loggerFactory.CreateLogger(typeof(IPlatformMessageBusProducer));
+        Logger = new Lazy<ILogger>(() => loggerFactory.CreateLogger(typeof(IPlatformMessageBusProducer)));
     }
 
     public async Task<TMessage> SendAsync<TMessage>(
@@ -90,7 +90,7 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
             catch (AlreadyClosedException alreadyClosedException)
             {
                 if (alreadyClosedException.ShutdownReason.ReplyCode == 404)
-                    Logger.LogWarning(
+                    Logger.Value.LogWarning(
                         "Tried to send a message with routing key {RoutingKey} from {ProducerType} " +
                         "but exchange is not found. May be there is no consumer registered to consume this message." +
                         "If in source code has consumers for this message, this could be unexpected errors",
@@ -124,7 +124,7 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Failed to inject trace context.");
+                Logger.Value.LogError(ex, "Failed to inject trace context.");
             }
         }
     }

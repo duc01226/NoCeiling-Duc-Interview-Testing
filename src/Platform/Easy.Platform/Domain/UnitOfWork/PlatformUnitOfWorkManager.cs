@@ -112,19 +112,22 @@ public interface IPlatformUnitOfWorkManager : IDisposable
     public void RemoveAllInactiveUow();
 }
 
-public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCqrs, IPlatformRootServiceProvider rootServiceProvider)
+public abstract class PlatformUnitOfWorkManager(Lazy<IPlatformCqrs> cqrs, IPlatformRootServiceProvider rootServiceProvider)
     : IPlatformUnitOfWorkManager
 {
     protected readonly List<IPlatformUnitOfWork> CurrentUnitOfWorks = [];
-    protected readonly ConcurrentDictionary<string, IPlatformUnitOfWork> FreeCreatedUnitOfWorks = new();
+
+    protected readonly Lazy<ConcurrentDictionary<string, IPlatformUnitOfWork>>
+        FreeCreatedUnitOfWorks = new(() => new ConcurrentDictionary<string, IPlatformUnitOfWork>(), true);
+
     protected readonly SemaphoreSlim RemoveAllInactiveUowLock = new(1, 1);
     protected readonly IPlatformRootServiceProvider RootServiceProvider = rootServiceProvider;
+
     private bool disposed;
-
+    private bool disposing;
     private IPlatformUnitOfWork globalUow;
-    private bool isDisposing;
 
-    public IPlatformCqrs CurrentSameScopeCqrs { get; } = currentSameScopeCqrs;
+    public IPlatformCqrs CurrentSameScopeCqrs => cqrs.Value;
 
     public abstract IPlatformUnitOfWork CreateNewUow(bool isUsingOnceTransientUow);
 
@@ -213,7 +216,7 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
 
     public void RemoveAllInactiveUow()
     {
-        if (disposed || isDisposing) return;
+        if (disposed || disposing) return;
 
         List<IPlatformUnitOfWork> removedUOWs = [];
         try
@@ -222,14 +225,15 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
 
             CurrentUnitOfWorks.RemoveWhere(p => !p.IsActive(), out removedUOWs);
 
-            FreeCreatedUnitOfWorks.Keys
-                .Where(key => !FreeCreatedUnitOfWorks[key].IsActive())
-                .ForEach(
-                    inactivatedUowKey =>
-                    {
-                        FreeCreatedUnitOfWorks.TryRemove(inactivatedUowKey, out var removedUOW);
-                        if (removedUOW != null) removedUOWs.Add(removedUOW);
-                    });
+            if (FreeCreatedUnitOfWorks.IsValueCreated)
+                FreeCreatedUnitOfWorks.Value.Keys
+                    .Where(key => !FreeCreatedUnitOfWorks.Value[key].IsActive())
+                    .ForEach(
+                        inactivatedUowKey =>
+                        {
+                            FreeCreatedUnitOfWorks.Value.TryRemove(inactivatedUowKey, out var removedUOW);
+                            if (removedUOW != null) removedUOWs.Add(removedUOW);
+                        });
         }
         finally
         {
@@ -245,7 +249,10 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
     {
         RemoveAllInactiveUow();
 
-        return LastOrDefaultMatchedUowOfId(CurrentUnitOfWorks, uowId) ?? LastOrDefaultMatchedUowOfId(FreeCreatedUnitOfWorks.Values.ToList(), uowId);
+        return LastOrDefaultMatchedUowOfId(CurrentUnitOfWorks, uowId) ??
+               (FreeCreatedUnitOfWorks.IsValueCreated
+                   ? LastOrDefaultMatchedUowOfId(FreeCreatedUnitOfWorks.Value.Values.ToList(), uowId)
+                   : null);
 
         static IPlatformUnitOfWork LastOrDefaultMatchedUowOfId(List<IPlatformUnitOfWork> unitOfWorks, string uowId)
         {
@@ -275,7 +282,7 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
     {
         if (!disposed)
         {
-            isDisposing = true;
+            this.disposing = true;
 
             if (disposing)
             {
@@ -286,8 +293,11 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
 
                 // Release managed resources
                 // ToList to clone the list to dispose because dispose could cause trigger RemoveAllInactiveUow => modified the original list
-                FreeCreatedUnitOfWorks.ToList().ForEach(currentUnitOfWork => currentUnitOfWork.Value?.Dispose());
-                FreeCreatedUnitOfWorks.Clear();
+                if (FreeCreatedUnitOfWorks.IsValueCreated)
+                {
+                    FreeCreatedUnitOfWorks.Value.ToList().ForEach(currentUnitOfWork => currentUnitOfWork.Value?.Dispose());
+                    FreeCreatedUnitOfWorks.Value.Clear();
+                }
 
                 globalUow?.Dispose();
                 globalUow = null;
@@ -298,7 +308,7 @@ public abstract class PlatformUnitOfWorkManager(IPlatformCqrs currentSameScopeCq
             // Release unmanaged resources
 
             disposed = true;
-            isDisposing = false;
+            this.disposing = false;
         }
     }
 

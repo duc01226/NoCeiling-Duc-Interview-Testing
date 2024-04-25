@@ -364,7 +364,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         // register default PlatformApplicationSettingContext from result of DefaultApplicationSettingContextFactory
         // WHY: To support custom IPlatformApplicationSettingContext if you want to or just use the default from DefaultApplicationSettingContextFactory
         if (serviceCollection.All(p => p.ServiceType != typeof(IPlatformApplicationSettingContext)))
-            serviceCollection.Register<IPlatformApplicationSettingContext>(DefaultApplicationSettingContextFactory);
+            serviceCollection.Register<IPlatformApplicationSettingContext>(DefaultApplicationSettingContextFactory, ServiceLifeTime.Singleton);
     }
 
     private static void RegisterDefaultApplicationRequestContext(IServiceCollection serviceCollection)

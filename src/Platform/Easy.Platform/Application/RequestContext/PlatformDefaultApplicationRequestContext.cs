@@ -8,14 +8,11 @@ namespace Easy.Platform.Application.RequestContext;
 
 public class PlatformDefaultApplicationRequestContext : IPlatformApplicationRequestContext
 {
-    protected readonly ConcurrentDictionary<string, object> UserContextData = new();
-    private readonly MethodInfo getValueByGenericTypeMethodInfo;
+    private static readonly MethodInfo GetValueByGenericTypeMethodInfo =
+        typeof(PlatformDefaultApplicationRequestContext).GetMethods()
+            .First(p => p.IsGenericMethod && p.Name == nameof(GetValue) && p.GetGenericArguments().Length == 1 && p.IsPublic);
 
-    public PlatformDefaultApplicationRequestContext()
-    {
-        getValueByGenericTypeMethodInfo =
-            GetType().GetMethods().First(p => p.IsGenericMethod && p.Name == nameof(GetValue) && p.GetGenericArguments().Length == 1 && p.IsPublic);
-    }
+    protected readonly ConcurrentDictionary<string, object> UserContextData = new();
 
     public T GetValue<T>(string contextKey)
     {
@@ -28,7 +25,7 @@ public class PlatformDefaultApplicationRequestContext : IPlatformApplicationRequ
 
     public object GetValue(Type valueType, string contextKey)
     {
-        return getValueByGenericTypeMethodInfo
+        return GetValueByGenericTypeMethodInfo
             .MakeGenericMethod(valueType)
             .Invoke(this, parameters: [contextKey]);
     }

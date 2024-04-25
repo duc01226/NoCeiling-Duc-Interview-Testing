@@ -154,8 +154,11 @@ public abstract class PlatformCacheRepository(
     : IPlatformCacheRepository
 {
     public static readonly string CachedKeysCollectionName = "___PlatformGlobalCacheKeys___";
+
     protected readonly PlatformCacheSettings CacheSettings = cacheSettings;
-    protected readonly ILogger Logger = loggerFactory.CreateLogger(typeof(PlatformCacheRepository));
+
+    private readonly Lazy<ILogger> loggerLazy = new(() => loggerFactory.CreateLogger(typeof(PlatformCacheRepository)));
+    protected ILogger Logger => loggerLazy.Value;
 
     public abstract T Get<T>(PlatformCacheKey cacheKey);
 

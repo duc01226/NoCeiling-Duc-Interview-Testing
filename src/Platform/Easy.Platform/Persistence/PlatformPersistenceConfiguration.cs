@@ -31,9 +31,9 @@ public struct PlatformPersistenceConfigurationPooledDbContextOptions
     public bool Enabled { get; set; } = true;
 
     /// <summary>
-    /// Sets the maximum number of instances retained by the pool. Defaults to 100.
+    /// Sets the maximum number of instances retained by the pool. Defaults to 500.
     /// </summary>
-    public int PoolSize { get; set; } = 100;
+    public int PoolSize { get; set; } = 500;
 
     public bool UsePooledDbContextForUsingOnceTransientUowOnly { get; set; }
 }

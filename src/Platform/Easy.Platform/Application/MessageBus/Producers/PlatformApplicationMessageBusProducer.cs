@@ -53,16 +53,18 @@ public interface IPlatformApplicationBusMessageProducer
 
 public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMessageProducer
 {
+    private readonly Lazy<ILogger<PlatformApplicationBusMessageProducer>> loggerLazy;
+
     public PlatformApplicationBusMessageProducer(
         IServiceProvider serviceProvider,
-        ILogger<PlatformApplicationBusMessageProducer> logger,
+        ILoggerFactory loggerFactory,
         IPlatformApplicationSettingContext applicationSettingContext,
         IPlatformApplicationRequestContextAccessor userContextAccessor,
         PlatformOutboxConfig outboxConfig,
         IPlatformUnitOfWorkManager unitOfWorkManager)
     {
         ServiceProvider = serviceProvider;
-        Logger = logger;
+        loggerLazy = new Lazy<ILogger<PlatformApplicationBusMessageProducer>>(() => loggerFactory.CreateLogger<PlatformApplicationBusMessageProducer>());
         MessageBusProducer = serviceProvider.GetService<IPlatformMessageBusProducer>() ?? new PlatformPseudoMessageBusProducer();
         ApplicationSettingContext = applicationSettingContext;
         UserContextAccessor = userContextAccessor;
@@ -71,7 +73,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
     }
 
     protected IServiceProvider ServiceProvider { get; }
-    protected ILogger<PlatformApplicationBusMessageProducer> Logger { get; }
+    protected ILogger<PlatformApplicationBusMessageProducer> Logger => loggerLazy.Value;
     protected IPlatformMessageBusProducer MessageBusProducer { get; }
     protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
     protected IPlatformApplicationRequestContextAccessor UserContextAccessor { get; }

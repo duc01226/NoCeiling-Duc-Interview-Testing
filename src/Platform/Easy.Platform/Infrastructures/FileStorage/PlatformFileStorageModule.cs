@@ -1,6 +1,7 @@
+using Easy.Platform.Common.DependencyInjection;
+using Easy.Platform.Common.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Easy.Platform.Infrastructures.FileStorage;
 
@@ -14,7 +15,7 @@ public abstract class PlatformFileStorageModule : PlatformInfrastructureModule
     {
         base.InternalRegister(serviceCollection);
 
-        serviceCollection.TryAddTransient(FileStorageOptionsProvider);
+        serviceCollection.Register(FileStorageOptionsProvider, ServiceLifeTime.Singleton);
     }
 
     protected abstract PlatformFileStorageOptions FileStorageOptionsProvider(IServiceProvider serviceProvider);

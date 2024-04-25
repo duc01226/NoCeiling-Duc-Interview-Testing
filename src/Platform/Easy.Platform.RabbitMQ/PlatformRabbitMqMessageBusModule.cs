@@ -30,8 +30,8 @@ public abstract class PlatformRabbitMqMessageBusModule : PlatformMessageBusModul
         serviceCollection.Register<PlatformProducerRabbitMqChannelPool>(ServiceLifeTime.Singleton);
         serviceCollection.Register<PlatformConsumerRabbitMqChannelPool>(ServiceLifeTime.Singleton);
 
-        serviceCollection.Register<IPlatformRabbitMqExchangeProvider, PlatformRabbitMqExchangeProvider>();
-        serviceCollection.Register(RabbitMqOptionsFactory);
+        serviceCollection.Register<IPlatformRabbitMqExchangeProvider, PlatformRabbitMqExchangeProvider>(ServiceLifeTime.Singleton);
+        serviceCollection.Register(RabbitMqOptionsFactory, ServiceLifeTime.Singleton);
         serviceCollection.Register<IPlatformMessageBusProducer, PlatformRabbitMqMessageBusProducer>();
         serviceCollection.Register<PlatformRabbitMqProcessInitializerService>(ServiceLifeTime.Singleton);
         serviceCollection.RegisterHostedService<PlatformRabbitMqStartProcessHostedService>();

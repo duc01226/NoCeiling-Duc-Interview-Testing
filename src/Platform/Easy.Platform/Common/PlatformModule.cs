@@ -538,7 +538,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
     protected void RegisterDefaultLogs(IServiceCollection serviceCollection)
     {
-        serviceCollection.RegisterIfServiceNotExist(typeof(ILoggerFactory), typeof(LoggerFactory));
+        serviceCollection.RegisterIfServiceNotExist(typeof(ILoggerFactory), typeof(LoggerFactory), ServiceLifeTime.Singleton);
         serviceCollection.RegisterIfServiceNotExist(typeof(ILogger<>), typeof(Logger<>));
         serviceCollection.RegisterIfServiceNotExist(typeof(ILogger), IPlatformModule.CreateDefaultLogger);
     }
@@ -552,6 +552,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
                     serviceCollection.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
 
                     serviceCollection.Register<IPlatformCqrs, PlatformCqrs>();
+                    serviceCollection.Register(sp => new Lazy<IPlatformCqrs>(sp.GetRequiredService<IPlatformCqrs>));
                     serviceCollection.RegisterAllSelfImplementationFromType(typeof(IPipelineBehavior<,>), assembly);
                 },
                 Assembly,

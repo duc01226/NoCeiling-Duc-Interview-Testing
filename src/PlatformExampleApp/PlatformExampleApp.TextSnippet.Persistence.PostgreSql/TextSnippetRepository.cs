@@ -1,4 +1,3 @@
-using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.EfCore.Domain.Repositories;
@@ -13,11 +12,9 @@ internal sealed class TextSnippetRepository<TEntity>
 {
     public TextSnippetRepository(
         IPlatformUnitOfWorkManager unitOfWorkManager,
-        IPlatformCqrs cqrs,
         DbContextOptions<TextSnippetDbContext> dbContextOptions,
         IServiceProvider serviceProvider) : base(
         unitOfWorkManager,
-        cqrs,
         dbContextOptions,
         serviceProvider)
     {
@@ -30,11 +27,9 @@ internal sealed class TextSnippetRootRepository<TEntity>
 {
     public TextSnippetRootRepository(
         IPlatformUnitOfWorkManager unitOfWorkManager,
-        IPlatformCqrs cqrs,
         DbContextOptions<TextSnippetDbContext> dbContextOptions,
         IServiceProvider serviceProvider) : base(
         unitOfWorkManager,
-        cqrs,
         dbContextOptions,
         serviceProvider)
     {

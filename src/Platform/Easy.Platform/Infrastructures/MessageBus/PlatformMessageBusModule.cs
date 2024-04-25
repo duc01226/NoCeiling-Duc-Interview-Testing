@@ -21,7 +21,7 @@ public abstract class PlatformMessageBusModule : PlatformInfrastructureModule
         serviceCollection.RegisterAllSelfImplementationFromType<IPlatformMessageBusConsumer>(Assembly);
         serviceCollection.RegisterAllFromType<IPlatformSelfRoutingKeyBusMessage>(Assembly);
         serviceCollection.RegisterIfServiceNotExist<IPlatformMessageBusScanner, PlatformMessageBusScanner>(ServiceLifeTime.Singleton);
-        serviceCollection.Register(typeof(PlatformMessageBusConfig), MessageBusConfigFactory);
+        serviceCollection.Register(typeof(PlatformMessageBusConfig), MessageBusConfigFactory, ServiceLifeTime.Singleton);
     }
 
     protected virtual PlatformMessageBusConfig MessageBusConfigFactory(IServiceProvider sp)
