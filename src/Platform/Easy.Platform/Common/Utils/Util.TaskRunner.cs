@@ -1719,14 +1719,15 @@ public static partial class Util
             /// </summary>
             public void ThrottleExecute(Action action)
             {
-                lock (lockObj)
-                {
-                    if (lastExecutionTime == null || lastExecutionTime.Value.Add(ThrottleWindow) < DateTime.UtcNow)
+                if (lastExecutionTime == null || lastExecutionTime.Value.Add(ThrottleWindow) < DateTime.UtcNow)
+                    lock (lockObj)
                     {
-                        action();
-                        lastExecutionTime = DateTime.UtcNow;
+                        if (lastExecutionTime == null || lastExecutionTime.Value.Add(ThrottleWindow) < DateTime.UtcNow)
+                        {
+                            action();
+                            lastExecutionTime = DateTime.UtcNow;
+                        }
                     }
-                }
             }
 
             protected virtual void Dispose(bool disposing)

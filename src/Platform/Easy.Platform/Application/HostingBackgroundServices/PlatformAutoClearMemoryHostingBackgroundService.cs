@@ -30,6 +30,10 @@ internal sealed class PlatformAutoClearMemoryHostingBackgroundService : Platform
 
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
-        for (var i = 0; i <= GC.MaxGeneration; i++) Util.GarbageCollector.Collect(0, true);
+        for (var i = 0; i <= GC.MaxGeneration; i++)
+        {
+            Util.GarbageCollector.Collect(0, true);
+            await Task.Delay(100, cancellationToken);
+        }
     }
 }

@@ -37,7 +37,7 @@ public static partial class Util
                  * It can be called with no arguments, which triggers a full blocking garbage collection of all generations,
                  * or with a specific generation parameter to target a specific generation.
                  */
-                GC.Collect();
+                ExecuteGcCollect();
 
                 // Wait for finalizers to complete
                 /*
@@ -56,12 +56,16 @@ public static partial class Util
                  */
                 GC.WaitForFullGCComplete();
 
+                // Run again after WaitForPendingFinalizers to ensure clean memory
+                ExecuteGcCollect();
+            }
+
+            void ExecuteGcCollect()
+            {
                 if (collectAggressively)
-                {
                     GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
-                    GC.WaitForPendingFinalizers();
-                    GC.WaitForFullGCComplete();
-                }
+                else
+                    GC.Collect();
             }
         }
 
