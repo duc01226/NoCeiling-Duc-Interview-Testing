@@ -31,7 +31,7 @@ internal sealed class DemoUseDemoDomainServiceCommandHandler
     public DemoUseDemoDomainServiceCommandHandler(
         IPlatformApplicationRequestContextAccessor requestContextAccessor,
         IPlatformUnitOfWorkManager unitOfWorkManager,
-        IPlatformCqrs cqrs,
+        Lazy<IPlatformCqrs> cqrs,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider,
         TransferSnippetTextToMultiDbDemoEntityNameService transferSnippetTextToMultiDbDemoEntityNameService) : base(

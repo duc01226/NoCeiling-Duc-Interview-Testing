@@ -654,6 +654,32 @@ public static class DependencyInjectionExtension
     {
         services.Register(hostedServiceType, ServiceLifeTime.Singleton, replaceIfExist: true, replaceStrategy: CheckRegisteredStrategy.ByBoth);
 
+        RegisterForIHostedService(services, hostedServiceType, replaceForHostedServiceType);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers a hosted service in the provided service collection.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection" /> to add the service to.</param>
+    /// <param name="hostedServiceFactory">The hostedServiceFactory of the hosted service to register.</param>
+    /// <param name="replaceForHostedServiceType">Optional. If provided, the existing registration of this type will be replaced.</param>
+    /// <returns>The same service collection so that multiple calls can be chained.</returns>
+    public static IServiceCollection RegisterHostedService<THostedService>(
+        this IServiceCollection services,
+        Func<IServiceProvider, THostedService> hostedServiceFactory,
+        Type replaceForHostedServiceType = null)
+    {
+        services.Register(hostedServiceFactory, ServiceLifeTime.Singleton, replaceIfExist: true, replaceStrategy: CheckRegisteredStrategy.ByBoth);
+
+        RegisterForIHostedService(services, typeof(THostedService), replaceForHostedServiceType);
+
+        return services;
+    }
+
+    private static void RegisterForIHostedService(IServiceCollection services, Type hostedServiceType, Type replaceForHostedServiceType)
+    {
         RegisterHostedServiceLockDict.TryAdd(hostedServiceType.FullName!, new object());
 
         lock (RegisterHostedServiceLockDict[hostedServiceType.FullName!])
@@ -686,8 +712,6 @@ public static class DependencyInjectionExtension
                 replaceIfExist: true,
                 replaceStrategy: CheckRegisteredStrategy.ByBoth);
         }
-
-        return services;
     }
 
     /// <summary>
@@ -1310,9 +1334,18 @@ public static class DependencyInjectionExtension
         await Util.Pager.ExecutePagingAsync(
             async (skipCount, pageSize) =>
             {
-                await serviceProvider.ExecuteInjectScopedAsync(
-                    method,
-                    manuallyParams: Util.ListBuilder.NewArray<object>(skipCount, pageSize).Concat(manuallyParams).ToArray());
+                try
+                {
+                    await serviceProvider.ExecuteInjectScopedAsync(
+                        method,
+                        manuallyParams: Util.ListBuilder.NewArray<object>(skipCount, pageSize).Concat(manuallyParams).ToArray());
+                }
+                finally
+                {
+                    _ = Task.Run(
+                        () => Util.GarbageCollector.Collect(),
+                        CancellationToken.None);
+                }
             },
             maxItemCount: maxItemCount,
             pageSize: pageSize,
@@ -1330,7 +1363,19 @@ public static class DependencyInjectionExtension
         params object[] manuallyParams)
     {
         return Util.Pager.ExecuteScrollingPagingAsync(
-            () => serviceProvider.ExecuteInjectScopedAsync<List<TItem>>(method, manuallyParams),
+            async () =>
+            {
+                try
+                {
+                    return await serviceProvider.ExecuteInjectScopedAsync<List<TItem>>(method, manuallyParams);
+                }
+                finally
+                {
+                    _ = Task.Run(
+                        () => Util.GarbageCollector.Collect(),
+                        CancellationToken.None);
+                }
+            },
             maxExecutionCount);
     }
 
@@ -1346,7 +1391,19 @@ public static class DependencyInjectionExtension
         params object[] manuallyParams)
     {
         return Util.Pager.ExecuteScrollingPagingAsync(
-            () => serviceProvider.ExecuteInjectScopedAsync<List<TItem>>(method, manuallyParams),
+            async () =>
+            {
+                try
+                {
+                    return await serviceProvider.ExecuteInjectScopedAsync<List<TItem>>(method, manuallyParams);
+                }
+                finally
+                {
+                    _ = Task.Run(
+                        () => Util.GarbageCollector.Collect(),
+                        CancellationToken.None);
+                }
+            },
             maxExecutionCount,
             pageDelayTime);
     }

@@ -9,10 +9,10 @@ public abstract class PlatformCqrsCommandHandler<TCommand, TResult>
     where TCommand : PlatformCqrsCommand<TResult>, IPlatformCqrsRequest, new()
     where TResult : PlatformCqrsCommandResult, new()
 {
-    protected readonly IPlatformCqrs Cqrs;
+    protected readonly Lazy<IPlatformCqrs> Cqrs;
     protected readonly IPlatformRootServiceProvider RootServiceProvider;
 
-    public PlatformCqrsCommandHandler(IPlatformCqrs cqrs, IPlatformRootServiceProvider rootServiceProvider)
+    public PlatformCqrsCommandHandler(Lazy<IPlatformCqrs> cqrs, IPlatformRootServiceProvider rootServiceProvider)
     {
         Cqrs = cqrs;
         RootServiceProvider = rootServiceProvider;
@@ -25,7 +25,7 @@ public abstract class PlatformCqrsCommandHandler<TCommand, TResult>
         var result = await ExecuteHandleAsync(request, cancellationToken);
 
         if (RootServiceProvider.CheckAssignableToServiceRegistered(typeof(IPlatformCqrsEventApplicationHandler<PlatformCqrsCommandEvent<TCommand, TResult>>)))
-            await Cqrs.SendEvent(
+            await Cqrs.Value.SendEvent(
                 new PlatformCqrsCommandEvent<TCommand, TResult>(request, result, PlatformCqrsCommandEventAction.Executed),
                 cancellationToken);
 
@@ -46,7 +46,7 @@ public abstract class PlatformCqrsCommandHandler<TCommand> : PlatformCqrsCommand
     where TCommand : PlatformCqrsCommand<PlatformCqrsCommandResult>, IPlatformCqrsRequest, new()
 {
     public PlatformCqrsCommandHandler(
-        IPlatformCqrs cqrs,
+        Lazy<IPlatformCqrs> cqrs,
         IPlatformRootServiceProvider rootServiceProvider) : base(cqrs, rootServiceProvider)
     {
     }

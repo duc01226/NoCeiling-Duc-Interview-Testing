@@ -1,10 +1,10 @@
 using System.Diagnostics;
-using Easy.Platform.Application.Cqrs.Events;
 using Easy.Platform.Application.Exceptions.Extensions;
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Commands;
+using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Common.Validations.Extensions;
@@ -32,7 +32,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
     /// <summary>
     /// The CQRS service for handling commands.
     /// </summary>
-    protected readonly IPlatformCqrs Cqrs;
+    protected readonly Lazy<IPlatformCqrs> Cqrs;
 
     /// <summary>
     /// The unit of work manager for managing database transactions.
@@ -50,7 +50,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
     protected PlatformCqrsCommandApplicationHandler(
         IPlatformApplicationRequestContextAccessor requestContextAccessor,
         IPlatformUnitOfWorkManager unitOfWorkManager,
-        IPlatformCqrs cqrs,
+        Lazy<IPlatformCqrs> cqrs,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider)
         : base(requestContextAccessor, loggerFactory, rootServiceProvider)
@@ -58,12 +58,15 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
         UnitOfWorkManager = unitOfWorkManager;
         Cqrs = cqrs;
         IsDistributedTracingEnabled = rootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled == true;
+        ApplicationSettingContext = rootServiceProvider.GetRequiredService<IPlatformApplicationSettingContext>();
     }
 
     /// <summary>
     /// Gets a value indicating whether distributed tracing is enabled.
     /// </summary>
     protected bool IsDistributedTracingEnabled { get; }
+
+    protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
 
     /// <summary>
     /// Gets the number of retry attempts after a failure.
@@ -83,36 +86,49 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
     /// <returns>The result of handling the CQRS command.</returns>
     public virtual async Task<TResult> Handle(TCommand request, CancellationToken cancellationToken)
     {
-        return await HandleWithTracing(
-            request,
-            async () =>
-            {
-                await ValidateRequestAsync(request.Validate().Of<TCommand>(), cancellationToken).EnsureValidAsync();
+        try
+        {
+            return await HandleWithTracing(
+                request,
+                async () =>
+                {
+                    await ValidateRequestAsync(request.Validate().Of<TCommand>(), cancellationToken).EnsureValidAsync();
 
-                var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
-                    () => ExecuteHandleAsync(request, cancellationToken),
-                    onException: ex =>
-                    {
-                        LoggerFactory.CreateLogger(typeof(PlatformCqrsCommandApplicationHandler<>))
-                            .Log(
-                                ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
-                                ex,
-                                "[{Tag1}] Command:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. UserContext:{UserContext}",
-                                ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
-                                request.GetType().Name,
-                                request.AuditInfo?.AuditTrackId,
-                                request.ToJson(),
-                                RequestContext.GetAllKeyValues().ToJson());
-                    });
+                    var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
+                        () => ExecuteHandleAsync(request, cancellationToken),
+                        onException: ex =>
+                        {
+                            LoggerFactory.CreateLogger(typeof(PlatformCqrsCommandApplicationHandler<>))
+                                .Log(
+                                    ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
+                                    ex,
+                                    "[{Tag1}] Command:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. UserContext:{UserContext}",
+                                    ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
+                                    request.GetType().Name,
+                                    request.AuditInfo?.AuditTrackId,
+                                    request.ToJson(),
+                                    RequestContext.GetAllKeyValues().ToJson());
+                        });
 
-                if (RootServiceProvider.CheckAssignableToServiceRegistered(typeof(IPlatformCqrsEventApplicationHandler<PlatformCqrsCommandEvent<TCommand, TResult>>)))
-                    await Cqrs.SendEvent(
-                        new PlatformCqrsCommandEvent<TCommand, TResult>(request, result, PlatformCqrsCommandEventAction.Executed)
-                            .With(p => p.SetRequestContextValues(RequestContext.GetAllKeyValues())),
-                        cancellationToken);
+                    if (RootServiceProvider.CheckAssignableToServiceRegistered(typeof(IPlatformCqrsEventHandler<PlatformCqrsCommandEvent<TCommand, TResult>>)))
+                        await Cqrs.Value.SendEvent(
+                            new PlatformCqrsCommandEvent<TCommand, TResult>(request, result, PlatformCqrsCommandEventAction.Executed)
+                                .With(p => p.SetRequestContextValues(RequestContext.GetAllKeyValues())),
+                            cancellationToken);
 
-                return result;
-            });
+                    return result;
+                });
+        }
+        finally
+        {
+            _ = Task.Run(
+                () =>
+                {
+                    if (ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
+                        Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
+                },
+                CancellationToken.None);
+        }
     }
 
     /// <summary>
@@ -199,7 +215,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand> : Platform
     protected PlatformCqrsCommandApplicationHandler(
         IPlatformApplicationRequestContextAccessor requestContextAccessor,
         IPlatformUnitOfWorkManager unitOfWorkManager,
-        IPlatformCqrs cqrs,
+        Lazy<IPlatformCqrs> cqrs,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider)
         : base(requestContextAccessor, unitOfWorkManager, cqrs, loggerFactory, rootServiceProvider)

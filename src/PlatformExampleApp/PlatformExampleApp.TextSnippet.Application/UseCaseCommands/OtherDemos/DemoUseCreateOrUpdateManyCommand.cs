@@ -25,7 +25,7 @@ internal sealed class DemoUseCreateOrUpdateManyCommandHandler
     public DemoUseCreateOrUpdateManyCommandHandler(
         IPlatformApplicationRequestContextAccessor requestContextAccessor,
         IPlatformUnitOfWorkManager unitOfWorkManager,
-        IPlatformCqrs cqrs,
+        Lazy<IPlatformCqrs> cqrs,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider,
         ITextSnippetRootRepository<TextSnippetEntity> textSnippetEntityRepository) : base(

@@ -30,7 +30,7 @@ internal sealed class DemoScheduleBackgroundJobManuallyCommandHandler
     public DemoScheduleBackgroundJobManuallyCommandHandler(
         IPlatformApplicationRequestContextAccessor requestContextAccessor,
         IPlatformUnitOfWorkManager unitOfWorkManager,
-        IPlatformCqrs cqrs,
+        Lazy<IPlatformCqrs> cqrs,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider,
         IPlatformBackgroundJobScheduler backgroundJobScheduler) : base(requestContextAccessor, unitOfWorkManager, cqrs, loggerFactory, rootServiceProvider)

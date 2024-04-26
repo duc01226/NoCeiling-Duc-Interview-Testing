@@ -21,4 +21,8 @@ public class TextSnippetApplicationSettingContext : IPlatformApplicationSettingC
     public string ApplicationName { get; set; } = TextSnippetApplicationConstants.ApplicationName;
 
     public Assembly ApplicationAssembly { get; set; }
+
+    public bool AutoGarbageCollectPerProcessRequestOrBusMessage { get; set; } = true;
+
+    public double AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds { get; set; } = 2;
 }

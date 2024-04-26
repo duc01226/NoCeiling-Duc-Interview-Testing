@@ -1,4 +1,6 @@
+using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
+using Easy.Platform.Common.Cqrs.Events;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
 
@@ -8,27 +10,31 @@ public static class SendPlatformCqrsEntityEventExtension
 {
     public static async Task SendEntityEvent<TEntity>(
         this IPlatformCqrs cqrs,
+        IPlatformRootServiceProvider rootServiceProvider,
         TEntity entity,
         PlatformCqrsEntityEventCrudAction crudAction,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity, new()
     {
-        await cqrs.SendEvent(
-            new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(_ => eventCustomConfig?.Invoke(_)),
-            cancellationToken);
+        if (rootServiceProvider.CheckAssignableToServiceRegistered(typeof(IPlatformCqrsEventHandler<PlatformCqrsEntityEvent<TEntity>>)))
+            await cqrs.SendEvent(
+                new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(_ => eventCustomConfig?.Invoke(_)),
+                cancellationToken);
     }
 
     public static async Task SendEntityEvents<TEntity>(
         this IPlatformCqrs cqrs,
+        IPlatformRootServiceProvider rootServiceProvider,
         IList<TEntity> entities,
         PlatformCqrsEntityEventCrudAction crudAction,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity, new()
     {
-        await cqrs.SendEvents(
-            entities.SelectList(entity => new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(_ => eventCustomConfig?.Invoke(_))),
-            cancellationToken);
+        if (rootServiceProvider.CheckAssignableToServiceRegistered(typeof(IPlatformCqrsEventHandler<PlatformCqrsEntityEvent<TEntity>>)))
+            await cqrs.SendEvents(
+                entities.SelectList(entity => new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(_ => eventCustomConfig?.Invoke(_))),
+                cancellationToken);
     }
 }

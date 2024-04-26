@@ -27,7 +27,7 @@ internal sealed class DemoSendFreeFormatEventBusMessageCommandHandler
     public DemoSendFreeFormatEventBusMessageCommandHandler(
         IPlatformApplicationRequestContextAccessor requestContextAccessor,
         IPlatformUnitOfWorkManager unitOfWorkManager,
-        IPlatformCqrs cqrs,
+        Lazy<IPlatformCqrs> cqrs,
         ILoggerFactory loggerFactory,
         IPlatformRootServiceProvider rootServiceProvider,
         IPlatformApplicationBusMessageProducer busMessageProducer) : base(requestContextAccessor, unitOfWorkManager, cqrs, loggerFactory, rootServiceProvider)

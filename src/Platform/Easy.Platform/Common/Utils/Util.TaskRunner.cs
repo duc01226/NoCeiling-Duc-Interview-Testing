@@ -1721,12 +1721,10 @@ public static partial class Util
             {
                 lock (lockObj)
                 {
-                    var now = DateTime.UtcNow;
-
-                    if (lastExecutionTime == null || lastExecutionTime.Value.Add(ThrottleWindow) < now)
+                    if (lastExecutionTime == null || lastExecutionTime.Value.Add(ThrottleWindow) < DateTime.UtcNow)
                     {
-                        lastExecutionTime = now;
                         action();
+                        lastExecutionTime = DateTime.UtcNow;
                     }
                 }
             }

@@ -3,6 +3,7 @@ using Easy.Platform.Application.Cqrs.Commands;
 using Easy.Platform.Application.Cqrs.Events;
 using Easy.Platform.Application.Cqrs.Queries;
 using Easy.Platform.Application.Domain;
+using Easy.Platform.Application.HostingBackgroundServices;
 using Easy.Platform.Application.MessageBus;
 using Easy.Platform.Application.MessageBus.Consumers;
 using Easy.Platform.Application.MessageBus.InboxPattern;
@@ -66,6 +67,8 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
     /// https://github.com/StackExchange/StackExchange.Redis/issues/2332
     /// </summary>
     protected virtual int MinThreadPool => 100;
+
+    public virtual int AutoClearMemoryIntervalTimeSeconds => PlatformAutoClearMemoryHostingBackgroundService.DefaultProcessTriggerIntervalTimeSeconds;
 
     /// <summary>
     /// Seeds the application data into the database.
@@ -309,6 +312,8 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             RegisterRuntimeModuleDependencies<PlatformCachingModule>(serviceCollection);
 
         serviceCollection.RegisterHostedServicesFromType(Assembly, typeof(PlatformHostingBackgroundService));
+        serviceCollection.RegisterHostedService(
+            sp => new PlatformAutoClearMemoryHostingBackgroundService(sp, sp.GetRequiredService<ILoggerFactory>(), AutoClearMemoryIntervalTimeSeconds));
     }
 
     protected override async Task InternalInit(IServiceScope serviceScope)

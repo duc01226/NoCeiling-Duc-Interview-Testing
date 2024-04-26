@@ -7,6 +7,10 @@ public interface IPlatformApplicationSettingContext
     public string ApplicationName { get; }
 
     public Assembly ApplicationAssembly { get; }
+
+    public bool AutoGarbageCollectPerProcessRequestOrBusMessage { get; set; }
+
+    public double AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds { get; set; }
 }
 
 public class PlatformApplicationSettingContext : IPlatformApplicationSettingContext
@@ -25,4 +29,8 @@ public class PlatformApplicationSettingContext : IPlatformApplicationSettingCont
         get => applicationAssembly ?? GetType().Assembly;
         set => applicationAssembly = value;
     }
+
+    public bool AutoGarbageCollectPerProcessRequestOrBusMessage { get; set; } = true;
+
+    public double AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds { get; set; } = 2;
 }

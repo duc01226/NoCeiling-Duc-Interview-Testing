@@ -2,6 +2,7 @@ using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
 using Microsoft.Extensions.DependencyInjection;
@@ -63,14 +64,17 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
         UowManager = uowManager;
         ServiceProvider = serviceProvider;
         RootServiceProvider = rootServiceProvider;
-        InboxBusMessageRepo = new Lazy<IPlatformInboxBusMessageRepository>(() => serviceProvider.GetService<IPlatformInboxBusMessageRepository>());
+        InboxBusMessageRepo = new Lazy<IPlatformInboxBusMessageRepository>(serviceProvider.GetService<IPlatformInboxBusMessageRepository>);
         InboxConfig = serviceProvider.GetRequiredService<PlatformInboxConfig>();
         RequestContextAccessor = ServiceProvider.GetRequiredService<IPlatformApplicationRequestContextAccessor>();
+        ApplicationSettingContext = rootServiceProvider.GetRequiredService<IPlatformApplicationSettingContext>();
     }
 
     public virtual bool AutoBeginUow => false;
 
     protected IPlatformApplicationRequestContextAccessor RequestContextAccessor { get; }
+
+    protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
 
     /// <summary>
     /// Default is True. Set to False to not allow use inbox message, just consume directly.
@@ -86,7 +90,6 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
     public override async Task ExecuteHandleLogicAsync(TMessage message, string routingKey)
     {
         if (InboxBusMessageRepo != null && AllowUseInboxMessage && !IsHandlingLogicForInboxMessage)
-        {
             await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
                 RootServiceProvider,
                 ServiceProvider,
@@ -101,29 +104,39 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                 handleExistingInboxMessage: HandleExistingInboxMessage,
                 autoDeleteProcessedMessage: AutoDeleteProcessedInboxEventMessage,
                 handleInUow: null);
-        }
         else
-        {
-            if (message is IPlatformTrackableBusMessage trackableBusMessage) RequestContextAccessor.Current.UpsertMany(trackableBusMessage.RequestContext);
-
-            if (AutoBeginUow)
+            try
             {
-                using (var uow = UowManager.Begin())
+                if (message is IPlatformTrackableBusMessage trackableBusMessage) RequestContextAccessor.Current.UpsertMany(trackableBusMessage.RequestContext);
+
+                if (AutoBeginUow)
+                {
+                    using (var uow = UowManager.Begin())
+                    {
+                        await HandleLogicAsync(message, routingKey);
+                        await uow.CompleteAsync();
+                    }
+                }
+                else
                 {
                     await HandleLogicAsync(message, routingKey);
-                    await uow.CompleteAsync();
+
+                    // Support if legacy app begin uow somewhere without complete it
+                    // Auto complete current active uow if any to save database.
+                    if (UowManager.HasCurrentActiveUow())
+                        await UowManager.CurrentActiveUow().CompleteAsync();
                 }
             }
-            else
+            finally
             {
-                await HandleLogicAsync(message, routingKey);
-
-                // Support if legacy app begin uow somewhere without complete it
-                // Auto complete current active uow if any to save database.
-                if (UowManager.HasCurrentActiveUow())
-                    await UowManager.CurrentActiveUow().CompleteAsync();
+                _ = Task.Run(
+                    () =>
+                    {
+                        if (ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
+                            Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
+                    },
+                    CancellationToken.None);
             }
-        }
     }
 
     public ILogger CreateGlobalLogger()

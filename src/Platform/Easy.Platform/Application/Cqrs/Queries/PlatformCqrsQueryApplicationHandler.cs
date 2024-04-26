@@ -50,12 +50,15 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
     {
         CacheRepositoryProvider = cacheRepositoryProvider ?? throw new ArgumentNullException(nameof(cacheRepositoryProvider));
         IsDistributedTracingEnabled = rootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled == true;
+        ApplicationSettingContext = rootServiceProvider.GetRequiredService<IPlatformApplicationSettingContext>();
     }
 
     /// <summary>
     /// Gets a value indicating whether distributed tracing is enabled.
     /// </summary>
     protected bool IsDistributedTracingEnabled { get; }
+
+    protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
 
     /// <summary>
     /// Handles the specified CQRS query asynchronously.
@@ -65,32 +68,45 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
     /// <returns>The result of handling the CQRS query.</returns>
     public async Task<TResult> Handle(TQuery request, CancellationToken cancellationToken)
     {
-        return await HandleWithTracing(
-            request,
-            async () =>
-            {
-                request.SetAuditInfo<TQuery>(BuildRequestAuditInfo(request));
+        try
+        {
+            return await HandleWithTracing(
+                request,
+                async () =>
+                {
+                    request.SetAuditInfo<TQuery>(BuildRequestAuditInfo(request));
 
-                await ValidateRequestAsync(request.Validate().Of<TQuery>(), cancellationToken).EnsureValidAsync();
+                    await ValidateRequestAsync(request.Validate().Of<TQuery>(), cancellationToken).EnsureValidAsync();
 
-                var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
-                    () => HandleAsync(request, cancellationToken),
-                    onException: ex =>
-                    {
-                        LoggerFactory.CreateLogger(typeof(PlatformCqrsQueryApplicationHandler<,>))
-                            .Log(
-                                ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
-                                ex,
-                                "[{Tag1}] Query:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. UserContext:{UserContext}",
-                                ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
-                                request.GetType().Name,
-                                request.AuditInfo?.AuditTrackId,
-                                request.ToJson(),
-                                RequestContext.GetAllKeyValues().ToJson());
-                    });
+                    var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
+                        () => HandleAsync(request, cancellationToken),
+                        onException: ex =>
+                        {
+                            LoggerFactory.CreateLogger(typeof(PlatformCqrsQueryApplicationHandler<,>))
+                                .Log(
+                                    ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
+                                    ex,
+                                    "[{Tag1}] Query:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. UserContext:{UserContext}",
+                                    ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
+                                    request.GetType().Name,
+                                    request.AuditInfo?.AuditTrackId,
+                                    request.ToJson(),
+                                    RequestContext.GetAllKeyValues().ToJson());
+                        });
 
-                return result;
-            });
+                    return result;
+                });
+        }
+        finally
+        {
+            _ = Task.Run(
+                () =>
+                {
+                    if (ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
+                        Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
+                },
+                CancellationToken.None);
+        }
     }
 
     /// <summary>

@@ -67,7 +67,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                 });
     }
 
-    public static async Task SendEvent<TEntity, TPrimaryKey>(
+    public static async Task SendEvent<TEntity>(
         IPlatformRootServiceProvider rootServiceProvider,
         [AllowNull] IPlatformUnitOfWork mappedToDbContextUow,
         TEntity entity,
@@ -76,7 +76,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         Action<PlatformCqrsEntityEvent> eventCustomConfig,
         Func<IDictionary<string, object>> requestContext,
         CancellationToken cancellationToken)
-        where TEntity : class, IEntity<TPrimaryKey>, new()
+        where TEntity : class, IEntity, new()
     {
         await SendEvent<PlatformCqrsEntityEvent<TEntity>>(
             rootServiceProvider,
@@ -122,7 +122,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                 async _ =>
                 {
                     if (!dismissSendEvent)
-                        await SendEvent<TEntity, TPrimaryKey>(
+                        await SendEvent(
                             rootServiceProvider,
                             mappedToDbContextUow,
                             entity,
@@ -151,7 +151,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                 async _ =>
                 {
                     if (!dismissSendEvent)
-                        await SendEvent<TEntity, TPrimaryKey>(
+                        await SendEvent(
                             rootServiceProvider,
                             mappedToDbContextUow,
                             entity,
@@ -184,7 +184,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                 async _ =>
                 {
                     if (!dismissSendEvent)
-                        await SendEvent<TEntity, TPrimaryKey>(
+                        await SendEvent(
                             rootServiceProvider,
                             unitOfWork,
                             entity,
