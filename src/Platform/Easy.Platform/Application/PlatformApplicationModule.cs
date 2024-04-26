@@ -68,6 +68,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
     /// </summary>
     protected virtual int MinThreadPool => 100;
 
+    public virtual bool AutoClearMemoryEnabled => false;
     public virtual int AutoClearMemoryIntervalTimeSeconds => PlatformAutoClearMemoryHostingBackgroundService.DefaultProcessTriggerIntervalTimeSeconds;
 
     /// <summary>
@@ -312,8 +313,10 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             RegisterRuntimeModuleDependencies<PlatformCachingModule>(serviceCollection);
 
         serviceCollection.RegisterHostedServicesFromType(Assembly, typeof(PlatformHostingBackgroundService));
-        serviceCollection.RegisterHostedService(
-            sp => new PlatformAutoClearMemoryHostingBackgroundService(sp, sp.GetRequiredService<ILoggerFactory>(), AutoClearMemoryIntervalTimeSeconds));
+
+        if (AutoClearMemoryEnabled)
+            serviceCollection.RegisterHostedService(
+                sp => new PlatformAutoClearMemoryHostingBackgroundService(sp, sp.GetRequiredService<ILoggerFactory>(), AutoClearMemoryIntervalTimeSeconds));
     }
 
     protected override async Task InternalInit(IServiceScope serviceScope)

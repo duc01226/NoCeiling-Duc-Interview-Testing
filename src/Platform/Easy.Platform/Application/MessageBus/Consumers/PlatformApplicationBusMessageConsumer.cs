@@ -129,13 +129,13 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
             }
             finally
             {
-                _ = Task.Run(
-                    () =>
-                    {
-                        if (ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
+                if (ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
+                    _ = Task.Run(
+                        () =>
+                        {
                             Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
-                    },
-                    CancellationToken.None);
+                        },
+                        CancellationToken.None);
             }
     }
 

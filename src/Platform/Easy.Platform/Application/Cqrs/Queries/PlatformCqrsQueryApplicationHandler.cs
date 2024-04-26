@@ -99,13 +99,13 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
         }
         finally
         {
-            _ = Task.Run(
-                () =>
-                {
-                    if (ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
+            if (ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
+                _ = Task.Run(
+                    () =>
+                    {
                         Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
-                },
-                CancellationToken.None);
+                    },
+                    CancellationToken.None);
         }
     }
 

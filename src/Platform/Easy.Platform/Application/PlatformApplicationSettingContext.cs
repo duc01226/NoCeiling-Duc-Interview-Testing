@@ -1,4 +1,5 @@
 using System.Reflection;
+using Easy.Platform.Common.Utils;
 
 namespace Easy.Platform.Application;
 
@@ -30,7 +31,7 @@ public class PlatformApplicationSettingContext : IPlatformApplicationSettingCont
         set => applicationAssembly = value;
     }
 
-    public bool AutoGarbageCollectPerProcessRequestOrBusMessage { get; set; } = true;
+    public bool AutoGarbageCollectPerProcessRequestOrBusMessage { get; set; }
 
-    public double AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds { get; set; } = 2;
+    public double AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds { get; set; } = Util.GarbageCollector.DefaultCollectGarbageMemoryThrottleSeconds;
 }

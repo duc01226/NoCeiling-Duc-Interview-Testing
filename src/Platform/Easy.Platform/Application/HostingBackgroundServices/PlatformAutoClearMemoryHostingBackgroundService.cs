@@ -7,7 +7,7 @@ namespace Easy.Platform.Application.HostingBackgroundServices;
 
 internal sealed class PlatformAutoClearMemoryHostingBackgroundService : PlatformIntervalHostingBackgroundService
 {
-    public const int DefaultProcessTriggerIntervalTimeSeconds = 5;
+    public const int DefaultProcessTriggerIntervalTimeSeconds = 10;
 
     public PlatformAutoClearMemoryHostingBackgroundService(
         IServiceProvider serviceProvider,
@@ -30,10 +30,6 @@ internal sealed class PlatformAutoClearMemoryHostingBackgroundService : Platform
 
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
-        for (var i = 0; i <= GC.MaxGeneration; i++)
-        {
-            Util.GarbageCollector.Collect(0, true);
-            await Task.Delay(100, cancellationToken);
-        }
+        Util.GarbageCollector.Collect(0, true);
     }
 }

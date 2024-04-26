@@ -22,7 +22,7 @@ public class TextSnippetApplicationSettingContext : IPlatformApplicationSettingC
 
     public Assembly ApplicationAssembly { get; set; }
 
-    public bool AutoGarbageCollectPerProcessRequestOrBusMessage { get; set; } = true;
+    public bool AutoGarbageCollectPerProcessRequestOrBusMessage { get; set; }
 
-    public double AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds { get; set; } = 2;
+    public double AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds { get; set; }
 }

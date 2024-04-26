@@ -63,6 +63,11 @@ RUN apt-get update && apt-get install -y curl
 WORKDIR /app
 COPY --from=publish /app .
 
+# hexadecimal value. 50 equal to 80 (mean 80%)
+ENV DOTNET_GCHighMemPercent=50
+# https://learn.microsoft.com/en-us/dotnet/core/runtime-config/garbage-collector#conserve-memory
+ENV DOTNET_GCConserveMemory=5
+
 # Config Pyroscope Dotnet Profiler
 COPY --from=pyroscope/pyroscope-dotnet:0.8.14-glibc /Pyroscope.Profiler.Native.so ./Pyroscope.Profiler.Native.so
 COPY --from=pyroscope/pyroscope-dotnet:0.8.14-glibc /Pyroscope.Linux.ApiWrapper.x64.so ./Pyroscope.Linux.ApiWrapper.x64.so
