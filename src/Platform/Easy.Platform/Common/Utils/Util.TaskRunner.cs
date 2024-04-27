@@ -1699,6 +1699,7 @@ public static partial class Util
             private readonly CancellationTokenSource cts = new();
             private readonly object lockObj = new();
             private bool disposed;
+            private bool isExecuting;
             private DateTime? lastExecutionTime;
 
             public Throttler(TimeSpan throttleWindow)
@@ -1719,15 +1720,24 @@ public static partial class Util
             /// </summary>
             public void ThrottleExecute(Action action)
             {
-                if (lastExecutionTime == null || lastExecutionTime.Value.Add(ThrottleWindow) < DateTime.UtcNow)
-                    lock (lockObj)
+                if (isExecuting || (lastExecutionTime != null && lastExecutionTime.Value.Add(ThrottleWindow) < DateTime.UtcNow)) return;
+
+                lock (lockObj)
+                {
+                    if (lastExecutionTime == null || lastExecutionTime.Value.Add(ThrottleWindow) < DateTime.UtcNow)
                     {
-                        if (lastExecutionTime == null || lastExecutionTime.Value.Add(ThrottleWindow) < DateTime.UtcNow)
+                        isExecuting = true;
+                        try
                         {
                             action();
                             lastExecutionTime = DateTime.UtcNow;
                         }
+                        finally
+                        {
+                            isExecuting = false;
+                        }
                     }
+                }
             }
 
             protected virtual void Dispose(bool disposing)

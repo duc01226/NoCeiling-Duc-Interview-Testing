@@ -68,7 +68,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
     /// </summary>
     protected virtual int MinThreadPool => 100;
 
-    public virtual bool AutoClearMemoryEnabled => false;
+    public virtual bool AutoClearMemoryEnabled => true;
     public virtual int AutoClearMemoryIntervalTimeSeconds => PlatformAutoClearMemoryHostingBackgroundService.DefaultProcessTriggerIntervalTimeSeconds;
 
     /// <summary>

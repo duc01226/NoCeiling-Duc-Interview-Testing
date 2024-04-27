@@ -82,7 +82,7 @@ public interface IPlatformCqrsEvent : INotification
 
 public abstract class PlatformCqrsEvent : IPlatformCqrsEvent
 {
-    private readonly object initRequestContext = new();
+    private readonly object initRequestContextLock = new();
 
     public Dictionary<string, object> AdditionalMetadata { get; set; } = [];
 
@@ -161,7 +161,7 @@ public abstract class PlatformCqrsEvent : IPlatformCqrsEvent
     private ConcurrentDictionary<string, object> InitRequestContext()
     {
         if (RequestContext == null)
-            lock (initRequestContext)
+            lock (initRequestContextLock)
             {
                 RequestContext = new ConcurrentDictionary<string, object>();
             }

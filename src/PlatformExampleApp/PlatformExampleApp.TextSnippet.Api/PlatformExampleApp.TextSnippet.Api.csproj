@@ -4,7 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <UserSecretsId>aspnet-PlatformExampleApp.TextSnippet.Api-14A6F879-C4AF-425C-9445-25F1499C7149</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ServerGarbageCollection>false</ServerGarbageCollection> <!--ServerGarbageCollection=false <=> WorkstationGC better for microservice-->
   </PropertyGroup>
 
   <PropertyGroup>
