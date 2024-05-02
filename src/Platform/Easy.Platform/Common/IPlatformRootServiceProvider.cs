@@ -9,14 +9,26 @@ namespace Easy.Platform.Common;
 /// </summary>
 public interface IPlatformRootServiceProvider : IServiceProvider
 {
-    public bool CheckServiceRegistered(Type serviceType);
+    /// <summary>
+    /// Check serviceType is registered in services collection
+    /// </summary>
+    public bool IsServiceTypeRegistered(Type serviceType);
 
-    public bool CheckAssignableToServiceRegistered(Type assignableToServiceType);
+    /// <summary>
+    /// Check any implementation type is assignable to assignableToServiceType registered
+    /// </summary>
+    public bool IsAnyImplementationAssignableToServiceTypeRegistered(Type assignableToServiceType);
+
+    /// <summary>
+    /// Get type by type name in registered platform module assemblies
+    /// </summary>
+    public Type GetRegisteredPlatformModuleAssembliesType(string typeName);
 }
 
 public class PlatformRootServiceProvider : IPlatformRootServiceProvider
 {
     private readonly ConcurrentDictionary<Type, bool> assignableToServiceTypeRegisteredDict = new();
+    private readonly ConcurrentDictionary<string, Type> registeredPlatformModuleAssembliesTypeByNameCachedDict = new();
     private readonly Lazy<HashSet<Type>> registeredServiceTypesLazy;
     private readonly IServiceProvider serviceProvider;
     private readonly IServiceCollection services;
@@ -33,23 +45,55 @@ public class PlatformRootServiceProvider : IPlatformRootServiceProvider
         return serviceProvider?.GetService(serviceType);
     }
 
-    public bool CheckServiceRegistered(Type serviceType)
+    public bool IsServiceTypeRegistered(Type serviceType)
     {
         return registeredServiceTypesLazy.Value.Contains(serviceType);
     }
 
-    public bool CheckAssignableToServiceRegistered(Type assignableToServiceType)
+    public bool IsAnyImplementationAssignableToServiceTypeRegistered(Type assignableToServiceType)
     {
         if (assignableToServiceTypeRegisteredDict.ContainsKey(assignableToServiceType) == false)
-            assignableToServiceTypeRegisteredDict.TryAdd(assignableToServiceType, InternalCheckAssignableToServiceRegistered(assignableToServiceType));
+            assignableToServiceTypeRegisteredDict.TryAdd(
+                assignableToServiceType,
+                InternalCheckIsAnyImplementationAssignableToServiceTypeRegistered(assignableToServiceType));
 
         return assignableToServiceTypeRegisteredDict[assignableToServiceType];
     }
 
-    private bool InternalCheckAssignableToServiceRegistered(Type assignableToServiceType)
+    public Type GetRegisteredPlatformModuleAssembliesType(string typeName)
+    {
+        if (registeredPlatformModuleAssembliesTypeByNameCachedDict.ContainsKey(typeName) == false)
+            registeredPlatformModuleAssembliesTypeByNameCachedDict.TryAdd(
+                typeName,
+                InternalGetRegisteredPlatformModuleAssembliesType(typeName));
+
+        return registeredPlatformModuleAssembliesTypeByNameCachedDict[typeName];
+    }
+
+    private Type InternalGetRegisteredPlatformModuleAssembliesType(string typeName)
+    {
+        var scanAssemblies = serviceProvider.GetServices<PlatformModule>()
+            .SelectMany(p => p.GetServicesRegisterScanAssemblies())
+            .ConcatSingle(typeof(PlatformModule).Assembly)
+            .ToList();
+
+        var scannedResultType = scanAssemblies
+            .Select(p => p.GetType(typeName))
+            .FirstOrDefault(p => p != null)
+            .Pipe(scannedResultType => scannedResultType ?? Type.GetType(typeName, throwOnError: false));
+        return scannedResultType;
+    }
+
+    private bool InternalCheckIsAnyImplementationAssignableToServiceTypeRegistered(Type assignableToServiceType)
     {
         return services.Any(
-            sd => sd.ImplementationType?.IsAssignableTo(assignableToServiceType) == true ||
-                  sd.ImplementationType?.IsAssignableToGenericType(assignableToServiceType) == true);
+            sd =>
+            {
+                var typeToCheck = sd.ImplementationType ?? sd.ImplementationFactory?.Method.ReturnType;
+
+                return typeToCheck?.IsClass == true &&
+                       (typeToCheck?.IsAssignableTo(assignableToServiceType) == true ||
+                        typeToCheck?.IsAssignableToGenericType(assignableToServiceType) == true);
+            });
     }
 }

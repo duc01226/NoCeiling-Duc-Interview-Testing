@@ -10,7 +10,7 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
     public const int IdMaxLength = 400;
     public const int MessageTypeFullNameMaxLength = 1000;
     public const int RoutingKeyMaxLength = 500;
-    public const double DefaultRetryProcessFailedMessageInSecondsUnit = 60;
+    public const double DefaultRetryProcessFailedMessageInSecondsUnit = 30;
     public const string BuildIdSeparator = "----";
     public const string BuildIdGroupedByConsumerPrefixSeparator = "_";
 
@@ -33,6 +33,8 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
 
     public int? RetriedProcessCount { get; set; }
 
+    public string? ForApplicationName { get; set; }
+
     public DateTime CreatedDate { get; set; } = Clock.UtcNow;
 
     public DateTime LastConsumeDate { get; set; }
@@ -44,23 +46,34 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
     public Guid? ConcurrencyUpdateToken { get; set; }
 
     public static Expression<Func<PlatformInboxBusMessage, bool>> CanHandleMessagesExpr(
-        double messageProcessingMaximumTimeInSeconds)
+        double messageProcessingMaximumTimeInSeconds,
+        string? forApplicationName)
     {
-        return p => p.ConsumeStatus == ConsumeStatuses.New ||
-                    (p.ConsumeStatus == ConsumeStatuses.Failed &&
-                     (p.NextRetryProcessAfter == null || p.NextRetryProcessAfter <= DateTime.UtcNow)) ||
-                    (p.ConsumeStatus == ConsumeStatuses.Processing &&
-                     p.LastConsumeDate <= Clock.UtcNow.AddSeconds(-messageProcessingMaximumTimeInSeconds - MarginRetryMessageProcessingMaximumTimeInSeconds));
+        Expression<Func<PlatformInboxBusMessage, bool>> initialExpr =
+            p => p.ConsumeStatus == ConsumeStatuses.New ||
+                 (p.ConsumeStatus == ConsumeStatuses.Failed &&
+                  (p.NextRetryProcessAfter == null || p.NextRetryProcessAfter <= DateTime.UtcNow)) ||
+                 (p.ConsumeStatus == ConsumeStatuses.Processing &&
+                  p.LastConsumeDate <= Clock.UtcNow.AddSeconds(-messageProcessingMaximumTimeInSeconds - MarginRetryMessageProcessingMaximumTimeInSeconds));
+
+        return initialExpr.AndAlsoIf(forApplicationName.IsNotNullOrEmpty(), () => p => p.ForApplicationName == null || p.ForApplicationName == forApplicationName);
     }
 
-    public static Expression<Func<PlatformInboxBusMessage, bool>> ToCleanExpiredMessagesByTimeExpr(
+    public static Expression<Func<PlatformInboxBusMessage, bool>> ToCleanExpiredMessagesExpr(
         double deleteProcessedMessageInSeconds,
-        double deleteExpiredFailedMessageInSeconds)
+        double deleteExpiredIgnoredMessageInSeconds)
     {
-        return p => (p.LastConsumeDate <= Clock.UtcNow.AddSeconds(-deleteProcessedMessageInSeconds) &&
+        return p => (p.CreatedDate <= Clock.UtcNow.AddSeconds(-deleteProcessedMessageInSeconds) &&
                      p.ConsumeStatus == ConsumeStatuses.Processed) ||
-                    (p.LastConsumeDate <= Clock.UtcNow.AddSeconds(-deleteExpiredFailedMessageInSeconds) &&
-                     p.ConsumeStatus == ConsumeStatuses.Failed);
+                    (p.CreatedDate <= Clock.UtcNow.AddSeconds(-deleteExpiredIgnoredMessageInSeconds) &&
+                     p.ConsumeStatus == ConsumeStatuses.Ignored);
+    }
+
+    public static Expression<Func<PlatformInboxBusMessage, bool>> ToIgnoreFailedExpiredMessagesExpr(
+        double ignoreExpiredFailedMessageInSeconds)
+    {
+        return p => p.CreatedDate <= Clock.UtcNow.AddSeconds(-ignoreExpiredFailedMessageInSeconds) &&
+                    p.ConsumeStatus == ConsumeStatuses.Failed;
     }
 
     public static Expression<Func<PlatformInboxBusMessage, bool>> CheckAnySameConsumerOtherPreviousNotProcessedMessageExpr(
@@ -104,12 +117,16 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
 
     public static string GetIdPrefix(string messageId)
     {
-        return messageId.Substring(0, messageId.IndexOf(BuildIdSeparator, StringComparison.Ordinal));
+        var buildIdSeparatorIndex = messageId.IndexOf(BuildIdSeparator, StringComparison.Ordinal);
+
+        return messageId.Substring(0, buildIdSeparatorIndex > 0 ? buildIdSeparatorIndex : messageId.Length);
     }
 
     public static string BuildIdGroupedByConsumerPrefix(Type consumerType, string extendedMessageIdPrefix)
     {
-        return extendedMessageIdPrefix.IsNullOrEmpty() ? consumerType.Name : $"{consumerType.Name}{BuildIdGroupedByConsumerPrefixSeparator}{extendedMessageIdPrefix}";
+        return extendedMessageIdPrefix.IsNullOrEmpty()
+            ? consumerType.GetNameOrGenericTypeName()
+            : $"{consumerType.GetNameOrGenericTypeName()}{BuildIdGroupedByConsumerPrefixSeparator}{extendedMessageIdPrefix}";
     }
 
     public static DateTime CalculateNextRetryProcessAfter(
@@ -117,7 +134,7 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
         double retryProcessFailedMessageInSecondsUnit = DefaultRetryProcessFailedMessageInSecondsUnit)
     {
         return DateTime.UtcNow.AddSeconds(
-            retryProcessFailedMessageInSecondsUnit * Math.Pow(2, retriedProcessCount ?? 0));
+            retryProcessFailedMessageInSecondsUnit * retriedProcessCount ?? 0);
     }
 
     public static PlatformInboxBusMessage Create<TMessage>(
@@ -127,8 +144,8 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
         string routingKey,
         Type consumerType,
         ConsumeStatuses consumeStatus,
-        string extendedMessageIdPrefix,
-        string lastConsumeError) where TMessage : class
+        string forApplicationName,
+        string extendedMessageIdPrefix) where TMessage : class
     {
         var nowDate = Clock.UtcNow;
 
@@ -143,8 +160,8 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
             CreatedDate = nowDate,
             ConsumerBy = GetConsumerByValue(consumerType),
             ConsumeStatus = consumeStatus,
-            LastConsumeError = lastConsumeError,
-            RetriedProcessCount = lastConsumeError != null ? 1 : 0
+            RetriedProcessCount = 0,
+            ForApplicationName = forApplicationName
         };
 
         return result;
@@ -160,6 +177,11 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
         New,
         Processing,
         Processed,
-        Failed
+        Failed,
+
+        /// <summary>
+        /// Ignored mean do not try to process this message anymore. Usually because it's failed, can't be processed but will still want to temporarily keep it
+        /// </summary>
+        Ignored
     }
 }

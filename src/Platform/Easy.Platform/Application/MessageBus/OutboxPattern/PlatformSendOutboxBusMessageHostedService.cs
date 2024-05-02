@@ -4,7 +4,6 @@ using Easy.Platform.Common.HostingBackgroundServices;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Exceptions;
-using Easy.Platform.Infrastructures.MessageBus;
 using Easy.Platform.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -24,10 +23,12 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
         IServiceProvider serviceProvider,
         ILoggerFactory loggerFactory,
         IPlatformApplicationSettingContext applicationSettingContext,
-        PlatformOutboxConfig outboxConfig) : base(serviceProvider, loggerFactory)
+        PlatformOutboxConfig outboxConfig,
+        IPlatformRootServiceProvider rootServiceProvider) : base(serviceProvider, loggerFactory)
     {
         ApplicationSettingContext = applicationSettingContext;
         OutboxConfig = outboxConfig;
+        RootServiceProvider = rootServiceProvider;
     }
 
     public override bool LogIntervalProcessInformation => OutboxConfig.LogIntervalProcessInformation;
@@ -36,6 +37,8 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
 
     protected PlatformOutboxConfig OutboxConfig { get; }
 
+    protected IPlatformRootServiceProvider RootServiceProvider { get; }
+
     protected override TimeSpan ProcessTriggerIntervalTime()
     {
         return OutboxConfig.CheckToProcessTriggerIntervalTimeSeconds.Seconds();
@@ -43,7 +46,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
 
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
-        await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformPersistenceModule), Logger, $"process ${GetType().Name}");
+        await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformPersistenceModule), Logger, $"process {GetType().Name}");
 
         if (!HasOutboxEventBusMessageRepositoryRegistered() || isProcessing) return;
 
@@ -61,7 +64,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                     if (currentRetry >= OutboxConfig.MinimumRetrySendOutboxMessageTimesToWarning)
                         Logger.LogError(
                             ex,
-                            "Retry SendOutboxEventBusMessages {CurrentRetry} time(s) failed. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly_FullName}]",
+                            "Retry SendOutboxEventBusMessages {CurrentRetry} time(s) failed. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
                             currentRetry,
                             ApplicationSettingContext.ApplicationName,
                             ApplicationSettingContext.ApplicationAssembly.FullName);
@@ -72,7 +75,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
         {
             Logger.LogError(
                 ex,
-                "SendOutboxEventBusMessages failed. [[Error:{Error}]]. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly_FullName}]",
+                "SendOutboxEventBusMessages failed. [[Error:{Error}]]. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
                 ex.Message,
                 ApplicationSettingContext.ApplicationName,
                 ApplicationSettingContext.ApplicationAssembly.FullName);
@@ -90,6 +93,9 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                 {
                     try
                     {
+                        // Random delay to prevent chance it scan at the same time
+                        await Task.Delay(millisecondsDelay: Random.Shared.Next(1, 10) * 1000, cancellationToken: cancellationToken);
+
                         var processedCanHandleMessageGroupedByTypeIdPrefixes = new HashSet<string>();
 
                         await Util.Pager.ExecutePagingAsync(
@@ -225,7 +231,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
         await scope.ExecuteInjectAsync(
             async (PlatformOutboxMessageBusProducerHelper outboxEventBusProducerHelper) =>
             {
-                var messageType = ResolveMessageType(toHandleOutboxMessage);
+                var messageType = RootServiceProvider.GetRegisteredPlatformModuleAssembliesType(toHandleOutboxMessage.MessageTypeFullName);
 
                 if (messageType != null)
                 {
@@ -318,19 +324,5 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
     protected bool HasOutboxEventBusMessageRepositoryRegistered()
     {
         return ServiceProvider.ExecuteScoped(scope => scope.ServiceProvider.GetService<IPlatformOutboxBusMessageRepository>() != null);
-    }
-
-    private Type ResolveMessageType(PlatformOutboxBusMessage toHandleOutboxMessage)
-    {
-        var messageType =
-            Type.GetType(toHandleOutboxMessage.MessageTypeFullName, throwOnError: false) ??
-            ServiceProvider
-                .GetService<IPlatformMessageBusScanner>()!
-                .ScanAssemblies()
-                .ConcatSingle(typeof(PlatformModule).Assembly)
-                .Select(assembly => assembly.GetType(toHandleOutboxMessage.MessageTypeFullName))
-                .FirstOrDefault(p => p != null);
-
-        return messageType;
     }
 }

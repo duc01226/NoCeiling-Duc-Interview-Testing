@@ -118,12 +118,12 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
 
     private void RegisterEfCoreUow(IServiceCollection serviceCollection)
     {
-        serviceCollection.RegisterAllFromType<IPlatformEfCorePersistenceUnitOfWork<TDbContext>>(Assembly);
+        serviceCollection.RegisterAllFromType<IPlatformEfCorePersistenceUnitOfWork<TDbContext>>(GetServicesRegisterScanAssemblies());
         // Register default PlatformMongoDbUnitOfWork if not any implementation in the concrete inherit persistence module
         if (serviceCollection.NotExist(p => p.ServiceType == typeof(IPlatformEfCorePersistenceUnitOfWork<TDbContext>)))
             serviceCollection.RegisterAllForImplementation<PlatformEfCorePersistenceUnitOfWork<TDbContext>>();
 
-        serviceCollection.RegisterAllFromType<IPlatformUnitOfWork>(Assembly);
+        serviceCollection.RegisterAllFromType<IPlatformUnitOfWork>(GetServicesRegisterScanAssemblies());
         // Register default PlatformEfCoreUnitOfWork for IUnitOfWork if not existing register for IUnitOfWork
         if (serviceCollection.NotExist(
             p => p.ServiceType == typeof(IPlatformUnitOfWork) &&

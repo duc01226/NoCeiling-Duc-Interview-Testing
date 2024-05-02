@@ -1,4 +1,5 @@
 using System.Reflection;
+using Easy.Platform.Application;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,6 +41,7 @@ public class PlatformMessageBusScanner : IPlatformMessageBusScanner
     public virtual List<Type> ScanAllDefinedConsumerTypes()
     {
         return ScanAssemblies()
+            .ConcatSingle(typeof(PlatformApplicationModule).Assembly) // Register built-in consumer type
             .SelectMany(p => p.GetTypes())
             .Where(p => p.IsAssignableTo(typeof(IPlatformMessageBusConsumer)) && p.IsClass && !p.IsAbstract)
             .Distinct()
@@ -67,7 +69,7 @@ public class PlatformMessageBusScanner : IPlatformMessageBusScanner
     {
         return serviceProvider.GetServices<PlatformModule>()
             .Where(p => p is not PlatformInfrastructureModule)
-            .Select(p => p.Assembly)
+            .SelectMany(p => p.GetServicesRegisterScanAssemblies())
             .Distinct()
             .ToList();
     }

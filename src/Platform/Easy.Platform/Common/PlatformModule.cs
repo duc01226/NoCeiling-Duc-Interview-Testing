@@ -365,6 +365,29 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
         Profiler.Instance.SetExceptionTrackingEnabled(config.Enabled == true && (config.ExceptionTrackingEnabled ?? false));
     }
 
+    /// <summary>
+    /// Return the current Assembly of the module and it's parent not abstract module.
+    /// Used to register scanning by assembly support scan the parent module too by default
+    /// </summary>
+    public virtual List<Assembly> GetServicesRegisterScanAssemblies()
+    {
+        var result = new List<Assembly>();
+
+        // Process add ancestor platform parent module assemblies
+        var currentCheckBaseTypeTargetType = GetType();
+        while (currentCheckBaseTypeTargetType.BaseType is { IsAbstract: false } &&
+               currentCheckBaseTypeTargetType.BaseType.IsAssignableTo(typeof(PlatformModule)))
+        {
+            result.Add(currentCheckBaseTypeTargetType.BaseType.Assembly);
+
+            currentCheckBaseTypeTargetType = currentCheckBaseTypeTargetType.BaseType;
+        }
+
+        result.Add(Assembly);
+
+        return result;
+    }
+
     protected virtual void Dispose(bool disposing)
     {
         if (!disposed)
@@ -442,16 +465,20 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
         return loggerFactory.CreateLogger(typeof(PlatformModule));
     }
 
-    protected static void ExecuteRegisterByAssemblyOnlyOnce(Action<Assembly> action, Assembly assembly, string actionName)
+    protected static void ExecuteRegisterByAssemblyOnlyOnce(Action<Assembly> action, List<Assembly> assemblies, string actionName)
     {
-        var executedRegisterByAssemblyKey = $"Action:{ExecutedRegisterByAssemblies.ContainsKey(actionName)};Assembly:{assembly.FullName}";
+        assemblies.ForEach(
+            assembly =>
+            {
+                var executedRegisterByAssemblyKey = $"Action:{ExecutedRegisterByAssemblies.ContainsKey(actionName)};Assembly:{assembly.FullName}";
 
-        if (!ExecutedRegisterByAssemblies.ContainsKey(executedRegisterByAssemblyKey))
-        {
-            action(assembly);
+                if (!ExecutedRegisterByAssemblies.ContainsKey(executedRegisterByAssemblyKey))
+                {
+                    action(assembly);
 
-            ExecutedRegisterByAssemblies.TryAdd(executedRegisterByAssemblyKey, assembly);
-        }
+                    ExecutedRegisterByAssemblies.TryAdd(executedRegisterByAssemblyKey, assembly);
+                }
+            });
     }
 
     /// <summary>
@@ -505,7 +532,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
     protected virtual void RegisterHelpers(IServiceCollection serviceCollection)
     {
-        serviceCollection.RegisterAllFromType<IPlatformHelper>(Assembly);
+        serviceCollection.RegisterAllFromType<IPlatformHelper>(GetServicesRegisterScanAssemblies());
     }
 
     /// <summary>
@@ -555,7 +582,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
                     serviceCollection.Register(sp => new Lazy<IPlatformCqrs>(sp.GetRequiredService<IPlatformCqrs>));
                     serviceCollection.RegisterAllSelfImplementationFromType(typeof(IPipelineBehavior<,>), assembly);
                 },
-                Assembly,
+                GetServicesRegisterScanAssemblies(),
                 nameof(RegisterCqrs));
     }
 

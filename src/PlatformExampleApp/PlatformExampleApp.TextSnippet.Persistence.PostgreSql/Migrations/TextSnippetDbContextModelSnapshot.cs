@@ -44,6 +44,9 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("ForApplicationName")
+                        .HasColumnType("text");
+
                     b.Property<string>("JsonMessage")
                         .HasColumnType("text");
 
@@ -76,7 +79,7 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
 
                     b.HasIndex("ConsumeStatus", "CreatedDate");
 
-                    b.HasIndex("ConsumeStatus", "LastConsumeDate", "CreatedDate");
+                    b.HasIndex("ForApplicationName", "ConsumeStatus", "LastConsumeDate", "CreatedDate");
 
                     b.ToTable("PlatformInboxEventBusMessage", (string)null);
                 });

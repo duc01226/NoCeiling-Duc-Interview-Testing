@@ -98,7 +98,7 @@ public abstract class PlatformCqrsEvent : IPlatformCqrsEvent
 
     public abstract string EventAction { get; }
 
-    public string Id => $"{AuditTrackId}-{EventAction}";
+    public string Id => $"{EventAction}-{AuditTrackId}";
 
     /// <summary>
     /// This is used to store the context of the request which generate the event, for example the CurrentUserContext

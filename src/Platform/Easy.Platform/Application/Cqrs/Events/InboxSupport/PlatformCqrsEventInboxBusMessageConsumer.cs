@@ -30,33 +30,23 @@ public class PlatformCqrsEventInboxBusMessageConsumer : PlatformApplicationMessa
         await ServiceProvider.ExecuteInjectScopedAsync(
             async (IServiceProvider serviceProvider) =>
             {
-                var scanAssemblies = serviceProvider.GetServices<PlatformModule>()
-                    .Select(p => p.Assembly)
-                    .ConcatSingle(typeof(PlatformModule).Assembly)
-                    .ToList();
-
-                var eventHandlerType = scanAssemblies
-                    .Select(p => p.GetType(message.Payload.EventHandlerTypeFullName))
-                    .FirstOrDefault(p => p != null)
+                var eventHandlerInstance = RootServiceProvider.GetRegisteredPlatformModuleAssembliesType(message.Payload.EventHandlerTypeFullName)
                     .EnsureFound(errorMsg: $"Not found defined event handler. EventHandlerType:{message.Payload.EventHandlerTypeFullName}")
                     .Ensure(
                         must: p => p.FindMatchedGenericType(typeof(IPlatformCqrsEventApplicationHandler<>)) != null,
-                        $"Handler {message.Payload.EventHandlerTypeFullName} must extended from {typeof(IPlatformCqrsEventApplicationHandler<>).FullName}");
-
-                var eventHandlerInstance = serviceProvider.GetRequiredService(eventHandlerType)
+                        $"Handler {message.Payload.EventHandlerTypeFullName} must extended from {typeof(IPlatformCqrsEventApplicationHandler<>).FullName}")
+                    .Pipe(serviceProvider.GetRequiredService)
                     .As<IPlatformCqrsEventApplicationHandler>()
-                    .With(_ => _.IsCurrentInstanceCalledFromInboxBusMessageConsumer = true)
-                    .With(_ => _.ForceCurrentInstanceHandleInCurrentThread = true)
-                    .With(_ => _.RetryOnFailedTimes = 0);
-                var @event = scanAssemblies
-                    .Select(p => p.GetType(message.Payload.EventTypeFullName))
-                    .FirstOrDefault(p => p != null)
+                    .With(p => p.IsCurrentInstanceCalledFromInboxBusMessageConsumer = true)
+                    .With(p => p.ForceCurrentInstanceHandleInCurrentThread = true)
+                    .With(p => p.RetryOnFailedTimes = 0);
+                var eventInstance = RootServiceProvider.GetRegisteredPlatformModuleAssembliesType(message.Payload.EventTypeFullName)
                     .EnsureFound(
                         $"[{nameof(PlatformCqrsEventInboxBusMessageConsumer)}] Not found [EventType:{message.Payload.EventTypeFullName}] in application to serialize the message.")
                     .Pipe(eventType => PlatformJsonSerializer.Deserialize(message.Payload.EventJson, eventType));
 
-                if (eventHandlerInstance.CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageSupport: true, @event))
-                    await eventHandlerInstance.Handle(@event, CancellationToken.None);
+                if (eventHandlerInstance.CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageSupport: true, eventInstance))
+                    await eventHandlerInstance.Handle(eventInstance, CancellationToken.None);
             });
     }
 }
@@ -83,7 +73,7 @@ public class PlatformCqrsEventBusMessagePayload : IPlatformSubMessageQueuePrefix
             EventTypeFullName = @event.GetType().FullName,
             EventTypeName = @event.GetType().Name,
             EventHandlerTypeFullName = eventHandlerTypeFullName,
-            SubQueueByIdExtendedPrefixValue = @event.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix()
+            SubQueueByIdExtendedPrefixValue = @event.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix() ?? @event.Id
         };
     }
 }

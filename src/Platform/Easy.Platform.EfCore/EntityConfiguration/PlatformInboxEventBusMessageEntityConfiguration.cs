@@ -26,6 +26,7 @@ public class PlatformInboxEventBusMessageEntityConfiguration : PlatformEntityCon
         builder.HasIndex(
             p => new
             {
+                p.ForApplicationName,
                 p.ConsumeStatus,
                 p.LastConsumeDate,
                 p.CreatedDate

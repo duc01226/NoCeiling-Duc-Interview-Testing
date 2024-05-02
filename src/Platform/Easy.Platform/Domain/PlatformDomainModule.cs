@@ -17,6 +17,6 @@ public abstract class PlatformDomainModule : PlatformModule
     protected override void InternalRegister(IServiceCollection serviceCollection)
     {
         base.InternalRegister(serviceCollection);
-        serviceCollection.RegisterAllFromType<IPlatformDomainService>(Assembly);
+        serviceCollection.RegisterAllFromType<IPlatformDomainService>(GetServicesRegisterScanAssemblies());
     }
 }

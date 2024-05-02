@@ -12,17 +12,6 @@ public class PlatformDataMigrationHistory : IRowVersionEntity
 
     private DateTime? createdDate;
 
-    public Guid? ConcurrencyUpdateToken { get; set; }
-
-    public Statuses? Status { get; set; } = Statuses.New;
-
-    /// <summary>
-    /// Used to determine that the current processing migration is still in processing and not done yet, ping to know that there is at least one service is working on it
-    /// </summary>
-    public DateTime? LastProcessingPingTime { get; set; }
-
-    public string? LastProcessError { get; set; }
-
     public PlatformDataMigrationHistory()
     {
         CreatedDate = DateTime.UtcNow;
@@ -33,6 +22,15 @@ public class PlatformDataMigrationHistory : IRowVersionEntity
         Name = name;
     }
 
+    public Statuses? Status { get; set; } = Statuses.New;
+
+    /// <summary>
+    /// Used to determine that the current processing migration is still in processing and not done yet, ping to know that there is at least one service is working on it
+    /// </summary>
+    public DateTime? LastProcessingPingTime { get; set; }
+
+    public string? LastProcessError { get; set; }
+
     public string Name { get; set; }
 
     public DateTime CreatedDate
@@ -41,17 +39,16 @@ public class PlatformDataMigrationHistory : IRowVersionEntity
         set => createdDate = value;
     }
 
-    public enum Statuses
+    public Guid? ConcurrencyUpdateToken { get; set; }
+
+    public object GetId()
     {
-        New,
-        Processing,
-        Processed,
-        Failed
+        return Name;
     }
 
     public bool CanStartOrRetryProcess()
     {
-        return !ProcessedOrProcessingExpr().Compile()(this);
+        return !this.Is(ProcessedOrProcessingExpr());
     }
 
     public static Expression<Func<PlatformDataMigrationHistory, bool>> ProcessedOrProcessingExpr()
@@ -62,5 +59,13 @@ public class PlatformDataMigrationHistory : IRowVersionEntity
                     (p.Status == Statuses.Processing &&
                      p.LastProcessingPingTime != null &&
                      p.LastProcessingPingTime >= Clock.Now.AddSeconds(-ProcessingPingIntervalSeconds * 3));
+    }
+
+    public enum Statuses
+    {
+        New,
+        Processing,
+        Processed,
+        Failed
     }
 }

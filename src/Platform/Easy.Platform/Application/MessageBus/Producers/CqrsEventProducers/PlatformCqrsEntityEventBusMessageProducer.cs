@@ -1,5 +1,4 @@
 using Easy.Platform.Common;
-using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.UnitOfWork;
@@ -8,9 +7,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.MessageBus.Producers.CqrsEventProducers;
 
-public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntity>
+public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntity, TPrimaryKey>
     : PlatformCqrsEventBusMessageProducer<PlatformCqrsEntityEvent<TEntity>, TMessage>
-    where TEntity : class, IEntity, new()
+    where TEntity : class, IEntity<TPrimaryKey>, new()
     where TMessage : class, IPlatformWithPayloadBusMessage<PlatformCqrsEntityEvent<TEntity>>, IPlatformSelfRoutingKeyBusMessage, IPlatformTrackableBusMessage, new()
 {
     protected PlatformCqrsEntityEventBusMessageProducer(
@@ -29,7 +28,7 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
 
     protected override TMessage BuildMessage(PlatformCqrsEntityEvent<TEntity> @event)
     {
-        return PlatformCqrsEntityEventBusMessage<TEntity>.New<TMessage>(
+        return PlatformCqrsEntityEventBusMessage<TEntity, TPrimaryKey>.New<TMessage>(
             trackId: @event.Id,
             payload: @event,
             identity: BuildPlatformEventBusMessageIdentity(@event.RequestContext),
@@ -40,13 +39,11 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
     }
 }
 
-public class PlatformCqrsEntityEventBusMessage<TEntity> : PlatformBusMessage<PlatformCqrsEntityEvent<TEntity>>, IPlatformSubMessageQueuePrefixSupport
-    where TEntity : class, IEntity, new()
+public class PlatformCqrsEntityEventBusMessage<TEntity, TPrimaryKey> : PlatformBusMessage<PlatformCqrsEntityEvent<TEntity>>
+    where TEntity : class, IEntity<TPrimaryKey>, new()
 {
     public override string SubQueuePrefix()
     {
-        return Payload.EntityData.As<IEntity<string>>()?.Id ??
-               Payload.EntityData.As<IEntity<Guid>>()?.Id.ToString() ??
-               Payload.EntityData.As<IEntity<int>>()?.Id.ToString();
+        return Payload?.EntityData?.Id?.ToString() ?? TrackingId;
     }
 }

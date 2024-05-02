@@ -14,6 +14,6 @@ public sealed class DemoSomethingHappenedEventBusMessage : PlatformTrackableBusM
 {
     public override string SubQueuePrefix()
     {
-        return null;
+        return TrackingId;
     }
 }

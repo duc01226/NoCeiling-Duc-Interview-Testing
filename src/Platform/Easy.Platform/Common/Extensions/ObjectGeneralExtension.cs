@@ -210,6 +210,11 @@ public static class ObjectGeneralExtension
         return expr.Compile().Invoke(obj);
     }
 
+    public static TReturn Get<TObject, TReturn>(this TObject obj, Expression<Func<TObject, TReturn>> expr)
+    {
+        return expr.Compile().Invoke(obj);
+    }
+
     public static bool Is<TObject>(this TObject obj, Func<TObject, bool> func)
     {
         return func(obj);

@@ -134,18 +134,18 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
     {
         base.InternalRegister(serviceCollection);
 
-        serviceCollection.RegisterAllFromType<IPlatformDbContext>(Assembly, ServiceLifeTime.Scoped);
+        serviceCollection.RegisterAllFromType<IPlatformDbContext>(GetServicesRegisterScanAssemblies(), ServiceLifeTime.Scoped);
 
         if (!ForCrossDbMigrationOnly)
         {
             RegisterUnitOfWorkManager(serviceCollection);
-            serviceCollection.RegisterAllFromType<IPlatformUnitOfWork>(Assembly);
+            serviceCollection.RegisterAllFromType<IPlatformUnitOfWork>(GetServicesRegisterScanAssemblies());
             RegisterRepositories(serviceCollection);
 
             RegisterInboxEventBusMessageRepository(serviceCollection);
             RegisterOutboxEventBusMessageRepository(serviceCollection);
 
-            serviceCollection.RegisterAllFromType<IPersistenceService>(Assembly);
+            serviceCollection.RegisterAllFromType<IPersistenceService>(GetServicesRegisterScanAssemblies());
         }
     }
 
@@ -167,13 +167,13 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
     protected virtual void RegisterInboxEventBusMessageRepository(IServiceCollection serviceCollection)
     {
         if (EnableInboxBusMessage())
-            serviceCollection.RegisterAllFromType<IPlatformInboxBusMessageRepository>(Assembly);
+            serviceCollection.RegisterAllFromType<IPlatformInboxBusMessageRepository>(GetServicesRegisterScanAssemblies());
     }
 
     protected virtual void RegisterOutboxEventBusMessageRepository(IServiceCollection serviceCollection)
     {
         if (EnableOutboxBusMessage())
-            serviceCollection.RegisterAllFromType<IPlatformOutboxBusMessageRepository>(Assembly);
+            serviceCollection.RegisterAllFromType<IPlatformOutboxBusMessageRepository>(GetServicesRegisterScanAssemblies());
     }
 
     /// <summary>
@@ -196,9 +196,8 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
     {
         serviceCollection.Register<IPlatformUnitOfWorkManager, PlatformDefaultPersistenceUnitOfWorkManager>(ServiceLifeTime.Scoped);
 
-        serviceCollection.RegisterAllFromType(
-            typeof(IPlatformUnitOfWorkManager),
-            Assembly,
+        serviceCollection.RegisterAllFromType<IPlatformUnitOfWorkManager>(
+            GetServicesRegisterScanAssemblies(),
             ServiceLifeTime.Scoped,
             replaceIfExist: true,
             replaceStrategy: DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
@@ -212,7 +211,7 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
             RegisterLimitedRepositoryImplementationTypes()
                 .ForEach(repositoryImplementationType => serviceCollection.RegisterAllForImplementation(repositoryImplementationType));
         else
-            serviceCollection.RegisterAllFromType<IPlatformRepository>(Assembly);
+            serviceCollection.RegisterAllFromType<IPlatformRepository>(GetServicesRegisterScanAssemblies());
     }
 }
 

@@ -24,12 +24,12 @@ public abstract class PlatformInfrastructureModule : PlatformModule
     {
         base.InternalRegister(serviceCollection);
 
-        serviceCollection.RegisterAllFromType<IPlatformInfrastructureService>(Assembly);
+        serviceCollection.RegisterAllFromType<IPlatformInfrastructureService>(GetServicesRegisterScanAssemblies());
     }
 
     protected override void RegisterHelpers(IServiceCollection serviceCollection)
     {
         serviceCollection.RegisterAllFromType<IPlatformHelper>(typeof(PlatformInfrastructureModule).Assembly);
-        serviceCollection.RegisterAllFromType<IPlatformHelper>(Assembly);
+        serviceCollection.RegisterAllFromType<IPlatformHelper>(GetServicesRegisterScanAssemblies());
     }
 }

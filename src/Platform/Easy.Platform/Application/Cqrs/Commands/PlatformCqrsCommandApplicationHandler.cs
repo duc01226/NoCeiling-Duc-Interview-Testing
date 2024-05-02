@@ -110,7 +110,8 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                                     RequestContext.GetAllKeyValues().ToJson());
                         });
 
-                    if (RootServiceProvider.CheckAssignableToServiceRegistered(typeof(IPlatformCqrsEventHandler<PlatformCqrsCommandEvent<TCommand, TResult>>)))
+                    if (RootServiceProvider.IsAnyImplementationAssignableToServiceTypeRegistered(
+                        typeof(IPlatformCqrsEventHandler<PlatformCqrsCommandEvent<TCommand, TResult>>)))
                         await Cqrs.Value.SendEvent(
                             new PlatformCqrsCommandEvent<TCommand, TResult>(request, result, PlatformCqrsCommandEventAction.Executed)
                                 .With(p => p.SetRequestContextValues(RequestContext.GetAllKeyValues())),

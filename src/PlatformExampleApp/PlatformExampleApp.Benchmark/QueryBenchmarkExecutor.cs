@@ -69,6 +69,32 @@ public class QueryBenchmarkExecutor
                             })));
     }
 
+    [Benchmark]
+    public Type? GetRegisteredPlatformModuleAssembliesType()
+    {
+        return ServiceProvider.GetRequiredService<IPlatformRootServiceProvider>()
+            .GetRegisteredPlatformModuleAssembliesType("Easy.Platform.Application.Cqrs.Events.InboxSupport.PlatformCqrsEventInboxBusMessageConsumer");
+    }
+
+    [Benchmark]
+    public Type? GetRegisteredPlatformModuleAssembliesType_NoCache()
+    {
+        var scanAssemblies = ServiceProvider.GetServices<PlatformModule>()
+            .SelectMany(p => p.GetServicesRegisterScanAssemblies())
+            .ConcatSingle(typeof(PlatformModule).Assembly)
+            .ToList();
+
+        var scannedResultType = scanAssemblies
+            .Select(p => p.GetType("Easy.Platform.Application.Cqrs.Events.InboxSupport.PlatformCqrsEventInboxBusMessageConsumer"))
+            .FirstOrDefault(p => p != null)
+            .Pipe(
+                scannedResultType => scannedResultType ?? Type.GetType(
+                    "Easy.Platform.Application.Cqrs.Events.InboxSupport.PlatformCqrsEventInboxBusMessageConsumer",
+                    throwOnError: false));
+
+        return scannedResultType;
+    }
+
     private void PopulateMockBenchmarkRequestContext(IPlatformApplicationRequestContext current, IConfiguration configuration)
     {
         current.SetEmail("testBenchmark@example.com");

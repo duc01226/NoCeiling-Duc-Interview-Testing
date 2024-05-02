@@ -1,3 +1,4 @@
+using System.Reflection;
 using Easy.Platform.Application.BackgroundJob;
 using Easy.Platform.Application.Cqrs.Commands;
 using Easy.Platform.Application.Cqrs.Events;
@@ -230,6 +231,15 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
     }
 
     /// <summary>
+    /// <inheritdoc cref="PlatformModule.GetServicesRegisterScanAssemblies" />  <br></br>
+    /// For ApplicationModule, by default do not support scan parent application module
+    /// </summary>
+    public override List<Assembly> GetServicesRegisterScanAssemblies()
+    {
+        return [Assembly];
+    }
+
+    /// <summary>
     /// Support to custom the inbox config. Default return null
     /// </summary>
     protected virtual PlatformInboxConfig InboxConfigProvider(IServiceProvider serviceProvider)
@@ -247,8 +257,8 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
 
     protected override void RegisterHelpers(IServiceCollection serviceCollection)
     {
-        serviceCollection.RegisterAllFromType<IPlatformHelper>(typeof(PlatformApplicationModule).Assembly);
-        serviceCollection.RegisterAllFromType<IPlatformHelper>(Assembly);
+        serviceCollection.RegisterAllFromType<IPlatformHelper>(GetServicesRegisterScanAssemblies());
+        serviceCollection.RegisterAllFromType<IPlatformHelper>(GetServicesRegisterScanAssemblies());
     }
 
     /// <summary>
@@ -297,22 +307,22 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
     {
         base.InternalRegister(serviceCollection);
 
-        serviceCollection.RegisterAllFromType<IPlatformApplicationDataSeeder>(Assembly, ServiceLifeTime.Scoped);
-        serviceCollection.RegisterAllSelfImplementationFromType<IPlatformCqrsEventApplicationHandler>(Assembly);
+        serviceCollection.RegisterAllFromType<IPlatformApplicationDataSeeder>(GetServicesRegisterScanAssemblies(), ServiceLifeTime.Scoped);
+        serviceCollection.RegisterAllSelfImplementationFromType<IPlatformCqrsEventApplicationHandler>(GetServicesRegisterScanAssemblies());
         RegisterMessageBus(serviceCollection);
         RegisterApplicationSettingContext(serviceCollection);
         RegisterDefaultApplicationRequestContext(serviceCollection);
         serviceCollection.RegisterIfServiceNotExist<IPlatformUnitOfWorkManager, PlatformPseudoApplicationUnitOfWorkManager>(ServiceLifeTime.Scoped);
-        serviceCollection.RegisterAllFromType<IPlatformApplicationService>(Assembly);
+        serviceCollection.RegisterAllFromType<IPlatformApplicationService>(GetServicesRegisterScanAssemblies());
 
-        serviceCollection.RegisterAllFromType<IPlatformDbContext>(Assembly, ServiceLifeTime.Scoped);
-        serviceCollection.RegisterAllFromType<IPlatformInfrastructureService>(Assembly);
-        serviceCollection.RegisterAllFromType<IPlatformBackgroundJobExecutor>(Assembly);
+        serviceCollection.RegisterAllFromType<IPlatformDbContext>(GetServicesRegisterScanAssemblies(), ServiceLifeTime.Scoped);
+        serviceCollection.RegisterAllFromType<IPlatformInfrastructureService>(GetServicesRegisterScanAssemblies());
+        serviceCollection.RegisterAllFromType<IPlatformBackgroundJobExecutor>(GetServicesRegisterScanAssemblies());
 
         if (AutoRegisterDefaultCaching)
             RegisterRuntimeModuleDependencies<PlatformCachingModule>(serviceCollection);
 
-        serviceCollection.RegisterHostedServicesFromType(Assembly, typeof(PlatformHostingBackgroundService));
+        GetServicesRegisterScanAssemblies().ForEach(assembly => serviceCollection.RegisterHostedServicesFromType(assembly, typeof(PlatformHostingBackgroundService)));
 
         if (AutoClearMemoryEnabled)
             serviceCollection.RegisterHostedService(
@@ -363,7 +373,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
 
     private void RegisterApplicationSettingContext(IServiceCollection serviceCollection)
     {
-        serviceCollection.RegisterAllFromType<IPlatformApplicationSettingContext>(Assembly);
+        serviceCollection.RegisterAllFromType<IPlatformApplicationSettingContext>(GetServicesRegisterScanAssemblies());
 
         // If there is no custom implemented class type of IPlatformApplicationSettingContext in application,
         // register default PlatformApplicationSettingContext from result of DefaultApplicationSettingContextFactory
@@ -394,23 +404,23 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         serviceCollection.Register<IPlatformApplicationBusMessageProducer, PlatformApplicationBusMessageProducer>();
         serviceCollection.RegisterAllSelfImplementationFromType(
             typeof(IPlatformCqrsEventBusMessageProducer<>),
-            Assembly);
+            GetServicesRegisterScanAssemblies());
         serviceCollection.RegisterAllSelfImplementationFromType(
             typeof(PlatformCqrsCommandEventBusMessageProducer<>),
-            Assembly);
+            GetServicesRegisterScanAssemblies());
         serviceCollection.RegisterAllSelfImplementationFromType(
-            typeof(PlatformCqrsEntityEventBusMessageProducer<,>),
-            Assembly);
+            typeof(PlatformCqrsEntityEventBusMessageProducer<,,>),
+            GetServicesRegisterScanAssemblies());
 
         serviceCollection.RegisterAllSelfImplementationFromType(
             typeof(IPlatformMessageBusConsumer),
             typeof(PlatformApplicationModule).Assembly);
         serviceCollection.RegisterAllSelfImplementationFromType(
             typeof(IPlatformMessageBusConsumer),
-            Assembly);
+            GetServicesRegisterScanAssemblies());
         serviceCollection.RegisterAllSelfImplementationFromType(
             typeof(IPlatformApplicationMessageBusConsumer<>),
-            Assembly);
+            GetServicesRegisterScanAssemblies());
 
         serviceCollection.RegisterHostedService<PlatformInboxBusMessageCleanerHostedService>();
         serviceCollection.RegisterHostedService<PlatformConsumeInboxBusMessageHostedService>();

@@ -11,6 +11,7 @@ namespace Easy.Platform.Domain.Entities;
 /// </summary>
 public interface IEntity
 {
+    object GetId();
 }
 
 /// <summary>
@@ -294,6 +295,11 @@ public abstract class Entity<TEntity, TPrimaryKey>
     /// Gets or sets the primary key of the entity.
     /// </summary>
     public virtual TPrimaryKey Id { get; set; }
+
+    public object GetId()
+    {
+        return Id;
+    }
 
     /// <summary>
     /// Gets a validator for checking uniqueness during entity creation or update.

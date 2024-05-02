@@ -34,11 +34,6 @@ public interface IPlatformApplicationMessageBusConsumer : IPlatformMessageBusCon
     /// Gets or sets a value indicating whether to allow processing the inbox message in a background thread.
     /// </summary>
     public bool AllowProcessInboxMessageInBackgroundThread { get; set; }
-
-    /// <summary>
-    /// Gets or sets the maximum timeout for executing inbox consumer.
-    /// </summary>
-    public TimeSpan? InboxProcessingMaxTimeout { get; set; }
 }
 
 public interface IPlatformApplicationMessageBusConsumer<in TMessage> : IPlatformMessageBusConsumer<TMessage>, IPlatformApplicationMessageBusConsumer
@@ -81,11 +76,12 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
     /// </summary>
     public virtual bool AllowUseInboxMessage => true;
 
+    public TimeSpan? InboxProcessingMaxTimeout { get; set; }
+
     public PlatformInboxBusMessage HandleExistingInboxMessage { get; set; }
     public bool AutoDeleteProcessedInboxEventMessageImmediately { get; set; }
     public bool IsHandlingLogicForInboxMessage { get; set; }
     public bool AllowProcessInboxMessageInBackgroundThread { get; set; }
-    public TimeSpan? InboxProcessingMaxTimeout { get; set; }
 
     public override async Task ExecuteHandleLogicAsync(TMessage message, string routingKey)
     {
@@ -97,8 +93,9 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                 inboxBusMessageRepository: InboxBusMessageRepo.Value,
                 inboxConfig: InboxConfig,
                 message: message,
+                forApplicationName: ApplicationSettingContext.ApplicationName,
                 routingKey: routingKey,
-                loggerFactory: CreateGlobalLogger,
+                loggerFactory: CreateLogger,
                 retryProcessFailedMessageInSecondsUnit: InboxConfig.RetryProcessFailedMessageInSecondsUnit,
                 allowProcessInBackgroundThread: AllowProcessInboxMessageInBackgroundThread,
                 handleExistingInboxMessage: HandleExistingInboxMessage,
@@ -134,10 +131,5 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                 if (ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
                     Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
             }
-    }
-
-    public ILogger CreateGlobalLogger()
-    {
-        return CreateLogger(RootServiceProvider.GetRequiredService<ILoggerFactory>());
     }
 }

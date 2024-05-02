@@ -1,3 +1,4 @@
+using Easy.Platform.Common.Utils;
 using Polly.Retry;
 
 namespace Easy.Platform.Common.Extensions;
@@ -18,7 +19,18 @@ public static class RetryPolicyExtension
     {
         try
         {
-            retryPolicy.Execute(action);
+            retryPolicy.Execute(
+                () =>
+                {
+                    try
+                    {
+                        action();
+                    }
+                    finally
+                    {
+                        Util.GarbageCollector.Collect();
+                    }
+                });
         }
         catch (Exception e)
         {
@@ -44,7 +56,18 @@ public static class RetryPolicyExtension
     {
         try
         {
-            return retryPolicy.Execute(action);
+            return retryPolicy.Execute(
+                () =>
+                {
+                    try
+                    {
+                        return action();
+                    }
+                    finally
+                    {
+                        Util.GarbageCollector.Collect();
+                    }
+                });
         }
         catch (Exception e)
         {
@@ -68,7 +91,18 @@ public static class RetryPolicyExtension
     {
         try
         {
-            retryPolicy.Execute(action);
+            retryPolicy.Execute(
+                () =>
+                {
+                    try
+                    {
+                        action();
+                    }
+                    finally
+                    {
+                        Util.GarbageCollector.Collect();
+                    }
+                });
         }
         catch (Exception e)
         {
@@ -94,7 +128,18 @@ public static class RetryPolicyExtension
     {
         try
         {
-            return retryPolicy.Execute(action);
+            return retryPolicy.Execute(
+                () =>
+                {
+                    try
+                    {
+                        return action();
+                    }
+                    finally
+                    {
+                        Util.GarbageCollector.Collect();
+                    }
+                });
         }
         catch (Exception e)
         {
@@ -121,7 +166,19 @@ public static class RetryPolicyExtension
     {
         try
         {
-            await retryPolicy.ExecuteAsync(async ct => await action(), cancellationToken);
+            await retryPolicy.ExecuteAsync(
+                async ct =>
+                {
+                    try
+                    {
+                        await action();
+                    }
+                    finally
+                    {
+                        Util.GarbageCollector.Collect();
+                    }
+                },
+                cancellationToken);
         }
         catch (Exception e)
         {
@@ -149,7 +206,19 @@ public static class RetryPolicyExtension
     {
         try
         {
-            return await retryPolicy.ExecuteAsync(async ct => await action(), cancellationToken);
+            return await retryPolicy.ExecuteAsync(
+                async ct =>
+                {
+                    try
+                    {
+                        return await action();
+                    }
+                    finally
+                    {
+                        Util.GarbageCollector.Collect();
+                    }
+                },
+                cancellationToken);
         }
         catch (Exception e)
         {

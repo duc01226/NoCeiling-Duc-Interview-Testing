@@ -10,7 +10,7 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
     public const int IdMaxLength = 400;
     public const int RoutingKeyMaxLength = 500;
     public const int MessageTypeFullNameMaxLength = 1000;
-    public const double DefaultRetryProcessFailedMessageInSecondsUnit = 60;
+    public const double DefaultRetryProcessFailedMessageInSecondsUnit = 30;
     public const string BuildIdSeparator = "----";
     public const string BuildIdGroupedByTypePrefixSeparator = "_";
 
@@ -44,14 +44,21 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
                      p.LastSendDate <= Clock.UtcNow.AddSeconds(-messageProcessingMaximumTimeInSeconds));
     }
 
-    public static Expression<Func<PlatformOutboxBusMessage, bool>> ToCleanExpiredMessagesByTimeExpr(
+    public static Expression<Func<PlatformOutboxBusMessage, bool>> ToCleanExpiredMessagesExpr(
         double deleteProcessedMessageInSeconds,
-        double deleteExpiredFailedMessageInSeconds)
+        double deleteExpiredIgnoredMessageInSeconds)
     {
-        return p => (p.LastSendDate <= Clock.UtcNow.AddSeconds(-deleteProcessedMessageInSeconds) &&
+        return p => (p.CreatedDate <= Clock.UtcNow.AddSeconds(-deleteProcessedMessageInSeconds) &&
                      p.SendStatus == SendStatuses.Processed) ||
-                    (p.LastSendDate <= Clock.UtcNow.AddSeconds(-deleteExpiredFailedMessageInSeconds) &&
-                     p.SendStatus == SendStatuses.Failed);
+                    (p.CreatedDate <= Clock.UtcNow.AddSeconds(-deleteExpiredIgnoredMessageInSeconds) &&
+                     p.SendStatus == SendStatuses.Ignored);
+    }
+
+    public static Expression<Func<PlatformOutboxBusMessage, bool>> ToIgnoreFailedExpiredMessagesExpr(
+        double ignoreExpiredFailedMessageInSeconds)
+    {
+        return p => p.CreatedDate <= Clock.UtcNow.AddSeconds(-ignoreExpiredFailedMessageInSeconds) &&
+                    p.SendStatus == SendStatuses.Failed;
     }
 
     public static PlatformOutboxBusMessage Create<TMessage>(
@@ -100,7 +107,7 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
         double retryProcessFailedMessageInSecondsUnit = DefaultRetryProcessFailedMessageInSecondsUnit)
     {
         return DateTime.UtcNow.AddSeconds(
-            retryProcessFailedMessageInSecondsUnit * Math.Pow(2, retriedProcessCount ?? 0));
+            retryProcessFailedMessageInSecondsUnit * retriedProcessCount ?? 0);
     }
 
     public static Expression<Func<PlatformOutboxBusMessage, bool>> CheckAnySameTypeOtherPreviousNotProcessedMessageExpr(
@@ -139,7 +146,9 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
 
     public static string GetIdPrefix(string messageId)
     {
-        return messageId.Substring(0, messageId.IndexOf(BuildIdSeparator, StringComparison.Ordinal));
+        var buildIdSeparatorIndex = messageId.IndexOf(BuildIdSeparator, StringComparison.Ordinal);
+
+        return messageId.Substring(0, buildIdSeparatorIndex > 0 ? buildIdSeparatorIndex : messageId.Length);
     }
 
     public enum SendStatuses
@@ -147,6 +156,11 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
         New,
         Processing,
         Processed,
-        Failed
+        Failed,
+
+        /// <summary>
+        /// Ignored mean do not try to process this message anymore. Usually because it's failed, can't be processed but will still want to temporarily keep it
+        /// </summary>
+        Ignored
     }
 }

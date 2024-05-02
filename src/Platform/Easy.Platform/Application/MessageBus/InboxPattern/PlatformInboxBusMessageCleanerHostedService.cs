@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.HostingBackgroundServices;
@@ -33,7 +32,7 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
 
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
-        await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformPersistenceModule), Logger, $"process ${GetType().Name}");
+        await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformPersistenceModule), Logger, $"process {GetType().Name}");
 
         if (!HasInboxEventBusMessageRepositoryRegistered() || isProcessing) return;
 
@@ -86,18 +85,6 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
         return InboxConfig.NumberOfDeleteMessagesBatch;
     }
 
-    /// <inheritdoc cref="PlatformInboxConfig.DeleteProcessedMessageInSeconds" />
-    protected virtual double DeleteProcessedMessageInSeconds()
-    {
-        return InboxConfig.DeleteProcessedMessageInSeconds;
-    }
-
-    /// <inheritdoc cref="PlatformInboxConfig.DeleteExpiredFailedMessageInSeconds" />
-    protected virtual double DeleteExpiredFailedMessageInSeconds()
-    {
-        return InboxConfig.DeleteExpiredFailedMessageInSeconds;
-    }
-
     protected bool HasInboxEventBusMessageRepositoryRegistered()
     {
         return ServiceProvider.ExecuteScoped(scope => scope.ServiceProvider.GetService<IPlatformInboxBusMessageRepository>() != null);
@@ -105,88 +92,144 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
 
     protected async Task CleanInboxEventBusMessage(CancellationToken cancellationToken)
     {
-        var totalProcessedMessages = await ServiceProvider.ExecuteScopedAsync(
-            p => p.ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>()
-                .CountAsync(p => p.ConsumeStatus == PlatformInboxBusMessage.ConsumeStatuses.Processed, cancellationToken));
-
-        if (totalProcessedMessages > InboxConfig.MaxStoreProcessedMessageCount)
-            await ProcessCleanMessageByMaxStoreProcessedMessageCount(totalProcessedMessages, cancellationToken);
-        else
-            await ProcessCleanMessageByExpiredTime(cancellationToken);
+        await ProcessCleanMessageByMaxStoreProcessedMessageCount(cancellationToken);
+        await ProcessCleanMessageByExpiredTime(cancellationToken);
+        await ProcessIgnoreFailedMessageByExpiredTime(cancellationToken);
     }
 
-    private async Task ProcessCleanMessageByMaxStoreProcessedMessageCount(int totalProcessedMessages, CancellationToken cancellationToken)
+    private async Task ProcessCleanMessageByMaxStoreProcessedMessageCount(CancellationToken cancellationToken)
     {
-        await ServiceProvider.ExecuteInjectScopedScrollingPagingAsync<PlatformInboxBusMessage>(
-            maxExecutionCount: await ServiceProvider.ExecuteScopedAsync(
+        try
+        {
+            var totalProcessedMessages = await ServiceProvider.ExecuteScopedAsync(
                 p => p.ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>()
-                    .CountAsync(CleanMessagePredicate(), cancellationToken: cancellationToken)
-                    .Then(total => total / NumberOfDeleteMessagesBatch())),
-            async (IPlatformInboxBusMessageRepository inboxEventBusMessageRepo) =>
-            {
-                var toDeleteMessages = await inboxEventBusMessageRepo.GetAllAsync(
-                    queryBuilder: query => query
-                        .Where(CleanMessagePredicate())
-                        .OrderByDescending(p => p.CreatedDate)
-                        .Skip(InboxConfig.MaxStoreProcessedMessageCount)
-                        .Take(NumberOfDeleteMessagesBatch()),
-                    cancellationToken);
+                    .CountAsync(p => p.ConsumeStatus == PlatformInboxBusMessage.ConsumeStatuses.Processed, cancellationToken));
+            if (totalProcessedMessages <= InboxConfig.MaxStoreProcessedMessageCount) return;
 
-                if (toDeleteMessages.Count > 0)
-                    await inboxEventBusMessageRepo.DeleteManyAsync(
-                        toDeleteMessages,
-                        dismissSendEvent: true,
-                        eventCustomConfig: null,
+            await ServiceProvider.ExecuteInjectScopedScrollingPagingAsync<PlatformInboxBusMessage>(
+                maxExecutionCount: await ServiceProvider.ExecuteScopedAsync(
+                    p => p.ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>()
+                        .CountAsync(p => p.ConsumeStatus == PlatformInboxBusMessage.ConsumeStatuses.Processed, cancellationToken: cancellationToken)
+                        .Then(total => total / NumberOfDeleteMessagesBatch())),
+                async (IPlatformInboxBusMessageRepository inboxEventBusMessageRepo) =>
+                {
+                    var toDeleteMessages = await inboxEventBusMessageRepo.GetAllAsync(
+                        queryBuilder: query => query
+                            .Where(p => p.ConsumeStatus == PlatformInboxBusMessage.ConsumeStatuses.Processed)
+                            .OrderByDescending(p => p.CreatedDate)
+                            .Skip(InboxConfig.MaxStoreProcessedMessageCount)
+                            .Take(NumberOfDeleteMessagesBatch()),
                         cancellationToken);
 
-                return toDeleteMessages;
-            });
+                    if (toDeleteMessages.Count > 0)
+                        await inboxEventBusMessageRepo.DeleteManyAsync(
+                            toDeleteMessages,
+                            dismissSendEvent: true,
+                            eventCustomConfig: null,
+                            cancellationToken);
 
-        Logger.LogInformation(
-            "CleanInboxEventBusMessage success. Number of deleted messages: {DeletedMessagesCount}",
-            totalProcessedMessages - InboxConfig.MaxStoreProcessedMessageCount);
+                    return toDeleteMessages;
+                });
 
-        static Expression<Func<PlatformInboxBusMessage, bool>> CleanMessagePredicate()
+            Logger.LogInformation(
+                "ProcessCleanMessageByMaxStoreProcessedMessageCount success. Number of deleted messages: {DeletedMessagesCount}",
+                totalProcessedMessages - InboxConfig.MaxStoreProcessedMessageCount);
+        }
+        catch (Exception e)
         {
-            return p => p.ConsumeStatus == PlatformInboxBusMessage.ConsumeStatuses.Processed;
+            Logger.LogError(e, "ProcessCleanMessageByMaxStoreProcessedMessageCount failed");
         }
     }
 
     private async Task ProcessCleanMessageByExpiredTime(CancellationToken cancellationToken)
     {
-        var toDeleteMessageCount = await ServiceProvider.ExecuteScopedAsync(
-            p => p.ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>()
-                .CountAsync(
-                    PlatformInboxBusMessage.ToCleanExpiredMessagesByTimeExpr(DeleteProcessedMessageInSeconds(), DeleteExpiredFailedMessageInSeconds()),
-                    cancellationToken));
-
-        if (toDeleteMessageCount > 0)
+        try
         {
-            await ServiceProvider.ExecuteInjectScopedScrollingPagingAsync<PlatformInboxBusMessage>(
-                maxExecutionCount: toDeleteMessageCount / NumberOfDeleteMessagesBatch(),
-                async (IPlatformInboxBusMessageRepository inboxEventBusMessageRepo) =>
-                {
-                    var expiredMessages = await inboxEventBusMessageRepo.GetAllAsync(
-                        queryBuilder: query => query
-                            .Where(
-                                PlatformInboxBusMessage.ToCleanExpiredMessagesByTimeExpr(
-                                    DeleteProcessedMessageInSeconds(),
-                                    DeleteExpiredFailedMessageInSeconds()))
-                            .OrderBy(p => p.CreatedDate)
-                            .Take(NumberOfDeleteMessagesBatch()),
-                        cancellationToken);
+            var toDeleteMessageCount = await ServiceProvider.ExecuteScopedAsync(
+                p => p.ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>()
+                    .CountAsync(
+                        PlatformInboxBusMessage.ToCleanExpiredMessagesExpr(
+                            InboxConfig.DeleteProcessedMessageInSeconds,
+                            InboxConfig.DeleteExpiredIgnoredMessageInSeconds),
+                        cancellationToken));
 
-                    if (expiredMessages.Count > 0)
-                        await inboxEventBusMessageRepo.DeleteManyAsync(
-                            expiredMessages,
-                            dismissSendEvent: true,
-                            eventCustomConfig: null,
+            if (toDeleteMessageCount > 0)
+            {
+                await ServiceProvider.ExecuteInjectScopedScrollingPagingAsync<PlatformInboxBusMessage>(
+                    maxExecutionCount: toDeleteMessageCount / NumberOfDeleteMessagesBatch(),
+                    async (IPlatformInboxBusMessageRepository inboxEventBusMessageRepo) =>
+                    {
+                        var expiredMessages = await inboxEventBusMessageRepo.GetAllAsync(
+                            queryBuilder: query => query
+                                .Where(
+                                    PlatformInboxBusMessage.ToCleanExpiredMessagesExpr(
+                                        InboxConfig.DeleteProcessedMessageInSeconds,
+                                        InboxConfig.DeleteExpiredIgnoredMessageInSeconds))
+                                .OrderBy(p => p.CreatedDate)
+                                .Take(NumberOfDeleteMessagesBatch()),
                             cancellationToken);
 
-                    return expiredMessages;
-                });
+                        if (expiredMessages.Count > 0)
+                            await inboxEventBusMessageRepo.DeleteManyAsync(
+                                expiredMessages,
+                                dismissSendEvent: true,
+                                eventCustomConfig: null,
+                                cancellationToken);
 
-            Logger.LogInformation("CleanInboxEventBusMessage success. Number of deleted messages: {DeletedMessageCount}", toDeleteMessageCount);
+                        return expiredMessages;
+                    });
+
+                Logger.LogInformation("ProcessCleanMessageByExpiredTime success. Number of deleted messages: {DeletedMessageCount}", toDeleteMessageCount);
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "ProcessCleanMessageByExpiredTime failed");
+        }
+    }
+
+    private async Task ProcessIgnoreFailedMessageByExpiredTime(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var toIgnoreMessageCount = await ServiceProvider.ExecuteScopedAsync(
+                p => p.ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>()
+                    .CountAsync(
+                        PlatformInboxBusMessage.ToIgnoreFailedExpiredMessagesExpr(
+                            InboxConfig.IgnoreExpiredFailedMessageInSeconds),
+                        cancellationToken));
+
+            if (toIgnoreMessageCount > 0)
+            {
+                await ServiceProvider.ExecuteInjectScopedScrollingPagingAsync<PlatformInboxBusMessage>(
+                    maxExecutionCount: toIgnoreMessageCount / NumberOfDeleteMessagesBatch(),
+                    async (IPlatformInboxBusMessageRepository inboxEventBusMessageRepo) =>
+                    {
+                        var expiredMessages = await inboxEventBusMessageRepo.GetAllAsync(
+                            queryBuilder: query => query
+                                .Where(
+                                    PlatformInboxBusMessage.ToIgnoreFailedExpiredMessagesExpr(
+                                        InboxConfig.IgnoreExpiredFailedMessageInSeconds))
+                                .OrderBy(p => p.CreatedDate)
+                                .Take(NumberOfDeleteMessagesBatch()),
+                            cancellationToken);
+
+                        if (expiredMessages.Count > 0)
+                            await inboxEventBusMessageRepo.UpdateManyAsync(
+                                expiredMessages.SelectList(p => p.With(x => x.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Ignored)),
+                                dismissSendEvent: true,
+                                eventCustomConfig: null,
+                                cancellationToken);
+
+                        return expiredMessages;
+                    });
+
+                Logger.LogInformation("ProcessIgnoreFailedMessageByExpiredTime success. Number of ignored messages: {DeletedMessageCount}", toIgnoreMessageCount);
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "ProcessIgnoreFailedMessageByExpiredTime failed");
         }
     }
 }

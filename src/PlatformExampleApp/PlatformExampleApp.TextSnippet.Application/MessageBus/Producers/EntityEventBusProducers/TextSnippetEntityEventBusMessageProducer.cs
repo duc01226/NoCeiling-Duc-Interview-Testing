@@ -7,7 +7,7 @@ using PlatformExampleApp.TextSnippet.Domain.Entities;
 namespace PlatformExampleApp.TextSnippet.Application.MessageBus.Producers.EntityEventBusProducers;
 
 public class TextSnippetEntityEventBusMessageProducer
-    : PlatformCqrsEntityEventBusMessageProducer<TextSnippetEntityEventBusMessage, TextSnippetEntity>
+    : PlatformCqrsEntityEventBusMessageProducer<TextSnippetEntityEventBusMessage, TextSnippetEntity, Guid>
 {
     public TextSnippetEntityEventBusMessageProducer(
         ILoggerFactory loggerFactory,
@@ -42,7 +42,7 @@ public class TextSnippetEntityEventBusMessageProducer
     //}
 }
 
-public class TextSnippetEntityEventBusMessage : PlatformCqrsEntityEventBusMessage<TextSnippetEntity>
+public class TextSnippetEntityEventBusMessage : PlatformCqrsEntityEventBusMessage<TextSnippetEntity, Guid>
 {
     // public string CustomAdditionalProp { get; set; }
 

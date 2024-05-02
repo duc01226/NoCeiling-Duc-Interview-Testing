@@ -24,7 +24,8 @@ public abstract class PlatformCqrsCommandHandler<TCommand, TResult>
 
         var result = await ExecuteHandleAsync(request, cancellationToken);
 
-        if (RootServiceProvider.CheckAssignableToServiceRegistered(typeof(IPlatformCqrsEventApplicationHandler<PlatformCqrsCommandEvent<TCommand, TResult>>)))
+        if (RootServiceProvider.IsAnyImplementationAssignableToServiceTypeRegistered(
+            typeof(IPlatformCqrsEventApplicationHandler<PlatformCqrsCommandEvent<TCommand, TResult>>)))
             await Cqrs.Value.SendEvent(
                 new PlatformCqrsCommandEvent<TCommand, TResult>(request, result, PlatformCqrsCommandEventAction.Executed),
                 cancellationToken);

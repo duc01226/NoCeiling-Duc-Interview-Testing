@@ -193,7 +193,7 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
     public PlatformMessageBusConsumer(ILoggerFactory loggerFactory)
     {
         LoggerFactory = loggerFactory;
-        loggerLazy = new Lazy<ILogger>(() => CreateLogger(loggerFactory));
+        loggerLazy = new Lazy<ILogger>(() => CreateLogger(loggerFactory, GetType()));
     }
 
     protected ILogger Logger => loggerLazy.Value;
@@ -214,10 +214,10 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
 
     public virtual async Task HandleAsync(TMessage message, string routingKey)
     {
-        if (!HandleWhen(message, routingKey)) return;
-
         try
         {
+            if (!HandleWhen(message, routingKey)) return;
+
             if (RetryOnFailedTimes > 0)
                 // Retry RetryOnFailedTimes to help resilient consumer. Sometime parallel, create/update concurrency could lead to error
                 await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
@@ -246,13 +246,13 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
         return true;
     }
 
-    public static ILogger CreateLogger(ILoggerFactory loggerFactory)
+    public static ILogger CreateLogger(ILoggerFactory loggerFactory, Type type)
     {
-        return loggerFactory.CreateLogger(typeof(PlatformMessageBusConsumer));
+        return loggerFactory.CreateLogger(type);
     }
 
     public ILogger CreateLogger()
     {
-        return CreateLogger(LoggerFactory);
+        return CreateLogger(LoggerFactory, GetType());
     }
 }

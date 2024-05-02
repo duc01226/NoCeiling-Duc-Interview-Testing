@@ -51,7 +51,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         CancellationToken cancellationToken)
         where TEvent : PlatformCqrsEntityEvent
     {
-        if (!rootServiceProvider.CheckAssignableToServiceRegistered(typeof(IPlatformCqrsEventHandler<TEvent>))) return;
+        if (!rootServiceProvider.IsAnyImplementationAssignableToServiceTypeRegistered(typeof(IPlatformCqrsEventHandler<TEvent>))) return;
 
         var entityEvent = eventBuilder()
             .With(@event => eventCustomConfig?.Invoke(@event))
@@ -257,9 +257,7 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent, IPlatfo
 
     public string SubQueuePrefix()
     {
-        return EntityData?.As<IEntity<string>>().Id ??
-               EntityData?.As<IEntity<Guid>>().Id.ToString() ??
-               EntityData?.As<IEntity<int>>().Id.ToString();
+        return EntityData?.GetId()?.ToString();
     }
 
     /// <summary>

@@ -612,7 +612,19 @@ public static partial class Util
                     retryCount,
                     sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
-                .ExecuteAndCaptureAsync(executeFunc, cancellationToken);
+                .ExecuteAndCaptureAsync(
+                    async ct =>
+                    {
+                        try
+                        {
+                            await executeFunc(ct);
+                        }
+                        finally
+                        {
+                            GarbageCollector.Collect();
+                        }
+                    },
+                    cancellationToken);
         }
 
         /// <summary>
@@ -638,7 +650,19 @@ public static partial class Util
                     retryCount,
                     sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
-                .ExecuteAndCaptureAsync(ct => executeFunc(), cancellationToken);
+                .ExecuteAndCaptureAsync(
+                    async ct =>
+                    {
+                        try
+                        {
+                            return await executeFunc();
+                        }
+                        finally
+                        {
+                            GarbageCollector.Collect();
+                        }
+                    },
+                    cancellationToken);
         }
 
         /// <summary>
@@ -690,7 +714,18 @@ public static partial class Util
                     retryCount,
                     sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
-                .ExecuteAndCapture(executeFunc);
+                .ExecuteAndCapture(
+                    () =>
+                    {
+                        try
+                        {
+                            return executeFunc();
+                        }
+                        finally
+                        {
+                            GarbageCollector.Collect();
+                        }
+                    });
         }
 
         /// <summary>
@@ -733,7 +768,17 @@ public static partial class Util
                     sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndCapture(
-                    executeAction);
+                    () =>
+                    {
+                        try
+                        {
+                            executeAction();
+                        }
+                        finally
+                        {
+                            GarbageCollector.Collect();
+                        }
+                    });
         }
 
         /// <inheritdoc cref="WaitRetryThrowFinalException{T}" />
@@ -778,7 +823,17 @@ public static partial class Util
                     sleepDurationProvider ?? (retryAttempt => TimeSpan.FromSeconds(DefaultWaitIntervalSeconds)),
                     onRetry ?? ((exception, timeSpan, currentRetry, context) => { }))
                 .ExecuteAndCapture(
-                    executeFunc);
+                    () =>
+                    {
+                        try
+                        {
+                            return executeFunc();
+                        }
+                        finally
+                        {
+                            GarbageCollector.Collect();
+                        }
+                    });
         }
 
         public static void Wait(int millisecondsToWait)

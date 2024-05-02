@@ -2,7 +2,6 @@ using System.Reflection;
 using Easy.Platform.Common;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.Utils;
 using Easy.Platform.Infrastructures.Caching.BuiltInCacheRepositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,7 +36,7 @@ public class PlatformCachingModule : PlatformInfrastructureModule
         PlatformModule newOtherRegisterModule)
     {
         if (newOtherRegisterModule is not PlatformInfrastructureModule)
-            RegisterCacheItemsByScanAssemblies(serviceCollection, newOtherRegisterModule.Assembly);
+            RegisterCacheItemsByScanAssemblies(serviceCollection, newOtherRegisterModule.GetServicesRegisterScanAssemblies().ToArray());
     }
 
     /// <summary>
@@ -79,11 +78,12 @@ public class PlatformCachingModule : PlatformInfrastructureModule
 
         RegisterCacheItemsByScanAssemblies(
             serviceCollection,
-            assemblies: Util.ListBuilder.New(Assembly)
+            assemblies: GetServicesRegisterScanAssemblies()
                 .Concat(
-                    serviceCollection.BuildServiceProvider().GetServices<PlatformModule>()
+                    serviceCollection.BuildServiceProvider()
+                        .GetServices<PlatformModule>()
                         .Where(p => p is not PlatformInfrastructureModule)
-                        .Select(p => p.GetType().Assembly))
+                        .SelectMany(p => p.GetServicesRegisterScanAssemblies()))
                 .Distinct()
                 .ToArray());
 

@@ -680,6 +680,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             [
                 new CreateIndexModel<PlatformInboxBusMessage>(
                     Builders<PlatformInboxBusMessage>.IndexKeys
+                        .Ascending(p => p.ForApplicationName)
                         .Ascending(p => p.ConsumeStatus)
                         .Ascending(p => p.LastConsumeDate)
                         .Ascending(p => p.CreatedDate)),

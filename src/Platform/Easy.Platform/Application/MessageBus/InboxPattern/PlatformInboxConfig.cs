@@ -2,6 +2,8 @@ namespace Easy.Platform.Application.MessageBus.InboxPattern;
 
 public class PlatformInboxConfig
 {
+    private double? messageProcessingMaxSecondsTimeout;
+
     /// <summary>
     /// This is used to calculate the next retry process message time.
     /// Ex: NextRetryProcessAfter = DateTime.UtcNow.AddSeconds(retryProcessFailedMessageInSecondsUnit * Math.Pow(2, retriedProcessCount ?? 0));
@@ -9,9 +11,9 @@ public class PlatformInboxConfig
     public double RetryProcessFailedMessageInSecondsUnit { get; set; } = PlatformInboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit;
 
     /// <summary>
-    /// To config how long a processed message can live in the database in seconds. Default is one week (2 days);
+    /// To config how long a processed message can live in the database in seconds. Default is one week (14 days);
     /// </summary>
-    public double DeleteProcessedMessageInSeconds { get; set; } = TimeSpan.FromDays(2).TotalSeconds;
+    public double DeleteProcessedMessageInSeconds { get; set; } = TimeSpan.FromDays(14).TotalSeconds;
 
     /// <summary>
     /// To config max store processed message count. Will delete old messages of maximum messages happened
@@ -19,14 +21,19 @@ public class PlatformInboxConfig
     public int MaxStoreProcessedMessageCount { get; set; } = 10000;
 
     /// <summary>
-    /// To config how long a message can live in the database in seconds. Default is two week (14 days);
+    /// To config how long a message can live in the database as Failed in seconds. Default is two week (28 days); After that the message will be automatically ignored by change status to Ignored
     /// </summary>
-    public double DeleteExpiredFailedMessageInSeconds { get; set; } = TimeSpan.FromDays(14).TotalSeconds;
+    public double IgnoreExpiredFailedMessageInSeconds { get; set; } = TimeSpan.FromDays(28).TotalSeconds;
 
     /// <summary>
-    /// To config maximum number messages is deleted in every process. Default is 100
+    /// To config how long a message can live in the database as Ignored in seconds. Default is one month (365 days); After that the message will be automatically deleted
     /// </summary>
-    public int NumberOfDeleteMessagesBatch { get; set; } = 10;
+    public double DeleteExpiredIgnoredMessageInSeconds { get; set; } = TimeSpan.FromDays(365).TotalSeconds;
+
+    /// <summary>
+    /// Default number messages is processed to be Deleted/Ignored in batch. Default is 100;
+    /// </summary>
+    public int NumberOfDeleteMessagesBatch { get; set; } = 100;
 
     public double MessageCleanerTriggerIntervalInMinutes { get; set; } = 1;
 
@@ -43,9 +50,26 @@ public class PlatformInboxConfig
     /// </summary>
     public double MessageProcessingMaxSeconds { get; set; } = 3600;
 
+    public double MessageProcessingMaxSecondsTimeoutRatio { get; set; } = 0.9;
+
+    public double MessageProcessingMaxSecondsTimeout
+    {
+        get
+        {
+            messageProcessingMaxSecondsTimeout ??= CalcMessageProcessingMaxSecondsTimeout();
+            return messageProcessingMaxSecondsTimeout!.Value;
+        }
+        set => messageProcessingMaxSecondsTimeout = value;
+    }
+
     public int MinimumRetryConsumeInboxMessageTimesToWarning { get; set; } = 3;
 
     public bool LogIntervalProcessInformation { get; set; }
 
     public int CheckToProcessTriggerIntervalTimeSeconds { get; set; } = 15;
+
+    public double? CalcMessageProcessingMaxSecondsTimeout()
+    {
+        return MessageProcessingMaxSeconds * MessageProcessingMaxSecondsTimeoutRatio;
+    }
 }

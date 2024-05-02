@@ -2,6 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Easy.Platform.Common.Utils;
 
 namespace Easy.Platform.Common.Extensions;
@@ -337,9 +338,22 @@ public static class ListExtension
     /// </example>
     public static void ForEach<T>(this IEnumerable<T> items, Action<T, int> action)
     {
-        var itemsList = items.As<IList<T>>() ?? items.ToList();
+        if (items is List<T> itemsList)
+        {
+            var itemsSpan = CollectionsMarshal.AsSpan(itemsList);
 
-        for (var i = 0; i < itemsList.Count; i++) action(itemsList[i], i);
+            for (var i = 0; i < itemsSpan.Length; i++) action(itemsSpan[i], i);
+        }
+        else if (items is T[] itemsArray)
+        {
+            for (var i = 0; i < itemsArray.Length; i++) action(itemsArray[i], i);
+        }
+        else
+        {
+            var itemsIList = items.As<IList<T>>() ?? items.ToList();
+
+            for (var i = 0; i < itemsIList.Count; i++) action(itemsIList[i], i);
+        }
     }
 
     /// <summary>
@@ -356,7 +370,17 @@ public static class ListExtension
     /// </example>
     public static void ForEach<T>(this IList<T> items, Action<T, int> action)
     {
-        for (var i = 0; i < items.Count; i++) action(items[i], i);
+        if (items is List<T> itemsList)
+        {
+            var itemsSpan = CollectionsMarshal.AsSpan(itemsList);
+
+            for (var i = 0; i < itemsSpan.Length; i++) action(itemsSpan[i], i);
+        }
+        else
+        {
+            for (var i = 0; i < items.Count; i++)
+                action(items[i], i);
+        }
     }
 
     /// <summary>
@@ -374,9 +398,16 @@ public static class ListExtension
     /// </example>
     public static async Task ForEachAsync<T>(this IEnumerable<T> items, Func<T, int, Task> action)
     {
-        var itemsList = items.As<IList<T>>() ?? items.ToList();
+        if (items is T[] itemsArray)
+        {
+            for (var i = 0; i < itemsArray.Length; i++) await action(itemsArray[i], i);
+        }
+        else
+        {
+            var itemsIList = items.As<IList<T>>() ?? items.ToList();
 
-        for (var i = 0; i < itemsList.Count; i++) await action(itemsList[i], i);
+            for (var i = 0; i < itemsIList.Count; i++) await action(itemsIList[i], i);
+        }
     }
 
     /// <summary>

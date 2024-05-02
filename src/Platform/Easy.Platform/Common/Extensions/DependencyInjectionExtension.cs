@@ -115,6 +115,31 @@ public static class DependencyInjectionExtension
         return services;
     }
 
+    /// <inheritdoc cref="RegisterAllSelfImplementationFromType(IServiceCollection,Type,Assembly,ServiceLifeTime,bool,CheckRegisteredStrategy,bool,CheckRegisteredStrategy)" />
+    public static IServiceCollection RegisterAllSelfImplementationFromType(
+        this IServiceCollection services,
+        Type conventionalType,
+        List<Assembly> assemblies,
+        ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
+        bool replaceIfExist = true,
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool skipIfExist = false,
+        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
+    {
+        assemblies.ForEach(
+            assembly => RegisterAllSelfImplementationFromType(
+                services,
+                conventionalType,
+                assembly,
+                lifeTime,
+                replaceIfExist,
+                replaceStrategy,
+                skipIfExist,
+                skipIfExistStrategy));
+
+        return services;
+    }
+
     /// <summary>
     /// Registers all concrete types in the specified assembly that are assignable to the type parameter TConventional.
     /// </summary>
@@ -147,6 +172,30 @@ public static class DependencyInjectionExtension
             skipIfExistStrategy: skipIfExistStrategy);
     }
 
+    /// <inheritdoc cref="RegisterAllFromType" />
+    public static IServiceCollection RegisterAllFromType<TConventional>(
+        this IServiceCollection services,
+        List<Assembly> assemblies,
+        ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
+        bool replaceIfExist = true,
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool skipIfExist = false,
+        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
+    {
+        assemblies.ForEach(
+            assembly => RegisterAllFromType(
+                services,
+                typeof(TConventional),
+                assembly,
+                lifeTime,
+                replaceIfExist,
+                replaceStrategy,
+                skipIfExist: skipIfExist,
+                skipIfExistStrategy: skipIfExistStrategy));
+
+        return services;
+    }
+
     /// <summary>
     /// Registers all concrete types in the specified assembly that are assignable to the given conventional type as themselves.
     /// </summary>
@@ -177,6 +226,33 @@ public static class DependencyInjectionExtension
             replaceStrategy,
             skipIfExist: skipIfExist,
             skipIfExistStrategy: skipIfExistStrategy);
+    }
+
+    /// <inheritdoc cref="RegisterAllSelfImplementationFromType" />
+    public static IServiceCollection RegisterAllSelfImplementationFromType<TConventional>(
+        this IServiceCollection services,
+        List<Assembly> assemblies,
+        ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
+        bool replaceIfExist = true,
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool skipIfExist = false,
+        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
+    {
+        assemblies.ForEach(
+            assembly =>
+            {
+                RegisterAllSelfImplementationFromType(
+                    services,
+                    typeof(TConventional),
+                    assembly,
+                    lifeTime,
+                    replaceIfExist,
+                    replaceStrategy,
+                    skipIfExist: skipIfExist,
+                    skipIfExistStrategy: skipIfExistStrategy);
+            });
+
+        return services;
     }
 
     /// <summary>
@@ -1334,16 +1410,9 @@ public static class DependencyInjectionExtension
         await Util.Pager.ExecutePagingAsync(
             async (skipCount, pageSize) =>
             {
-                try
-                {
-                    await serviceProvider.ExecuteInjectScopedAsync(
-                        method,
-                        manuallyParams: Util.ListBuilder.NewArray<object>(skipCount, pageSize).Concat(manuallyParams).ToArray());
-                }
-                finally
-                {
-                    Util.GarbageCollector.Collect();
-                }
+                await serviceProvider.ExecuteInjectScopedAsync(
+                    method,
+                    manuallyParams: Util.ListBuilder.NewArray<object>(skipCount, pageSize).Concat(manuallyParams).ToArray());
             },
             maxItemCount: maxItemCount,
             pageSize: pageSize,
@@ -1361,17 +1430,7 @@ public static class DependencyInjectionExtension
         params object[] manuallyParams)
     {
         return Util.Pager.ExecuteScrollingPagingAsync(
-            async () =>
-            {
-                try
-                {
-                    return await serviceProvider.ExecuteInjectScopedAsync<List<TItem>>(method, manuallyParams);
-                }
-                finally
-                {
-                    Util.GarbageCollector.Collect();
-                }
-            },
+            async () => await serviceProvider.ExecuteInjectScopedAsync<List<TItem>>(method, manuallyParams),
             maxExecutionCount);
     }
 
@@ -1387,17 +1446,7 @@ public static class DependencyInjectionExtension
         params object[] manuallyParams)
     {
         return Util.Pager.ExecuteScrollingPagingAsync(
-            async () =>
-            {
-                try
-                {
-                    return await serviceProvider.ExecuteInjectScopedAsync<List<TItem>>(method, manuallyParams);
-                }
-                finally
-                {
-                    Util.GarbageCollector.Collect();
-                }
-            },
+            async () => await serviceProvider.ExecuteInjectScopedAsync<List<TItem>>(method, manuallyParams),
             maxExecutionCount,
             pageDelayTime);
     }

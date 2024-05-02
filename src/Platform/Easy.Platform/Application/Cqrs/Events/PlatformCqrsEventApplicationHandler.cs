@@ -270,7 +270,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         if (!ForceInSameEventTriggerUow &&
             eventSourceUow != null &&
             !eventSourceUow.IsPseudoTransactionUow() &&
-            !CanExecuteHandlingEventUsingInboxConsumer(RootServiceProvider.CheckServiceRegistered(typeof(IPlatformInboxBusMessageRepository)), @event) &&
+            !CanExecuteHandlingEventUsingInboxConsumer(RootServiceProvider.IsServiceTypeRegistered(typeof(IPlatformInboxBusMessageRepository)), @event) &&
             !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()) &&
             !MustWaitHandlerExecutionFinishedImmediately)
             eventSourceUow.OnSaveChangesCompletedActions.Add(
@@ -404,6 +404,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             inboxBusMessageRepository: inboxMessageRepository,
             inboxConfig: inboxConfig,
             message: CqrsEventInboxBusMessage(@event, eventHandlerType: GetType(), applicationSettingContext, currentBusMessageIdentity),
+            forApplicationName: ApplicationSettingContext.ApplicationName,
             routingKey: PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(typeof(TEvent), applicationSettingContext.ApplicationName),
             loggerFactory: CreateGlobalLogger,
             retryProcessFailedMessageInSecondsUnit: PlatformInboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit,
@@ -413,7 +414,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             handleInUow: eventSourceUow,
             autoDeleteProcessedMessageImmediately: AutoDeleteProcessedInboxEventMessage,
             extendedMessageIdPrefix:
-            $"{GetType().GetNameOrGenericTypeName()}-{@event.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix() ?? ""}",
+            $"{GetType().GetNameOrGenericTypeName()}-{@event.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix() ?? @event.Id}",
             cancellationToken: cancellationToken);
     }
 
@@ -424,7 +425,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         PlatformBusMessageIdentity currentBusMessageIdentity)
     {
         return PlatformBusMessage<PlatformCqrsEventBusMessagePayload>.New<PlatformBusMessage<PlatformCqrsEventBusMessagePayload>>(
-            trackId: $"{@event.Id}-{eventHandlerType.Name}",
+            trackId: @event.Id,
             payload: PlatformCqrsEventBusMessagePayload.New(@event, eventHandlerType.FullName),
             identity: currentBusMessageIdentity,
             producerContext: applicationSettingContext.ApplicationName,

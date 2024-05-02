@@ -17,7 +17,7 @@ public static class SendPlatformCqrsEntityEventExtension
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity, new()
     {
-        if (rootServiceProvider.CheckAssignableToServiceRegistered(typeof(IPlatformCqrsEventHandler<PlatformCqrsEntityEvent<TEntity>>)))
+        if (rootServiceProvider.IsAnyImplementationAssignableToServiceTypeRegistered(typeof(IPlatformCqrsEventHandler<PlatformCqrsEntityEvent<TEntity>>)))
             await cqrs.SendEvent(
                 new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(_ => eventCustomConfig?.Invoke(_)),
                 cancellationToken);
@@ -32,7 +32,7 @@ public static class SendPlatformCqrsEntityEventExtension
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity, new()
     {
-        if (rootServiceProvider.CheckAssignableToServiceRegistered(typeof(IPlatformCqrsEventHandler<PlatformCqrsEntityEvent<TEntity>>)))
+        if (rootServiceProvider.IsAnyImplementationAssignableToServiceTypeRegistered(typeof(IPlatformCqrsEventHandler<PlatformCqrsEntityEvent<TEntity>>)))
             await cqrs.SendEvents(
                 entities.SelectList(entity => new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(_ => eventCustomConfig?.Invoke(_))),
                 cancellationToken);

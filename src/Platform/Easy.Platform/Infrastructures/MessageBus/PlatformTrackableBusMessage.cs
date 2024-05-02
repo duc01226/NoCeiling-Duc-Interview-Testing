@@ -2,6 +2,9 @@ namespace Easy.Platform.Infrastructures.MessageBus;
 
 public interface IPlatformTrackableBusMessage : IPlatformSubMessageQueuePrefixSupport
 {
+    /// <summary>
+    /// Unique generated string, usually guid id to define a unique message id
+    /// </summary>
     public string TrackingId { get; set; }
 
     public DateTime? CreatedUtcDate { get; set; }

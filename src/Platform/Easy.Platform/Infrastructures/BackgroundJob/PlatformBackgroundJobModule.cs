@@ -39,15 +39,15 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
     {
         base.InternalRegister(serviceCollection);
 
-        serviceCollection.RegisterAllFromType<IPlatformBackgroundJobExecutor>(Assembly);
+        serviceCollection.RegisterAllFromType<IPlatformBackgroundJobExecutor>(GetServicesRegisterScanAssemblies());
 
         serviceCollection.RegisterAllFromType<IPlatformBackgroundJobScheduler>(
-            Assembly,
+            GetServicesRegisterScanAssemblies(),
             replaceStrategy: DependencyInjectionExtension.CheckRegisteredStrategy.ByService,
             lifeTime: ServiceLifeTime.Singleton);
 
         serviceCollection.RegisterAllFromType<IPlatformBackgroundJobProcessingService>(
-            Assembly,
+            GetServicesRegisterScanAssemblies(),
             ServiceLifeTime.Singleton,
             replaceStrategy: DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
 

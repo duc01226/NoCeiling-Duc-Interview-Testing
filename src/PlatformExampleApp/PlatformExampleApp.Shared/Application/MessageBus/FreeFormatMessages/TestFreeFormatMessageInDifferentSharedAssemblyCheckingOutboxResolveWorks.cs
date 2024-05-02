@@ -8,7 +8,7 @@ public sealed class TestFreeFormatMessageInDifferentSharedAssemblyCheckingOutbox
 
     public override string SubQueuePrefix()
     {
-        return null;
+        return TrackingId;
     }
 }
 
@@ -18,6 +18,6 @@ public sealed class TestFreeFormatMessageInDifferentSharedAssemblyCheckingOutbox
 
     public override string SubQueuePrefix()
     {
-        return null;
+        return TrackingId;
     }
 }

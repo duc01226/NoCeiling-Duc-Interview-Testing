@@ -1,3 +1,4 @@
+using System.Reflection;
 using Easy.Platform.Application;
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.AspNetCore.Constants;
@@ -58,6 +59,15 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
     /// <returns>An array of strings representing the allowed CORS origins.</returns>
     protected abstract string[] GetAllowCorsOrigins(IConfiguration configuration);
 
+    /// <summary>
+    /// <inheritdoc cref="PlatformModule.GetServicesRegisterScanAssemblies" />  <br></br>
+    /// For PlatformAspNetCoreModule, by default do not support scan parent application module
+    /// </summary>
+    public override List<Assembly> GetServicesRegisterScanAssemblies()
+    {
+        return [Assembly];
+    }
+
     protected override void InternalRegister(IServiceCollection serviceCollection)
     {
         base.InternalRegister(serviceCollection);
@@ -65,7 +75,7 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
         RegisterUserContext(serviceCollection);
         AddDefaultCorsPolicy(serviceCollection);
         serviceCollection.AddHttpClient();
-        serviceCollection.RegisterHostedServicesFromType(Assembly, typeof(PlatformHostingBackgroundService));
+        GetServicesRegisterScanAssemblies().ForEach(assembly => serviceCollection.RegisterHostedServicesFromType(assembly, typeof(PlatformHostingBackgroundService)));
     }
 
     protected override async Task InternalInit(IServiceScope serviceScope)
