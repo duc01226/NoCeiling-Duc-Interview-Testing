@@ -29,6 +29,8 @@ public abstract class PlatformHostingBackgroundService : IHostedService, IDispos
     /// </summary>
     protected readonly ILogger Logger;
 
+    protected readonly ILoggerFactory LoggerFactory;
+
     /// <summary>
     /// Service provider for resolving dependencies.
     /// </summary>
@@ -68,6 +70,7 @@ public abstract class PlatformHostingBackgroundService : IHostedService, IDispos
     {
         ServiceProvider = serviceProvider;
         Logger = CreateLogger(loggerFactory);
+        LoggerFactory = loggerFactory;
     }
 
     /// <summary>

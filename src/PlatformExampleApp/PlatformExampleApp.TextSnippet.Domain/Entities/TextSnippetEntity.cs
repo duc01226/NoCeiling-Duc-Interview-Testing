@@ -66,6 +66,11 @@ public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid
 
     public Guid? ConcurrencyUpdateToken { get; set; }
 
+    public override string UniqueCompositeId()
+    {
+        return Id.ToString();
+    }
+
     public static TextSnippetEntity Create(Guid id, string snippetText, string fullText)
     {
         return new TextSnippetEntity

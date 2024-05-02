@@ -7,10 +7,12 @@ namespace Easy.Platform.Application.MessageBus.OutboxPattern;
 
 public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, string>, IRowVersionEntity
 {
-    public const int IdMaxLength = 200;
+    public const int IdMaxLength = 400;
     public const int RoutingKeyMaxLength = 500;
     public const int MessageTypeFullNameMaxLength = 1000;
     public const double DefaultRetryProcessFailedMessageInSecondsUnit = 60;
+    public const string BuildIdSeparator = "----";
+    public const string BuildIdGroupedByTypePrefixSeparator = "_";
 
     public string JsonMessage { get; set; }
 
@@ -24,7 +26,7 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
 
     public DateTime? NextRetryProcessAfter { get; set; }
 
-    public DateTime CreatedDate { get; set; }
+    public DateTime CreatedDate { get; set; } = Clock.UtcNow;
 
     public DateTime LastSendDate { get; set; }
 
@@ -57,13 +59,14 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
         string trackId,
         string routingKey,
         SendStatuses sendStatus,
-        string lastSendError = null) where TMessage : class, new()
+        string extendedMessageIdPrefix,
+        string lastSendError) where TMessage : class, new()
     {
         var nowDate = Clock.UtcNow;
 
         var result = new PlatformOutboxBusMessage
         {
-            Id = BuildId(trackId),
+            Id = BuildId(message.GetType(), trackId, extendedMessageIdPrefix),
             JsonMessage = message.ToFormattedJson(forceUseRuntimeType: true),
             MessageTypeFullName = GetMessageTypeFullName(message.GetType()),
             RoutingKey = routingKey.TakeTop(RoutingKeyMaxLength),
@@ -82,9 +85,14 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
         return messageType.AssemblyQualifiedName?.TakeTop(MessageTypeFullNameMaxLength);
     }
 
-    public static string BuildId(string trackId)
+    public static string BuildId(Type messageType, string trackId, string extendedMessageIdPrefix)
     {
-        return (trackId ?? Guid.NewGuid().ToString()).TakeTop(IdMaxLength);
+        return $"{BuildIdGroupedByTypePrefix(messageType, extendedMessageIdPrefix)}{BuildIdSeparator}{trackId ?? Guid.NewGuid().ToString()}".TakeTop(IdMaxLength);
+    }
+
+    public static string BuildIdGroupedByTypePrefix(Type messageType, string extendedMessageIdPrefix)
+    {
+        return extendedMessageIdPrefix.IsNullOrEmpty() ? messageType.Name : $"{messageType.Name}{BuildIdGroupedByTypePrefixSeparator}{extendedMessageIdPrefix}";
     }
 
     public static DateTime CalculateNextRetryProcessAfter(
@@ -93,6 +101,45 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
     {
         return DateTime.UtcNow.AddSeconds(
             retryProcessFailedMessageInSecondsUnit * Math.Pow(2, retriedProcessCount ?? 0));
+    }
+
+    public static Expression<Func<PlatformOutboxBusMessage, bool>> CheckAnySameTypeOtherPreviousNotProcessedMessageExpr(
+        Type messageType,
+        string messageTrackId,
+        DateTime messageCreatedDate,
+        string extendedMessageIdPrefix)
+    {
+        return CheckAnySameTypeOtherPreviousNotProcessedMessageExpr(
+            BuildIdGroupedByTypePrefix(messageType, extendedMessageIdPrefix),
+            BuildId(messageType, messageTrackId, extendedMessageIdPrefix),
+            messageCreatedDate);
+    }
+
+    public static Expression<Func<PlatformOutboxBusMessage, bool>> CheckAnySameTypeOtherPreviousNotProcessedMessageExpr(
+        PlatformOutboxBusMessage message)
+    {
+        return CheckAnySameTypeOtherPreviousNotProcessedMessageExpr(message.GetIdPrefix(), message.Id, message.CreatedDate);
+    }
+
+    public static Expression<Func<PlatformOutboxBusMessage, bool>> CheckAnySameTypeOtherPreviousNotProcessedMessageExpr(
+        string messageIdPrefix,
+        string messageId,
+        DateTime messageCreatedDate)
+    {
+        return p => p.Id.StartsWith(messageIdPrefix) &&
+                    (p.SendStatus == SendStatuses.Failed || p.SendStatus == SendStatuses.Processing || p.SendStatus == SendStatuses.New) &&
+                    p.Id != messageId &&
+                    p.CreatedDate < messageCreatedDate;
+    }
+
+    public string GetIdPrefix()
+    {
+        return GetIdPrefix(Id);
+    }
+
+    public static string GetIdPrefix(string messageId)
+    {
+        return messageId.Substring(0, messageId.IndexOf(BuildIdSeparator, StringComparison.Ordinal));
     }
 
     public enum SendStatuses

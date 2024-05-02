@@ -46,8 +46,8 @@ public class PlatformCqrsEventInboxBusMessageConsumer : PlatformApplicationMessa
                 var eventHandlerInstance = serviceProvider.GetRequiredService(eventHandlerType)
                     .As<IPlatformCqrsEventApplicationHandler>()
                     .With(_ => _.IsCurrentInstanceCalledFromInboxBusMessageConsumer = true)
-                    .With(_ => _.ForceCurrentInstanceHandleInCurrentThread = true);
-
+                    .With(_ => _.ForceCurrentInstanceHandleInCurrentThread = true)
+                    .With(_ => _.RetryOnFailedTimes = 0);
                 var @event = scanAssemblies
                     .Select(p => p.GetType(message.Payload.EventTypeFullName))
                     .FirstOrDefault(p => p != null)
@@ -61,11 +61,18 @@ public class PlatformCqrsEventInboxBusMessageConsumer : PlatformApplicationMessa
     }
 }
 
-public class PlatformCqrsEventBusMessagePayload
+public class PlatformCqrsEventBusMessagePayload : IPlatformSubMessageQueuePrefixSupport
 {
     public string EventJson { get; set; }
     public string EventTypeFullName { get; set; }
+    public string EventTypeName { get; set; }
     public string EventHandlerTypeFullName { get; set; }
+    public string? SubQueueByIdExtendedPrefixValue { get; set; }
+
+    public string SubQueuePrefix()
+    {
+        return SubQueueByIdExtendedPrefixValue;
+    }
 
     public static PlatformCqrsEventBusMessagePayload New<TEvent>(TEvent @event, string eventHandlerTypeFullName)
         where TEvent : PlatformCqrsEvent, new()
@@ -74,7 +81,9 @@ public class PlatformCqrsEventBusMessagePayload
         {
             EventJson = @event.ToJson(),
             EventTypeFullName = @event.GetType().FullName,
-            EventHandlerTypeFullName = eventHandlerTypeFullName
+            EventTypeName = @event.GetType().Name,
+            EventHandlerTypeFullName = eventHandlerTypeFullName,
+            SubQueueByIdExtendedPrefixValue = @event.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix()
         };
     }
 }

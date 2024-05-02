@@ -23,7 +23,7 @@ public interface IPlatformApplicationMessageBusConsumer : IPlatformMessageBusCon
     /// <summary>
     /// Gets or sets a value indicating whether the processed inbox event message should be automatically deleted.
     /// </summary>
-    public bool AutoDeleteProcessedInboxEventMessage { get; set; }
+    public bool AutoDeleteProcessedInboxEventMessageImmediately { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the instance is called to execute handling logic for an inbox message.
@@ -82,7 +82,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
     public virtual bool AllowUseInboxMessage => true;
 
     public PlatformInboxBusMessage HandleExistingInboxMessage { get; set; }
-    public bool AutoDeleteProcessedInboxEventMessage { get; set; }
+    public bool AutoDeleteProcessedInboxEventMessageImmediately { get; set; }
     public bool IsHandlingLogicForInboxMessage { get; set; }
     public bool AllowProcessInboxMessageInBackgroundThread { get; set; }
     public TimeSpan? InboxProcessingMaxTimeout { get; set; }
@@ -93,7 +93,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
             await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
                 RootServiceProvider,
                 ServiceProvider,
-                consumer: this,
+                consumerType: GetType(),
                 inboxBusMessageRepository: InboxBusMessageRepo.Value,
                 inboxConfig: InboxConfig,
                 message: message,
@@ -102,7 +102,9 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                 retryProcessFailedMessageInSecondsUnit: InboxConfig.RetryProcessFailedMessageInSecondsUnit,
                 allowProcessInBackgroundThread: AllowProcessInboxMessageInBackgroundThread,
                 handleExistingInboxMessage: HandleExistingInboxMessage,
-                autoDeleteProcessedMessage: AutoDeleteProcessedInboxEventMessage,
+                handleExistingInboxMessageConsumerInstance: this,
+                extendedMessageIdPrefix: message.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix(),
+                autoDeleteProcessedMessageImmediately: AutoDeleteProcessedInboxEventMessageImmediately,
                 handleInUow: null);
         else
             try
@@ -130,12 +132,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
             finally
             {
                 if (ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
-                    _ = Task.Run(
-                        () =>
-                        {
-                            Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
-                        },
-                        CancellationToken.None);
+                    Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
             }
     }
 

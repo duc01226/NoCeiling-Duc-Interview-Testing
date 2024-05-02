@@ -15,14 +15,12 @@ public abstract class PlatformCqrsCommandEventBusMessageProducer<TCommand>
         IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider,
-        IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
-        IPlatformApplicationSettingContext applicationSettingContext) : base(
+        IPlatformApplicationBusMessageProducer applicationBusMessageProducer) : base(
         loggerFactory,
         unitOfWorkManager,
         serviceProvider,
         rootServiceProvider,
-        applicationBusMessageProducer,
-        applicationSettingContext)
+        applicationBusMessageProducer)
     {
     }
 

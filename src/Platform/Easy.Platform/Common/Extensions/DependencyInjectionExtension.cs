@@ -1342,9 +1342,7 @@ public static class DependencyInjectionExtension
                 }
                 finally
                 {
-                    _ = Task.Run(
-                        () => Util.GarbageCollector.Collect(),
-                        CancellationToken.None);
+                    Util.GarbageCollector.Collect();
                 }
             },
             maxItemCount: maxItemCount,
@@ -1371,9 +1369,7 @@ public static class DependencyInjectionExtension
                 }
                 finally
                 {
-                    _ = Task.Run(
-                        () => Util.GarbageCollector.Collect(),
-                        CancellationToken.None);
+                    Util.GarbageCollector.Collect();
                 }
             },
             maxExecutionCount);
@@ -1399,9 +1395,7 @@ public static class DependencyInjectionExtension
                 }
                 finally
                 {
-                    _ = Task.Run(
-                        () => Util.GarbageCollector.Collect(),
-                        CancellationToken.None);
+                    Util.GarbageCollector.Collect();
                 }
             },
             maxExecutionCount,

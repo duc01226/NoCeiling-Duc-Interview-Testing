@@ -160,6 +160,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
                 message,
                 routingKey,
                 OutboxConfig.RetryProcessFailedMessageInSecondsUnit,
+                extendedMessageIdPrefix: message.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix(),
                 handleExistingOutboxMessage: null,
                 sourceOutboxUowId: sourceOutboxUowId,
                 cancellationToken);

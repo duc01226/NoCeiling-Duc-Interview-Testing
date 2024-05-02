@@ -39,11 +39,9 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
         IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider,
-        IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
-        IPlatformApplicationSettingContext applicationSettingContext) : base(loggerFactory, unitOfWorkManager, serviceProvider, rootServiceProvider)
+        IPlatformApplicationBusMessageProducer applicationBusMessageProducer) : base(loggerFactory, unitOfWorkManager, serviceProvider, rootServiceProvider)
     {
         ApplicationBusMessageProducer = applicationBusMessageProducer;
-        ApplicationSettingContext = applicationSettingContext;
     }
 
     public override bool EnableInboxEventBusMessage => false;
@@ -53,8 +51,6 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
     protected override bool AllowUsingUserContextAccessor => true;
 
     protected override bool MustWaitHandlerExecutionFinishedImmediately => ApplicationBusMessageProducer.HasOutboxMessageSupport();
-
-    protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
 
     protected abstract TMessage BuildMessage(TEvent @event);
 

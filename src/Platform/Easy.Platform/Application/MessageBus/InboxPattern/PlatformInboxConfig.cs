@@ -16,7 +16,7 @@ public class PlatformInboxConfig
     /// <summary>
     /// To config max store processed message count. Will delete old messages of maximum messages happened
     /// </summary>
-    public int MaxStoreProcessedMessageCount { get; set; } = 100;
+    public int MaxStoreProcessedMessageCount { get; set; } = 10000;
 
     /// <summary>
     /// To config how long a message can live in the database in seconds. Default is two week (14 days);
@@ -32,7 +32,7 @@ public class PlatformInboxConfig
 
     public int ProcessClearMessageRetryCount { get; set; } = 5;
 
-    public int NumberOfProcessConsumeInboxMessagesBatch { get; set; } = 10;
+    public int NumberOfProcessConsumeInboxMessagesBatch { get; set; } = 5;
 
     public int ProcessConsumeMessageRetryCount { get; set; } = 10;
 
@@ -43,5 +43,9 @@ public class PlatformInboxConfig
     /// </summary>
     public double MessageProcessingMaxSeconds { get; set; } = 3600;
 
+    public int MinimumRetryConsumeInboxMessageTimesToWarning { get; set; } = 3;
+
     public bool LogIntervalProcessInformation { get; set; }
+
+    public int CheckToProcessTriggerIntervalTimeSeconds { get; set; } = 15;
 }

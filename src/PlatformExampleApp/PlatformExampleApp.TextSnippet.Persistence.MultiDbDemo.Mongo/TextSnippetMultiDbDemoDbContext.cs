@@ -11,14 +11,12 @@ namespace PlatformExampleApp.TextSnippet.Persistence.MultiDbDemo.Mongo;
 public sealed class TextSnippetMultiDbDemoDbContext : PlatformMongoDbContext<TextSnippetMultiDbDemoDbContext>
 {
     public TextSnippetMultiDbDemoDbContext(
-        IOptions<PlatformMongoOptions<TextSnippetMultiDbDemoDbContext>> options,
-        IPlatformMongoClient<TextSnippetMultiDbDemoDbContext> client,
+        IPlatformMongoDatabase<TextSnippetMultiDbDemoDbContext> database,
         ILoggerFactory loggerFactory,
         IPlatformApplicationRequestContextAccessor userContextAccessor,
         PlatformPersistenceConfiguration<TextSnippetMultiDbDemoDbContext> persistenceConfiguration,
         IPlatformRootServiceProvider rootServiceProvider) : base(
-        options,
-        client,
+        database,
         loggerFactory,
         userContextAccessor,
         persistenceConfiguration,

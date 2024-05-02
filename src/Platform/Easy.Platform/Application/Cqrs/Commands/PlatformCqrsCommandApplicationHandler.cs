@@ -122,12 +122,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
         finally
         {
             if (ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
-                _ = Task.Run(
-                    () =>
-                    {
-                        Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
-                    },
-                    CancellationToken.None);
+                Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
         }
     }
 

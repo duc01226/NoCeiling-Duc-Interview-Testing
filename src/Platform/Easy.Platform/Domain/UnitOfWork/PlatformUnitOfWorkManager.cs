@@ -77,6 +77,12 @@ public interface IPlatformUnitOfWorkManager : IDisposable
     public IPlatformUnitOfWork TryGetCurrentOrCreatedActiveUow(string uowId);
 
     /// <summary>
+    /// Gets currently latest active unit of work has id equal uowId. Return null if no active uow
+    /// </summary>
+    [return: MaybeNull]
+    public IPlatformUnitOfWork TryGetCurrentActiveUow(string uowId);
+
+    /// <summary>
     /// Check that is there any currently latest active unit of work
     /// </summary>
     public bool HasCurrentActiveUow();
@@ -174,6 +180,17 @@ public abstract class PlatformUnitOfWorkManager(Lazy<IPlatformCqrs> cqrs, IPlatf
             : null;
     }
 
+    public IPlatformUnitOfWork TryGetCurrentActiveUow(string uowId)
+    {
+        if (uowId == null) return TryGetCurrentActiveUow();
+
+        var currentOrCreatedUow = LastOrDefaultMatchedUowOfId(CurrentUnitOfWorks, uowId);
+
+        return currentOrCreatedUow?.IsActive() == true
+            ? currentOrCreatedUow
+            : null;
+    }
+
     public bool HasCurrentActiveUow()
     {
         return CurrentUow()?.IsActive() == true;
@@ -253,18 +270,18 @@ public abstract class PlatformUnitOfWorkManager(Lazy<IPlatformCqrs> cqrs, IPlatf
                (FreeCreatedUnitOfWorks.IsValueCreated
                    ? LastOrDefaultMatchedUowOfId(FreeCreatedUnitOfWorks.Value.Values.ToList(), uowId)
                    : null);
+    }
 
-        static IPlatformUnitOfWork LastOrDefaultMatchedUowOfId(List<IPlatformUnitOfWork> unitOfWorks, string uowId)
+    public static IPlatformUnitOfWork LastOrDefaultMatchedUowOfId(List<IPlatformUnitOfWork> unitOfWorks, string uowId)
+    {
+        for (var i = unitOfWorks.Count - 1; i >= 0; i--)
         {
-            for (var i = unitOfWorks.Count - 1; i >= 0; i--)
-            {
-                var matchedUow = unitOfWorks.ElementAtOrDefault(i)?.UowOfId(uowId);
+            var matchedUow = unitOfWorks.ElementAtOrDefault(i)?.UowOfId(uowId);
 
-                if (matchedUow != null) return matchedUow;
-            }
-
-            return null;
+            if (matchedUow != null) return matchedUow;
         }
+
+        return null;
     }
 
     private static void EnsureUowActive(IPlatformUnitOfWork currentUow)

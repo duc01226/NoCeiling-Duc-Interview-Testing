@@ -21,7 +21,7 @@ public class PlatformOutboxConfig
     /// <summary>
     /// To config max store processed message count. Will delete old messages of maximum messages happened
     /// </summary>
-    public int MaxStoreProcessedMessageCount { get; set; } = 100;
+    public int MaxStoreProcessedMessageCount { get; set; } = 10000;
 
     /// <summary>
     /// To config how long a message can live in the database in seconds. Default is two week (14 days);
@@ -42,11 +42,15 @@ public class PlatformOutboxConfig
     public int ProcessSendMessageRetryCount { get; set; } = 10;
 
     /// <summary>
-    /// To config how long a message can live in the database as Processing status in seconds. Default is 600 seconds;
+    /// To config how long a message can live in the database as Processing status in seconds. Default is 3600 seconds;
     /// This to handle that if message for some reason has been set as Processing but failed to process and has not been set
     /// back to failed.
     /// </summary>
-    public int MessageProcessingMaxSeconds { get; set; } = 600;
+    public int MessageProcessingMaxSeconds { get; set; } = 3600;
 
     public bool LogIntervalProcessInformation { get; set; }
+
+    public int CheckToProcessTriggerIntervalTimeSeconds { get; set; } = 15;
+
+    public int MinimumRetrySendOutboxMessageTimesToWarning { get; set; } = 2;
 }

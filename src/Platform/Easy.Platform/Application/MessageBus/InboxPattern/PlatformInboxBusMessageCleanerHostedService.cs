@@ -3,6 +3,7 @@ using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.HostingBackgroundServices;
 using Easy.Platform.Common.Utils;
+using Easy.Platform.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -32,7 +33,7 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
 
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
-        await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformModule), Logger, $"process ${GetType().Name}");
+        await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformPersistenceModule), Logger, $"process ${GetType().Name}");
 
         if (!HasInboxEventBusMessageRepositoryRegistered() || isProcessing) return;
 
@@ -126,7 +127,7 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
                 var toDeleteMessages = await inboxEventBusMessageRepo.GetAllAsync(
                     queryBuilder: query => query
                         .Where(CleanMessagePredicate())
-                        .OrderByDescending(p => p.LastConsumeDate)
+                        .OrderByDescending(p => p.CreatedDate)
                         .Skip(InboxConfig.MaxStoreProcessedMessageCount)
                         .Take(NumberOfDeleteMessagesBatch()),
                     cancellationToken);
@@ -171,7 +172,7 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
                                 PlatformInboxBusMessage.ToCleanExpiredMessagesByTimeExpr(
                                     DeleteProcessedMessageInSeconds(),
                                     DeleteExpiredFailedMessageInSeconds()))
-                            .OrderBy(p => p.LastConsumeDate)
+                            .OrderBy(p => p.CreatedDate)
                             .Take(NumberOfDeleteMessagesBatch()),
                         cancellationToken);
 

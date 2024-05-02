@@ -7,6 +7,7 @@ using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.UnitOfWork;
+using Easy.Platform.Infrastructures.MessageBus;
 
 namespace Easy.Platform.Domain.Events;
 
@@ -216,7 +217,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
 /// <br />
 /// In summary, PlatformCqrsEntityEvent[TEntity] is a key part of the event-driven architecture of the system, facilitating the handling and propagation of entity-related events.
 /// </remarks>
-public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent
+public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent, IPlatformSubMessageQueuePrefixSupport
     where TEntity : class, IEntity, new()
 {
     public PlatformCqrsEntityEvent() { }
@@ -253,6 +254,13 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent
     /// It is a list of DomainEventName-DomainEventAsJson from entity domain events
     /// </summary>
     public List<KeyValuePair<string, string>> DomainEvents { get; set; } = [];
+
+    public string SubQueuePrefix()
+    {
+        return EntityData?.As<IEntity<string>>().Id ??
+               EntityData?.As<IEntity<Guid>>().Id.ToString() ??
+               EntityData?.As<IEntity<int>>().Id.ToString();
+    }
 
     /// <summary>
     /// Finds and retrieves a list of specific domain events associated with an entity.

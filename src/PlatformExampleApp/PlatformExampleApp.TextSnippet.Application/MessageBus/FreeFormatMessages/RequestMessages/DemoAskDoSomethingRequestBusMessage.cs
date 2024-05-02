@@ -7,11 +7,13 @@ namespace PlatformExampleApp.TextSnippet.Application.MessageBus.FreeFormatMessag
 /// Other feature services can ask this common service to do something, then the bus message act like a request
 /// The request receiver is the LEADER, control the request schema and logic.
 /// Other services just use them
-///
 /// The naming convention rule is: [LEADER-SERVICE-NAME (The consumer service handle request)] + XXX + RequestBusMessage
-///
 /// Example: EmailServiceSendEmailRequestBusMessage
 /// </summary>
 public sealed class DemoAskDoSomethingRequestBusMessage : PlatformTrackableBusMessage
 {
+    public override string SubQueuePrefix()
+    {
+        return TrackingId;
+    }
 }

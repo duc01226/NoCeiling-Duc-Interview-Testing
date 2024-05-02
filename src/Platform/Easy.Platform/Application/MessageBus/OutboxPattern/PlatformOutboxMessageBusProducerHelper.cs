@@ -1,5 +1,6 @@
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.Timing;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Exceptions;
 using Easy.Platform.Domain.UnitOfWork;
@@ -35,6 +36,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         TMessage message,
         string routingKey,
         double retryProcessFailedMessageInSecondsUnit,
+        string extendedMessageIdPrefix,
         PlatformOutboxBusMessage handleExistingOutboxMessage = null,
         string sourceOutboxUowId = null,
         CancellationToken cancellationToken = default) where TMessage : class, new()
@@ -52,6 +54,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         retryProcessFailedMessageInSecondsUnit,
                         handleExistingOutboxMessage,
                         null,
+                        extendedMessageIdPrefix,
                         cancellationToken,
                         CreateLogger(),
                         outboxBusMessageRepository,
@@ -68,6 +71,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         retryProcessFailedMessageInSecondsUnit,
                         handleExistingOutboxMessage,
                         sourceOutboxUowId,
+                        extendedMessageIdPrefix,
                         cancellationToken,
                         CreateLogger(),
                         outboxBusMessageRepository,
@@ -86,6 +90,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         double retryProcessFailedMessageInSecondsUnit,
         PlatformOutboxBusMessage handleExistingOutboxMessage,
         string sourceOutboxUowId,
+        string extendedMessageIdPrefix,
         CancellationToken cancellationToken,
         ILogger logger,
         IPlatformOutboxBusMessageRepository outboxBusMessageRepository,
@@ -99,6 +104,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 message,
                 routingKey,
                 retryProcessFailedMessageInSecondsUnit,
+                extendedMessageIdPrefix,
                 cancellationToken,
                 logger,
                 messageBusProducer,
@@ -109,6 +115,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 routingKey,
                 retryProcessFailedMessageInSecondsUnit,
                 sourceOutboxUowId,
+                extendedMessageIdPrefix,
                 cancellationToken,
                 logger,
                 unitOfWorkManager,
@@ -120,6 +127,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         TMessage message,
         string routingKey,
         double retryProcessFailedMessageInSecondsUnit,
+        string extendedMessageIdPrefix,
         CancellationToken cancellationToken,
         ILogger logger,
         IPlatformMessageBusProducer messageBusProducer,
@@ -146,8 +154,28 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         {
             logger.LogError(exception, "SendExistingOutboxMessageAsync failed. [[Error:{Error}]]", exception.Message);
 
-            await UpdateExistingOutboxMessageFailedInNewScopeAsync(existingOutboxMessage, exception, retryProcessFailedMessageInSecondsUnit, cancellationToken, logger);
+            await UpdateExistingOutboxMessageFailedAsync(existingOutboxMessage, exception, retryProcessFailedMessageInSecondsUnit, cancellationToken, logger);
         }
+    }
+
+    public async Task RevertExistingOutboxToNewMessageAsync(
+        PlatformOutboxBusMessage existingOutboxMessage,
+        IPlatformOutboxBusMessageRepository outboxBusMessageRepository,
+        CancellationToken cancellationToken)
+    {
+        await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+            async () =>
+            {
+                var toUpdateMessage = await outboxBusMessageRepository.GetByIdAsync(existingOutboxMessage.Id, cancellationToken);
+
+                await outboxBusMessageRepository.UpdateImmediatelyAsync(
+                    toUpdateMessage
+                        .With(p => p.SendStatus = PlatformOutboxBusMessage.SendStatuses.New),
+                    cancellationToken: cancellationToken);
+            },
+            sleepDurationProvider: retryAttempt => (retryAttempt * DefaultResilientRetiredDelayMilliseconds).Milliseconds(),
+            retryCount: DefaultResilientRetiredCount,
+            cancellationToken: cancellationToken);
     }
 
     public async Task SendExistingOutboxMessageInNewUowAsync<TMessage>(
@@ -176,7 +204,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         {
             logger.LogError(exception, "SendExistingOutboxMessageInNewUowAsync failed. [[Error:{Error}]]", exception.Message);
 
-            await UpdateExistingOutboxMessageFailedInNewScopeAsync(existingOutboxMessage, exception, retryProcessFailedMessageInSecondsUnit, cancellationToken, logger);
+            await UpdateExistingOutboxMessageFailedAsync(existingOutboxMessage, exception, retryProcessFailedMessageInSecondsUnit, cancellationToken, logger);
         }
     }
 
@@ -216,7 +244,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             cancellationToken: cancellationToken);
     }
 
-    public async Task UpdateExistingOutboxMessageFailedInNewScopeAsync(
+    public async Task UpdateExistingOutboxMessageFailedAsync(
         PlatformOutboxBusMessage existingOutboxMessage,
         Exception exception,
         double retryProcessFailedMessageInSecondsUnit,
@@ -225,6 +253,14 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
     {
         try
         {
+            logger.LogError(
+                exception,
+                "Error Send message [Type:{ExistingOutboxMessage_MessageTypeFullName}]; [[Error:{Error}]]. " +
+                "Message Info: ${ExistingOutboxMessage_JsonMessage}.",
+                existingOutboxMessage.MessageTypeFullName,
+                exception.Message,
+                existingOutboxMessage.JsonMessage);
+
             await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                 async () =>
                 {
@@ -241,7 +277,6 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                                     exception,
                                     retryProcessFailedMessageInSecondsUnit,
                                     cancellationToken,
-                                    logger,
                                     outboxBusMessageRepository);
                         });
                 },
@@ -253,7 +288,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         {
             logger.LogError(
                 ex,
-                "UpdateExistingOutboxMessageFailedInNewUowAsync failed. [[Error:{Error}]]].",
+                "UpdateExistingOutboxMessageFailedAsync failed. [[Error:{Error}]]].",
                 ex.Message);
         }
     }
@@ -263,7 +298,6 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         Exception exception,
         double retryProcessFailedMessageInSecondsUnit,
         CancellationToken cancellationToken,
-        ILogger logger,
         IPlatformOutboxBusMessageRepository outboxBusMessageRepository)
     {
         existingOutboxMessage.SendStatus = PlatformOutboxBusMessage.SendStatuses.Failed;
@@ -275,8 +309,6 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             retryProcessFailedMessageInSecondsUnit);
 
         await outboxBusMessageRepository.CreateOrUpdateAsync(existingOutboxMessage, dismissSendEvent: true, eventCustomConfig: null, cancellationToken);
-
-        LogSendOutboxMessageFailed(exception, existingOutboxMessage, logger);
     }
 
     protected async Task SaveAndTrySendNewOutboxMessageAsync<TMessage>(
@@ -284,6 +316,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         string routingKey,
         double retryProcessFailedMessageInSecondsUnit,
         string sourceOutboxUowId,
+        string extendedMessageIdPrefix,
         CancellationToken cancellationToken,
         ILogger logger,
         IPlatformUnitOfWorkManager unitOfWorkManager,
@@ -293,27 +326,14 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
             async () =>
             {
-                var messageTrackId = message.As<IPlatformTrackableBusMessage>()?.TrackingId;
+                var (toProcessOutboxMessage, existedOutboxMessage) = await GetOrCreateToProcessOutboxMessage(
+                    message,
+                    routingKey,
+                    extendedMessageIdPrefix,
+                    cancellationToken,
+                    outboxBusMessageRepository);
 
-                var existedOutboxMessage = messageTrackId != null
-                    ? await outboxBusMessageRepository.FirstOrDefaultAsync(
-                        p => p.Id == PlatformOutboxBusMessage.BuildId(messageTrackId),
-                        cancellationToken)
-                    : null;
-
-                var newOutboxMessage = existedOutboxMessage == null
-                    ? await outboxBusMessageRepository.CreateAsync(
-                        PlatformOutboxBusMessage.Create(
-                            message,
-                            messageTrackId,
-                            routingKey,
-                            PlatformOutboxBusMessage.SendStatuses.Processing),
-                        dismissSendEvent: true,
-                        eventCustomConfig: null,
-                        cancellationToken)
-                    : null;
-
-                var toProcessInboxMessage = existedOutboxMessage ?? newOutboxMessage;
+                if (toProcessOutboxMessage == null) return;
 
                 if (existedOutboxMessage == null ||
                     PlatformOutboxBusMessage.CanHandleMessagesExpr(outboxConfig.MessageProcessingMaxSeconds).Compile()(existedOutboxMessage))
@@ -333,10 +353,11 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         Util.TaskRunner.QueueActionInBackground(
                             async () => await rootServiceProvider.ExecuteInjectScopedAsync(
                                 SendExistingOutboxMessageAsync<TMessage>,
-                                toProcessInboxMessage,
+                                toProcessOutboxMessage,
                                 message,
                                 routingKey,
                                 retryProcessFailedMessageInSecondsUnit,
+                                extendedMessageIdPrefix,
                                 cancellationToken,
                                 logger),
                             loggerFactory: CreateLogger,
@@ -352,10 +373,11 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                                 // immediately if possible is better instead of waiting for the background process
                                 await rootServiceProvider.ExecuteInjectScopedAsync(
                                     SendExistingOutboxMessageInNewUowAsync<TMessage>,
-                                    toProcessInboxMessage,
+                                    toProcessOutboxMessage,
                                     message,
                                     routingKey,
                                     retryProcessFailedMessageInSecondsUnit,
+                                    extendedMessageIdPrefix,
                                     cancellationToken,
                                     logger);
                             });
@@ -367,19 +389,58 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             cancellationToken: cancellationToken);
     }
 
+    private static async Task<(PlatformOutboxBusMessage, PlatformOutboxBusMessage)> GetOrCreateToProcessOutboxMessage<TMessage>(
+        TMessage message,
+        string routingKey,
+        string extendedMessageIdPrefix,
+        CancellationToken cancellationToken,
+        IPlatformOutboxBusMessageRepository outboxBusMessageRepository) where TMessage : class, new()
+    {
+        return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+            async () =>
+            {
+                var messageTrackId = message.As<IPlatformTrackableBusMessage>()?.TrackingId;
+
+                var existedOutboxMessage = messageTrackId != null
+                    ? await outboxBusMessageRepository.FirstOrDefaultAsync(
+                        p => p.Id == PlatformOutboxBusMessage.BuildId(message.GetType(), messageTrackId, extendedMessageIdPrefix),
+                        cancellationToken)
+                    : null;
+                var isAnySameTypeOtherNotProcessedMessage = await outboxBusMessageRepository.AnyAsync(
+                    PlatformOutboxBusMessage.CheckAnySameTypeOtherPreviousNotProcessedMessageExpr(
+                        message.GetType(),
+                        messageTrackId,
+                        existedOutboxMessage?.CreatedDate ?? Clock.UtcNow,
+                        extendedMessageIdPrefix),
+                    cancellationToken);
+
+                var newOutboxMessage = existedOutboxMessage == null
+                    ? await outboxBusMessageRepository.CreateAsync(
+                        PlatformOutboxBusMessage.Create(
+                            message,
+                            messageTrackId,
+                            routingKey,
+                            isAnySameTypeOtherNotProcessedMessage ? PlatformOutboxBusMessage.SendStatuses.New : PlatformOutboxBusMessage.SendStatuses.Processing,
+                            extendedMessageIdPrefix,
+                            null),
+                        dismissSendEvent: true,
+                        eventCustomConfig: null,
+                        cancellationToken)
+                    : null;
+
+                var toProcessOutboxMessage = isAnySameTypeOtherNotProcessedMessage
+                    ? null
+                    : existedOutboxMessage ?? newOutboxMessage;
+
+                return (toProcessOutboxMessage, existedOutboxMessage);
+            },
+            _ => DefaultResilientRetiredDelayMilliseconds.Milliseconds(),
+            DefaultResilientRetiredCount,
+            cancellationToken: cancellationToken);
+    }
+
     protected ILogger CreateLogger()
     {
         return rootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(PlatformOutboxMessageBusProducerHelper));
-    }
-
-    protected static void LogSendOutboxMessageFailed(Exception exception, PlatformOutboxBusMessage existingOutboxMessage, ILogger logger)
-    {
-        logger.LogError(
-            exception,
-            "Error Send message [Type:{ExistingOutboxMessage_MessageTypeFullName}]; [[Error:{Error}]]. " +
-            "Message Info: ${ExistingOutboxMessage_JsonMessage}.",
-            existingOutboxMessage.MessageTypeFullName,
-            exception.Message,
-            existingOutboxMessage.JsonMessage);
     }
 }

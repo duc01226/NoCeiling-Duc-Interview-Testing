@@ -7,6 +7,7 @@ using Easy.Platform.Common.Timing;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Exceptions;
 using Easy.Platform.Infrastructures.MessageBus;
+using Easy.Platform.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -17,8 +18,7 @@ namespace Easy.Platform.Application.MessageBus.InboxPattern;
 /// </summary>
 public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHostingBackgroundService
 {
-    public const int MinimumRetryConsumeInboxMessageTimesToWarning = 3;
-
+    private const int GetCanHandleMessageGroupedByConsumerIdPrefixesPageSize = 1000;
     private bool isProcessing;
 
     public PlatformConsumeInboxBusMessageHostedService(
@@ -46,12 +46,16 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
     protected Dictionary<string, Type> ConsumerByNameToTypeDic { get; }
     protected ILogger InvokeConsumerLogger { get; }
 
+    protected override TimeSpan ProcessTriggerIntervalTime()
+    {
+        return InboxConfig.CheckToProcessTriggerIntervalTimeSeconds.Seconds();
+    }
+
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
-        await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformModule), Logger, $"process ${GetType().Name}");
+        await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformPersistenceModule), Logger, $"process ${GetType().Name}");
 
-        if (!HasInboxEventBusMessageRepositoryRegistered() || isProcessing)
-            return;
+        if (!HasInboxEventBusMessageRepositoryRegistered() || isProcessing) return;
 
         isProcessing = true;
 
@@ -64,7 +68,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                 retryCount: InboxConfig.ProcessConsumeMessageRetryCount,
                 onRetry: (ex, timeSpan, currentRetry, ctx) =>
                 {
-                    if (currentRetry >= MinimumRetryConsumeInboxMessageTimesToWarning)
+                    if (currentRetry >= InboxConfig.MinimumRetryConsumeInboxMessageTimesToWarning)
                         Logger.LogError(
                             ex,
                             "Retry ConsumeInboxEventBusMessages {CurrentRetry} time(s) failed. [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
@@ -88,58 +92,123 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
 
     protected virtual async Task ConsumeInboxEventBusMessages(CancellationToken cancellationToken)
     {
-        do
-        {
-            var toHandleMessages = await PopToHandleInboxEventBusMessages(cancellationToken);
-
-            // Group by ConsumerBy to handling multiple different consumers parallel
-            await toHandleMessages
-                .GroupBy(p => p.ConsumerBy)
-                .ParallelAsync(
-                    async consumerMessages =>
+        await ServiceProvider.ExecuteInjectScopedAsync(
+            async (IPlatformInboxBusMessageRepository inboxBusMessageRepository) =>
+            {
+                do
+                {
+                    try
                     {
-                        // Message in the same consumer queue but created on the same seconds usually from different data/users and not dependent,
-                        // so that we could process it in parallel
-                        await consumerMessages
-                            .GroupBy(p => p.CreatedDate.AddMilliseconds(-p.CreatedDate.Millisecond))
-                            .ForEachAsync(groupSameTimeSeconds => groupSameTimeSeconds.ParallelAsync(HandleInboxMessageAsync));
-                    });
+                        var processedCanHandleMessageGroupedByConsumerIdPrefixes = new HashSet<string>();
 
-            // Random wait to decrease the chance that multiple deploy instance could process same messages at the same time
-            await Task.Delay(Util.RandomGenerator.Next(5, 10).Seconds(), cancellationToken);
-        } while (await IsAnyMessagesToHandleAsync());
+                        await Util.Pager.ExecutePagingAsync(
+                            async (skipCount, pageSize) =>
+                            {
+                                var pagedCanHandleMessageGroupedByConsumerIdPrefixes = await inboxBusMessageRepository.GetAllAsync(
+                                        queryBuilder: query => query
+                                            .Where(PlatformInboxBusMessage.CanHandleMessagesExpr(InboxConfig.MessageProcessingMaxSeconds))
+                                            .Skip(skipCount)
+                                            .Take(pageSize)
+                                            .Select(p => p.Id),
+                                        cancellationToken: cancellationToken)
+                                    .Then(
+                                        messageIds => messageIds
+                                            .Select(PlatformInboxBusMessage.GetIdPrefix)
+                                            .Where(p => !processedCanHandleMessageGroupedByConsumerIdPrefixes.Contains(p))
+                                            .ToList());
+
+                                await pagedCanHandleMessageGroupedByConsumerIdPrefixes.ParallelAsync(
+                                    async messageGroupedByConsumerIdPrefix =>
+                                    {
+                                        if (!await AnyCanHandleInboxBusMessages(messageGroupedByConsumerIdPrefix, inboxBusMessageRepository)) return;
+
+                                        do
+                                        {
+                                            try
+                                            {
+                                                var hasHandlingFailedMessage = false;
+                                                var isAnySameConsumerOtherNotProcessedMessage = false;
+
+                                                var toHandleMessages = await PopToHandleInboxEventBusMessages(
+                                                    messageGroupedByConsumerIdPrefix,
+                                                    pageSize: InboxConfig.NumberOfProcessConsumeInboxMessagesBatch,
+                                                    cancellationToken);
+
+                                                if (toHandleMessages.IsEmpty()) break;
+
+                                                foreach (var toHandleInboxMessage in toHandleMessages)
+                                                    try
+                                                    {
+                                                        isAnySameConsumerOtherNotProcessedMessage = await inboxBusMessageRepository.AnyAsync(
+                                                            PlatformInboxBusMessage.CheckAnySameConsumerOtherPreviousNotProcessedMessageExpr(toHandleInboxMessage),
+                                                            cancellationToken);
+
+                                                        if (isAnySameConsumerOtherNotProcessedMessage || hasHandlingFailedMessage)
+                                                            await PlatformInboxMessageBusConsumerHelper.RevertExistingInboxToNewMessageAsync(
+                                                                toHandleInboxMessage,
+                                                                inboxBusMessageRepository,
+                                                                cancellationToken);
+                                                        else await HandleInboxMessageAsync(toHandleInboxMessage);
+                                                    }
+                                                    catch (Exception e)
+                                                    {
+                                                        hasHandlingFailedMessage = true;
+                                                        Logger.LogError(
+                                                            e,
+                                                            "[PlatformConsumeInboxEventBusMessageHostedService] Try to consume inbox message with Id:{MessageId} failed. Message Content:{InboxMessage}",
+                                                            toHandleInboxMessage.Id,
+                                                            toHandleInboxMessage.ToJson());
+                                                    }
+
+                                                if (isAnySameConsumerOtherNotProcessedMessage || hasHandlingFailedMessage) break;
+                                            }
+                                            finally
+                                            {
+                                                Util.GarbageCollector.Collect();
+                                            }
+                                        } while (await AnyCanHandleInboxBusMessages(messageGroupedByConsumerIdPrefix, inboxBusMessageRepository));
+                                    });
+
+                                pagedCanHandleMessageGroupedByConsumerIdPrefixes.ForEach(p => processedCanHandleMessageGroupedByConsumerIdPrefixes.Add(p));
+                            },
+                            maxItemCount: await inboxBusMessageRepository.CountAsync(
+                                queryBuilder: query => query
+                                    .Where(PlatformInboxBusMessage.CanHandleMessagesExpr(InboxConfig.MessageProcessingMaxSeconds)),
+                                cancellationToken: cancellationToken),
+                            pageSize: GetCanHandleMessageGroupedByConsumerIdPrefixesPageSize,
+                            cancellationToken: cancellationToken);
+                    }
+                    finally
+                    {
+                        Util.GarbageCollector.Collect();
+                    }
+                } while (await AnyCanHandleInboxBusMessages(null, inboxBusMessageRepository));
+            });
 
         async Task HandleInboxMessageAsync(PlatformInboxBusMessage toHandleInboxMessage)
         {
             using (var scope = ServiceProvider.CreateScope())
             {
-                try
-                {
-                    await InvokeConsumerAsync(
-                        scope,
-                        toHandleInboxMessage,
-                        cancellationToken);
-                }
-                catch (Exception e)
-                {
-                    Logger.LogError(
-                        e,
-                        "[PlatformConsumeInboxEventBusMessageHostedService] Try to consume inbox message with Id:{MessageId} failed. Message Content:{InboxMessage}",
-                        toHandleInboxMessage.Id,
-                        toHandleInboxMessage.ToJson());
-                }
+                await InvokeConsumerAsync(
+                    scope,
+                    toHandleInboxMessage,
+                    cancellationToken);
             }
         }
     }
 
-    protected Task<bool> IsAnyMessagesToHandleAsync()
+    protected async Task<bool> AnyCanHandleInboxBusMessages(
+        string messageGroupedByConsumerIdPrefix,
+        IPlatformInboxBusMessageRepository inboxBusMessageRepository)
     {
-        return ServiceProvider.ExecuteInjectScopedAsync<bool>(
-            (IPlatformInboxBusMessageRepository inboxEventBusMessageRepo) =>
-            {
-                return inboxEventBusMessageRepo!.AnyAsync(
-                    PlatformInboxBusMessage.CanHandleMessagesExpr(InboxConfig.MessageProcessingMaxSeconds));
-            });
+        var toHandleMessages = await inboxBusMessageRepository.GetAllAsync(
+            queryBuilder: query => CanHandleMessagesByConsumerIdPrefixQueryBuilder(query, messageGroupedByConsumerIdPrefix).Take(1));
+
+        var result = toHandleMessages.Any() &&
+                     !await inboxBusMessageRepository.AnyAsync(
+                         PlatformInboxBusMessage.CheckAnySameConsumerOtherPreviousNotProcessedMessageExpr(toHandleMessages.First()));
+
+        return result;
     }
 
     protected virtual async Task InvokeConsumerAsync(
@@ -153,7 +222,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
         {
             var consumer = scope.ServiceProvider.GetService(consumerType)
                 .As<IPlatformApplicationMessageBusConsumer>()
-                .With(_ => _.HandleExistingInboxMessage = toHandleInboxMessage);
+                .With(p => p.HandleExistingInboxMessage = toHandleInboxMessage);
 
             var consumerMessageType = PlatformMessageBusConsumer.GetConsumerMessageType(consumer);
 
@@ -179,15 +248,22 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
         }
         else
         {
-            Logger.LogWarning(
-                "[{LoggerType}] Error resolve consumer type {ToHandleInboxMessageConsumerBy}. InboxId:{ToHandleInboxMessageId}",
-                GetType().Name,
-                toHandleInboxMessage.ConsumerBy,
-                toHandleInboxMessage.Id);
+            await PlatformInboxMessageBusConsumerHelper.UpdateExistingInboxFailedMessageAsync(
+                ServiceProvider,
+                toHandleInboxMessage,
+                toHandleInboxMessage.JsonMessage.JsonDeserialize<object>(),
+                null,
+                toHandleInboxMessage.RoutingKey,
+                new Exception($"Error resolve consumer type {toHandleInboxMessage.ConsumerBy}. InboxId:{toHandleInboxMessage.Id}"),
+                PlatformInboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit,
+                () => Logger,
+                cancellationToken);
         }
     }
 
     protected async Task<List<PlatformInboxBusMessage>> PopToHandleInboxEventBusMessages(
+        string messageGroupedByConsumerIdPrefix,
+        int pageSize,
         CancellationToken cancellationToken)
     {
         try
@@ -196,10 +272,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                 async (IPlatformInboxBusMessageRepository inboxEventBusMessageRepo) =>
                 {
                     var toHandleMessages = await inboxEventBusMessageRepo.GetAllAsync(
-                        queryBuilder: query => query
-                            .Where(PlatformInboxBusMessage.CanHandleMessagesExpr(InboxConfig.MessageProcessingMaxSeconds))
-                            .OrderBy(p => p.LastConsumeDate)
-                            .Take(InboxConfig.NumberOfProcessConsumeInboxMessagesBatch),
+                        queryBuilder: query => CanHandleMessagesByConsumerIdPrefixQueryBuilder(query, messageGroupedByConsumerIdPrefix).Take(pageSize),
                         cancellationToken);
 
                     if (toHandleMessages.IsEmpty()) return toHandleMessages;
@@ -228,8 +301,18 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
 
             // WHY: Because support multiple service instance running concurrently,
             // get row version conflict is expected, so just retry again to get unprocessed inbox messages
-            return await PopToHandleInboxEventBusMessages(cancellationToken);
+            return await PopToHandleInboxEventBusMessages(messageGroupedByConsumerIdPrefix, pageSize, cancellationToken);
         }
+    }
+
+    protected IQueryable<PlatformInboxBusMessage> CanHandleMessagesByConsumerIdPrefixQueryBuilder(
+        IQueryable<PlatformInboxBusMessage> query,
+        string messageGroupedByConsumerIdPrefix)
+    {
+        return query
+            .WhereIf(messageGroupedByConsumerIdPrefix.IsNotNullOrEmpty(), p => p.Id.StartsWith(messageGroupedByConsumerIdPrefix))
+            .Where(PlatformInboxBusMessage.CanHandleMessagesExpr(InboxConfig.MessageProcessingMaxSeconds))
+            .OrderBy(p => p.CreatedDate);
     }
 
     protected bool HasInboxEventBusMessageRepositoryRegistered()
@@ -237,7 +320,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
         return ServiceProvider.ExecuteScoped(scope => scope.ServiceProvider.GetService<IPlatformInboxBusMessageRepository>() != null);
     }
 
-    private Type ResolveConsumerType(PlatformInboxBusMessage toHandleInboxMessage)
+    protected Type ResolveConsumerType(PlatformInboxBusMessage toHandleInboxMessage)
     {
         return ConsumerByNameToTypeDic.GetValueOrDefault(toHandleInboxMessage.ConsumerBy, null);
     }

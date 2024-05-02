@@ -11,14 +11,12 @@ namespace PlatformExampleApp.TextSnippet.Persistence.MultiDbDemo.Mongo.DemoMigra
 public sealed class DemoMigrateDataCrossDbContext : PlatformMongoDbContext<DemoMigrateDataCrossDbContext>
 {
     public DemoMigrateDataCrossDbContext(
-        IOptions<PlatformMongoOptions<DemoMigrateDataCrossDbContext>> options,
-        IPlatformMongoClient<DemoMigrateDataCrossDbContext> client,
+        IPlatformMongoDatabase<DemoMigrateDataCrossDbContext> database,
         ILoggerFactory loggerFactory,
         IPlatformApplicationRequestContextAccessor userContextAccessor,
         PlatformPersistenceConfiguration<DemoMigrateDataCrossDbContext> persistenceConfiguration,
         IPlatformRootServiceProvider rootServiceProvider) : base(
-        options,
-        client,
+        database,
         loggerFactory,
         userContextAccessor,
         persistenceConfiguration,

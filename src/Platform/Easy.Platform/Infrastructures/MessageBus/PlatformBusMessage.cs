@@ -1,4 +1,5 @@
 using System.Reflection;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Timing;
 
 namespace Easy.Platform.Infrastructures.MessageBus;
@@ -51,6 +52,12 @@ public class PlatformBusMessage<TPayload> : IPlatformTrackableBusMessage, IPlatf
     public DateTime? CreatedUtcDate { get; set; } = Clock.UtcNow;
     public string ProduceFrom { get; set; } = Assembly.GetEntryAssembly()?.FullName;
     public IDictionary<string, object> RequestContext { get; set; } = new Dictionary<string, object>();
+
+    public virtual string SubQueuePrefix()
+    {
+        return Payload?.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix();
+    }
+
     public TPayload Payload { get; set; }
 
     public static TBusMessage New<TBusMessage>(

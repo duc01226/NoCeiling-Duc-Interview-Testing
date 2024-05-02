@@ -12,6 +12,8 @@ public interface IPlatformCqrsEventHandler
     public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformCqrsEventHandler)}");
 
     public bool ForceCurrentInstanceHandleInCurrentThread { get; set; }
+
+    public int RetryOnFailedTimes { get; set; }
 }
 
 public interface IPlatformCqrsEventHandler<in TEvent> : INotificationHandler<TEvent>, IPlatformCqrsEventHandler
@@ -36,9 +38,9 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     protected bool IsDistributedTracingEnabled => isDistributedTracingEnabledLazy.Value;
 
-    public virtual int RetryOnFailedTimes => 3;
-
     public virtual double RetryOnFailedDelaySeconds => 1;
+
+    public virtual int RetryOnFailedTimes { get; set; } = 2;
 
     public bool ForceCurrentInstanceHandleInCurrentThread { get; set; }
 
@@ -88,7 +90,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                         .With(newInstance => CopyPropertiesToNewInstanceBeforeExecution(this, newInstance));
 
                     await thisHandlerNewInstance
-                        .With(_ => _.ForceCurrentInstanceHandleInCurrentThread = true)
+                        .With(p => p.ForceCurrentInstanceHandleInCurrentThread = true)
                         .Handle(notification, cancellationToken);
                 });
         }
@@ -115,8 +117,13 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         }
         catch (Exception e)
         {
-            handlerNewInstance.LogError(notification, e, LoggerFactory);
+            OnExecuteHandleFailed(handlerNewInstance, notification, e);
         }
+    }
+
+    protected virtual void OnExecuteHandleFailed(PlatformCqrsEventHandler<TEvent> handlerNewInstance, TEvent notification, Exception e)
+    {
+        handlerNewInstance.LogError(notification, e, LoggerFactory);
     }
 
     protected virtual void CopyPropertiesToNewInstanceBeforeExecution(
@@ -124,6 +131,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         PlatformCqrsEventHandler<TEvent> newInstance)
     {
         newInstance.ForceCurrentInstanceHandleInCurrentThread = previousInstance.ForceCurrentInstanceHandleInCurrentThread;
+        newInstance.RetryOnFailedTimes = previousInstance.RetryOnFailedTimes;
     }
 
     public virtual async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)

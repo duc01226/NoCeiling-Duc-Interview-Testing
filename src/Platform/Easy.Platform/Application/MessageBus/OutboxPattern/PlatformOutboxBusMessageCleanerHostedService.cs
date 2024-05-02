@@ -3,6 +3,7 @@ using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.HostingBackgroundServices;
 using Easy.Platform.Common.Utils;
+using Easy.Platform.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -32,7 +33,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
 
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
-        await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformModule), Logger, $"process ${GetType().Name}");
+        await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformPersistenceModule), Logger, $"process ${GetType().Name}");
 
         if (!HasOutboxEventBusMessageRepositoryRegistered() || isProcessing) return;
 
@@ -127,7 +128,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
                 var toDeleteMessages = await outboxEventBusMessageRepo.GetAllAsync(
                     queryBuilder: query => query
                         .Where(CleanMessagePredicate())
-                        .OrderByDescending(p => p.LastSendDate)
+                        .OrderByDescending(p => p.CreatedDate)
                         .Skip(OutboxConfig.MaxStoreProcessedMessageCount)
                         .Take(NumberOfDeleteMessagesBatch()),
                     cancellationToken);
@@ -172,7 +173,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
                                 PlatformOutboxBusMessage.ToCleanExpiredMessagesByTimeExpr(
                                     DeleteProcessedMessageInSeconds(),
                                     DeleteExpiredFailedMessageInSeconds()))
-                            .OrderBy(p => p.LastSendDate)
+                            .OrderBy(p => p.CreatedDate)
                             .Take(NumberOfDeleteMessagesBatch()),
                         cancellationToken);
 

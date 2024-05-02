@@ -27,7 +27,14 @@ public class PlatformInboxEventBusMessageEntityConfiguration : PlatformEntityCon
             p => new
             {
                 p.ConsumeStatus,
-                p.LastConsumeDate
+                p.LastConsumeDate,
+                p.CreatedDate
+            });
+        builder.HasIndex(
+            p => new
+            {
+                p.ConsumeStatus,
+                p.CreatedDate
             });
     }
 }

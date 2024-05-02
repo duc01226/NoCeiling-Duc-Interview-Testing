@@ -1,4 +1,5 @@
 using Easy.Platform.Common;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.UnitOfWork;
@@ -17,14 +18,12 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
         IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider,
-        IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
-        IPlatformApplicationSettingContext applicationSettingContext) : base(
+        IPlatformApplicationBusMessageProducer applicationBusMessageProducer) : base(
         loggerFactory,
         unitOfWorkManager,
         serviceProvider,
         rootServiceProvider,
-        applicationBusMessageProducer,
-        applicationSettingContext)
+        applicationBusMessageProducer)
     {
     }
 
@@ -41,7 +40,13 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
     }
 }
 
-public class PlatformCqrsEntityEventBusMessage<TEntity> : PlatformBusMessage<PlatformCqrsEntityEvent<TEntity>>
+public class PlatformCqrsEntityEventBusMessage<TEntity> : PlatformBusMessage<PlatformCqrsEntityEvent<TEntity>>, IPlatformSubMessageQueuePrefixSupport
     where TEntity : class, IEntity, new()
 {
+    public override string SubQueuePrefix()
+    {
+        return Payload.EntityData.As<IEntity<string>>()?.Id ??
+               Payload.EntityData.As<IEntity<Guid>>()?.Id.ToString() ??
+               Payload.EntityData.As<IEntity<int>>()?.Id.ToString();
+    }
 }

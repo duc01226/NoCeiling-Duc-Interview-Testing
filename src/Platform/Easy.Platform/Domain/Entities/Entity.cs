@@ -242,16 +242,6 @@ public abstract class Entity<TEntity, TPrimaryKey>
     /// </summary>
     protected readonly List<KeyValuePair<string, ISupportDomainEventsEntity.DomainEvent>> DomainEvents = [];
 
-    public virtual Expression<Func<TEntity, bool>> FindByUniqueCompositeIdExpr()
-    {
-        return null;
-    }
-
-    public virtual string UniqueCompositeId()
-    {
-        return null;
-    }
-
     /// <summary>
     /// Gets the domain events associated with the entity.
     /// </summary>
@@ -288,6 +278,16 @@ public abstract class Entity<TEntity, TPrimaryKey>
                 customDomainEventName ?? ISupportDomainEventsEntity.DomainEvent.GetDefaultEventName<TEvent>(),
                 eventActionPayload));
         return this.As<TEntity>();
+    }
+
+    public virtual Expression<Func<TEntity, bool>> FindByUniqueCompositeIdExpr()
+    {
+        return null;
+    }
+
+    public virtual string UniqueCompositeId()
+    {
+        return null;
     }
 
     /// <summary>

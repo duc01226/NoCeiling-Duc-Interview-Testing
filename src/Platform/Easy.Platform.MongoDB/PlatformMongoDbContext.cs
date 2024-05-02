@@ -13,7 +13,6 @@ using Easy.Platform.MongoDB.Migration;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -32,20 +31,18 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     protected readonly IPlatformRootServiceProvider RootServiceProvider;
     protected readonly IPlatformApplicationRequestContextAccessor UserContextAccessor;
 
-    private readonly Lazy<IMongoDatabase> databaseLazy;
     private readonly Lazy<ILogger> lazyLogger;
 
     private bool disposed;
 
     public PlatformMongoDbContext(
-        IOptions<PlatformMongoOptions<TDbContext>> options,
-        IPlatformMongoClient<TDbContext> client,
+        IPlatformMongoDatabase<TDbContext> database,
         ILoggerFactory loggerFactory,
         IPlatformApplicationRequestContextAccessor userContextAccessor,
         PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
         IPlatformRootServiceProvider rootServiceProvider)
     {
-        databaseLazy = new Lazy<IMongoDatabase>(() => client.MongoClient.GetDatabase(options.Value.Database), LazyThreadSafetyMode.ExecutionAndPublication);
+        Database = database.Value;
 
         UserContextAccessor = userContextAccessor;
         PersistenceConfiguration = persistenceConfiguration;
@@ -55,7 +52,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         EntityTypeToCollectionNameDictionary = new Lazy<Dictionary<Type, string>>(BuildEntityTypeToCollectionNameDictionary);
     }
 
-    public IMongoDatabase Database => databaseLazy.Value;
+    public IMongoDatabase Database { get; }
 
     /// <summary>
     /// If true enable show query to Debug output
@@ -684,7 +681,12 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 new CreateIndexModel<PlatformInboxBusMessage>(
                     Builders<PlatformInboxBusMessage>.IndexKeys
                         .Ascending(p => p.ConsumeStatus)
-                        .Ascending(p => p.LastConsumeDate))
+                        .Ascending(p => p.LastConsumeDate)
+                        .Ascending(p => p.CreatedDate)),
+                new CreateIndexModel<PlatformInboxBusMessage>(
+                    Builders<PlatformInboxBusMessage>.IndexKeys
+                        .Ascending(p => p.ConsumeStatus)
+                        .Ascending(p => p.CreatedDate))
             ]);
     }
 

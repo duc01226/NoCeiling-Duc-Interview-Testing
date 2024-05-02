@@ -14,6 +14,7 @@ using Easy.Platform.Persistence.DataMigration;
 using Easy.Platform.Persistence.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver.Core.Extensions.DiagnosticSources;
 using OpenTelemetry.Trace;
@@ -63,6 +64,12 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
 
         serviceCollection.RegisterAllForImplementation<TClientContext>(ServiceLifeTime.Singleton);
         serviceCollection.Register<IPlatformMongoClient<TDbContext>>(sp => sp.GetRequiredService<TClientContext>(), ServiceLifeTime.Singleton);
+        serviceCollection.Register(
+            typeof(IPlatformMongoDatabase<TDbContext>),
+            sp => new PlatformMongoDatabase<TDbContext>(
+                sp.GetRequiredService<IPlatformMongoClient<TDbContext>>()
+                    .MongoClient.GetDatabase(sp.GetRequiredService<IOptions<PlatformMongoOptions<TDbContext>>>().Value.Database)),
+            ServiceLifeTime.Singleton);
 
         serviceCollection.Register<PlatformMongoDbContext<TDbContext>, TDbContext>();
 

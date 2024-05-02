@@ -215,18 +215,23 @@ public interface IPlatformDbContext : IDisposable
             async () =>
             {
                 while (!cancellationToken.IsCancellationRequested)
-                {
-                    await ExecuteWithNewDbContextInstanceAsync(
-                        async newContextInstance =>
-                        {
-                            await newContextInstance.UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(
-                                newContextInstance.DataMigrationHistoryQuery()
-                                    .First(p => p.Name == migrationExecutionName && p.Status == PlatformDataMigrationHistory.Statuses.Processing)
-                                    .With(p => p.LastProcessingPingTime = Clock.UtcNow));
-                        });
+                    try
+                    {
+                        await ExecuteWithNewDbContextInstanceAsync(
+                            async newContextInstance =>
+                            {
+                                await newContextInstance.UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(
+                                    newContextInstance.DataMigrationHistoryQuery()
+                                        .First(p => p.Name == migrationExecutionName && p.Status == PlatformDataMigrationHistory.Statuses.Processing)
+                                        .With(p => p.LastProcessingPingTime = Clock.UtcNow));
+                            });
 
-                    await Task.Delay(PlatformDataMigrationHistory.ProcessingPingIntervalSeconds.Seconds(), cancellationToken);
-                }
+                        await Task.Delay(PlatformDataMigrationHistory.ProcessingPingIntervalSeconds.Seconds(), cancellationToken);
+                    }
+                    finally
+                    {
+                        Util.GarbageCollector.Collect();
+                    }
             },
             () => Logger,
             cancellationToken: cancellationToken);

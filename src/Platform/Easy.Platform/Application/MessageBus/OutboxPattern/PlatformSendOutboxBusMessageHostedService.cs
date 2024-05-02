@@ -5,6 +5,7 @@ using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Exceptions;
 using Easy.Platform.Infrastructures.MessageBus;
+using Easy.Platform.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -15,7 +16,7 @@ namespace Easy.Platform.Application.MessageBus.OutboxPattern;
 /// </summary>
 public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHostingBackgroundService
 {
-    public const int MinimumRetrySendOutboxMessageTimesToWarning = 3;
+    private const int GetCanHandleMessageGroupedByTypeIdPrefixesPageSize = 1000;
 
     private bool isProcessing;
 
@@ -35,12 +36,16 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
 
     protected PlatformOutboxConfig OutboxConfig { get; }
 
+    protected override TimeSpan ProcessTriggerIntervalTime()
+    {
+        return OutboxConfig.CheckToProcessTriggerIntervalTimeSeconds.Seconds();
+    }
+
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
-        await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformModule), Logger, $"process ${GetType().Name}");
+        await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformPersistenceModule), Logger, $"process ${GetType().Name}");
 
-        if (!HasOutboxEventBusMessageRepositoryRegistered() || isProcessing)
-            return;
+        if (!HasOutboxEventBusMessageRepositoryRegistered() || isProcessing) return;
 
         isProcessing = true;
 
@@ -53,7 +58,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                 retryCount: ProcessSendMessageRetryCount(),
                 onRetry: (ex, timeSpan, currentRetry, ctx) =>
                 {
-                    if (currentRetry >= MinimumRetrySendOutboxMessageTimesToWarning)
+                    if (currentRetry >= OutboxConfig.MinimumRetrySendOutboxMessageTimesToWarning)
                         Logger.LogError(
                             ex,
                             "Retry SendOutboxEventBusMessages {CurrentRetry} time(s) failed. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly_FullName}]",
@@ -78,53 +83,137 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
 
     protected virtual async Task SendOutboxEventBusMessages(CancellationToken cancellationToken)
     {
-        do
-        {
-            var toHandleMessages = await PopToHandleOutboxEventBusMessages(cancellationToken);
-
-            await toHandleMessages
-                .ParallelAsync(
-                    async toHandleOutboxMessage =>
+        await ServiceProvider.ExecuteInjectScopedAsync(
+            async (IPlatformOutboxBusMessageRepository outboxBusMessageRepository, PlatformOutboxMessageBusProducerHelper outboxMessageBusProducerHelper) =>
+            {
+                do
+                {
+                    try
                     {
-                        using (var scope = ServiceProvider.CreateScope())
-                        {
-                            try
-                            {
-                                await SendMessageToBusAsync(
-                                    scope,
-                                    toHandleOutboxMessage,
-                                    OutboxConfig.RetryProcessFailedMessageInSecondsUnit,
-                                    cancellationToken);
-                            }
-                            catch (Exception e)
-                            {
-                                Logger.LogError(
-                                    e,
-                                    "[PlatformSendOutboxEventBusMessageHostedService] Failed to produce outbox message. [[Error:{Error}]]" +
-                                    "Id:{OutboxMessageId} failed. " +
-                                    "Message Content:{OutboxMessage}",
-                                    e.Message,
-                                    toHandleOutboxMessage.Id,
-                                    toHandleOutboxMessage.ToJson());
+                        var processedCanHandleMessageGroupedByTypeIdPrefixes = new HashSet<string>();
 
-                                throw;
-                            }
-                        }
-                    });
+                        await Util.Pager.ExecutePagingAsync(
+                            async (skipCount, pageSize) =>
+                            {
+                                var pagedCanHandleMessageGroupedByTypeIdPrefixes = await outboxBusMessageRepository.GetAllAsync(
+                                        queryBuilder: query => query
+                                            .Where(PlatformOutboxBusMessage.CanHandleMessagesExpr(OutboxConfig.MessageProcessingMaxSeconds))
+                                            .Skip(skipCount)
+                                            .Take(pageSize)
+                                            .Select(p => p.Id),
+                                        cancellationToken: cancellationToken)
+                                    .Then(
+                                        messageIds => messageIds
+                                            .Select(PlatformOutboxBusMessage.GetIdPrefix)
+                                            .Where(p => !processedCanHandleMessageGroupedByTypeIdPrefixes.Contains(p))
+                                            .ToList());
 
-            // Random wait to decrease the chance that multiple deploy instance could process same messages at the same time
-            await Task.Delay(Util.RandomGenerator.Next(5, 20).Seconds(), cancellationToken);
-        } while (await IsAnyMessagesToHandleAsync());
+                                await pagedCanHandleMessageGroupedByTypeIdPrefixes.ParallelAsync(
+                                    async messageGroupedByTypeIdPrefix =>
+                                    {
+                                        if (!await AnyCanHandleOutboxBusMessages(messageGroupedByTypeIdPrefix, outboxBusMessageRepository)) return;
+
+                                        do
+                                        {
+                                            try
+                                            {
+                                                var hasHandlingFailedMessage = false;
+                                                var isAnySameTypeOtherNotProcessedMessage = false;
+
+                                                var toHandleMessages = await PopToHandleOutboxEventBusMessages(
+                                                    messageGroupedByTypeIdPrefix,
+                                                    pageSize: OutboxConfig.NumberOfProcessSendOutboxMessagesBatch,
+                                                    cancellationToken);
+
+                                                if (toHandleMessages.IsEmpty()) break;
+
+                                                foreach (var toHandleOutboxMessage in toHandleMessages)
+                                                    try
+                                                    {
+                                                        isAnySameTypeOtherNotProcessedMessage = await outboxBusMessageRepository.AnyAsync(
+                                                            PlatformOutboxBusMessage.CheckAnySameTypeOtherPreviousNotProcessedMessageExpr(toHandleOutboxMessage),
+                                                            cancellationToken);
+
+                                                        if (isAnySameTypeOtherNotProcessedMessage || hasHandlingFailedMessage)
+                                                            await outboxMessageBusProducerHelper.RevertExistingOutboxToNewMessageAsync(
+                                                                toHandleOutboxMessage,
+                                                                outboxBusMessageRepository,
+                                                                cancellationToken);
+                                                        else await HandleOutboxMessageAsync(toHandleOutboxMessage);
+                                                    }
+                                                    catch (Exception e)
+                                                    {
+                                                        hasHandlingFailedMessage = true;
+                                                        Logger.LogError(
+                                                            e,
+                                                            "[PlatformSendOutboxEventBusMessageHostedService] Failed to produce outbox message. [[Error:{Error}]]" +
+                                                            "Id:{OutboxMessageId} failed. " +
+                                                            "Message Content:{OutboxMessage}",
+                                                            e.Message,
+                                                            toHandleOutboxMessage.Id,
+                                                            toHandleOutboxMessage.ToJson());
+                                                    }
+
+                                                if (isAnySameTypeOtherNotProcessedMessage || hasHandlingFailedMessage) break;
+                                            }
+                                            finally
+                                            {
+                                                Util.GarbageCollector.Collect();
+                                            }
+                                        } while (await AnyCanHandleOutboxBusMessages(messageGroupedByTypeIdPrefix, outboxBusMessageRepository));
+                                    });
+
+                                pagedCanHandleMessageGroupedByTypeIdPrefixes.ForEach(p => processedCanHandleMessageGroupedByTypeIdPrefixes.Add(p));
+                            },
+                            await outboxBusMessageRepository.CountAsync(
+                                queryBuilder: query => query
+                                    .Where(PlatformOutboxBusMessage.CanHandleMessagesExpr(OutboxConfig.MessageProcessingMaxSeconds)),
+                                cancellationToken: cancellationToken),
+                            GetCanHandleMessageGroupedByTypeIdPrefixesPageSize,
+                            cancellationToken: cancellationToken);
+                    }
+                    finally
+                    {
+                        Util.GarbageCollector.Collect();
+                    }
+                } while (await AnyCanHandleOutboxBusMessages(null, outboxBusMessageRepository));
+            });
+
+        async Task HandleOutboxMessageAsync(PlatformOutboxBusMessage toHandleOutboxMessage)
+        {
+            using (var scope = ServiceProvider.CreateScope())
+            {
+                await SendMessageToBusAsync(
+                    scope,
+                    toHandleOutboxMessage,
+                    OutboxConfig.RetryProcessFailedMessageInSecondsUnit,
+                    cancellationToken);
+            }
+        }
     }
 
-    protected Task<bool> IsAnyMessagesToHandleAsync()
+    protected async Task<bool> AnyCanHandleOutboxBusMessages(
+        string messageGroupedByTypeIdPrefix,
+        IPlatformOutboxBusMessageRepository outboxBusMessageRepository)
     {
-        return ServiceProvider.ExecuteInjectScopedAsync<bool>(
-            (IPlatformOutboxBusMessageRepository outboxEventBusMessageRepo) =>
-            {
-                return outboxEventBusMessageRepo!.AnyAsync(
-                    PlatformOutboxBusMessage.CanHandleMessagesExpr(MessageProcessingMaximumTimeInSeconds()));
-            });
+        var toHandleMessages = await outboxBusMessageRepository.GetAllAsync(
+            queryBuilder: query => CanHandleMessagesByProducerIdPrefixQueryBuilder(query, messageGroupedByTypeIdPrefix).Take(1));
+
+        var result = toHandleMessages.Any() &&
+                     !await outboxBusMessageRepository.AnyAsync(
+                         PlatformOutboxBusMessage.CheckAnySameTypeOtherPreviousNotProcessedMessageExpr(toHandleMessages.First()));
+
+        return result;
+    }
+
+    private IQueryable<PlatformOutboxBusMessage> CanHandleMessagesByProducerIdPrefixQueryBuilder(
+        IQueryable<PlatformOutboxBusMessage> query,
+        string messageGroupedByTypeIdPrefix)
+    {
+        return query
+            .WhereIf(messageGroupedByTypeIdPrefix.IsNotNullOrEmpty(), p => p.Id.StartsWith(messageGroupedByTypeIdPrefix))
+            .Where(PlatformOutboxBusMessage.CanHandleMessagesExpr(OutboxConfig.MessageProcessingMaxSeconds))
+            .OrderBy(p => p.CreatedDate);
     }
 
     protected virtual async Task SendMessageToBusAsync(
@@ -148,13 +237,14 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                         message,
                         toHandleOutboxMessage.RoutingKey,
                         retryProcessFailedMessageInSecondsUnit,
+                        extendedMessageIdPrefix: toHandleOutboxMessage.GetIdPrefix(),
                         handleExistingOutboxMessage: toHandleOutboxMessage,
                         sourceOutboxUowId: null,
                         cancellationToken);
                 }
                 else
                 {
-                    await outboxEventBusProducerHelper.UpdateExistingOutboxMessageFailedInNewScopeAsync(
+                    await outboxEventBusProducerHelper.UpdateExistingOutboxMessageFailedAsync(
                         toHandleOutboxMessage,
                         new Exception(
                             $"[{GetType().Name}] Error resolve outbox message type " +
@@ -167,6 +257,8 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
     }
 
     protected async Task<List<PlatformOutboxBusMessage>> PopToHandleOutboxEventBusMessages(
+        string messageGroupedByTypeIdPrefix,
+        int pageSize,
         CancellationToken cancellationToken)
     {
         try
@@ -175,21 +267,23 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                 async (IPlatformOutboxBusMessageRepository outboxEventBusMessageRepo) =>
                 {
                     var toHandleMessages = await outboxEventBusMessageRepo.GetAllAsync(
-                        queryBuilder: query => query
-                            .Where(PlatformOutboxBusMessage.CanHandleMessagesExpr(MessageProcessingMaximumTimeInSeconds()))
-                            .OrderBy(p => p.LastSendDate)
-                            .Take(NumberOfProcessSendOutboxMessagesBatch()),
+                        queryBuilder: query => CanHandleMessagesByTypeIdPrefixQueryBuilder(query, messageGroupedByTypeIdPrefix).Take(pageSize),
                         cancellationToken);
+
+                    if (toHandleMessages.IsEmpty()) return toHandleMessages;
 
                     toHandleMessages.ForEach(
                         p =>
                         {
                             p.SendStatus = PlatformOutboxBusMessage.SendStatuses.Processing;
+                            p.LastSendDate = DateTime.UtcNow;
                         });
 
                     await outboxEventBusMessageRepo.UpdateManyAsync(
                         toHandleMessages,
-                        cancellationToken: cancellationToken);
+                        dismissSendEvent: true,
+                        eventCustomConfig: null,
+                        cancellationToken);
 
                     return toHandleMessages;
                 });
@@ -202,24 +296,23 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
 
             // WHY: Because support multiple service instance running concurrently,
             // get row version conflict is expected, so just retry again to get unprocessed outbox messages
-            return await PopToHandleOutboxEventBusMessages(cancellationToken);
+            return await PopToHandleOutboxEventBusMessages(messageGroupedByTypeIdPrefix, pageSize, cancellationToken);
         }
     }
 
-    protected virtual int NumberOfProcessSendOutboxMessagesBatch()
+    protected IQueryable<PlatformOutboxBusMessage> CanHandleMessagesByTypeIdPrefixQueryBuilder(
+        IQueryable<PlatformOutboxBusMessage> query,
+        string messageGroupedByTypeIdPrefix)
     {
-        return OutboxConfig.NumberOfProcessSendOutboxMessagesBatch;
+        return query
+            .WhereIf(messageGroupedByTypeIdPrefix.IsNotNullOrEmpty(), p => p.Id.StartsWith(messageGroupedByTypeIdPrefix))
+            .Where(PlatformOutboxBusMessage.CanHandleMessagesExpr(OutboxConfig.MessageProcessingMaxSeconds))
+            .OrderBy(p => p.CreatedDate);
     }
 
     protected virtual int ProcessSendMessageRetryCount()
     {
         return OutboxConfig.ProcessSendMessageRetryCount;
-    }
-
-    /// <inheritdoc cref="PlatformOutboxConfig.MessageProcessingMaxSeconds" />
-    protected virtual double MessageProcessingMaximumTimeInSeconds()
-    {
-        return OutboxConfig.MessageProcessingMaxSeconds;
     }
 
     protected bool HasOutboxEventBusMessageRepositoryRegistered()

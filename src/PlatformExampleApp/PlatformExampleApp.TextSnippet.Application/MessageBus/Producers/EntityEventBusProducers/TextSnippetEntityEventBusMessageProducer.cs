@@ -1,4 +1,3 @@
-using Easy.Platform.Application;
 using Easy.Platform.Application.MessageBus.Producers;
 using Easy.Platform.Application.MessageBus.Producers.CqrsEventProducers;
 using Easy.Platform.Domain.UnitOfWork;
@@ -15,14 +14,12 @@ public class TextSnippetEntityEventBusMessageProducer
         IPlatformUnitOfWorkManager unitOfWorkManager,
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider,
-        IPlatformApplicationBusMessageProducer applicationBusMessageProducer,
-        IPlatformApplicationSettingContext applicationSettingContext) : base(
+        IPlatformApplicationBusMessageProducer applicationBusMessageProducer) : base(
         loggerFactory,
         unitOfWorkManager,
         serviceProvider,
         rootServiceProvider,
-        applicationBusMessageProducer,
-        applicationSettingContext)
+        applicationBusMessageProducer)
     {
     }
 
@@ -48,4 +45,9 @@ public class TextSnippetEntityEventBusMessageProducer
 public class TextSnippetEntityEventBusMessage : PlatformCqrsEntityEventBusMessage<TextSnippetEntity>
 {
     // public string CustomAdditionalProp { get; set; }
+
+    //public override string SubQueueByIdExtendedPrefix()
+    //{
+    //    return Payload.EntityData.UniqueCompositeId();
+    //}
 }

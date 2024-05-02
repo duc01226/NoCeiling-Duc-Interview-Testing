@@ -1,6 +1,6 @@
 namespace Easy.Platform.Infrastructures.MessageBus;
 
-public interface IPlatformTrackableBusMessage : IPlatformMessage
+public interface IPlatformTrackableBusMessage : IPlatformSubMessageQueuePrefixSupport
 {
     public string TrackingId { get; set; }
 
@@ -11,10 +11,12 @@ public interface IPlatformTrackableBusMessage : IPlatformMessage
     public IDictionary<string, object> RequestContext { get; set; }
 }
 
-public class PlatformTrackableBusMessage : IPlatformTrackableBusMessage
+public abstract class PlatformTrackableBusMessage : IPlatformTrackableBusMessage
 {
     public string TrackingId { get; set; } = Guid.NewGuid().ToString();
     public DateTime? CreatedUtcDate { get; set; } = DateTime.UtcNow;
     public string ProduceFrom { get; set; }
     public IDictionary<string, object> RequestContext { get; set; } = new Dictionary<string, object>();
+
+    public abstract string SubQueuePrefix();
 }

@@ -198,7 +198,7 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
 
     protected ILogger Logger => loggerLazy.Value;
 
-    public virtual int RetryOnFailedTimes => 3;
+    public virtual int RetryOnFailedTimes => 2;
 
     public virtual double RetryOnFailedDelaySeconds => 1;
 

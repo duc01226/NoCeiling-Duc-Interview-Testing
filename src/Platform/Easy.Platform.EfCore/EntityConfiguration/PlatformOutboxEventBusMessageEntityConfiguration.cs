@@ -27,7 +27,14 @@ public class PlatformOutboxEventBusMessageEntityConfiguration : PlatformEntityCo
             p => new
             {
                 p.SendStatus,
-                p.LastSendDate
+                p.LastSendDate,
+                p.CreatedDate
+            });
+        builder.HasIndex(
+            p => new
+            {
+                p.SendStatus,
+                p.CreatedDate
             });
     }
 }
