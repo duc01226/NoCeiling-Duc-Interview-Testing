@@ -151,7 +151,7 @@ csharp_prefer_simple_default_expression = true:error
 csharp_style_pattern_local_over_anonymous_function = true:error
 csharp_style_deconstructed_variable_declaration = true:error
 csharp_style_prefer_index_operator = true:error
-csharp_style_prefer_range_operator = true:error
+csharp_style_prefer_range_operator = true:suggestion
 csharp_style_implicit_object_creation_when_type_is_apparent = true:error
 # "Null" checking preferences
 csharp_style_throw_expression = true:error
@@ -435,6 +435,7 @@ dotnet_diagnostic.IDE0200.severity = suggestion
 dotnet_diagnostic.IDE0270.severity = suggestion
 dotnet_diagnostic.IDE0251.severity = none
 dotnet_diagnostic.IDE0290.severity = suggestion
+dotnet_diagnostic.IDE0100.severity = suggestion
 
 dotnet_diagnostic.SA1101.severity = error
 dotnet_diagnostic.SA1413.severity = error

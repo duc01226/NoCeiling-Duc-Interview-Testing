@@ -40,7 +40,7 @@ public static class PlatformLoggerConfigurationExtensions
         TExceptionDestructurer destructurer) where TExceptionDestructurer : ExceptionDestructurer
     {
         if (!destructuringOptionsBuilder.Destructurers.Any(p => p is TExceptionDestructurer))
-            destructuringOptionsBuilder.WithDestructurers(new[] { destructurer });
+            destructuringOptionsBuilder.WithDestructurers([destructurer]);
 
         return destructuringOptionsBuilder;
     }

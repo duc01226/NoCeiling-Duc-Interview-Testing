@@ -51,15 +51,15 @@ public static class ExpressionExtension
     /// <param name="if">A boolean value determining whether to combine the expressions.</param>
     /// <param name="andExpressionAsync">An asynchronous function providing the second expression.</param>
     /// <returns>A task returning a new expression representing the combined result.</returns>
-    public static async Task<Expression<Func<T, bool>>> AndAlsoIf<T>(
+    public static Task<Expression<Func<T, bool>>> AndAlsoIf<T>(
         this Task<Expression<Func<T, bool>>> expressionTask,
         bool @if,
         Func<Task<Expression<Func<T, bool>>>> andExpressionAsync)
     {
         if (@if)
-            return await expressionTask.Then(async expression => expression.AndAlso(await andExpressionAsync()));
+            return expressionTask.Then(async expression => expression.AndAlso(await andExpressionAsync()));
 
-        return await expressionTask;
+        return expressionTask;
     }
 
     /// <summary>
@@ -70,15 +70,15 @@ public static class ExpressionExtension
     /// <param name="if">A boolean value determining whether to combine the expressions.</param>
     /// <param name="andExpression">The second expression func builder to combine if the condition is met.</param>
     /// <returns>A task returning a new expression representing the combined result.</returns>
-    public static async Task<Expression<Func<T, bool>>> AndAlsoIf<T>(
+    public static Task<Expression<Func<T, bool>>> AndAlsoIf<T>(
         this Task<Expression<Func<T, bool>>> expressionTask,
         bool @if,
         Func<Expression<Func<T, bool>>> andExpression)
     {
         if (@if)
-            return await expressionTask.Then(expression => expression.AndAlso(andExpression()));
+            return expressionTask.Then(expression => expression.AndAlso(andExpression()));
 
-        return await expressionTask;
+        return expressionTask;
     }
 
     /// <summary>

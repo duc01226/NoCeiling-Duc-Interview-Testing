@@ -286,10 +286,10 @@ public class PlatformValidationResult<TValue> : ValidationResult
     }
 
     /// <inheritdoc cref="ThenAsync{T}(Func{Task{PlatformValidationResult{T}}})" />
-    public async Task<PlatformValidationResult<T>> ThenAsync<T>(
+    public Task<PlatformValidationResult<T>> ThenAsync<T>(
         Func<TValue, Task<T>> next)
     {
-        return await MatchAsync(
+        return MatchAsync(
             valid: async value => new PlatformValidationResult<T>(await next(value), null),
             invalid: err => Of<T>(default).BoxedInTask());
     }
@@ -357,11 +357,11 @@ public class PlatformValidationResult<TValue> : ValidationResult
         return And(() => Validate(value: Value, () => must(Value), errors));
     }
 
-    public async Task<PlatformValidationResult<TValue>> AndAsync(
+    public Task<PlatformValidationResult<TValue>> AndAsync(
         Func<TValue, Task<bool>> must,
         params PlatformValidationError[] errors)
     {
-        return await AndAsync(_ => _.ValidateAsync(must, errors));
+        return AndAsync(_ => _.ValidateAsync(must, errors));
     }
 
     public PlatformValidationResult<TValue> And(
@@ -437,11 +437,11 @@ public class PlatformValidationResult<TValue> : ValidationResult
         return And(() => ValidateNot(value: Value, () => mustNot(Value), errors));
     }
 
-    public async Task<PlatformValidationResult<TValue>> AndNotAsync(
+    public Task<PlatformValidationResult<TValue>> AndNotAsync(
         Func<TValue, Task<bool>> mustNot,
         params PlatformValidationError[] errors)
     {
-        return await AndAsync(_ => _.ValidateNotAsync(mustNot, errors));
+        return AndAsync(_ => _.ValidateNotAsync(mustNot, errors));
     }
 
     public PlatformValidationResult<TValue> Or(Func<PlatformValidationResult<TValue>> nextValidation)

@@ -37,17 +37,17 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     protected PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration { get; }
     protected ILogger Logger => loggerLazy.Value;
 
-    protected override async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForWrite<TResult>(
+    protected override Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForWrite<TResult>(
         Func<IPlatformUnitOfWork, Task<TResult>> action,
         IPlatformUnitOfWork forceUseUow = null)
     {
-        return await ExecuteWithBadQueryWarningForWriteHandling(_ => base.ExecuteAutoOpenUowUsingOnceTimeForWrite(action, forceUseUow), null);
+        return ExecuteWithBadQueryWarningForWriteHandling(_ => base.ExecuteAutoOpenUowUsingOnceTimeForWrite(action, forceUseUow), null);
     }
 
-    protected async Task<TResult> ExecuteWithBadQueryWarningForWriteHandling<TResult>(Func<IPlatformUnitOfWork, Task<TResult>> action, IPlatformUnitOfWork uow)
+    protected Task<TResult> ExecuteWithBadQueryWarningForWriteHandling<TResult>(Func<IPlatformUnitOfWork, Task<TResult>> action, IPlatformUnitOfWork uow)
     {
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
-            return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling<TResult, TEntity>(
+            return IPlatformDbContext.ExecuteWithBadQueryWarningHandling<TResult, TEntity>(
                 () => action(uow),
                 Logger,
                 PersistenceConfiguration,
@@ -55,7 +55,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                 resultQuery: null,
                 resultQueryStringBuilder: null);
 
-        return await action(uow);
+        return action(uow);
     }
 
     public TDbContext GetUowDbContext(IPlatformUnitOfWork uow)
@@ -258,12 +258,12 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             loadRelatedEntities);
     }
 
-    public override async Task<TSelector> FirstOrDefaultAsync<TSelector>(
+    public override Task<TSelector> FirstOrDefaultAsync<TSelector>(
         Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities) where TSelector : default
     {
-        return await ExecuteAutoOpenUowUsingOnceTimeForRead(
+        return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (_, query) => FirstOrDefaultAsync(queryBuilder(query), cancellationToken),
             loadRelatedEntities);
     }

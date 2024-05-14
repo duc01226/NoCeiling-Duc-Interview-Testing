@@ -347,9 +347,9 @@ public static class TaskExtension
     /// <param name="task">The task to execute the function on.</param>
     /// <param name="getWith">The function to execute on the task result.</param>
     /// <returns>A task that represents the asynchronous operation. The task result is a tuple containing the original task result and the result of the function.</returns>
-    public static async Task<ValueTuple<T, T1>> ThenGetWith<T, T1>(this Task<T> task, Func<T, T1> getWith)
+    public static Task<ValueTuple<T, T1>> ThenGetWith<T, T1>(this Task<T> task, Func<T, T1> getWith)
     {
-        return await task.Then(p => (p, getWith(p)));
+        return task.Then(p => (p, getWith(p)));
     }
 
     /// <summary>
@@ -448,9 +448,9 @@ public static class TaskExtension
     /// <typeparam name="T">The type of the value to be wrapped.</typeparam>
     /// <param name="t">The value to be wrapped.</param>
     /// <returns>A Task containing the specified value.</returns>
-    public static async Task<T> BoxedInTask<T>(this T t)
+    public static Task<T> BoxedInTask<T>(this T t)
     {
-        return await Task.FromResult(t);
+        return Task.FromResult(t);
     }
 
     /// <summary>
@@ -1009,7 +1009,6 @@ public static class TaskExtension
         Func<Task<TR2>> fr2)
     {
         await task;
-
         return await Util.TaskRunner.WhenAll(fr1(), fr2());
     }
 

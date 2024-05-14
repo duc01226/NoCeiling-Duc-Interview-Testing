@@ -468,12 +468,12 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         return await executeFn(uow);
     }
 
-    protected async Task<TResult> ExecuteReadData<TResult>(
+    protected Task<TResult> ExecuteReadData<TResult>(
         IPlatformUnitOfWork uow,
         Func<IPlatformUnitOfWork, IQueryable<TEntity>, Task<TResult>> readDataFn,
         Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        return await readDataFn(uow, GetQuery(uow, loadRelatedEntities));
+        return readDataFn(uow, GetQuery(uow, loadRelatedEntities));
     }
 
     protected virtual Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(
@@ -482,9 +482,9 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(ReadDataFnAsync, loadRelatedEntities);
 
-        async Task<TResult> ReadDataFnAsync(IPlatformUnitOfWork unitOfWork, IQueryable<TEntity> entities)
+        Task<TResult> ReadDataFnAsync(IPlatformUnitOfWork unitOfWork, IQueryable<TEntity> entities)
         {
-            return await readDataFn(unitOfWork, entities).BoxedInTask();
+            return readDataFn(unitOfWork, entities).BoxedInTask();
         }
     }
 
