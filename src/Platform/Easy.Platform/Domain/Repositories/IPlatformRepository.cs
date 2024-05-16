@@ -553,42 +553,6 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
-    public Task<TSelector> FirstOrDefaultAsync<TSelector>(
-        Func<IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
-
-    public Task<TSelector> FirstOrDefaultAsync<TSelector>(
-        Func<IPlatformUnitOfWork, IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
-
-    /// <summary>
-    /// Asynchronously retrieves all entities of type TEntity that satisfy the conditions defined by the queryBuilder.
-    /// </summary>
-    /// <typeparam name="TSelector">The type of the result.</typeparam>
-    /// <param name="queryBuilder">A function to process the entities of type TEntity.</param>
-    /// <param name="cancellationToken">A token that may be used to cancel the operation.</param>
-    /// <param name="loadRelatedEntities">An array of expressions to include related entities.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains a list of TSelector.</returns>
-    public Task<List<TSelector>> GetAllAsync<TSelector>(
-        Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
-
-    /// <summary>
-    /// Asynchronously retrieves all entities of type TEntity and projects them into a new form using the provided query builder.
-    /// </summary>
-    /// <typeparam name="TSelector">The type of the result after projection.</typeparam>
-    /// <param name="queryBuilder">A function that takes the current unit of work and a queryable source of entities and returns a queryable result of TSelector.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the work.</param>
-    /// <param name="loadRelatedEntities">An array of expressions that represent the related entities to be loaded along with the entities.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains a list of TSelector.</returns>
-    public Task<List<TSelector>> GetAllAsync<TSelector>(
-        Func<IPlatformUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
-
     /// <summary>
     /// Asynchronously retrieves all entities of type TEntity that satisfy the conditions defined by the queryBuilder.
     /// </summary>
@@ -598,7 +562,7 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
     /// <param name="loadRelatedEntities">Expressions to load related entities.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a list of TSelector elements.</returns>
     public Task<List<TSelector>> GetAllAsync<TSelector>(
-        Func<IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
+        Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
@@ -611,7 +575,7 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
     /// <param name="loadRelatedEntities">An array of expressions specifying related entities to load along with the main entities.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a list of transformed entities.</returns>
     public Task<List<TSelector>> GetAllAsync<TSelector>(
-        Func<IPlatformUnitOfWork, IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
+        Func<IPlatformUnitOfWork, IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 

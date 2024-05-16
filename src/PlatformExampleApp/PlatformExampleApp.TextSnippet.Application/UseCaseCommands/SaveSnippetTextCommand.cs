@@ -275,9 +275,11 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
                 var (testGetDataParallel1, testGetDataParallel2, testGetDataParallel3, testGetDataParallel4) = await Util.TaskRunner.WhenAll(
                     textSnippetEntityRepository.FirstOrDefaultAsync(cancellationToken: cancellationToken),
                     textSnippetEntityRepository.GetAllAsync(queryBuilder: query => query.Take(1), cancellationToken),
-                    textSnippetEntityRepository.GetAllAsync(
-                        queryBuilder: query => query.Take(1).ToDictionary(p => p.Id, p => p),
-                        cancellationToken),
+                    textSnippetEntityRepository
+                        .GetAllAsync(
+                            queryBuilder: query => query.Take(1),
+                            cancellationToken)
+                        .Then(items => items.ToDictionary(p => p.Id, p => p)),
                     textSnippetEntityRepository.GetAllAsync(
                         queryBuilder: query => query.Take(1).GroupBy(p => p.Id, (key, entities) => new { id = key, count = entities.Count() }),
                         cancellationToken));

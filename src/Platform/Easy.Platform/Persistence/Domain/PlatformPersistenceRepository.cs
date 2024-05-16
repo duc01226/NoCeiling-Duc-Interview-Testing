@@ -238,26 +238,6 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             loadRelatedEntities);
     }
 
-    public override Task<List<TSelector>> GetAllAsync<TSelector>(
-        Func<IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
-    {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (_, query) => ToListAsync(queryBuilder(query), cancellationToken),
-            loadRelatedEntities);
-    }
-
-    public override Task<List<TSelector>> GetAllAsync<TSelector>(
-        Func<IPlatformUnitOfWork, IQueryable<TEntity>, IEnumerable<TSelector>> queryBuilder,
-        CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
-    {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (uow, query) => ToListAsync(queryBuilder(uow, query), cancellationToken),
-            loadRelatedEntities);
-    }
-
     public override Task<TSelector> FirstOrDefaultAsync<TSelector>(
         Func<IQueryable<TEntity>, IQueryable<TSelector>> queryBuilder,
         CancellationToken cancellationToken = default,
