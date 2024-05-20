@@ -18,7 +18,7 @@ public class PlatformInboxConfig
     /// <summary>
     /// To config max store processed message count. Will delete old messages of maximum messages happened
     /// </summary>
-    public int MaxStoreProcessedMessageCount { get; set; } = 10000;
+    public int MaxStoreProcessedMessageCount { get; set; } = 1000;
 
     /// <summary>
     /// To config how long a message can live in the database as Failed in seconds. Default is two week (28 days); After that the message will be automatically ignored by change status to Ignored

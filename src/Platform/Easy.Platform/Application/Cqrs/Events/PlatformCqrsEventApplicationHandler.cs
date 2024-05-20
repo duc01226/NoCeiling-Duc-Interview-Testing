@@ -103,7 +103,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     public bool IsInjectingApplicationBusMessageProducer => isInjectingApplicationBusMessageProducerLazy.Value;
 
-    public virtual bool AutoDeleteProcessedInboxEventMessage => false;
+    public virtual bool AutoDeleteProcessedInboxEventMessage => true;
 
     /// <summary>
     /// Default false. If true, the event handler will handle immediately using the same current active uow if existing active uow
