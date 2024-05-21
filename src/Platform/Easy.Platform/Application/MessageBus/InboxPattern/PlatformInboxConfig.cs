@@ -39,7 +39,11 @@ public class PlatformInboxConfig
 
     public int ProcessClearMessageRetryCount { get; set; } = 5;
 
-    public int NumberOfProcessConsumeInboxMessagesBatch { get; set; } = 5;
+    public int NumberOfProcessConsumeInboxMessagesBatch { get; set; } = 10;
+
+    public int NumberOfProcessConsumeInboxMessagesSubQueuePrefetch { get; set; } = 5;
+
+    public int GetCanHandleMessageGroupedByConsumerIdPrefixesPageSize { get; set; } = 10000;
 
     public int ProcessConsumeMessageRetryCount { get; set; } = 10;
 

@@ -21,8 +21,8 @@ internal interface IFcmSender
 /// </summary>
 internal sealed class FcmSender : IFcmSender
 {
-    private readonly FireBasePushNotificationSettings settings;
     private readonly HttpClient http;
+    private readonly FireBasePushNotificationSettings settings;
 
     public FcmSender(FireBasePushNotificationSettings settings, HttpClient http)
     {
@@ -74,8 +74,7 @@ internal sealed class FcmSender : IFcmSender
             {
                 var responseString = await response.Content.ReadAsStringAsync(cancellationToken);
 
-                if (!response.IsSuccessStatusCode)
-                    throw new HttpRequestException("Firebase notification error: " + responseString);
+                response.EnsureSuccessStatusCodeWithErrorContent();
 
                 return PlatformJsonSerializer.Deserialize<FcmResponse>(responseString);
             }

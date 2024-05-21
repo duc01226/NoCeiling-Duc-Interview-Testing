@@ -702,7 +702,12 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 new CreateIndexModel<PlatformOutboxBusMessage>(
                     Builders<PlatformOutboxBusMessage>.IndexKeys
                         .Ascending(p => p.SendStatus)
-                        .Ascending(p => p.LastSendDate))
+                        .Ascending(p => p.LastSendDate)
+                        .Ascending(p => p.CreatedDate)),
+                new CreateIndexModel<PlatformOutboxBusMessage>(
+                    Builders<PlatformOutboxBusMessage>.IndexKeys
+                        .Ascending(p => p.SendStatus)
+                        .Ascending(p => p.CreatedDate))
             ]);
     }
 

@@ -46,6 +46,10 @@ public class PlatformOutboxConfig
 
     public int NumberOfProcessSendOutboxMessagesBatch { get; set; } = 10;
 
+    public int NumberOfProcessSendOutboxMessagesSubQueuePrefetch { get; set; } = 5;
+
+    public int GetCanHandleMessageGroupedByTypeIdPrefixesPageSize { get; set; } = 10000;
+
     public int ProcessSendMessageRetryCount { get; set; } = 10;
 
     /// <summary>
