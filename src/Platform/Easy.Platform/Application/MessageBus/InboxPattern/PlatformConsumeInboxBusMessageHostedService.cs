@@ -166,7 +166,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                                             }
                                         } while (true);
                                     },
-                                    InboxConfig.NumberOfProcessConsumeInboxMessagesBatch);
+                                    InboxConfig.NumberOfProcessConsumeInboxParallelMessages);
 
                                 pagedCanHandleMessageGroupedByConsumerIdPrefixes.ForEach(p => processedCanHandleMessageGroupedByConsumerIdPrefixes.Add(p));
                             },

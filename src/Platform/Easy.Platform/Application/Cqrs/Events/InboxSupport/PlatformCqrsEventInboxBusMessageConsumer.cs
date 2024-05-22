@@ -37,7 +37,7 @@ public class PlatformCqrsEventInboxBusMessageConsumer : PlatformApplicationMessa
                         $"Handler {message.Payload.EventHandlerTypeFullName} must extended from {typeof(IPlatformCqrsEventApplicationHandler<>).FullName}")
                     .Pipe(serviceProvider.GetRequiredService)
                     .As<IPlatformCqrsEventApplicationHandler>()
-                    .With(p => p.IsCurrentInstanceCalledFromInboxBusMessageConsumer = true)
+                    .With(p => p.ThrowExceptionOnHandleFailed = true)
                     .With(p => p.ForceCurrentInstanceHandleInCurrentThread = true)
                     .With(p => p.RetryOnFailedTimes = 0);
                 var eventInstance = RootServiceProvider.GetRegisteredPlatformModuleAssembliesType(message.Payload.EventTypeFullName)
@@ -45,7 +45,8 @@ public class PlatformCqrsEventInboxBusMessageConsumer : PlatformApplicationMessa
                         $"[{nameof(PlatformCqrsEventInboxBusMessageConsumer)}] Not found [EventType:{message.Payload.EventTypeFullName}] in application to serialize the message.")
                     .Pipe(eventType => PlatformJsonSerializer.Deserialize(message.Payload.EventJson, eventType));
 
-                if (eventHandlerInstance.CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageSupport: true, eventInstance))
+                if (eventHandlerInstance.CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageSupport: true, eventInstance) &&
+                    eventHandlerInstance.HandleWhen(eventInstance))
                     await eventHandlerInstance.Handle(eventInstance, CancellationToken.None);
             });
     }

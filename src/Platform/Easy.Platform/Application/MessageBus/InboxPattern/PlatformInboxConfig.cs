@@ -39,7 +39,7 @@ public class PlatformInboxConfig
 
     public int ProcessClearMessageRetryCount { get; set; } = 5;
 
-    public int NumberOfProcessConsumeInboxMessagesBatch { get; set; } = 10;
+    public int NumberOfProcessConsumeInboxParallelMessages { get; set; } = Environment.ProcessorCount * 2;
 
     public int NumberOfProcessConsumeInboxMessagesSubQueuePrefetch { get; set; } = 5;
 

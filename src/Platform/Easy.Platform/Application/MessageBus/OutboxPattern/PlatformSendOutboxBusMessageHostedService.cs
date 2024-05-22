@@ -159,7 +159,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                                             }
                                         } while (true);
                                     },
-                                    OutboxConfig.NumberOfProcessSendOutboxMessagesBatch);
+                                    OutboxConfig.NumberOfProcessSendOutboxParallelMessages);
 
                                 pagedCanHandleMessageGroupedByTypeIdPrefixes.ForEach(p => processedCanHandleMessageGroupedByTypeIdPrefixes.Add(p));
                             },

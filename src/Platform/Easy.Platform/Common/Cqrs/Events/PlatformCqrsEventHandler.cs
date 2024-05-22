@@ -14,11 +14,32 @@ public interface IPlatformCqrsEventHandler
     public bool ForceCurrentInstanceHandleInCurrentThread { get; set; }
 
     public int RetryOnFailedTimes { get; set; }
+
+    public bool ThrowExceptionOnHandleFailed { get; set; }
+
+    /// <summary>
+    /// Executes the handle asynchronously.
+    /// </summary>
+    /// <param name="event">The event to handle.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used to cancel the work.</param>
+    Task ExecuteHandleAsync(object @event, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Handles the event.
+    /// </summary>
+    /// <param name="event">The event to handle.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used to cancel the work.</param>
+    Task Handle(object @event, CancellationToken cancellationToken);
+
+    public bool HandleWhen(object @event);
 }
 
 public interface IPlatformCqrsEventHandler<in TEvent> : INotificationHandler<TEvent>, IPlatformCqrsEventHandler
     where TEvent : IPlatformCqrsEvent
 {
+    public bool HandleWhen(TEvent @event);
+
+    Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken);
 }
 
 public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandler<TEvent>
@@ -44,9 +65,30 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     public bool ForceCurrentInstanceHandleInCurrentThread { get; set; }
 
+    public virtual bool ThrowExceptionOnHandleFailed { get; set; }
+
+    public abstract Task ExecuteHandleAsync(object @event, CancellationToken cancellationToken);
+
+    public abstract Task Handle(object @event, CancellationToken cancellationToken);
+
+    public abstract bool HandleWhen(object @event);
+
     public virtual Task Handle(TEvent notification, CancellationToken cancellationToken)
     {
         return DoHandle(notification, cancellationToken, () => true);
+    }
+
+    public virtual async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
+    {
+        await ExecuteHandleWithTracingAsync(@event, () => HandleAsync(@event, cancellationToken));
+    }
+
+    /// <summary>
+    /// Default return True. Override this to define the condition to handle the event
+    /// </summary>
+    public virtual bool HandleWhen(TEvent @event)
+    {
+        return true;
     }
 
     protected virtual async Task DoHandle(TEvent @event, CancellationToken cancellationToken, Func<bool> couldRunInBackgroundThread)
@@ -117,13 +159,9 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         }
         catch (Exception e)
         {
-            OnExecuteHandleFailed(handlerNewInstance, notification, e);
+            if (ThrowExceptionOnHandleFailed) throw;
+            handlerNewInstance.LogError(notification, e, LoggerFactory);
         }
-    }
-
-    protected virtual void OnExecuteHandleFailed(PlatformCqrsEventHandler<TEvent> handlerNewInstance, TEvent notification, Exception e)
-    {
-        handlerNewInstance.LogError(notification, e, LoggerFactory);
     }
 
     protected virtual void CopyPropertiesToNewInstanceBeforeExecution(
@@ -132,11 +170,6 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
     {
         newInstance.ForceCurrentInstanceHandleInCurrentThread = previousInstance.ForceCurrentInstanceHandleInCurrentThread;
         newInstance.RetryOnFailedTimes = previousInstance.RetryOnFailedTimes;
-    }
-
-    public virtual async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
-    {
-        await ExecuteHandleWithTracingAsync(@event, () => HandleAsync(@event, cancellationToken));
     }
 
     protected async Task ExecuteHandleWithTracingAsync(TEvent @event, Func<Task> handleAsync)
@@ -163,14 +196,6 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                 notification.GetType().Name,
                 GetType().Name,
                 notification.ToJson());
-    }
-
-    /// <summary>
-    /// Default return True. Override this to define the condition to handle the event
-    /// </summary>
-    protected virtual bool HandleWhen(TEvent @event)
-    {
-        return true;
     }
 
     protected abstract Task HandleAsync(TEvent @event, CancellationToken cancellationToken);

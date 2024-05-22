@@ -25,28 +25,9 @@ namespace Easy.Platform.Application.Cqrs.Events;
 public interface IPlatformCqrsEventApplicationHandler : IPlatformCqrsEventHandler
 {
     /// <summary>
-    /// Gets or sets a value indicating whether the current instance is called from Inbox Bus Message Consumer.
-    /// </summary>
-    bool IsCurrentInstanceCalledFromInboxBusMessageConsumer { get; set; }
-
-    /// <summary>
     /// Gets a value indicating whether to enable Inbox Event Bus Message.
     /// </summary>
     public bool EnableInboxEventBusMessage { get; }
-
-    /// <summary>
-    /// Executes the handle asynchronously.
-    /// </summary>
-    /// <param name="event">The event to handle.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the work.</param>
-    Task ExecuteHandleAsync(object @event, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Handles the event.
-    /// </summary>
-    /// <param name="event">The event to handle.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to cancel the work.</param>
-    Task Handle(object @event, CancellationToken cancellationToken);
 
     /// <summary>
     /// Determines whether the event can be handled using Inbox Consumer.
@@ -59,8 +40,6 @@ public interface IPlatformCqrsEventApplicationHandler : IPlatformCqrsEventHandle
 public interface IPlatformCqrsEventApplicationHandler<in TEvent> : IPlatformCqrsEventApplicationHandler, IPlatformCqrsEventHandler<TEvent>
     where TEvent : PlatformCqrsEvent, new()
 {
-    Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken);
-
     bool CanExecuteHandlingEventUsingInboxConsumer(bool hasInboxMessageSupport, TEvent @event);
 }
 
@@ -111,11 +90,6 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     public virtual bool ForceInSameEventTriggerUow => false;
 
     /// <summary>
-    /// Default return False. When True, Support for store cqrs event handler as inbox if inbox bus message is enabled in persistence module
-    /// </summary>
-    public virtual bool EnableInboxEventBusMessage => true;
-
-    /// <summary>
     /// Gets or sets a value indicating whether the current instance of the event handler is called from the Inbox Bus Message Consumer.
     /// </summary>
     /// <value>
@@ -123,14 +97,26 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     /// </value>
     public bool IsCurrentInstanceCalledFromInboxBusMessageConsumer { get; set; }
 
-    public Task ExecuteHandleAsync(object @event, CancellationToken cancellationToken)
+    /// <summary>
+    /// Default return False. When True, Support for store cqrs event handler as inbox if inbox bus message is enabled in persistence module
+    /// </summary>
+    public virtual bool EnableInboxEventBusMessage => true;
+
+    public override bool ThrowExceptionOnHandleFailed { get => IsCurrentInstanceCalledFromInboxBusMessageConsumer; set { } }
+
+    public override Task ExecuteHandleAsync(object @event, CancellationToken cancellationToken)
     {
-        return DoExecuteHandleAsync(@event.As<TEvent>(), cancellationToken);
+        return ExecuteHandleWithTracingAsync(@event.As<TEvent>(), () => DoExecuteHandleAsync(@event.As<TEvent>(), cancellationToken));
     }
 
-    public Task Handle(object @event, CancellationToken cancellationToken)
+    public override Task Handle(object @event, CancellationToken cancellationToken)
     {
         return DoHandle(@event.As<TEvent>(), cancellationToken, () => !IsInjectingUserContextAccessor);
+    }
+
+    public override bool HandleWhen(object @event)
+    {
+        return HandleWhen(@event.As<TEvent>());
     }
 
     public bool CanExecuteHandlingEventUsingInboxConsumer(bool hasInboxMessageSupport, object @event)
@@ -152,9 +138,9 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         await DoHandle(notification, cancellationToken, () => !IsInjectingUserContextAccessor);
     }
 
-    public override async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
+    public override Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
     {
-        await ExecuteHandleWithTracingAsync(@event, () => DoExecuteHandleAsync(@event, cancellationToken));
+        return ExecuteHandleWithTracingAsync(@event, () => DoExecuteHandleAsync(@event, cancellationToken));
     }
 
     /// <summary>
@@ -211,11 +197,6 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                !(IsInjectingApplicationBusMessageProducer && HasOutboxMessageSupport()) &&
                !IsInjectingUserContextAccessor &&
                !ForceInSameEventTriggerUow;
-    }
-
-    private bool HasInboxMessageSupport()
-    {
-        return RootServiceProvider.CheckHasRegisteredScopedService<IPlatformInboxBusMessageRepository>();
     }
 
     protected bool HasOutboxMessageSupport()
@@ -301,9 +282,11 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             if (AllowHandleInBackgroundThread(@event) && @event.RequestContext?.Any() == true)
                 requestContextAccessor.Current.SetValues(@event.RequestContext);
 
-            var hasInboxMessageRepository = RootServiceProvider.CheckHasRegisteredScopedService<IPlatformInboxBusMessageRepository>();
+            if (!HandleWhen(@event)) return;
 
-            if (CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository, @event) &&
+            if (CanExecuteHandlingEventUsingInboxConsumer(
+                    hasInboxMessageSupport: HasInboxMessageSupport(),
+                    @event) &&
                 !IsCurrentInstanceCalledFromInboxBusMessageConsumer &&
                 !IsInjectingUserContextAccessor &&
                 !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()))
@@ -347,7 +330,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                     // If handler already executed in background or from inbox consumer, not need to open new scope for open uow
                     // If not then create new scope to open new uow so that multiple events handlers from an event do not get conflicted
                     // uow in the same scope if not open new scope
-                    if (AllowHandleInBackgroundThread(@event) || CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageRepository, @event))
+                    if (AllowHandleInBackgroundThread(@event) ||
+                        CanExecuteHandlingEventUsingInboxConsumer(HasInboxMessageSupport(), @event))
                         using (var uow = UnitOfWorkManager.Begin())
                         {
                             await HandleAsync(@event, cancellationToken);
@@ -380,14 +364,12 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         }
     }
 
-    protected override void OnExecuteHandleFailed(PlatformCqrsEventHandler<TEvent> handlerNewInstance, TEvent notification, Exception e)
+    protected bool HasInboxMessageSupport()
     {
-        if (IsCurrentInstanceCalledFromInboxBusMessageConsumer)
-            throw e;
-        base.OnExecuteHandleFailed(handlerNewInstance, notification, e);
+        return RootServiceProvider.CheckHasRegisteredScopedService<IPlatformInboxBusMessageRepository>();
     }
 
-    private async Task HandleExecutingInboxConsumerAsync(
+    protected async Task HandleExecutingInboxConsumerAsync(
         TEvent @event,
         IServiceProvider serviceProvider,
         PlatformInboxConfig inboxConfig,

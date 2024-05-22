@@ -44,7 +44,7 @@ public class PlatformOutboxConfig
 
     public int ProcessClearMessageRetryCount { get; set; } = 5;
 
-    public int NumberOfProcessSendOutboxMessagesBatch { get; set; } = 10;
+    public int NumberOfProcessSendOutboxParallelMessages { get; set; } = Environment.ProcessorCount * 4;
 
     public int NumberOfProcessSendOutboxMessagesSubQueuePrefetch { get; set; } = 5;
 
