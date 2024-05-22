@@ -38,6 +38,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         IPlatformUnitOfWork handleInUow,
         string extendedMessageIdPrefix,
         bool autoDeleteProcessedMessageImmediately = false,
+        bool needToCheckAnySameConsumerOtherPreviousNotProcessedMessage = true,
         CancellationToken cancellationToken = default) where TMessage : class, new()
     {
         if (handleExistingInboxMessage != null &&
@@ -54,6 +55,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 loggerFactory,
                 retryProcessFailedMessageInSecondsUnit,
                 autoDeleteProcessedMessageImmediately,
+                needToCheckAnySameConsumerOtherPreviousNotProcessedMessage,
                 cancellationToken);
         else if (handleExistingInboxMessage == null)
             await SaveAndTryConsumeNewInboxMessageAsync(
@@ -68,6 +70,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 allowProcessInBackgroundThread,
                 handleInUow,
                 autoDeleteProcessedMessageImmediately,
+                needToCheckAnySameConsumerOtherPreviousNotProcessedMessage,
                 extendedMessageIdPrefix,
                 retryProcessFailedMessageInSecondsUnit,
                 cancellationToken);
@@ -85,6 +88,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         bool allowProcessInBackgroundThread,
         IPlatformUnitOfWork handleInUow,
         bool autoDeleteProcessedMessage,
+        bool needToCheckAnySameConsumerOtherPreviousNotProcessedMessage,
         string extendedMessageIdPrefix,
         double retryProcessFailedMessageInSecondsUnit,
         CancellationToken cancellationToken) where TMessage : class, new()
@@ -97,6 +101,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 forApplicationName,
                 routingKey,
                 extendedMessageIdPrefix,
+                needToCheckAnySameConsumerOtherPreviousNotProcessedMessage,
                 cancellationToken);
 
         if (toProcessInboxMessage == null) return;
@@ -164,6 +169,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         string forApplicationName,
         string routingKey,
         string extendedMessageIdPrefix,
+        bool needToCheckAnySameConsumerOtherPreviousNotProcessedMessage,
         CancellationToken cancellationToken) where TMessage : class, new()
     {
         return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
@@ -176,13 +182,14 @@ public static class PlatformInboxMessageBusConsumerHelper
                         p => p.Id == PlatformInboxBusMessage.BuildId(consumerType, trackId, extendedMessageIdPrefix),
                         cancellationToken)
                     : null;
-                var isAnySameConsumerOtherNotProcessedMessage = await inboxBusMessageRepository.AnyAsync(
-                    PlatformInboxBusMessage.CheckAnySameConsumerOtherPreviousNotProcessedMessageExpr(
-                        consumerType,
-                        trackId,
-                        existedInboxMessage?.CreatedDate ?? Clock.UtcNow,
-                        extendedMessageIdPrefix),
-                    cancellationToken);
+                var isAnySameConsumerOtherNotProcessedMessage = needToCheckAnySameConsumerOtherPreviousNotProcessedMessage
+                                                                && await inboxBusMessageRepository.AnyAsync(
+                                                                    PlatformInboxBusMessage.CheckAnySameConsumerOtherPreviousNotProcessedMessageExpr(
+                                                                        consumerType,
+                                                                        trackId,
+                                                                        existedInboxMessage?.CreatedDate ?? Clock.UtcNow,
+                                                                        extendedMessageIdPrefix),
+                                                                    cancellationToken);
 
                 var newInboxMessage = existedInboxMessage == null
                     ? await CreateNewInboxMessageAsync(
@@ -260,13 +267,15 @@ public static class PlatformInboxMessageBusConsumerHelper
         Func<ILogger> loggerFactory,
         double retryProcessFailedMessageInSecondsUnit,
         bool autoDeleteProcessedMessage,
+        bool needToCheckAnySameConsumerOtherPreviousNotProcessedMessage,
         CancellationToken cancellationToken) where TMessage : class, new()
     {
         try
         {
-            if (await inboxBusMessageRepository.AnyAsync(
-                PlatformInboxBusMessage.CheckAnySameConsumerOtherPreviousNotProcessedMessageExpr(existingInboxMessage),
-                cancellationToken))
+            if (needToCheckAnySameConsumerOtherPreviousNotProcessedMessage &&
+                await inboxBusMessageRepository.AnyAsync(
+                    PlatformInboxBusMessage.CheckAnySameConsumerOtherPreviousNotProcessedMessageExpr(existingInboxMessage),
+                    cancellationToken))
                 await RevertExistingInboxToNewMessageAsync(existingInboxMessage, inboxBusMessageRepository, cancellationToken);
             else
                 await consumer

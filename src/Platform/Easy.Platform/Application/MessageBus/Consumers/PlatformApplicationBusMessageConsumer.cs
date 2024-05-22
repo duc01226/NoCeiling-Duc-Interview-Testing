@@ -26,6 +26,11 @@ public interface IPlatformApplicationMessageBusConsumer : IPlatformMessageBusCon
     public bool AutoDeleteProcessedInboxEventMessageImmediately { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether if you need to check any consumer other previous not processed inbox message before processing. Default is true
+    /// </summary>
+    public bool NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the instance is called to execute handling logic for an inbox message.
     /// </summary>
     public bool IsHandlingLogicForInboxMessage { get; set; }
@@ -77,7 +82,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
     public virtual bool AllowUseInboxMessage => true;
 
     public TimeSpan? InboxProcessingMaxTimeout { get; set; }
-
+    public bool NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage { get; set; } = true;
     public PlatformInboxBusMessage HandleExistingInboxMessage { get; set; }
     public bool AutoDeleteProcessedInboxEventMessageImmediately { get; set; }
     public bool IsHandlingLogicForInboxMessage { get; set; }
@@ -102,6 +107,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                 handleExistingInboxMessageConsumerInstance: this,
                 extendedMessageIdPrefix: message.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix(),
                 autoDeleteProcessedMessageImmediately: AutoDeleteProcessedInboxEventMessageImmediately,
+                needToCheckAnySameConsumerOtherPreviousNotProcessedMessage: NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage,
                 handleInUow: null);
         else
             try

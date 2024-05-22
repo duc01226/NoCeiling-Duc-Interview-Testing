@@ -79,6 +79,8 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
 
                     b.HasIndex("ConsumeStatus", "CreatedDate");
 
+                    b.HasIndex("CreatedDate", "ConsumeStatus");
+
                     b.HasIndex("ForApplicationName", "ConsumeStatus", "LastConsumeDate", "CreatedDate");
 
                     b.ToTable("PlatformInboxEventBusMessage", (string)null);
@@ -127,6 +129,8 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatedDate", "SendStatus");
 
                     b.HasIndex("SendStatus", "CreatedDate");
 

@@ -224,7 +224,8 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
         {
             var consumer = scope.ServiceProvider.GetService(consumerType)
                 .As<IPlatformApplicationMessageBusConsumer>()
-                .With(p => p.HandleExistingInboxMessage = toHandleInboxMessage);
+                .With(p => p.HandleExistingInboxMessage = toHandleInboxMessage)
+                .With(p => p.NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage = false);
 
             var consumerMessageType = PlatformMessageBusConsumer.GetConsumerMessageType(consumer);
 

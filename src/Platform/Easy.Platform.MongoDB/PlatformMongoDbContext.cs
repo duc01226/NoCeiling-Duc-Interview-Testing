@@ -687,7 +687,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 new CreateIndexModel<PlatformInboxBusMessage>(
                     Builders<PlatformInboxBusMessage>.IndexKeys
                         .Ascending(p => p.ConsumeStatus)
-                        .Ascending(p => p.CreatedDate))
+                        .Ascending(p => p.CreatedDate)),
+                new CreateIndexModel<PlatformInboxBusMessage>(
+                    Builders<PlatformInboxBusMessage>.IndexKeys
+                        .Ascending(p => p.CreatedDate)
+                        .Ascending(p => p.ConsumeStatus))
             ]);
     }
 
@@ -707,7 +711,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 new CreateIndexModel<PlatformOutboxBusMessage>(
                     Builders<PlatformOutboxBusMessage>.IndexKeys
                         .Ascending(p => p.SendStatus)
-                        .Ascending(p => p.CreatedDate))
+                        .Ascending(p => p.CreatedDate)),
+                new CreateIndexModel<PlatformOutboxBusMessage>(
+                    Builders<PlatformOutboxBusMessage>.IndexKeys
+                        .Ascending(p => p.CreatedDate)
+                        .Ascending(p => p.SendStatus))
             ]);
     }
 
