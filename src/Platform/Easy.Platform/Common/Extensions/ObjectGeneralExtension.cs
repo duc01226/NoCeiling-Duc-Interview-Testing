@@ -19,14 +19,19 @@ public static class ObjectGeneralExtension
     /// <returns>True if the values are different, false otherwise.</returns>
     public static bool IsValuesDifferent<T1, T2>(this T1 obj1, T2 obj2)
     {
-        if (obj1 == null && obj2 != null)
+        if ((obj1 == null && obj2 != null) || (obj2 == null && obj1 != null))
             return true;
-        if (obj2 == null && obj1 != null)
-            return true;
-        if (obj1 != null)
-            return PlatformJsonSerializer.Serialize(obj1) != PlatformJsonSerializer.Serialize(obj2);
 
-        return false;
+        // Case both obj is null
+        if (obj1 == null)
+            return false;
+
+        var obj1Type = typeof(T1);
+        if (obj1Type == typeof(T2) &&
+            (obj1Type.IsPrimitive || obj1Type == typeof(string) || obj1Type == typeof(decimal) || obj1Type == typeof(DateTime)))
+            return !obj1.Equals(obj2);
+
+        return PlatformJsonSerializer.Serialize(obj1) != PlatformJsonSerializer.Serialize(obj2);
     }
 
     /// <summary>

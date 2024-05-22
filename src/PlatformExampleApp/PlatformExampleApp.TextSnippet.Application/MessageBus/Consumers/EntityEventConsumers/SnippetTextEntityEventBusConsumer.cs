@@ -41,6 +41,11 @@ internal sealed class SnippetTextEntityEventBusConsumer : PlatformCqrsEntityEven
         return Task.CompletedTask;
     }
 
+    public override bool HandleWhen(TextSnippetEntityEventBusMessage message, string routingKey)
+    {
+        return true;
+    }
+
     // Can override this method return false to user normal consumer without using inbox message
     //public override bool AutoSaveInboxMessage => false;
 }

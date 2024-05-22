@@ -244,12 +244,16 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
             if (busMessage != null)
                 try
                 {
-                    await PlatformMessageBusConsumer.InvokeConsumerAsync(
-                        consumer,
-                        busMessage,
-                        toHandleInboxMessage.RoutingKey,
-                        MessageBusConfig,
-                        InvokeConsumerLogger);
+                    if (consumer.HandleWhen(busMessage, toHandleInboxMessage.RoutingKey))
+                        await PlatformMessageBusConsumer.InvokeConsumerAsync(
+                            consumer,
+                            busMessage,
+                            toHandleInboxMessage.RoutingKey,
+                            MessageBusConfig,
+                            InvokeConsumerLogger);
+                    else
+                        await scope.ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>()
+                            .DeleteImmediatelyAsync(toHandleInboxMessage.Id, cancellationToken: cancellationToken);
                 }
                 catch (Exception ex)
                 {

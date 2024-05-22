@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -13,7 +13,7 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_PlatformOutboxEventBusMessage_CreatedDate_SendStatus",
                 table: "PlatformOutboxEventBusMessage",
-                columns: ["CreatedDate", "ConsumeStatus"]);
+                columns: ["CreatedDate", "SendStatus"]);
         }
 
         /// <inheritdoc />

@@ -25,4 +25,6 @@ public abstract class PlatformCqrsEntityEventBusMessageConsumer<TMessage, TEntit
         IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, uowManager, serviceProvider, rootServiceProvider)
     {
     }
+
+    public new abstract bool HandleWhen(TMessage message, string routingKey);
 }

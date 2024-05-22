@@ -13,7 +13,7 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_PlatformOutboxEventBusMessage_CreatedDate_SendStatus",
                 table: "PlatformOutboxEventBusMessage",
-                columns: ["CreatedDate", "ConsumeStatus"]);
+                columns: ["CreatedDate", "SendStatus"]);
         }
 
         /// <inheritdoc />

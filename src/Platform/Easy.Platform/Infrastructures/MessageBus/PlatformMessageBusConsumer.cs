@@ -32,6 +32,8 @@ public interface IPlatformMessageBusConsumer
     /// </summary>
     int ExecuteOrder();
 
+    public bool HandleWhen(object message, string routingKey);
+
     public static PlatformBusMessageRoutingKey BuildForConsumerDefaultBindingRoutingKey(Type consumerType)
     {
         var messageType = GetConsumerMessageType(consumerType);
@@ -79,6 +81,8 @@ public interface IPlatformMessageBusConsumer<in TMessage> : IPlatformMessageBusC
     /// Main handle logic only method of the consumer
     /// </summary>
     Task HandleLogicAsync(TMessage message, string routingKey);
+
+    public bool HandleWhen(TMessage message, string routingKey);
 }
 
 public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
@@ -106,6 +110,8 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
     {
         return 0;
     }
+
+    public abstract bool HandleWhen(object message, string routingKey);
 
     /// <summary>
     /// Get <see cref="PlatformBusMessage{TPayload}" /> concrete message type from a <see cref="IPlatformMessageBusConsumer" /> consumer
@@ -244,6 +250,11 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
     public virtual bool HandleWhen(TMessage message, string routingKey)
     {
         return true;
+    }
+
+    public override bool HandleWhen(object message, string routingKey)
+    {
+        return HandleWhen(message.Cast<TMessage>(), routingKey);
     }
 
     public static ILogger CreateLogger(ILoggerFactory loggerFactory, Type type)
