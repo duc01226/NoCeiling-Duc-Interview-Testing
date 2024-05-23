@@ -17,6 +17,8 @@ public interface IPlatformCqrsEvent : INotification
     string EventAction { get; }
     string Id { get; }
 
+    string StackTrace { get; set; }
+
     /// <summary>
     /// This is used to store the context of the request which generate the event, for example the CurrentUserContext
     /// </summary>
@@ -99,6 +101,11 @@ public abstract class PlatformCqrsEvent : IPlatformCqrsEvent
     public abstract string EventAction { get; }
 
     public string Id => $"{EventAction}-{AuditTrackId}";
+
+    /// <summary>
+    /// StackTrace of event is enabled when <see cref="PlatformModule.DistributedTracingConfig.Enabled" /> equal True
+    /// </summary>
+    public string StackTrace { get; set; }
 
     /// <summary>
     /// This is used to store the context of the request which generate the event, for example the CurrentUserContext

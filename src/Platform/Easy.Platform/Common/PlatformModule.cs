@@ -422,16 +422,16 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
         if (IsRootModule)
         {
             var distributedTracingConfig = ConfigDistributedTracing();
+
+            serviceCollection.Register(
+                typeof(DistributedTracingConfig),
+                sp => distributedTracingConfig,
+                ServiceLifeTime.Singleton,
+                true,
+                DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
+
             if (distributedTracingConfig.Enabled)
             {
-                // Register only if enabled for other place to check is any distributed tracing config is enabled or not
-                serviceCollection.Register(
-                    typeof(DistributedTracingConfig),
-                    sp => distributedTracingConfig,
-                    ServiceLifeTime.Singleton,
-                    true,
-                    DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
-
                 // Setup OpenTelemetry
                 var allDependencyModules = AllDependencyChildModules(serviceCollection);
 

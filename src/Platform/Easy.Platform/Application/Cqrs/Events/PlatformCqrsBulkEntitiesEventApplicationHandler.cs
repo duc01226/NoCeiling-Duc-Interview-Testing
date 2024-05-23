@@ -21,4 +21,12 @@ public abstract class PlatformCqrsBulkEntitiesEventApplicationHandler<TEntity, T
         rootServiceProvider)
     {
     }
+
+    /// <summary>
+    /// Default return True
+    /// </summary>
+    public override bool HandleWhen(PlatformCqrsBulkEntitiesEvent<TEntity, TPrimaryKey> @event)
+    {
+        return true;
+    }
 }

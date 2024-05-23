@@ -37,6 +37,14 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
             messageAction: @event.EventAction,
             requestContext: @event.RequestContext);
     }
+
+    /// <summary>
+    /// Default return True
+    /// </summary>
+    public override bool HandleWhen(PlatformCqrsEntityEvent<TEntity> @event)
+    {
+        return true;
+    }
 }
 
 public class PlatformCqrsEntityEventBusMessage<TEntity, TPrimaryKey> : PlatformBusMessage<PlatformCqrsEntityEvent<TEntity>>

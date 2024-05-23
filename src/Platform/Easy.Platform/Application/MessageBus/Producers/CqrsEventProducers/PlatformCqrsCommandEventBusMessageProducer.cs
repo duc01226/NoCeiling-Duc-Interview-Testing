@@ -35,6 +35,14 @@ public abstract class PlatformCqrsCommandEventBusMessageProducer<TCommand>
             messageAction: @event.EventAction,
             requestContext: @event.RequestContext);
     }
+
+    /// <summary>
+    /// Default return True
+    /// </summary>
+    public override bool HandleWhen(PlatformCqrsCommandEvent<TCommand> @event)
+    {
+        return true;
+    }
 }
 
 public class PlatformCqrsCommandEventBusMessage<TCommand> : PlatformBusMessage<PlatformCqrsCommandEvent<TCommand>>

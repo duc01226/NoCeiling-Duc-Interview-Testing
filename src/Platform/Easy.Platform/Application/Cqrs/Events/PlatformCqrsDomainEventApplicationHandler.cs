@@ -19,4 +19,12 @@ public abstract class PlatformCqrsDomainEventApplicationHandler<TEvent> : Platfo
         rootServiceProvider)
     {
     }
+
+    /// <summary>
+    /// Default return True
+    /// </summary>
+    public override bool HandleWhen(TEvent @event)
+    {
+        return true;
+    }
 }

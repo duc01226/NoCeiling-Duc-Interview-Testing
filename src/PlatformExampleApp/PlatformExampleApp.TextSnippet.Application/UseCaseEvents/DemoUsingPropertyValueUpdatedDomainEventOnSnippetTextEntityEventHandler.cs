@@ -27,7 +27,7 @@ internal sealed class DemoUsingFieldUpdatedDomainEventOnSnippetTextEntityEventHa
     // Can override to return False to TURN OFF support for store cqrs event handler as inbox
     // protected override bool EnableHandleEventFromInboxBusMessage => false;
 
-    protected override bool HandleWhen(PlatformCqrsEntityEvent<TextSnippetEntity> @event)
+    public override bool HandleWhen(PlatformCqrsEntityEvent<TextSnippetEntity> @event)
     {
         return true;
     }

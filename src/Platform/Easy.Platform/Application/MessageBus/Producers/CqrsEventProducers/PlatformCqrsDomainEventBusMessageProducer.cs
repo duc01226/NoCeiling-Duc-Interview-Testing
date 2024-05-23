@@ -35,6 +35,14 @@ public abstract class PlatformCqrsDomainEventBusMessageProducer<TDomainEvent>
             messageAction: @event.EventAction,
             requestContext: @event.RequestContext);
     }
+
+    /// <summary>
+    /// Default return True
+    /// </summary>
+    public override bool HandleWhen(TDomainEvent @event)
+    {
+        return true;
+    }
 }
 
 public class PlatformCqrsDomainEventBusMessage<TDomainEvent> : PlatformBusMessage<TDomainEvent>

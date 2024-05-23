@@ -83,17 +83,15 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         await ExecuteHandleWithTracingAsync(@event, () => HandleAsync(@event, cancellationToken));
     }
 
-    /// <summary>
-    /// Default return True. Override this to define the condition to handle the event
-    /// </summary>
-    public virtual bool HandleWhen(TEvent @event)
-    {
-        return true;
-    }
+    public abstract bool HandleWhen(TEvent @event);
 
     protected virtual async Task DoHandle(TEvent @event, CancellationToken cancellationToken, Func<bool> couldRunInBackgroundThread)
     {
         if (!HandleWhen(@event)) return;
+
+        if (RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled == true &&
+            @event.StackTrace == null)
+            @event.StackTrace = Environment.StackTrace;
 
         // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
         // so that it wont be disposed when run in background thread, this handler ServiceProvider will be disposed

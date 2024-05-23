@@ -20,6 +20,4 @@ public abstract class PlatformCqrsEntityEventApplicationHandler<TEntity> : Platf
         rootServiceProvider)
     {
     }
-
-    protected new abstract bool HandleWhen(PlatformCqrsEntityEvent<TEntity> @event);
 }

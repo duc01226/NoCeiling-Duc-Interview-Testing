@@ -246,6 +246,10 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
         if (!HandleWhen(@event)) return;
 
+        if (RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled == true &&
+            @event.StackTrace == null)
+            @event.StackTrace = Environment.StackTrace;
+
         var eventSourceUow = TryGetCurrentOrCreatedActiveUow(@event);
 
         if (!ForceInSameEventTriggerUow &&
@@ -281,8 +285,6 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         {
             if (AllowHandleInBackgroundThread(@event) && @event.RequestContext?.Any() == true)
                 requestContextAccessor.Current.SetValues(@event.RequestContext);
-
-            if (!HandleWhen(@event)) return;
 
             if (CanExecuteHandlingEventUsingInboxConsumer(
                     hasInboxMessageSupport: HasInboxMessageSupport(),
@@ -394,7 +396,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             handleExistingInboxMessage: null,
             handleExistingInboxMessageConsumerInstance: null,
             handleInUow: eventSourceUow,
-            autoDeleteProcessedMessageImmediately: AutoDeleteProcessedInboxEventMessage,
+            autoDeleteProcessedMessageImmediately: AutoDeleteProcessedInboxEventMessage &&
+                                                   RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled != true,
             extendedMessageIdPrefix:
             $"{GetType().GetNameOrGenericTypeName()}-{@event.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix() ?? @event.Id}",
             cancellationToken: cancellationToken);

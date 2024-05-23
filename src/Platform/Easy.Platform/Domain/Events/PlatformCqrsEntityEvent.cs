@@ -8,6 +8,7 @@ using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.MessageBus;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Easy.Platform.Domain.Events;
 
@@ -56,7 +57,10 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         var entityEvent = eventBuilder()
             .With(@event => eventCustomConfig?.Invoke(@event))
             .With(@event => @event.SourceUowId = mappedToDbContextUow?.Id)
-            .WithIf(requestContext != null, @event => @event.SetRequestContextValues(requestContext!()));
+            .WithIf(requestContext != null, @event => @event.SetRequestContextValues(requestContext!()))
+            .WithIf(
+                p => rootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled == true && p.StackTrace == null,
+                p => p.StackTrace = Environment.StackTrace);
 
         if (mappedToDbContextUow != null)
             await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs.SendEvent(entityEvent, cancellationToken);
