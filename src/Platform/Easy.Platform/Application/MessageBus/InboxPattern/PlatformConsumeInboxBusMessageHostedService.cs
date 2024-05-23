@@ -69,7 +69,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                 {
                     if (currentRetry >= InboxConfig.MinimumRetryConsumeInboxMessageTimesToWarning)
                         Logger.LogError(
-                            ex,
+                            ex.BeautifyStackTrace(),
                             "Retry ConsumeInboxEventBusMessages {CurrentRetry} time(s) failed. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
                             currentRetry,
                             ApplicationSettingContext.ApplicationName,
@@ -80,7 +80,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
         catch (Exception ex)
         {
             Logger.LogError(
-                ex,
+                ex.BeautifyStackTrace(),
                 "Retry ConsumeInboxEventBusMessages failed. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
                 ApplicationSettingContext.ApplicationName,
                 ApplicationSettingContext.ApplicationAssembly.FullName);
@@ -152,10 +152,10 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                                                     {
                                                         handlePreviousMessageFailed = true;
                                                         Logger.LogError(
-                                                            e,
+                                                            e.BeautifyStackTrace(),
                                                             "[PlatformConsumeInboxEventBusMessageHostedService] Try to consume inbox message with Id:{MessageId} failed. Message Content:{InboxMessage}",
                                                             toHandleInboxMessage.Id,
-                                                            toHandleInboxMessage.ToJson());
+                                                            toHandleInboxMessage.ToFormattedJson());
                                                     }
 
                                                 if (handlePreviousMessageFailed) break;
@@ -235,7 +235,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                     consumerMessageType,
                     consumer.CustomJsonSerializerOptions()),
                 ex => Logger.LogError(
-                    ex,
+                    ex.BeautifyStackTrace(),
                     "RabbitMQ parsing message to {ConsumerMessageType}. [[Error:{Error}]]. Body: {InboxMessage}",
                     consumerMessageType.Name,
                     ex.Message,

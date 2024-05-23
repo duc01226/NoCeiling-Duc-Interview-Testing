@@ -69,7 +69,7 @@ public class PlatformMemoryCacheRepository : PlatformCacheRepository, IPlatformM
                 catch (Exception ex)
                 {
                     Logger.LogError(
-                        ex,
+                        ex.BeautifyStackTrace(),
                         "RemoveAsync failed. [[Exception:{Exception}]]. [CacheKey: {CacheKey}]",
                         ex.ToString(),
                         cacheKey);
@@ -108,11 +108,12 @@ public class PlatformMemoryCacheRepository : PlatformCacheRepository, IPlatformM
     {
         var toUpdateRequestCachedKeys = await LoadGlobalAllRequestCachedKeys();
 
-        await toUpdateRequestCachedKeys.SelectList(p => p.Key).ForEachAsync(
-            async key =>
-            {
-                if (await memoryDistributedCache.GetAsync(key) == null) toUpdateRequestCachedKeys.Remove(key, out _);
-            });
+        await toUpdateRequestCachedKeys.SelectList(p => p.Key)
+            .ForEachAsync(
+                async key =>
+                {
+                    if (await memoryDistributedCache.GetAsync(key) == null) toUpdateRequestCachedKeys.Remove(key, out _);
+                });
 
         await SetGlobalCachedKeysAsync(toUpdateRequestCachedKeys);
     }
@@ -158,7 +159,7 @@ public class PlatformMemoryCacheRepository : PlatformCacheRepository, IPlatformM
         catch (Exception ex)
         {
             Logger.LogError(
-                ex,
+                ex.BeautifyStackTrace(),
                 "SetToMemoryDistributedCacheAsync failed. [[Exception:{Exception}]]. [CacheKey: {CacheKey}]",
                 ex.ToString(),
                 cacheKey);

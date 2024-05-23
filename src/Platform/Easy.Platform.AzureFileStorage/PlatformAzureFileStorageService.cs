@@ -100,7 +100,7 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Fail to upload blob {PureFilePath} in {RootDirectory} container", pureFilePath, rootDirectory);
+            logger.LogError(e.BeautifyStackTrace(), "Fail to upload blob {PureFilePath} in {RootDirectory} container", pureFilePath, rootDirectory);
             throw;
         }
     }

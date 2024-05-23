@@ -96,7 +96,7 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "[BackgroundJob] Job {BackgroundJobType_Name} execution was failed.", GetType().Name);
+            Logger.LogError(e.BeautifyStackTrace(), "[BackgroundJob] Job {BackgroundJobType_Name} execution was failed.", GetType().Name);
             throw;
         }
     }

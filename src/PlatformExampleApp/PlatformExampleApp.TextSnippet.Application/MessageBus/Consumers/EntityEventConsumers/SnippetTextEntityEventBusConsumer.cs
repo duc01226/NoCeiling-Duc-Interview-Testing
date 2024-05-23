@@ -36,7 +36,7 @@ internal sealed class SnippetTextEntityEventBusConsumer : PlatformCqrsEntityEven
             "Message Detail: {Message}",
             GetType().FullName,
             message.Payload.DomainEvents.Any() ? $"for DomainEvents [{message.Payload.DomainEvents.Select(p => p.Key).JoinToString(", ")}]" : "",
-            message.ToJson());
+            message.ToFormattedJson());
 
         return Task.CompletedTask;
     }

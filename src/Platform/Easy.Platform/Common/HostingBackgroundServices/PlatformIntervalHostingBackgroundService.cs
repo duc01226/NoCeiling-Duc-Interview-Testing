@@ -65,7 +65,7 @@ public abstract class PlatformIntervalHostingBackgroundService : PlatformHosting
             }
             catch (Exception e)
             {
-                Logger.LogError(e, "IntervalProcessHostedService {TargetName} FAILED. Error: {Error}", GetType().Name, e.Message);
+                Logger.LogError(e.BeautifyStackTrace(), "IntervalProcessHostedService {TargetName} FAILED. Error: {Error}", GetType().Name, e.Message);
             }
 
             await Task.Delay(ProcessTriggerIntervalTime(), cancellationToken);
@@ -111,7 +111,7 @@ public abstract class PlatformIntervalHostingBackgroundService : PlatformHosting
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "IntervalProcessHostedService {TargetName} FAILED. Error: {Error}", GetType().Name, e.Message);
+            Logger.LogError(e.BeautifyStackTrace(), "IntervalProcessHostedService {TargetName} FAILED. Error: {Error}", GetType().Name, e.Message);
         }
         finally
         {

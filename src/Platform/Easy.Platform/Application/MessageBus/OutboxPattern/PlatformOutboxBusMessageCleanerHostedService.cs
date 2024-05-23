@@ -49,7 +49,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
                 {
                     if (currentRetry >= MinimumRetryCleanOutboxMessageTimesToWarning)
                         Logger.LogError(
-                            ex,
+                            ex.BeautifyStackTrace(),
                             "Retry CleanOutboxEventBusMessage {CurrentRetry} time(s) failed. [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
                             currentRetry,
                             ApplicationSettingContext.ApplicationName,
@@ -60,7 +60,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
         catch (Exception ex)
         {
             Logger.LogError(
-                ex,
+                ex.BeautifyStackTrace(),
                 "CleanOutboxEventBusMessage failed. [[Error:{Error}]] [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
                 ex.Message,
                 ApplicationSettingContext.ApplicationName,
@@ -139,7 +139,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "ProcessCleanMessageByMaxStoreProcessedMessageCount failed");
+            Logger.LogError(e.BeautifyStackTrace(), "ProcessCleanMessageByMaxStoreProcessedMessageCount failed");
         }
     }
 
@@ -186,7 +186,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "ProcessCleanMessageByExpiredTime failed");
+            Logger.LogError(e.BeautifyStackTrace(), "ProcessCleanMessageByExpiredTime failed");
         }
     }
 
@@ -231,7 +231,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "ProcessIgnoreFailedMessageByExpiredTime failed");
+            Logger.LogError(e.BeautifyStackTrace(), "ProcessIgnoreFailedMessageByExpiredTime failed");
         }
     }
 }

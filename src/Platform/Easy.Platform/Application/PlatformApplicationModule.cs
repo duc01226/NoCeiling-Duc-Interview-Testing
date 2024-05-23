@@ -107,7 +107,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             onRetry: (exception, timeSpan, retry, ctx) =>
             {
                 Logger.LogError(
-                    exception,
+                    exception.BeautifyStackTrace(),
                     "Exception {ExceptionType} detected on attempt SeedData {Retry}",
                     exception.GetType().Name,
                     retry);
@@ -136,7 +136,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                     onRetry: (ex, timeSpan, currentRetry, context) =>
                     {
                         logger.LogError(
-                            ex,
+                            ex.BeautifyStackTrace(),
                             "[SeedData] Retry seed data in background {SeederTypeName}.",
                             seederType.Name);
                     });
@@ -144,7 +144,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             catch (Exception ex)
             {
                 logger.LogError(
-                    ex,
+                    ex.BeautifyStackTrace(),
                     "[SeedData] Seed data in background {SeederTypeName} failed.",
                     seederType.Name);
             }
@@ -214,7 +214,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             onRetry: (exception, timeSpan, retry, ctx) =>
             {
                 Logger.LogError(
-                    exception,
+                    exception.BeautifyStackTrace(),
                     "Exception {ExceptionType} detected on attempt ClearDistributedCache {Retry}",
                     exception.GetType().Name,
                     retry);

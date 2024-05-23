@@ -229,7 +229,7 @@ public static class TaskExtension
         }
         catch (Exception e)
         {
-            logger?.LogError(e, "SideEffectAction failed");
+            logger?.LogError(e.BeautifyStackTrace(), "SideEffectAction failed");
         }
 
         return targetValue;
@@ -255,7 +255,7 @@ public static class TaskExtension
         }
         catch (Exception e)
         {
-            logger?.LogError(e, "SideEffectAction failed");
+            logger?.LogError(e.BeautifyStackTrace(), "SideEffectAction failed");
         }
     }
 
@@ -284,7 +284,7 @@ public static class TaskExtension
         }
         catch (Exception e)
         {
-            logger?.LogError(e, "SideEffectAction failed");
+            logger?.LogError(e.BeautifyStackTrace(), "SideEffectAction failed");
         }
 
         return targetValue;

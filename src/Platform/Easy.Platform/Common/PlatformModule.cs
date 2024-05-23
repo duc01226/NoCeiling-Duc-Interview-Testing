@@ -357,7 +357,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
         var config = ConfigPerformanceProfiling();
 
-        Logger.LogInformation("[PlatformModule] InitPerformanceProfiling. Config:{Config}", config.ToJson());
+        Logger.LogInformation("[PlatformModule] InitPerformanceProfiling. Config:{Config}", config.ToFormattedJson());
 
         Profiler.Instance.SetCPUTrackingEnabled(config.Enabled == true && (config.CPUTrackingEnabled ?? true));
         Profiler.Instance.SetAllocationTrackingEnabled(config.Enabled == true && (config.AllocationTrackingEnabled ?? true));
@@ -617,6 +617,16 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
         /// Gets or sets the name of the application.
         /// </summary>
         public string AppName { get; set; }
+
+        public string? DistributedTracingStackTrace()
+        {
+            return DistributedTracingStackTraceEnabled() ? PlatformEnvironment.StackTrace() : null;
+        }
+
+        public bool DistributedTracingStackTraceEnabled()
+        {
+            return Enabled || PlatformEnvironment.IsDevelopment;
+        }
     }
 
     public class PerformanceProfilingConfig

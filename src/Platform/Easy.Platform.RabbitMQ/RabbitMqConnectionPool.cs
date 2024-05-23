@@ -1,4 +1,5 @@
 using System.Reflection;
+using Easy.Platform.Common;
 using Microsoft.Extensions.ObjectPool;
 using RabbitMQ.Client;
 
@@ -46,22 +47,23 @@ public class RabbitMqConnectionPool : IDisposable
         int maxWaitSeconds)
     {
         return Util.TaskRunner.WaitUntilGetValidResultAsync(
-            this,
-            p =>
-            {
-                lock (currentUsingObjectCounterLock)
+                this,
+                p =>
                 {
-                    if (IsConnectionPoolFull()) return null;
+                    lock (currentUsingObjectCounterLock)
+                    {
+                        if (IsConnectionPoolFull()) return null;
 
-                    var result = ProcessGetConnectionFromPool();
+                        var result = ProcessGetConnectionFromPool();
 
-                    return result;
-                }
-            },
-            con => con != null,
-            maxWaitSeconds,
-            delayRetryTimeSeconds: 1,
-            waitForMsg: $"RabbitMqConnectionPool is fulled. PoolSize is {PoolSize}").GetResult();
+                        return result;
+                    }
+                },
+                con => con != null,
+                maxWaitSeconds,
+                delayRetryTimeSeconds: 1,
+                waitForMsg: $"RabbitMqConnectionPool is fulled. PoolSize is {PoolSize}")
+            .GetResult();
     }
 
     public void ReturnConnection(IConnection connection)
@@ -125,7 +127,7 @@ public class RabbitMqPooledObjectPolicy : IPooledObjectPolicy<IConnection>
     {
         // Store stack trace before call CreateConnection to keep the original stack trace to log
         // after CreateConnection will lose full stack trace (may because it connect async to other external service)
-        var fullStackTrace = Environment.StackTrace;
+        var fullStackTrace = PlatformEnvironment.StackTrace();
 
         try
         {
@@ -150,7 +152,7 @@ public class RabbitMqPooledObjectPolicy : IPooledObjectPolicy<IConnection>
     {
         // Store stack trace before call CreateConnection to keep the original stack trace to log
         // after CreateConnection will lose full stack trace (may because it connect async to other external service)
-        var fullStackTrace = Environment.StackTrace;
+        var fullStackTrace = PlatformEnvironment.StackTrace();
 
         try
         {

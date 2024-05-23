@@ -89,9 +89,9 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
     {
         if (!HandleWhen(@event)) return;
 
-        if (RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled == true &&
+        if (RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTraceEnabled() == true &&
             @event.StackTrace == null)
-            @event.StackTrace = Environment.StackTrace;
+            @event.StackTrace = PlatformEnvironment.StackTrace();
 
         // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
         // so that it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
@@ -158,7 +158,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         catch (Exception e)
         {
             if (ThrowExceptionOnHandleFailed) throw;
-            handlerNewInstance.LogError(notification, e, LoggerFactory);
+            handlerNewInstance.LogError(notification, e.BeautifyStackTrace(), LoggerFactory);
         }
     }
 
@@ -177,7 +177,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
             {
                 activity?.AddTag("Type", GetType().FullName);
                 activity?.AddTag("EventType", typeof(TEvent).FullName);
-                activity?.AddTag("Event", @event.ToJson());
+                activity?.AddTag("Event", @event.ToFormattedJson());
 
                 await handleAsync();
             }
@@ -188,12 +188,12 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
     {
         CreateLogger(loggerFactory)
             .LogError(
-                exception,
+                exception.BeautifyStackTrace(),
                 "[PlatformCqrsEventHandler] Handle event failed. [[Message:{Message}]] [[EventType:{EventType}]]; [[HandlerType:{HandlerType}]]. [[EventContent:{EventContent}]].",
                 exception.Message,
                 notification.GetType().Name,
                 GetType().Name,
-                notification.ToJson());
+                notification.ToFormattedJson());
     }
 
     protected abstract Task HandleAsync(TEvent @event, CancellationToken cancellationToken);

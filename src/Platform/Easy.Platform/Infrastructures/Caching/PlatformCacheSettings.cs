@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Microsoft.Extensions.Logging;
 
@@ -16,7 +17,7 @@ public class PlatformCacheSettings
         {
             // Store stack trace before call redisCache.Value.GetAsync to keep the original stack trace to log
             // after redisCache.Value.GetAsync will lose full stack trace (may because it connect async to other external service)
-            var fullStackTrace = Environment.StackTrace;
+            var fullStackTrace = PlatformEnvironment.StackTrace();
 
             var startQueryTimeStamp = Stopwatch.GetTimestamp();
 
@@ -25,14 +26,15 @@ public class PlatformCacheSettings
             var queryElapsedTime = Stopwatch.GetElapsedTime(startQueryTimeStamp);
 
             if (queryElapsedTime.TotalMilliseconds >= SlowWarning.GetSlowQueryMillisecondsThreshold(forSetData))
-                loggerFactory().Log(
-                    SlowWarning.IsLogWarningAsError ? LogLevel.Error : LogLevel.Warning,
-                    "[SlowDistributedCacheWarning][IsLogWarningAsError:{IsLogWarningAsError}][ForWrite:{ForWrite}] Slow redis cache execution. QueryElapsedTime.TotalMilliseconds:{QueryElapsedTime}. " +
-                    "SlowCacheWarningTrackTrace:{TrackTrace}",
-                    SlowWarning.IsLogWarningAsError,
-                    forSetData.ToString(),
-                    queryElapsedTime.TotalMilliseconds,
-                    fullStackTrace);
+                loggerFactory()
+                    .Log(
+                        SlowWarning.IsLogWarningAsError ? LogLevel.Error : LogLevel.Warning,
+                        "[SlowDistributedCacheWarning][IsLogWarningAsError:{IsLogWarningAsError}][ForWrite:{ForWrite}] Slow redis cache execution. QueryElapsedTime.TotalMilliseconds:{QueryElapsedTime}. " +
+                        "SlowCacheWarningTrackTrace:{TrackTrace}",
+                        SlowWarning.IsLogWarningAsError,
+                        forSetData.ToString(),
+                        queryElapsedTime.TotalMilliseconds,
+                        fullStackTrace);
 
             return result;
         }

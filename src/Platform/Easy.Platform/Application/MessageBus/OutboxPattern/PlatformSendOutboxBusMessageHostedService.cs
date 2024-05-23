@@ -61,7 +61,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                 {
                     if (currentRetry >= OutboxConfig.MinimumRetrySendOutboxMessageTimesToWarning)
                         Logger.LogError(
-                            ex,
+                            ex.BeautifyStackTrace(),
                             "Retry SendOutboxEventBusMessages {CurrentRetry} time(s) failed. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
                             currentRetry,
                             ApplicationSettingContext.ApplicationName,
@@ -72,7 +72,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
         catch (Exception ex)
         {
             Logger.LogError(
-                ex,
+                ex.BeautifyStackTrace(),
                 "SendOutboxEventBusMessages failed. [[Error:{Error}]]. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
                 ex.Message,
                 ApplicationSettingContext.ApplicationName,
@@ -142,13 +142,13 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                                                     {
                                                         handlePreviousMessageFailed = true;
                                                         Logger.LogError(
-                                                            e,
+                                                            e.BeautifyStackTrace(),
                                                             "[PlatformSendOutboxEventBusMessageHostedService] Failed to produce outbox message. [[Error:{Error}]]" +
                                                             "Id:{OutboxMessageId} failed. " +
                                                             "Message Content:{OutboxMessage}",
                                                             e.Message,
                                                             toHandleOutboxMessage.Id,
-                                                            toHandleOutboxMessage.ToJson());
+                                                            toHandleOutboxMessage.ToFormattedJson());
                                                     }
 
                                                 if (handlePreviousMessageFailed) break;

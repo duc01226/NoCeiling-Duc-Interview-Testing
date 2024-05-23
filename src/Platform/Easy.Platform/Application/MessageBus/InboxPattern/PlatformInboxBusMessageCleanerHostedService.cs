@@ -49,7 +49,7 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
                 {
                     if (currentRetry >= MinimumRetryCleanInboxMessageTimesToWarning)
                         Logger.LogError(
-                            ex,
+                            ex.BeautifyStackTrace(),
                             "Retry CleanInboxEventBusMessage {CurrentRetry} time(s) failed. [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
                             currentRetry,
                             ApplicationSettingContext.ApplicationName,
@@ -60,7 +60,7 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
         catch (Exception ex)
         {
             Logger.LogError(
-                ex,
+                ex.BeautifyStackTrace(),
                 "CleanInboxEventBusMessage failed. [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
                 ApplicationSettingContext.ApplicationName,
                 ApplicationSettingContext.ApplicationAssembly.FullName);
@@ -137,7 +137,7 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "ProcessCleanMessageByMaxStoreProcessedMessageCount failed");
+            Logger.LogError(e.BeautifyStackTrace(), "ProcessCleanMessageByMaxStoreProcessedMessageCount failed");
         }
     }
 
@@ -184,7 +184,7 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "ProcessCleanMessageByExpiredTime failed");
+            Logger.LogError(e.BeautifyStackTrace(), "ProcessCleanMessageByExpiredTime failed");
         }
     }
 
@@ -229,7 +229,7 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "ProcessIgnoreFailedMessageByExpiredTime failed");
+            Logger.LogError(e.BeautifyStackTrace(), "ProcessIgnoreFailedMessageByExpiredTime failed");
         }
     }
 }

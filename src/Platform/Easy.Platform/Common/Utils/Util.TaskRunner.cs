@@ -73,7 +73,7 @@ public static partial class Util
             CancellationToken cancellationToken = default)
         {
             // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
-            var fullStackTrace = Environment.StackTrace;
+            var fullStackTrace = PlatformEnvironment.StackTrace();
 
             Task.Run(
                 async () =>
@@ -86,7 +86,7 @@ public static partial class Util
                     }
                     catch (Exception ex)
                     {
-                        loggerFactory().LogError(ex, "Run in background thread failed.");
+                        loggerFactory().LogError(ex.BeautifyStackTrace(), "Run in background thread failed.");
                     }
                 },
                 cancellationToken);
@@ -110,7 +110,7 @@ public static partial class Util
             CancellationToken cancellationToken = default)
         {
             // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
-            var fullStackTrace = Environment.StackTrace;
+            var fullStackTrace = PlatformEnvironment.StackTrace();
 
             Task.Run(
                 async () =>
@@ -123,7 +123,7 @@ public static partial class Util
                     }
                     catch (Exception ex)
                     {
-                        loggerFactory().LogError(ex, "Run in background thread failed.");
+                        loggerFactory().LogError(ex.BeautifyStackTrace(), "Run in background thread failed.");
                     }
                 },
                 cancellationToken);
@@ -147,7 +147,7 @@ public static partial class Util
             CancellationToken cancellationToken = default)
         {
             // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
-            var fullStackTrace = Environment.StackTrace;
+            var fullStackTrace = PlatformEnvironment.StackTrace();
 
             Task.Run(
                 async () =>
@@ -160,7 +160,7 @@ public static partial class Util
                     }
                     catch (Exception ex)
                     {
-                        loggerFactory().LogError(ex, "Run in background thread failed.");
+                        loggerFactory().LogError(ex.BeautifyStackTrace(), "Run in background thread failed.");
                     }
                 },
                 cancellationToken);
@@ -221,7 +221,7 @@ public static partial class Util
             CancellationToken cancellationToken = default)
         {
             // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
-            var fullStackTrace = Environment.StackTrace;
+            var fullStackTrace = PlatformEnvironment.StackTrace();
 
             Task.Run(
                 async () =>
@@ -234,7 +234,7 @@ public static partial class Util
                     }
                     catch (Exception ex)
                     {
-                        loggerFactory().LogError(ex, "Run in background thread failed.");
+                        loggerFactory().LogError(ex.BeautifyStackTrace(), "Run in background thread failed.");
                     }
                 },
                 cancellationToken);

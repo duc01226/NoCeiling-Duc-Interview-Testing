@@ -32,7 +32,7 @@ public abstract class PlatformApplicationBackgroundJobExecutor<TParam> : Platfor
         using (var activity = IPlatformApplicationBackgroundJobExecutor.ActivitySource.StartActivity($"BackgroundJob.{nameof(InternalExecuteAsync)}"))
         {
             activity?.SetTag("Type", GetType().FullName);
-            activity?.SetTag("Param", param?.ToJson());
+            activity?.SetTag("Param", param?.ToFormattedJson());
 
             Logger.LogInformation("[PlatformApplicationBackgroundJobExecutor] {BackgroundJobName} STARTED", GetType().Name);
 

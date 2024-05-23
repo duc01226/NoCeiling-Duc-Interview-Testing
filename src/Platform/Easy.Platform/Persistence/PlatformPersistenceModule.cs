@@ -242,7 +242,7 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
             sleepDurationProvider: retryAttempt => 10.Seconds(),
             retryCount: DefaultDbInitAndMigrationRetryCount,
             onBeforeThrowFinalExceptionFn: exception => Logger.LogError(
-                exception,
+                exception.BeautifyStackTrace(),
                 "[{DbContext}] {ExceptionType} detected on attempt MigrateApplicationDataAsync",
                 typeof(TDbContext).Name,
                 exception.GetType().Name));
@@ -262,7 +262,7 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
             sleepDurationProvider: retryAttempt => 10.Seconds(),
             retryCount: DefaultDbInitAndMigrationRetryCount,
             onBeforeThrowFinalExceptionFn: exception => Logger.LogError(
-                exception,
+                exception.BeautifyStackTrace(),
                 "[{DbContext}] {ExceptionType} detected on attempt InitializeDb",
                 typeof(TDbContext).Name,
                 exception.GetType().Name));

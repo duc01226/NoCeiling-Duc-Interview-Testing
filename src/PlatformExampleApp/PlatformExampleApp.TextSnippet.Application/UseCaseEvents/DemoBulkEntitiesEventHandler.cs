@@ -25,7 +25,8 @@ internal sealed class DemoBulkEntitiesEventHandler : PlatformCqrsBulkEntitiesEve
         @event.Entities.ForEach(
             entity =>
             {
-                Console.WriteLine($"EntityId {entity.Id} is {@event.CrudAction}. DomainEvents: {@event.DomainEvents.GetValueOrDefault(entity.Id)?.ToJson() ?? "null"}");
+                Console.WriteLine(
+                    $"EntityId {entity.Id} is {@event.CrudAction}. DomainEvents: {@event.DomainEvents.GetValueOrDefault(entity.Id)?.ToFormattedJson() ?? "null"}");
             });
     }
 }

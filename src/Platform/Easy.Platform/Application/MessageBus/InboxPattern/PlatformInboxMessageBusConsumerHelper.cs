@@ -398,7 +398,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         {
             loggerFactory()
                 .LogError(
-                    ex,
+                    ex.BeautifyStackTrace(),
                     "UpdateExistingInboxProcessedMessageAsync failed. [[Error:{Error}]], [ExistingInboxMessageId:{ExistingInboxMessageId}].",
                     ex.Message,
                     existingInboxMessageId);
@@ -468,7 +468,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         }
         catch (Exception e)
         {
-            loggerFactory().LogError(e, "Try DeleteExistingInboxProcessedMessageAsync failed");
+            loggerFactory().LogError(e.BeautifyStackTrace(), "Try DeleteExistingInboxProcessedMessageAsync failed");
         }
     }
 
@@ -487,13 +487,13 @@ public static class PlatformInboxMessageBusConsumerHelper
         {
             loggerFactory()
                 .LogError(
-                    exception,
+                    exception.BeautifyStackTrace(),
                     "UpdateExistingInboxFailedMessageAsync. [[Error:{Error}]]; [[MessageType: {MessageType}]]; [[ConsumerType: {ConsumerType}]]; [[RoutingKey: {RoutingKey}]]; [[InboxMessage: {InboxMessage}]];",
                     exception.Message,
                     message.GetType().GetNameOrGenericTypeName(),
                     consumerType?.GetNameOrGenericTypeName() ?? "n/a",
                     routingKey,
-                    existingInboxMessage.ToJson());
+                    existingInboxMessage.ToFormattedJson());
 
             await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                 async () =>
@@ -525,10 +525,10 @@ public static class PlatformInboxMessageBusConsumerHelper
         {
             loggerFactory()
                 .LogError(
-                    ex,
+                    ex.BeautifyStackTrace(),
                     "UpdateExistingInboxFailedMessageAsync failed. [[Error:{Error}]]. [InboxMessage:{Message}].",
                     ex.Message,
-                    existingInboxMessage.ToJson());
+                    existingInboxMessage.ToFormattedJson());
         }
     }
 
@@ -541,7 +541,7 @@ public static class PlatformInboxMessageBusConsumerHelper
     {
         existingInboxMessage.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Failed;
         existingInboxMessage.LastConsumeDate = Clock.UtcNow;
-        existingInboxMessage.LastConsumeError = exception.Serialize();
+        existingInboxMessage.LastConsumeError = exception.BeautifyStackTrace().Serialize();
         existingInboxMessage.RetriedProcessCount = (existingInboxMessage.RetriedProcessCount ?? 0) + 1;
         existingInboxMessage.NextRetryProcessAfter = PlatformInboxBusMessage.CalculateNextRetryProcessAfter(
             existingInboxMessage.RetriedProcessCount,

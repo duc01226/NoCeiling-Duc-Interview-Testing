@@ -12,6 +12,7 @@ using Easy.Platform.MongoDB.Extensions;
 using Easy.Platform.MongoDB.Migration;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -133,7 +134,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     {
         // Store stack trace before call Migrate() to keep the original stack trace to log
         // after Migrate() will lose full stack trace (may because it connects async to other external service)
-        var fullStackTrace = Environment.StackTrace;
+        var fullStackTrace = PlatformEnvironment.StackTrace();
 
         try
         {
@@ -143,7 +144,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "PlatformMongoDbContext {Type} Initialize failed.", GetType().Name);
+            Logger.LogError(ex.BeautifyStackTrace(), "PlatformMongoDbContext {Type} Initialize failed.", GetType().Name);
 
             throw new Exception(
                 $"{GetType().Name} Initialize failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
@@ -328,6 +329,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             dismissSendEvent,
             eventCustomConfig: eventCustomConfig,
             requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
+            stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
             cancellationToken);
     }
 
@@ -523,6 +525,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 dismissSendEvent,
                 eventCustomConfig: eventCustomConfig,
                 requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
+                stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -549,6 +552,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 dismissSendEvent,
                 eventCustomConfig: eventCustomConfig,
                 requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
+                stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -776,6 +780,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 dismissSendEvent,
                 eventCustomConfig: eventCustomConfig,
                 requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
+                stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
                 cancellationToken);
         else
             await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
@@ -792,6 +797,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 dismissSendEvent,
                 eventCustomConfig: eventCustomConfig,
                 requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
+                stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
                 cancellationToken);
 
         return toBeCreatedEntity;
@@ -886,6 +892,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             crudAction,
             eventCustomConfig,
             requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
+            stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
             cancellationToken);
     }
 }

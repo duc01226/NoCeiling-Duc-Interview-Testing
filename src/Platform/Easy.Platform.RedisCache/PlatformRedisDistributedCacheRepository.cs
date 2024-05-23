@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Easy.Platform.Application;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Infrastructures.Caching;
@@ -57,7 +58,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
                         }
                         catch (Exception e)
                         {
-                            Logger.LogError(e, "GetAsync failed. CacheKey:{CacheKey}", cacheKey);
+                            Logger.LogError(e.BeautifyStackTrace(), "GetAsync failed. CacheKey:{CacheKey}", cacheKey);
                             // WHY: If parse failed, the cached data could be obsolete. Then just clear the cache
                             await RemoveAsync(cacheKey, token);
                             return default;
@@ -111,7 +112,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
                 catch (Exception ex)
                 {
                     Logger.LogError(
-                        ex,
+                        ex.BeautifyStackTrace(),
                         "RemoveAsync failed. [[Exception:{Exception}]]. [CacheKey: {CacheKey}]",
                         ex.ToString(),
                         cacheKey);
@@ -213,7 +214,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         catch (Exception ex)
         {
             Logger.LogError(
-                ex,
+                ex.BeautifyStackTrace(),
                 "SetToRedisCacheAsync failed. [[Exception:{Exception}]]. [CacheKey: {CacheKey}]",
                 ex.ToString(),
                 cacheKey);

@@ -278,7 +278,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entity.ToJson());
+                activity?.AddTag("Entity", entity.ToFormattedJson());
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow).CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
@@ -300,7 +300,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entity.ToJson());
+                activity?.AddTag("Entity", entity.ToFormattedJson());
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken));
@@ -321,7 +321,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entity.ToJson());
+                activity?.AddTag("Entity", entity.ToFormattedJson());
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow)
@@ -348,7 +348,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entities.ToJson());
+                activity?.AddTag("Entity", entities.ToFormattedJson());
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow)
@@ -386,7 +386,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entities.ToJson());
+                activity?.AddTag("Entity", entities.ToFormattedJson());
 
                 return await ExecuteWithBadQueryWarningForWriteHandling(
                     uow => GetUowDbContext(uow)
@@ -430,15 +430,15 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(UpdateAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entity.ToJson());
+                activity?.AddTag("Entity", entity.ToFormattedJson());
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-                    uow => GetUowDbContext(uow).UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
+                    async uow => await GetUowDbContext(uow).UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
                     uow);
             }
 
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
+            async uow => await GetUowDbContext(uow).UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
             uow);
     }
 
@@ -484,7 +484,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entity.ToJson());
+                activity?.AddTag("Entity", entity.ToFormattedJson());
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow).DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken));
@@ -508,7 +508,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entities.ToJson());
+                activity?.AddTag("Entity", entities.ToFormattedJson());
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow).CreateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));
@@ -547,7 +547,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entities.ToJson());
+                activity?.AddTag("Entity", entities.ToFormattedJson());
 
                 return await ExecuteWithBadQueryWarningForWriteHandling(
                     uow => GetUowDbContext(uow).CreateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken),
@@ -571,7 +571,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(UpdateManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entities.ToJson());
+                activity?.AddTag("Entity", entities.ToFormattedJson());
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));
@@ -594,7 +594,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(UpdateManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entities.ToJson());
+                activity?.AddTag("Entity", entities.ToFormattedJson());
 
                 return await ExecuteWithBadQueryWarningForWriteHandling(
                     uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken),
@@ -618,7 +618,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entityIds.ToJson());
+                activity?.AddTag("Entity", entityIds.ToFormattedJson());
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entityIds, dismissSendEvent, eventCustomConfig, cancellationToken));
@@ -641,7 +641,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entities.ToJson());
+                activity?.AddTag("Entity", entities.ToFormattedJson());
 
                 return await ExecuteWithBadQueryWarningForWriteHandling(
                     uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken),
@@ -665,7 +665,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entities.ToJson());
+                activity?.AddTag("Entity", entities.ToFormattedJson());
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));

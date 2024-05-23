@@ -272,7 +272,7 @@ public abstract class PlatformCacheRepository(
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Try get data from cache failed. CacheKey:{CacheKey}", cacheKey.ToString());
+            Logger.LogError(ex.BeautifyStackTrace(), "Try get data from cache failed. CacheKey:{CacheKey}", cacheKey.ToString());
 
             return PlatformValidationResult<T>.Invalid(default, ex.Message);
         }
@@ -290,7 +290,7 @@ public abstract class PlatformCacheRepository(
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Try set data to cache failed. CacheKey:{CacheKey}", cacheKey.ToString());
+            Logger.LogError(ex.BeautifyStackTrace(), "Try set data to cache failed. CacheKey:{CacheKey}", cacheKey.ToString());
         }
     }
 
@@ -312,7 +312,7 @@ public abstract class PlatformCacheRepository(
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "LoadGlobalCachedKeys failed. Fallback to empty default value.");
+            Logger.LogError(e.BeautifyStackTrace(), "LoadGlobalCachedKeys failed. Fallback to empty default value.");
             return new ConcurrentDictionary<PlatformCacheKey, object>();
         }
     }

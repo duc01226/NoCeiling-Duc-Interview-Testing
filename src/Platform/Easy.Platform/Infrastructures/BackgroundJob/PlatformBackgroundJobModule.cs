@@ -84,7 +84,7 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
                 {
                     LoggerFactory.CreateLogger(typeof(PlatformBackgroundJobModule))
                         .LogError(
-                            exception,
+                            exception.BeautifyStackTrace(),
                             "[StartBackgroundJobProcessing] Exception {ExceptionType} detected on attempt StartBackgroundJobProcessing {Retry} of {Retries}",
                             exception.GetType().Name,
                             currentRetry,
@@ -128,7 +128,7 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
             {
                 LoggerFactory.CreateLogger(typeof(PlatformBackgroundJobModule))
                     .LogError(
-                        exception,
+                        exception.BeautifyStackTrace(),
                         "[Init][ReplaceAllLatestRecurringBackgroundJobs] Exception {ExceptionType} detected on attempt ReplaceAllLatestRecurringBackgroundJobs {Retry} of {Retries}",
                         exception.GetType().Name,
                         currentRetry,

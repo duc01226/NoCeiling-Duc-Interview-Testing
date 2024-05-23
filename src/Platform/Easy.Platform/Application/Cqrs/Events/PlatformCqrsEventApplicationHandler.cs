@@ -82,7 +82,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     public bool IsInjectingApplicationBusMessageProducer => isInjectingApplicationBusMessageProducerLazy.Value;
 
-    public virtual bool AutoDeleteProcessedInboxEventMessage => true;
+    public virtual bool AutoDeleteProcessedInboxEventMessage => false;
 
     /// <summary>
     /// Default false. If true, the event handler will handle immediately using the same current active uow if existing active uow
@@ -96,6 +96,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     /// <c>true</c> if this instance is called from the Inbox Bus Message Consumer; otherwise, <c>false</c>.
     /// </value>
     public bool IsCurrentInstanceCalledFromInboxBusMessageConsumer { get; set; }
+
+    public int RetryEventInboxBusMessageConsumerOnFailedDelaySeconds { get; set; } = 15;
 
     /// <summary>
     /// Default return False. When True, Support for store cqrs event handler as inbox if inbox bus message is enabled in persistence module
@@ -246,9 +248,9 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
         if (!HandleWhen(@event)) return;
 
-        if (RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled == true &&
+        if (RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTraceEnabled() == true &&
             @event.StackTrace == null)
-            @event.StackTrace = Environment.StackTrace;
+            @event.StackTrace = PlatformEnvironment.StackTrace();
 
         var eventSourceUow = TryGetCurrentOrCreatedActiveUow(@event);
 
@@ -381,25 +383,29 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         IPlatformUnitOfWork eventSourceUow,
         CancellationToken cancellationToken)
     {
-        await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
-            rootServiceProvider: RootServiceProvider,
-            serviceProvider: serviceProvider,
-            consumerType: typeof(PlatformCqrsEventInboxBusMessageConsumer),
-            inboxBusMessageRepository: inboxMessageRepository,
-            inboxConfig: inboxConfig,
-            message: CqrsEventInboxBusMessage(@event, eventHandlerType: GetType(), applicationSettingContext, currentBusMessageIdentity),
-            forApplicationName: ApplicationSettingContext.ApplicationName,
-            routingKey: PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(typeof(TEvent), applicationSettingContext.ApplicationName),
-            loggerFactory: CreateGlobalLogger,
-            retryProcessFailedMessageInSecondsUnit: PlatformInboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit,
-            allowProcessInBackgroundThread: AllowHandleInBackgroundThread(@event),
-            handleExistingInboxMessage: null,
-            handleExistingInboxMessageConsumerInstance: null,
-            handleInUow: eventSourceUow,
-            autoDeleteProcessedMessageImmediately: AutoDeleteProcessedInboxEventMessage &&
-                                                   RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled != true,
-            extendedMessageIdPrefix:
-            $"{GetType().GetNameOrGenericTypeName()}-{@event.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix() ?? @event.Id}",
+        await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+            async () => await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
+                rootServiceProvider: RootServiceProvider,
+                serviceProvider: serviceProvider,
+                consumerType: typeof(PlatformCqrsEventInboxBusMessageConsumer),
+                inboxBusMessageRepository: inboxMessageRepository,
+                inboxConfig: inboxConfig,
+                message: CqrsEventInboxBusMessage(@event, eventHandlerType: GetType(), applicationSettingContext, currentBusMessageIdentity),
+                forApplicationName: ApplicationSettingContext.ApplicationName,
+                routingKey: PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(typeof(TEvent), applicationSettingContext.ApplicationName),
+                loggerFactory: CreateGlobalLogger,
+                retryProcessFailedMessageInSecondsUnit: PlatformInboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit,
+                allowProcessInBackgroundThread: AllowHandleInBackgroundThread(@event),
+                handleExistingInboxMessage: null,
+                handleExistingInboxMessageConsumerInstance: null,
+                handleInUow: eventSourceUow,
+                autoDeleteProcessedMessageImmediately: AutoDeleteProcessedInboxEventMessage &&
+                                                       RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled != true,
+                extendedMessageIdPrefix:
+                $"{GetType().GetNameOrGenericTypeName()}-{@event.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix() ?? @event.Id}",
+                cancellationToken: cancellationToken),
+            retryCount: int.MaxValue,
+            sleepDurationProvider: retryAttempt => RetryEventInboxBusMessageConsumerOnFailedDelaySeconds.Seconds(),
             cancellationToken: cancellationToken);
     }
 

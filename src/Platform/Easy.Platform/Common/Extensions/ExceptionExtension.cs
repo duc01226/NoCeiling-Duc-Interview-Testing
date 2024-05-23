@@ -1,4 +1,5 @@
 #nullable enable
+using System.Diagnostics;
 using Easy.Platform.Common.JsonSerialization;
 
 namespace Easy.Platform.Common.Extensions;
@@ -14,5 +15,10 @@ public static class ExceptionExtension
                 InnerException = includeInnerException ? exception.InnerException?.Pipe(_ => Serialize(_, includeInnerException)) : null,
                 exception.StackTrace
             });
+    }
+
+    public static Exception BeautifyStackTrace(this Exception exception)
+    {
+        return exception.Demystify();
     }
 }

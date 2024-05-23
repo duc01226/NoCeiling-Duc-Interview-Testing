@@ -90,8 +90,8 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
                                     ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
                                     request.GetType().Name,
                                     request.AuditInfo?.AuditTrackId,
-                                    request.ToJson(),
-                                    RequestContext.GetAllKeyValues().ToJson());
+                                    request.ToFormattedJson(),
+                                    RequestContext.GetAllKeyValues().ToFormattedJson());
                         });
 
                     return result;
@@ -117,7 +117,7 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
                 IPlatformCqrsCommandApplicationHandler.ActivitySource.StartActivity($"QueryApplicationHandler.{nameof(Handle)}"))
             {
                 activity?.SetTag("RequestType", request.GetType().Name);
-                activity?.SetTag("Request", request.ToJson());
+                activity?.SetTag("Request", request.ToFormattedJson());
 
                 return await handleFunc();
             }

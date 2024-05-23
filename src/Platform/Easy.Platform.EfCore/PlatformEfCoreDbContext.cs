@@ -10,6 +10,7 @@ using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.EfCore;
@@ -126,7 +127,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     {
         // Store stack trace before call Database.MigrateAsync() to keep the original stack trace to log
         // after Database.MigrateAsync() will lose full stack trace (may because it connects async to other external service)
-        var fullStackTrace = Environment.StackTrace;
+        var fullStackTrace = PlatformEnvironment.StackTrace();
 
         try
         {
@@ -136,7 +137,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "PlatformEfCoreDbContext {Type} Initialize failed.", GetType().Name);
+            Logger.LogError(ex.BeautifyStackTrace(), "PlatformEfCoreDbContext {Type} Initialize failed.", GetType().Name);
 
             throw new Exception(
                 $"{GetType().Name} Initialize failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
@@ -217,24 +218,24 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Created, eventCustomConfig, cancellationToken));
     }
 
-    public Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
+    public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken);
+        return await UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken);
     }
 
-    public Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
+    public async Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return entities.SelectAsync(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken))
+        return await entities.SelectAsync(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken))
             .ThenActionIfAsync(
                 !dismissSendEvent,
                 entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Updated, eventCustomConfig, cancellationToken));
@@ -280,6 +281,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 dismissSendEvent,
                 eventCustomConfig: eventCustomConfig,
                 requestContext: () => RequestContextAccessor.Current.GetAllKeyValues(),
+                stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
                 cancellationToken);
         }
         catch (Exception)
@@ -354,6 +356,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 dismissSendEvent,
                 eventCustomConfig: eventCustomConfig,
                 requestContext: () => RequestContextAccessor.Current.GetAllKeyValues(),
+                stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
                 cancellationToken);
 
             return result;
@@ -523,6 +526,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 dismissSendEvent,
                 eventCustomConfig: eventCustomConfig,
                 requestContext: () => RequestContextAccessor.Current.GetAllKeyValues(),
+                stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
                 cancellationToken);
 
             return result;
@@ -570,6 +574,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             crudAction,
             eventCustomConfig,
             requestContext: () => RequestContextAccessor.Current.GetAllKeyValues(),
+            stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
             cancellationToken);
     }
 

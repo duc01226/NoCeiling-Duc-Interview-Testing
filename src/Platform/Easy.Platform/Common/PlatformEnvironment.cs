@@ -1,4 +1,5 @@
 #nullable enable
+using System.Diagnostics;
 using Easy.Platform.Common.Extensions;
 
 namespace Easy.Platform.Common;
@@ -18,4 +19,9 @@ public static class PlatformEnvironment
     public static string? AspCoreUrlsValue => Environment.GetEnvironmentVariable(AspCoreUrlsVariableName);
 
     public static bool IsDevelopment => AspCoreEnvironmentValue.ContainsIgnoreCase(DevelopmentEnvironmentIndicatorText);
+
+    public static string StackTrace()
+    {
+        return EnhancedStackTrace.Current().ToString();
+    }
 }

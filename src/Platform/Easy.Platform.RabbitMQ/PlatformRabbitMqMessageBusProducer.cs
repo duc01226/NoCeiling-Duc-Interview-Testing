@@ -124,7 +124,7 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
             }
             catch (Exception ex)
             {
-                Logger.Value.LogError(ex, "Failed to inject trace context.");
+                Logger.Value.LogError(ex.BeautifyStackTrace(), "Failed to inject trace context.");
             }
         }
     }

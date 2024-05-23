@@ -182,7 +182,7 @@ public class ConsentController : Controller
         var vm = new ConsentViewModel
         {
             RememberConsent = model?.RememberConsent ?? true,
-            ScopesConsented = model?.ScopesConsented ?? Enumerable.Empty<string>(),
+            ScopesConsented = model?.ScopesConsented ?? [],
             Description = model?.Description,
 
             ReturnUrl = returnUrl,

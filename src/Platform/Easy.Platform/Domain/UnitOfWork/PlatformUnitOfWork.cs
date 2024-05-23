@@ -230,7 +230,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     {
         // Store stack trace before save changes so that if something went wrong in save into db, stack trace could
         // be tracked. Because call to db if failed lose stack trace
-        var fullStackTrace = Environment.StackTrace;
+        var fullStackTrace = PlatformEnvironment.StackTrace();
 
         try
         {
@@ -273,7 +273,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
                 .ForEachAsync(
                     p => Util.TaskRunner.CatchException(
                         p.Invoke,
-                        ex => LoggerFactory.CreateLogger(GetType()).LogError(ex, "Invoke DisposedActions error.")))
+                        ex => LoggerFactory.CreateLogger(GetType()).LogError(ex.BeautifyStackTrace(), "Invoke DisposedActions error.")))
                 .WaitResult();
             OnDisposedActions.Clear();
         }
@@ -289,7 +289,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
                 await OnSaveChangesCompletedActions.ForEachAsync(
                     p => Util.TaskRunner.CatchException(
                         p.Invoke,
-                        ex => LoggerFactory.CreateLogger(GetType()).LogError(ex, "Invoke CompletedActions error.")));
+                        ex => LoggerFactory.CreateLogger(GetType()).LogError(ex.BeautifyStackTrace(), "Invoke CompletedActions error.")));
 
                 OnSaveChangesCompletedActions.Clear();
             },
@@ -301,7 +301,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
         await OnSaveChangesFailedActions.ForEachAsync(
             p => Util.TaskRunner.CatchException(
                 () => p.Invoke(e),
-                ex => LoggerFactory.CreateLogger(GetType()).LogError(ex, "Invoke FailedActions error.")));
+                ex => LoggerFactory.CreateLogger(GetType()).LogError(ex.BeautifyStackTrace(), "Invoke FailedActions error.")));
 
         OnSaveChangesFailedActions.Clear();
     }

@@ -106,8 +106,8 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                                     ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
                                     request.GetType().Name,
                                     request.AuditInfo?.AuditTrackId,
-                                    request.ToJson(),
-                                    RequestContext.GetAllKeyValues().ToJson());
+                                    request.ToFormattedJson(),
+                                    RequestContext.GetAllKeyValues().ToFormattedJson());
                         });
 
                     if (RootServiceProvider.IsAnyImplementationAssignableToServiceTypeRegistered(
@@ -140,7 +140,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                 IPlatformCqrsCommandApplicationHandler.ActivitySource.StartActivity($"CommandApplicationHandler.{nameof(Handle)}"))
             {
                 activity?.SetTag("RequestType", request.GetType().Name);
-                activity?.SetTag("Request", request.ToJson());
+                activity?.SetTag("Request", request.ToFormattedJson());
 
                 return await handleFunc();
             }

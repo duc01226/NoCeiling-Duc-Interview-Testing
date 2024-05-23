@@ -204,7 +204,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "[{GetTypeFullName}] RabbitMq Consumer can't start", GetType().FullName);
+            Logger.LogError(ex.BeautifyStackTrace(), "[{GetTypeFullName}] RabbitMq Consumer can't start", GetType().FullName);
             throw;
         }
     }
@@ -273,7 +273,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         catch (PlatformInvokeConsumerException ex)
         {
             Logger.LogError(
-                ex,
+                ex.BeautifyStackTrace(),
                 "[MessageBus] Consume message error. [RoutingKey:{RoutingKey}]. Message: {Message}",
                 rabbitMqMessage.RoutingKey,
                 Encoding.UTF8.GetString(rabbitMqMessage.Body.Span));
@@ -283,7 +283,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         catch (Exception ex)
         {
             Logger.LogError(
-                ex,
+                ex.BeautifyStackTrace(),
                 "[MessageBus] Consume message error must REJECT. [RoutingKey:{RoutingKey}]. Message: {Message}",
                 rabbitMqMessage.RoutingKey,
                 Encoding.UTF8.GetString(rabbitMqMessage.Body.Span));
@@ -322,7 +322,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                     retryAttempt => TimeSpan.FromSeconds(AckMessageRetryDelaySeconds),
                     retryCount: AckMessageRetryCount,
                     ex => Logger.LogError(
-                        ex,
+                        ex.BeautifyStackTrace(),
                         "[MessageBus] Failed to ack the message. RoutingKey:{RoutingKey}. DeliveryTag:{DeliveryTag}",
                         rabbitMqMessage.RoutingKey,
                         rabbitMqMessage.DeliveryTag));
@@ -393,16 +393,16 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                             message: "RabbitMQ retry queue message for the routing key: {RoutingKey}. " +
                                      "Message: {BusMessage}",
                             rabbitMqMessage.RoutingKey,
-                            busMessage.ToJson());
+                            busMessage.ToFormattedJson());
                     },
                     retryAttempt => TimeSpan.FromSeconds(options.ProcessRequeueMessageRetryDelaySeconds),
                     retryCount: options.ProcessRequeueMessageRetryCount,
                     finalEx => Logger.LogError(
-                        finalEx,
+                        finalEx.BeautifyStackTrace(),
                         message: "RabbitMQ retry queue failed message for the routing key: {RoutingKey}. " +
                                  "Message: {BusMessage}",
                         rabbitMqMessage.RoutingKey,
-                        busMessage.ToJson()));
+                        busMessage.ToFormattedJson()));
             },
             () => Logger,
             cancellationToken: currentStartProcessCancellationToken);
@@ -425,7 +425,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                 consumerMessageType,
                 consumer.CustomJsonSerializerOptions()),
             ex => Logger.LogError(
-                ex,
+                ex.BeautifyStackTrace(),
                 "RabbitMQ parsing message to {ConsumerMessageType.Name} error for the routing key {Args.RoutingKey}. Body: {Args.Body}",
                 consumerMessageType.Name,
                 args.RoutingKey,
@@ -434,7 +434,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         if (busMessage != null)
         {
             traceActivity?.SetTag("consumer", consumer.GetType().Name);
-            traceActivity?.SetTag("message", busMessage.ToJson());
+            traceActivity?.SetTag("message", busMessage.ToFormattedJson());
 
             await PlatformMessageBusConsumer.InvokeConsumerAsync(
                 consumer,
@@ -458,7 +458,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to extract trace context");
+            Logger.LogError(ex.BeautifyStackTrace(), "Failed to extract trace context");
         }
 
         return [];
@@ -475,7 +475,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                 () => channelPool.TryInitFirstChannel(),
                 ex =>
                 {
-                    Logger.LogError(ex, "Init rabbit-mq channel failed.");
+                    Logger.LogError(ex.BeautifyStackTrace(), "Init rabbit-mq channel failed.");
                 });
     }
 
@@ -514,7 +514,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                         catch (Exception e)
                         {
                             Logger.LogError(
-                                e,
+                                e.BeautifyStackTrace(),
                                 "Failed try to delete queue to declare new queue with updated configuration. If the queue still have messages, please process it or manually delete the queue. We still are using the old queue configuration");
 
                             // If delete queue failed, just ACCEPT using the current old one is OK

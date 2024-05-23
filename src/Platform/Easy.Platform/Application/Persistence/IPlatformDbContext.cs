@@ -104,7 +104,7 @@ public interface IPlatformDbContext : IDisposable
     public static void LogDataMigrationFailedError(ILogger logger, Exception ex, string migrationExecutionName)
     {
         logger.LogError(
-            ex,
+            ex.BeautifyStackTrace(),
             "DataMigration {DataMigrationName} FAILED. [Error:{Error}].",
             migrationExecutionName,
             ex.Message);
@@ -255,7 +255,7 @@ public interface IPlatformDbContext : IDisposable
         // Must use stack trace BEFORE await fn() BECAUSE after call get data function, the stack trace get lost because
         // some unknown reason (ToListAsync, FirstOrDefault, XXAsync from ef-core, mongo-db). Could be the thread/task context has been changed
         // after get data from database, it switched to I/O thread pool
-        var loggingFullStackTrace = Environment.StackTrace;
+        var loggingFullStackTrace = PlatformEnvironment.StackTrace();
 
         if (persistenceConfiguration.BadQueryWarning.TotalItemsThresholdWarningEnabled &&
             resultQuery != null &&

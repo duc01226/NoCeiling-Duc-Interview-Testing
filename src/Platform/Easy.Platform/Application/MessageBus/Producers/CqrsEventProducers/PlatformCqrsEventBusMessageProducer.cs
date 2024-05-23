@@ -70,12 +70,12 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
     {
         CreateLogger(loggerFactory)
             .LogError(
-                exception,
+                exception.BeautifyStackTrace(),
                 "[PlatformCqrsEventBusMessageProducer] Failed to send {MessageName}. [[Error:{Error}]]. MessageContent: {MessageContent}. EventContent:{EventContent}",
                 typeof(TMessage).FullName,
                 exception.Message,
-                exception.As<PlatformMessageBusException<TMessage>>()?.EventBusMessage.ToJson(),
-                notification.ToJson());
+                exception.As<PlatformMessageBusException<TMessage>>()?.EventBusMessage.ToFormattedJson(),
+                notification.ToFormattedJson());
     }
 
     protected virtual async Task SendMessage(TEvent @event, CancellationToken cancellationToken)

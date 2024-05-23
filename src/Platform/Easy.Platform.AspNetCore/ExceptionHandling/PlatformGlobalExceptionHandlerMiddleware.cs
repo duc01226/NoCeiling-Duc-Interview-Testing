@@ -51,9 +51,9 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
             catch (Exception exception)
             {
                 if (exception is OperationCanceledException or TaskCanceledException)
-                    Logger.LogWarning(exception, "Exception {Exception}", exception.GetType().Name);
+                    Logger.LogWarning(exception.BeautifyStackTrace(), "Exception {Exception}", exception.GetType().Name);
                 else
-                    Logger.LogError(exception, "Exception {Exception}", exception.GetType().Name);
+                    Logger.LogError(exception.BeautifyStackTrace(), "Exception {Exception}", exception.GetType().Name);
             }
         }
     }
@@ -96,10 +96,10 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
                 exception =>
                 {
                     Logger.LogError(
-                        exception,
+                        exception.BeautifyStackTrace(),
                         "[UnexpectedRequestError] There is an unexpected exception during the processing of the request. RequestId: {RequestId}. UserContext: {UserContext}",
                         context.TraceIdentifier,
-                        UserContextAccessor.Current.GetAllKeyValues().ToJson());
+                        UserContextAccessor.Current.GetAllKeyValues().ToFormattedJson());
 
                     return new PlatformAspNetMvcErrorResponse(
                         PlatformAspNetMvcErrorInfo.FromUnknownException(exception, DeveloperExceptionEnabled),

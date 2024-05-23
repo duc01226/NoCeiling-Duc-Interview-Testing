@@ -154,7 +154,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "SendExistingOutboxMessageAsync failed. [[Error:{Error}]]", exception.Message);
+            logger.LogError(exception.BeautifyStackTrace(), "SendExistingOutboxMessageAsync failed. [[Error:{Error}]]", exception.Message);
 
             await UpdateExistingOutboxMessageFailedAsync(existingOutboxMessage, exception, retryProcessFailedMessageInSecondsUnit, cancellationToken, logger);
         }
@@ -204,7 +204,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "SendExistingOutboxMessageInNewUowAsync failed. [[Error:{Error}]]", exception.Message);
+            logger.LogError(exception.BeautifyStackTrace(), "SendExistingOutboxMessageInNewUowAsync failed. [[Error:{Error}]]", exception.Message);
 
             await UpdateExistingOutboxMessageFailedAsync(existingOutboxMessage, exception, retryProcessFailedMessageInSecondsUnit, cancellationToken, logger);
         }
@@ -256,11 +256,11 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         try
         {
             logger.LogError(
-                exception,
+                exception.BeautifyStackTrace(),
                 "UpdateExistingOutboxMessageFailedAsync. [[Error:{Error}]]. [[Type:{MessageTypeFullName}]]; [[OutboxMessage: {OutboxMessage}]].",
                 exception.Message,
                 existingOutboxMessage.MessageTypeFullName,
-                existingOutboxMessage.ToJson());
+                existingOutboxMessage.ToFormattedJson());
 
             await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                 async () =>
@@ -288,7 +288,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         catch (Exception ex)
         {
             logger.LogError(
-                ex,
+                ex.BeautifyStackTrace(),
                 "UpdateExistingOutboxMessageFailedAsync failed. [[Error:{Error}]]].",
                 ex.Message);
         }
@@ -303,7 +303,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
     {
         existingOutboxMessage.SendStatus = PlatformOutboxBusMessage.SendStatuses.Failed;
         existingOutboxMessage.LastSendDate = DateTime.UtcNow;
-        existingOutboxMessage.LastSendError = exception.Serialize();
+        existingOutboxMessage.LastSendError = exception.BeautifyStackTrace().Serialize();
         existingOutboxMessage.RetriedProcessCount = (existingOutboxMessage.RetriedProcessCount ?? 0) + 1;
         existingOutboxMessage.NextRetryProcessAfter = PlatformOutboxBusMessage.CalculateNextRetryProcessAfter(
             existingOutboxMessage.RetriedProcessCount,
