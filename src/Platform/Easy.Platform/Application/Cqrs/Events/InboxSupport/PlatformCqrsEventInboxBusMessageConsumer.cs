@@ -39,6 +39,7 @@ public class PlatformCqrsEventInboxBusMessageConsumer : PlatformApplicationMessa
                     .As<IPlatformCqrsEventApplicationHandler>()
                     .With(p => p.ThrowExceptionOnHandleFailed = true)
                     .With(p => p.ForceCurrentInstanceHandleInCurrentThread = true)
+                    .With(p => p.IsCurrentInstanceCalledFromInboxBusMessageConsumer = true)
                     .With(p => p.RetryOnFailedTimes = 0);
                 var eventInstance = RootServiceProvider.GetRegisteredPlatformModuleAssembliesType(message.Payload.EventTypeFullName)
                     .EnsureFound(

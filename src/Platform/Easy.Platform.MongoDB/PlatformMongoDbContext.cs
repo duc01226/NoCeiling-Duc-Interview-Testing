@@ -12,7 +12,6 @@ using Easy.Platform.MongoDB.Extensions;
 using Easy.Platform.MongoDB.Migration;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -329,7 +328,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             dismissSendEvent,
             eventCustomConfig: eventCustomConfig,
             requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
-            stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
+            eventStackTrace: PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
             cancellationToken);
     }
 
@@ -525,7 +524,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 dismissSendEvent,
                 eventCustomConfig: eventCustomConfig,
                 requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
-                stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
+                eventStackTrace: PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -552,7 +551,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 dismissSendEvent,
                 eventCustomConfig: eventCustomConfig,
                 requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
-                stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
+                eventStackTrace: PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -780,7 +779,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 dismissSendEvent,
                 eventCustomConfig: eventCustomConfig,
                 requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
-                stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
+                eventStackTrace: PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
         else
             await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
@@ -797,7 +796,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 dismissSendEvent,
                 eventCustomConfig: eventCustomConfig,
                 requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
-                stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
+                eventStackTrace: PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
         return toBeCreatedEntity;
@@ -892,7 +891,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             crudAction,
             eventCustomConfig,
             requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
-            stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
+            eventStackTrace: PlatformCqrsEntityEvent.GetBulkEntitiesEventStackTrace<TEntity, TPrimaryKey>(RootServiceProvider),
             cancellationToken);
     }
 }

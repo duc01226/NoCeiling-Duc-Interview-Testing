@@ -29,6 +29,8 @@ public interface IPlatformCqrsEventApplicationHandler : IPlatformCqrsEventHandle
     /// </summary>
     public bool EnableInboxEventBusMessage { get; }
 
+    public bool IsCurrentInstanceCalledFromInboxBusMessageConsumer { get; set; }
+
     /// <summary>
     /// Determines whether the event can be handled using Inbox Consumer.
     /// </summary>
@@ -89,6 +91,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     /// </summary>
     public virtual bool ForceInSameEventTriggerUow => false;
 
+    public int RetryEventInboxBusMessageConsumerOnFailedDelaySeconds { get; set; } = 15;
+
     /// <summary>
     /// Gets or sets a value indicating whether the current instance of the event handler is called from the Inbox Bus Message Consumer.
     /// </summary>
@@ -96,8 +100,6 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     /// <c>true</c> if this instance is called from the Inbox Bus Message Consumer; otherwise, <c>false</c>.
     /// </value>
     public bool IsCurrentInstanceCalledFromInboxBusMessageConsumer { get; set; }
-
-    public int RetryEventInboxBusMessageConsumerOnFailedDelaySeconds { get; set; } = 15;
 
     /// <summary>
     /// Default return False. When True, Support for store cqrs event handler as inbox if inbox bus message is enabled in persistence module
@@ -406,7 +408,12 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                 cancellationToken: cancellationToken),
             retryCount: int.MaxValue,
             sleepDurationProvider: retryAttempt => RetryEventInboxBusMessageConsumerOnFailedDelaySeconds.Seconds(),
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken,
+            onRetry: (exception, retryTime, retryAttempt, context) => Logger.Value.LogError(
+                exception,
+                "Execute inbox consumer for EventType:{EventType}; EventContent:{EventContent}.",
+                @event.GetType().FullName,
+                @event.ToFormattedJson()));
     }
 
     protected virtual PlatformBusMessage<PlatformCqrsEventBusMessagePayload> CqrsEventInboxBusMessage(

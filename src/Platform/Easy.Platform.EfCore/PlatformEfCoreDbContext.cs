@@ -10,7 +10,6 @@ using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.EfCore;
@@ -281,7 +280,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 dismissSendEvent,
                 eventCustomConfig: eventCustomConfig,
                 requestContext: () => RequestContextAccessor.Current.GetAllKeyValues(),
-                stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
+                eventStackTrace: PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
         }
         catch (Exception)
@@ -356,7 +355,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 dismissSendEvent,
                 eventCustomConfig: eventCustomConfig,
                 requestContext: () => RequestContextAccessor.Current.GetAllKeyValues(),
-                stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
+                eventStackTrace: PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
             return result;
@@ -526,7 +525,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 dismissSendEvent,
                 eventCustomConfig: eventCustomConfig,
                 requestContext: () => RequestContextAccessor.Current.GetAllKeyValues(),
-                stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
+                eventStackTrace: PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
             return result;
@@ -574,7 +573,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             crudAction,
             eventCustomConfig,
             requestContext: () => RequestContextAccessor.Current.GetAllKeyValues(),
-            stackTrace: RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace(),
+            eventStackTrace: PlatformCqrsEntityEvent.GetBulkEntitiesEventStackTrace<TEntity, TPrimaryKey>(RootServiceProvider),
             cancellationToken);
     }
 

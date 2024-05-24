@@ -49,28 +49,52 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         Func<TEvent> eventBuilder,
         Action<TEvent> eventCustomConfig,
         Func<IDictionary<string, object>> requestContext,
-        string stackTrace,
+        string eventStackTrace,
         CancellationToken cancellationToken)
         where TEvent : PlatformCqrsEntityEvent
     {
-        if (!rootServiceProvider.IsAnyImplementationAssignableToServiceTypeRegistered(typeof(IPlatformCqrsEventHandler<TEvent>))) return;
+        if (IsAnyEventHandlerRegistered<TEvent>(rootServiceProvider))
+        {
+            var entityEvent = eventBuilder()
+                .With(@event => eventCustomConfig?.Invoke(@event))
+                .With(@event => @event.SourceUowId = mappedToDbContextUow?.Id)
+                .WithIf(requestContext != null, @event => @event.SetRequestContextValues(requestContext!()))
+                .WithIf(
+                    p => eventStackTrace != null,
+                    p => p.StackTrace = eventStackTrace);
 
-        var entityEvent = eventBuilder()
-            .With(@event => eventCustomConfig?.Invoke(@event))
-            .With(@event => @event.SourceUowId = mappedToDbContextUow?.Id)
-            .WithIf(requestContext != null, @event => @event.SetRequestContextValues(requestContext!()))
-            .WithIf(
-                p => rootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTraceEnabled() == true && p.StackTrace == null,
-                p => p.StackTrace = stackTrace ?? PlatformEnvironment.StackTrace());
+            if (mappedToDbContextUow != null)
+                await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs.SendEvent(entityEvent, cancellationToken);
+            else
+                await rootServiceProvider.ExecuteInjectScopedAsync(
+                    async (IPlatformCqrs cqrs) =>
+                    {
+                        await cqrs.SendEvent(entityEvent, cancellationToken);
+                    });
+        }
+    }
 
-        if (mappedToDbContextUow != null)
-            await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs.SendEvent(entityEvent, cancellationToken);
-        else
-            await rootServiceProvider.ExecuteInjectScopedAsync(
-                async (IPlatformCqrs cqrs) =>
-                {
-                    await cqrs.SendEvent(entityEvent, cancellationToken);
-                });
+    public static string GetEntityEventStackTrace<TEntity>(IPlatformRootServiceProvider rootServiceProvider, bool dismissSendEvent) where TEntity : class, IEntity, new()
+    {
+        return !dismissSendEvent && IsAnyEntityEventHandlerRegisteredForEntity<TEntity>(rootServiceProvider)
+            ? rootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace()
+            : null;
+    }
+
+    public static bool IsAnyEventHandlerRegistered<TEvent>(IPlatformRootServiceProvider rootServiceProvider) where TEvent : PlatformCqrsEntityEvent
+    {
+        return rootServiceProvider.IsAnyImplementationAssignableToServiceTypeRegistered(typeof(IPlatformCqrsEventHandler<TEvent>));
+    }
+
+    public static bool IsAnyEntityEventHandlerRegisteredForEntity<TEntity>(IPlatformRootServiceProvider rootServiceProvider) where TEntity : class, IEntity, new()
+    {
+        return IsAnyEventHandlerRegistered<PlatformCqrsEntityEvent<TEntity>>(rootServiceProvider);
+    }
+
+    public static bool IsAnyBulkEntitiesEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(IPlatformRootServiceProvider rootServiceProvider)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        return IsAnyEventHandlerRegistered<PlatformCqrsBulkEntitiesEvent<TEntity, TPrimaryKey>>(rootServiceProvider);
     }
 
     public static async Task SendEvent<TEntity>(
@@ -81,7 +105,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         PlatformCqrsEntityEventCrudAction crudAction,
         Action<PlatformCqrsEntityEvent> eventCustomConfig,
         Func<IDictionary<string, object>> requestContext,
-        string stackTrace,
+        string eventStackTrace,
         CancellationToken cancellationToken)
         where TEntity : class, IEntity, new()
     {
@@ -92,7 +116,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                 @event => @event.ExistingEntityData = existingEntity),
             eventCustomConfig,
             requestContext,
-            stackTrace,
+            eventStackTrace,
             cancellationToken);
     }
 
@@ -103,7 +127,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         PlatformCqrsEntityEventCrudAction crudAction,
         Action<PlatformCqrsEntityEvent> eventCustomConfig,
         Func<IDictionary<string, object>> requestContext,
-        string stackTrace,
+        string eventStackTrace,
         CancellationToken cancellationToken)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
@@ -113,7 +137,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
             () => new PlatformCqrsBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, crudAction),
             eventCustomConfig,
             requestContext,
-            stackTrace,
+            eventStackTrace,
             cancellationToken);
     }
 
@@ -125,7 +149,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         bool dismissSendEvent,
         Action<PlatformCqrsEntityEvent> eventCustomConfig,
         Func<IDictionary<string, object>> requestContext,
-        string stackTrace,
+        string eventStackTrace,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var result = await deleteEntityAction(entity)
@@ -141,7 +165,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                             PlatformCqrsEntityEventCrudAction.Deleted,
                             eventCustomConfig: eventCustomConfig,
                             requestContext: requestContext,
-                            stackTrace,
+                            eventStackTrace,
                             cancellationToken);
                 });
 
@@ -156,7 +180,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         bool dismissSendEvent,
         Action<PlatformCqrsEntityEvent> eventCustomConfig,
         Func<IDictionary<string, object>> requestContext,
-        string stackTrace,
+        string eventStackTrace,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var result = await createEntityAction(entity)
@@ -172,7 +196,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                             PlatformCqrsEntityEventCrudAction.Created,
                             eventCustomConfig: eventCustomConfig,
                             requestContext: requestContext,
-                            stackTrace,
+                            eventStackTrace,
                             cancellationToken);
                 });
 
@@ -188,7 +212,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         bool dismissSendEvent,
         Action<PlatformCqrsEntityEvent> eventCustomConfig,
         Func<IDictionary<string, object>> requestContext,
-        string stackTrace,
+        string eventStackTrace,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         if (!dismissSendEvent && existingEntity != null)
@@ -207,11 +231,19 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                             PlatformCqrsEntityEventCrudAction.Updated,
                             eventCustomConfig: eventCustomConfig,
                             requestContext: requestContext,
-                            stackTrace,
+                            eventStackTrace,
                             cancellationToken);
                 });
 
         return result;
+    }
+
+    public static string GetBulkEntitiesEventStackTrace<TEntity, TPrimaryKey>(IPlatformRootServiceProvider rootServiceProvider)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        return IsAnyBulkEntitiesEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(rootServiceProvider)
+            ? rootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTrace()
+            : null;
     }
 }
 
