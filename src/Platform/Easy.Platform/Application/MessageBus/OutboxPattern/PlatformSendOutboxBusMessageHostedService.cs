@@ -270,7 +270,10 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                         queryBuilder: query => CanHandleMessagesByTypeIdPrefixQueryBuilder(query, messageGroupedByTypeIdPrefix).Take(pageSize),
                         cancellationToken);
 
-                    if (toHandleMessages.IsEmpty()) return toHandleMessages;
+                    if (toHandleMessages.IsEmpty() ||
+                        await outboxEventBusMessageRepo.AnyAsync(
+                            PlatformOutboxBusMessage.CheckAnySameTypeOtherPreviousNotProcessedMessageExpr(toHandleMessages.First()),
+                            cancellationToken)) return [];
 
                     toHandleMessages.ForEach(
                         p =>

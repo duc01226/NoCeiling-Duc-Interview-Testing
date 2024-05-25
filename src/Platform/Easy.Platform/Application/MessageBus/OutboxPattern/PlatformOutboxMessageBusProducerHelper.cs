@@ -12,8 +12,12 @@ namespace Easy.Platform.Application.MessageBus.OutboxPattern;
 
 public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
 {
-    public const int DefaultResilientRetiredCount = 120;
-    public const int DefaultResilientRetiredDelayMilliseconds = 1000;
+    /// <summary>
+    /// Default 40320 * 15 = 1 week total seconds
+    /// </summary>
+    public const int DefaultResilientRetiredCount = 40320;
+
+    public const int DefaultResilientRetiredDelaySeconds = 15;
 
     private readonly IPlatformMessageBusProducer messageBusProducer;
     private readonly PlatformOutboxConfig outboxConfig;
@@ -142,7 +146,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                     {
                         await messageBusProducer.SendAsync(message, routingKey, cancellationToken);
                     },
-                    sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelayMilliseconds.Milliseconds(),
+                    sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelaySeconds.Seconds(),
                     retryCount: DefaultResilientRetiredCount,
                     cancellationToken: cancellationToken)
                 .Timeout(outboxConfig.MessageProcessingMaxSecondsTimeout.Seconds());
@@ -175,7 +179,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         .With(p => p.SendStatus = PlatformOutboxBusMessage.SendStatuses.New),
                     cancellationToken: cancellationToken);
             },
-            sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelayMilliseconds.Milliseconds(),
+            sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelaySeconds.Seconds(),
             retryCount: DefaultResilientRetiredCount,
             cancellationToken: cancellationToken);
     }
@@ -241,7 +245,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         }
                     });
             },
-            sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelayMilliseconds.Milliseconds(),
+            sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelaySeconds.Seconds(),
             retryCount: DefaultResilientRetiredCount,
             cancellationToken: cancellationToken);
     }
@@ -282,7 +286,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         });
                 },
                 retryCount: DefaultResilientRetiredCount,
-                sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelayMilliseconds.Milliseconds(),
+                sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelaySeconds.Seconds(),
                 cancellationToken: cancellationToken);
         }
         catch (Exception ex)
@@ -428,7 +432,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
 
                 return (toProcessOutboxMessage, existedOutboxMessage);
             },
-            _ => DefaultResilientRetiredDelayMilliseconds.Milliseconds(),
+            _ => DefaultResilientRetiredDelaySeconds.Seconds(),
             DefaultResilientRetiredCount,
             cancellationToken: cancellationToken);
     }

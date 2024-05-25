@@ -94,6 +94,12 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     public int RetryEventInboxBusMessageConsumerOnFailedDelaySeconds { get; set; } = 15;
 
     /// <summary>
+    /// RetryEventInboxBusMessageConsumerMaxCount. Default is 40320, equivalent to default of
+    /// RetryEventInboxBusMessageConsumerOnFailedDelaySeconds * 40320 = 1 week total seconds
+    /// </summary>
+    public int RetryEventInboxBusMessageConsumerMaxCount { get; set; } = 40320;
+
+    /// <summary>
     /// Gets or sets a value indicating whether the current instance of the event handler is called from the Inbox Bus Message Consumer.
     /// </summary>
     /// <value>
@@ -406,7 +412,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                 extendedMessageIdPrefix:
                 $"{GetType().GetNameOrGenericTypeName()}-{@event.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix() ?? @event.Id}",
                 cancellationToken: cancellationToken),
-            retryCount: int.MaxValue,
+            retryCount: RetryEventInboxBusMessageConsumerMaxCount,
             sleepDurationProvider: retryAttempt => RetryEventInboxBusMessageConsumerOnFailedDelaySeconds.Seconds(),
             cancellationToken: cancellationToken,
             onRetry: (exception, retryTime, retryAttempt, context) => Logger.Value.LogError(

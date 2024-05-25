@@ -300,7 +300,10 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                         queryBuilder: query => CanHandleMessagesByConsumerIdPrefixQueryBuilder(query, messageGroupedByConsumerIdPrefix).Take(pageSize),
                         cancellationToken);
 
-                    if (toHandleMessages.IsEmpty()) return toHandleMessages;
+                    if (toHandleMessages.IsEmpty() ||
+                        await inboxEventBusMessageRepo.AnyAsync(
+                            PlatformInboxBusMessage.CheckAnySameConsumerOtherPreviousNotProcessedMessageExpr(toHandleMessages.First()),
+                            cancellationToken)) return [];
 
                     toHandleMessages.ForEach(
                         p =>

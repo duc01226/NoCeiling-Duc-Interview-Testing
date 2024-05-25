@@ -13,8 +13,12 @@ namespace Easy.Platform.Application.MessageBus.InboxPattern;
 
 public static class PlatformInboxMessageBusConsumerHelper
 {
-    public const int DefaultResilientRetiredCount = 120;
-    public const int DefaultResilientRetiredDelayMilliseconds = 1000;
+    /// <summary>
+    /// Default 40320 * 15 = 1 week total seconds
+    /// </summary>
+    public const int DefaultResilientRetiredCount = 40320;
+
+    public const int DefaultResilientRetiredDelaySeconds = 15;
 
     /// <summary>
     /// Inbox consumer support inbox pattern to prevent duplicated consumer message many times
@@ -209,7 +213,7 @@ public static class PlatformInboxMessageBusConsumerHelper
 
                 return (toProcessInboxMessage, existedInboxMessage);
             },
-            _ => DefaultResilientRetiredDelayMilliseconds.Milliseconds(),
+            _ => DefaultResilientRetiredDelaySeconds.Seconds(),
             DefaultResilientRetiredCount,
             cancellationToken: cancellationToken);
     }
@@ -338,7 +342,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                         .With(p => p.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.New),
                     cancellationToken: cancellationToken);
             },
-            sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelayMilliseconds.Milliseconds(),
+            sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelaySeconds.Seconds(),
             retryCount: DefaultResilientRetiredCount,
             cancellationToken: cancellationToken);
     }
@@ -380,29 +384,41 @@ public static class PlatformInboxMessageBusConsumerHelper
     {
         try
         {
-            await serviceProvider.ExecuteInjectScopedAsync(
-                async (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
-                {
-                    var existingInboxMessage = await inboxBusMessageRepo.FirstOrDefaultAsync(
-                        predicate: p => p.Id == existingInboxMessageId,
-                        cancellationToken: cancellationToken);
+            await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                async () =>
+                    await serviceProvider.ExecuteInjectScopedAsync(
+                        async (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
+                        {
+                            var existingInboxMessage = await inboxBusMessageRepo.FirstOrDefaultAsync(
+                                predicate: p => p.Id == existingInboxMessageId,
+                                cancellationToken: cancellationToken);
 
-                    if (existingInboxMessage != null)
-                        await UpdateExistingInboxProcessedMessageAsync(
-                            serviceProvider.GetRequiredService<IPlatformRootServiceProvider>(),
-                            existingInboxMessage,
-                            cancellationToken);
-                });
+                            if (existingInboxMessage != null)
+                                await UpdateExistingInboxProcessedMessageAsync(
+                                    serviceProvider.GetRequiredService<IPlatformRootServiceProvider>(),
+                                    existingInboxMessage,
+                                    cancellationToken);
+                        }),
+                retryAttempt => DefaultResilientRetiredDelaySeconds.Seconds(),
+                retryCount: DefaultResilientRetiredCount,
+                onRetry: (ex, retryTime, retryAttempt, context) =>
+                    LogErrorOfUpdateExistingInboxProcessedMessage(existingInboxMessageId, loggerFactory, ex),
+                cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {
-            loggerFactory()
-                .LogError(
-                    ex.BeautifyStackTrace(),
-                    "UpdateExistingInboxProcessedMessageAsync failed. [[Error:{Error}]], [ExistingInboxMessageId:{ExistingInboxMessageId}].",
-                    ex.Message,
-                    existingInboxMessageId);
+            LogErrorOfUpdateExistingInboxProcessedMessage(existingInboxMessageId, loggerFactory, ex);
         }
+    }
+
+    private static void LogErrorOfUpdateExistingInboxProcessedMessage(string existingInboxMessageId, Func<ILogger> loggerFactory, Exception ex)
+    {
+        loggerFactory()
+            .LogError(
+                ex.BeautifyStackTrace(),
+                "UpdateExistingInboxProcessedMessageAsync failed. [[Error:{Error}]], [ExistingInboxMessageId:{ExistingInboxMessageId}].",
+                ex.Message,
+                existingInboxMessageId);
     }
 
     public static async Task UpdateExistingInboxProcessedMessageAsync(
@@ -436,7 +452,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                         }
                     });
             },
-            sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelayMilliseconds.Milliseconds(),
+            sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelaySeconds.Seconds(),
             retryCount: DefaultResilientRetiredCount,
             cancellationToken: cancellationToken);
     }
@@ -462,7 +478,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                                 cancellationToken);
                         });
                 },
-                sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelayMilliseconds.Milliseconds(),
+                sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelaySeconds.Seconds(),
                 retryCount: DefaultResilientRetiredCount,
                 cancellationToken: cancellationToken);
         }
@@ -517,7 +533,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                                     inboxBusMessageRepo);
                         });
                 },
-                sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelayMilliseconds.Milliseconds(),
+                sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelaySeconds.Seconds(),
                 retryCount: DefaultResilientRetiredCount,
                 cancellationToken: cancellationToken);
         }
