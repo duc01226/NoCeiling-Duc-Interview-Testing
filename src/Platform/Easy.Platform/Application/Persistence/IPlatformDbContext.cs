@@ -226,7 +226,7 @@ public interface IPlatformDbContext : IDisposable
                                         .With(p => p.LastProcessingPingTime = Clock.UtcNow));
                             });
 
-                        await Task.Delay(PlatformDataMigrationHistory.ProcessingPingIntervalSeconds.Seconds(), cancellationToken);
+                        await Task.Delay(PlatformDataMigrationHistory.ProcessingPingIntervalSeconds.Seconds(), CancellationToken.None);
                     }
                     finally
                     {
@@ -234,7 +234,7 @@ public interface IPlatformDbContext : IDisposable
                     }
             },
             () => Logger,
-            cancellationToken: cancellationToken);
+            cancellationToken: CancellationToken.None);
     }
 
     public async Task UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(PlatformDataMigrationHistory toUpsertMigrationHistory)
