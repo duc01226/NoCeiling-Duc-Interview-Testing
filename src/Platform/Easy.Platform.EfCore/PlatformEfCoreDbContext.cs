@@ -72,13 +72,13 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryDbSet.AsQueryable();
 
-    public async Task UpsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity)
+    public async Task UpsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity, CancellationToken cancellationToken = default)
     {
-        var existingEntity = await ApplicationDataMigrationHistoryDbSet.AsNoTracking().Where(p => p.Name == entity.Name).FirstOrDefaultAsync();
+        var existingEntity = await ApplicationDataMigrationHistoryDbSet.AsNoTracking().Where(p => p.Name == entity.Name).FirstOrDefaultAsync(cancellationToken);
 
         if (existingEntity == null)
         {
-            await ApplicationDataMigrationHistoryDbSet.AddAsync(entity);
+            await ApplicationDataMigrationHistoryDbSet.AddAsync(entity, cancellationToken);
         }
         else
         {

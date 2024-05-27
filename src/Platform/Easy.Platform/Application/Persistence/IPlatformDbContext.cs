@@ -29,7 +29,7 @@ public interface IPlatformDbContext : IDisposable
 
     public ILogger Logger { get; }
 
-    public Task UpsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity);
+    public Task UpsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity, CancellationToken cancellationToken = default);
 
     public IQueryable<PlatformDataMigrationHistory> DataMigrationHistoryQuery();
 
@@ -178,7 +178,8 @@ public interface IPlatformDbContext : IDisposable
                             DataMigrationHistoryQuery()
                                 .First(p => p.Name == migrationExecution.Name)
                                 .With(p => p.Status = PlatformDataMigrationHistory.Statuses.Processed)
-                                .With(p => p.LastProcessingPingTime = Clock.UtcNow)),
+                                .With(p => p.LastProcessingPingTime = Clock.UtcNow),
+                            ct),
                         retryTime => 1.Seconds(),
                         3,
                         cancellationToken: default);
@@ -195,7 +196,8 @@ public interface IPlatformDbContext : IDisposable
                             DataMigrationHistoryQuery()
                                 .First(p => p.Name == migrationExecution.Name)
                                 .With(p => p.Status = PlatformDataMigrationHistory.Statuses.Failed)
-                                .With(p => p.LastProcessError = e.Serialize())),
+                                .With(p => p.LastProcessError = e.Serialize()),
+                            ct),
                         retryTime => 1.Seconds(),
                         3,
                         cancellationToken: default);
@@ -223,10 +225,15 @@ public interface IPlatformDbContext : IDisposable
                                 await newContextInstance.UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(
                                     newContextInstance.DataMigrationHistoryQuery()
                                         .First(p => p.Name == migrationExecutionName && p.Status == PlatformDataMigrationHistory.Statuses.Processing)
-                                        .With(p => p.LastProcessingPingTime = Clock.UtcNow));
+                                        .With(p => p.LastProcessingPingTime = Clock.UtcNow),
+                                    cancellationToken);
                             });
 
                         await Task.Delay(PlatformDataMigrationHistory.ProcessingPingIntervalSeconds.Seconds(), CancellationToken.None);
+                    }
+                    catch (TaskCanceledException taskCanceledException)
+                    {
+                        // Empty and skip taskCanceledException
                     }
                     finally
                     {
@@ -237,11 +244,13 @@ public interface IPlatformDbContext : IDisposable
             cancellationToken: CancellationToken.None);
     }
 
-    public async Task UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(PlatformDataMigrationHistory toUpsertMigrationHistory)
+    public async Task UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(
+        PlatformDataMigrationHistory toUpsertMigrationHistory,
+        CancellationToken cancellationToken = default)
     {
-        await UpsertOneDataMigrationHistoryAsync(toUpsertMigrationHistory);
+        await UpsertOneDataMigrationHistoryAsync(toUpsertMigrationHistory, cancellationToken);
 
-        await SaveChangesAsync();
+        await SaveChangesAsync(cancellationToken);
     }
 
     public static async Task<TResult> ExecuteWithBadQueryWarningHandling<TResult, TSource>(

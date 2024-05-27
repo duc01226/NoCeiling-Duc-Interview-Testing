@@ -77,13 +77,13 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryCollection.AsQueryable();
 
-    public async Task UpsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity)
+    public async Task UpsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity, CancellationToken cancellationToken = default)
     {
-        var existingEntity = await ApplicationDataMigrationHistoryQuery.Where(p => p.Name == entity.Name).FirstOrDefaultAsync();
+        var existingEntity = await ApplicationDataMigrationHistoryQuery.Where(p => p.Name == entity.Name).FirstOrDefaultAsync(cancellationToken);
 
         if (existingEntity == null)
         {
-            await ApplicationDataMigrationHistoryCollection.InsertOneAsync(entity);
+            await ApplicationDataMigrationHistoryCollection.InsertOneAsync(entity, cancellationToken: cancellationToken);
         }
         else
         {
@@ -104,11 +104,12 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                           ((IRowVersionEntity)p).ConcurrencyUpdateToken == Guid.Empty ||
                           ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken),
                     entity,
-                    new ReplaceOptions { IsUpsert = false });
+                    new ReplaceOptions { IsUpsert = false },
+                    cancellationToken: cancellationToken);
 
             if (result.MatchedCount <= 0)
             {
-                if (await ApplicationDataMigrationHistoryCollection.AsQueryable().AnyAsync(p => p.Name == entity.Name))
+                if (await ApplicationDataMigrationHistoryCollection.AsQueryable().AnyAsync(p => p.Name == entity.Name, cancellationToken: cancellationToken))
                     throw new PlatformDomainRowVersionConflictException(
                         $"Update {nameof(PlatformDataMigrationHistory)} with Name:{toBeUpdatedEntity.Name} has conflicted version.");
                 throw new PlatformDomainEntityNotFoundException<PlatformDataMigrationHistory>(toBeUpdatedEntity.Name);
