@@ -21,6 +21,8 @@ public interface IPlatformDbContext : IDisposable
 {
     public const int DefaultPageSize = 10;
     public const int DefaultRunDataMigrationInBackgroundRetryCount = 3;
+
+    public const int PingProcessingMigrationHistoryFailedRetryCount = 1000;
     public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformDbContext)}");
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery { get; }
@@ -217,28 +219,39 @@ public interface IPlatformDbContext : IDisposable
             async () =>
             {
                 while (!cancellationToken.IsCancellationRequested)
-                    try
-                    {
-                        await ExecuteWithNewDbContextInstanceAsync(
-                            async newContextInstance =>
+                    await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                        async () =>
+                        {
+                            try
                             {
-                                await newContextInstance.UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(
-                                    newContextInstance.DataMigrationHistoryQuery()
-                                        .First(p => p.Name == migrationExecutionName && p.Status == PlatformDataMigrationHistory.Statuses.Processing)
-                                        .With(p => p.LastProcessingPingTime = Clock.UtcNow),
-                                    cancellationToken);
-                            });
+                                if (!cancellationToken.IsCancellationRequested)
+                                    await ExecuteWithNewDbContextInstanceAsync(
+                                        async newContextInstance =>
+                                        {
+                                            await newContextInstance.UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(
+                                                newContextInstance.DataMigrationHistoryQuery()
+                                                    .First(p => p.Name == migrationExecutionName && p.Status == PlatformDataMigrationHistory.Statuses.Processing)
+                                                    .With(p => p.LastProcessingPingTime = Clock.UtcNow),
+                                                cancellationToken);
+                                        });
 
-                        await Task.Delay(PlatformDataMigrationHistory.ProcessingPingIntervalSeconds.Seconds(), CancellationToken.None);
-                    }
-                    catch (TaskCanceledException taskCanceledException)
-                    {
-                        // Empty and skip taskCanceledException
-                    }
-                    finally
-                    {
-                        Util.GarbageCollector.Collect();
-                    }
+                                await Task.Delay(PlatformDataMigrationHistory.ProcessingPingIntervalSeconds.Seconds(), CancellationToken.None);
+                            }
+                            catch (TaskCanceledException taskCanceledException)
+                            {
+                                // Empty and skip taskCanceledException
+                            }
+                            finally
+                            {
+                                Util.GarbageCollector.Collect();
+                            }
+                        },
+                        cancellationToken: CancellationToken.None,
+                        retryCount: PingProcessingMigrationHistoryFailedRetryCount,
+                        onRetry: (ex, delayRetryTime, retryAttempt, context) =>
+                        {
+                            if (retryAttempt > 1) Logger.LogError(ex, "Upsert DataMigrationHistory LastProcessingPingTime failed");
+                        });
             },
             () => Logger,
             cancellationToken: CancellationToken.None);

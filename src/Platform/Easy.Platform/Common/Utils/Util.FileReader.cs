@@ -181,7 +181,35 @@ public static partial class Util
                 }
             }
 
-            //Set the MemoryStream to the beginning
+            // Reset the position of the MemoryStream to the beginning
+            returnZipFileStream.Seek(0, SeekOrigin.Begin);
+
+            return returnZipFileStream;
+        }
+
+        public static async Task<Stream> ZipFilesAsStream<TFileContent>(
+            List<ZipFilesAsStreamFileItem<TFileContent>> files,
+            Func<TFileContent, byte[]> readFileAsBytesFn)
+        {
+            var returnZipFileStream = new MemoryStream();
+
+            using (var newZipArchive = new ZipArchive(returnZipFileStream, ZipArchiveMode.Create, true))
+            {
+                foreach (var file in files)
+                {
+                    var fileZipEntry = newZipArchive.CreateEntry(file.FileName);
+
+                    // Write the file data to the entry
+                    using (var entryStream = fileZipEntry.Open())
+                    {
+                        var fileBytes = readFileAsBytesFn(file.FileContent);
+
+                        await entryStream.WriteAsync(fileBytes);
+                    }
+                }
+            }
+
+            // Reset the position of the MemoryStream to the beginning
             returnZipFileStream.Seek(0, SeekOrigin.Begin);
 
             return returnZipFileStream;

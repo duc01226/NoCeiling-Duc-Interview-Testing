@@ -109,7 +109,6 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 message,
                 routingKey,
                 retryProcessFailedMessageInSecondsUnit,
-                extendedMessageIdPrefix,
                 cancellationToken,
                 logger,
                 messageBusProducer,
@@ -132,7 +131,6 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         TMessage message,
         string routingKey,
         double retryProcessFailedMessageInSecondsUnit,
-        string extendedMessageIdPrefix,
         CancellationToken cancellationToken,
         ILogger logger,
         IPlatformMessageBusProducer messageBusProducer,
@@ -184,20 +182,18 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             cancellationToken: cancellationToken);
     }
 
-    public async Task SendExistingOutboxMessageInNewUowAsync<TMessage>(
+    public async Task SendExistingOutboxMessageInNewScopeAsync<TMessage>(
         PlatformOutboxBusMessage existingOutboxMessage,
         TMessage message,
         string routingKey,
         double retryProcessFailedMessageInSecondsUnit,
         CancellationToken cancellationToken,
-        ILogger logger,
-        IPlatformUnitOfWorkManager unitOfWorkManager,
-        IServiceProvider serviceProvider)
+        ILogger logger)
         where TMessage : class, new()
     {
         try
         {
-            await serviceProvider.ExecuteInjectAsync(
+            await rootServiceProvider.ExecuteInjectScopedAsync(
                 SendExistingOutboxMessageAsync<TMessage>,
                 existingOutboxMessage,
                 message,
@@ -208,7 +204,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         }
         catch (Exception exception)
         {
-            logger.LogError(exception.BeautifyStackTrace(), "SendExistingOutboxMessageInNewUowAsync failed. [[Error:{Error}]]", exception.Message);
+            logger.LogError(exception.BeautifyStackTrace(), "SendExistingOutboxMessageInNewScopeAsync failed. [[Error:{Error}]]", exception.Message);
 
             await UpdateExistingOutboxMessageFailedAsync(existingOutboxMessage, exception, retryProcessFailedMessageInSecondsUnit, cancellationToken, logger);
         }
@@ -359,7 +355,6 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         message,
                         routingKey,
                         retryProcessFailedMessageInSecondsUnit,
-                        extendedMessageIdPrefix,
                         cancellationToken,
                         logger),
                     loggerFactory: CreateLogger,
@@ -373,13 +368,11 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         // Try to process sending newProcessingOutboxMessage first time immediately after task completed
                         // WHY: we can wait for the background process handle the message but try to do it
                         // immediately if possible is better instead of waiting for the background process
-                        await rootServiceProvider.ExecuteInjectScopedAsync(
-                            SendExistingOutboxMessageInNewUowAsync<TMessage>,
+                        await SendExistingOutboxMessageInNewScopeAsync(
                             toProcessOutboxMessage,
                             message,
                             routingKey,
                             retryProcessFailedMessageInSecondsUnit,
-                            extendedMessageIdPrefix,
                             cancellationToken,
                             logger);
                     });
