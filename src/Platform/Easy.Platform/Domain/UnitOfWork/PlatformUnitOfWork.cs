@@ -72,13 +72,13 @@ public interface IPlatformUnitOfWork : IDisposable
     /// If true, the uow actually do not handle real transaction. Repository when create/update data actually save immediately
     /// </summary>
     /// <remarks>
-    /// The IsPseudoTransactionUow method is part of the IUnitOfWork interface in the Easy.Platform.Domain.UnitOfWork namespace. This method is used to determine whether the current unit of work (UoW) is handling a real transaction or not.
+    /// The IsPseudoTransactionUow method is part of the IPlatformUnitOfWork interface in the Easy.Platform.Domain.UnitOfWork namespace. This method is used to determine whether the current unit of work (UoW) is handling a real transaction or not.
     /// <br />
     /// In the context of a UoW pattern, a real transaction implies that the changes made within the UoW are not immediately saved to the database, but are instead held until the UoW is completed. If the UoW fails, the changes can be rolled back, maintaining the integrity of the data.
     /// <br />
     /// On the other hand, a pseudo-transaction UoW implies that the changes are immediately saved to the database when they are made. This means there is no rollback mechanism if the UoW fails.
     /// <br />
-    /// In the provided code, different implementations of the IUnitOfWork interface override the IsPseudoTransactionUow method to specify whether they handle real transactions or pseudo-transactions. For example, the PlatformEfCorePersistenceUnitOfWork class returns false, indicating it handles real transactions, while the PlatformMongoDbPersistenceUnitOfWork class returns true, indicating it handles pseudo-transactions.
+    /// In the provided code, different implementations of the IPlatformUnitOfWork interface override the IsPseudoTransactionUow method to specify whether they handle real transactions or pseudo-transactions. For example, the PlatformEfCorePersistenceUnitOfWork class returns false, indicating it handles real transactions, while the PlatformMongoDbPersistenceUnitOfWork class returns true, indicating it handles pseudo-transactions.
     /// <br />
     /// This method is used in various parts of the code to decide how to handle certain operations. For example, in the PlatformCqrsEventApplicationHandler class, the IsPseudoTransactionUow method is used to determine whether to execute certain actions immediately or add them to the OnSaveChangesCompletedActions list to be executed when the UoW is completed.
     /// </remarks>
@@ -114,13 +114,13 @@ public interface IPlatformUnitOfWork : IDisposable
     /// Get itself or inner uow which is TUnitOfWork.
     /// </summary>
     /// <remarks>
-    /// The method is part of the IUnitOfWork interface in the Easy.Platform.Domain.UnitOfWork namespace. This method is used to retrieve a unit of work of a specific type from the current unit of work or its inner units of work.
+    /// The method is part of the IPlatformUnitOfWork interface in the Easy.Platform.Domain.UnitOfWork namespace. This method is used to retrieve a unit of work of a specific type from the current unit of work or its inner units of work.
     /// <br />
     /// In the context of the Unit of Work pattern, a unit of work is a single, cohesive operation that consists of multiple steps. It's used to ensure that all these steps are completed successfully as a whole, or none of them are, to maintain the integrity of the data.
     /// <br />
-    /// The method is a generic method that takes a type parameter TUnitOfWork which must be a class and implement the IUnitOfWork interface. It checks if the current unit of work (this) is of the type TUnitOfWork. If it is, it returns the current unit of work cast to TUnitOfWork. If it's not, it looks for the first unit of work of the type TUnitOfWork in its inner units of work.
+    /// The method is a generic method that takes a type parameter TUnitOfWork which must be a class and implement the IPlatformUnitOfWork interface. It checks if the current unit of work (this) is of the type TUnitOfWork. If it is, it returns the current unit of work cast to TUnitOfWork. If it's not, it looks for the first unit of work of the type TUnitOfWork in its inner units of work.
     /// <br />
-    /// This method is useful in scenarios where you have nested units of work and you need to retrieve a specific unit of work by its type. For example, in the provided code, UowOfType[TUnitOfWork]() is used to retrieve the current active unit of work of type IUnitOfWork to perform operations like SaveChangesAsync().
+    /// This method is useful in scenarios where you have nested units of work and you need to retrieve a specific unit of work by its type. For example, in the provided code, UowOfType[TUnitOfWork]() is used to retrieve the current active unit of work of type IPlatformUnitOfWork to perform operations like SaveChangesAsync().
     /// </remarks>
     public TUnitOfWork UowOfType<TUnitOfWork>() where TUnitOfWork : class, IPlatformUnitOfWork
     {

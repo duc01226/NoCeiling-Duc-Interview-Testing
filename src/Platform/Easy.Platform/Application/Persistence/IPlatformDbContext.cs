@@ -22,7 +22,7 @@ public interface IPlatformDbContext : IDisposable
     public const int DefaultPageSize = 10;
     public const int DefaultRunDataMigrationInBackgroundRetryCount = 3;
 
-    public const int PingProcessingMigrationHistoryFailedRetryCount = 1000;
+    public const int SaveMigrationHistoryFailedRetryCount = 1000;
     public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformDbContext)}");
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery { get; }
@@ -182,9 +182,13 @@ public interface IPlatformDbContext : IDisposable
                                 .With(p => p.Status = PlatformDataMigrationHistory.Statuses.Processed)
                                 .With(p => p.LastProcessingPingTime = Clock.UtcNow),
                             ct),
-                        retryTime => 1.Seconds(),
-                        3,
-                        cancellationToken: default);
+                        retryTime => retryTime.Seconds(),
+                        SaveMigrationHistoryFailedRetryCount,
+                        (ex, delayRetryTime, retryAttempt, context) =>
+                        {
+                            if (retryAttempt > 3) Logger.LogError(ex, "Upsert DataMigrationHistory Status=Processed failed");
+                        },
+                        default);
 
                     await SaveChangesAsync(CancellationToken.None);
 
@@ -200,9 +204,13 @@ public interface IPlatformDbContext : IDisposable
                                 .With(p => p.Status = PlatformDataMigrationHistory.Statuses.Failed)
                                 .With(p => p.LastProcessError = e.Serialize()),
                             ct),
-                        retryTime => 1.Seconds(),
-                        3,
-                        cancellationToken: default);
+                        retryTime => retryTime.Seconds(),
+                        SaveMigrationHistoryFailedRetryCount,
+                        (ex, delayRetryTime, retryAttempt, context) =>
+                        {
+                            if (retryAttempt > 3) Logger.LogError(ex, "Upsert DataMigrationHistory Status=Failed failed");
+                        },
+                        default);
                     throw;
                 }
                 finally
@@ -228,11 +236,13 @@ public interface IPlatformDbContext : IDisposable
                                     await ExecuteWithNewDbContextInstanceAsync(
                                         async newContextInstance =>
                                         {
-                                            await newContextInstance.UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(
-                                                newContextInstance.DataMigrationHistoryQuery()
-                                                    .First(p => p.Name == migrationExecutionName && p.Status == PlatformDataMigrationHistory.Statuses.Processing)
-                                                    .With(p => p.LastProcessingPingTime = Clock.UtcNow),
-                                                cancellationToken);
+                                            var toUpdatePingTimeMigrationHistory = newContextInstance.DataMigrationHistoryQuery()
+                                                .FirstOrDefault(p => p.Name == migrationExecutionName && p.Status == PlatformDataMigrationHistory.Statuses.Processing);
+
+                                            if (toUpdatePingTimeMigrationHistory != null)
+                                                await newContextInstance.UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(
+                                                    toUpdatePingTimeMigrationHistory.With(p => p.LastProcessingPingTime = Clock.UtcNow),
+                                                    cancellationToken);
                                         });
 
                                 await Task.Delay(PlatformDataMigrationHistory.ProcessingPingIntervalSeconds.Seconds(), CancellationToken.None);
@@ -247,10 +257,10 @@ public interface IPlatformDbContext : IDisposable
                             }
                         },
                         cancellationToken: CancellationToken.None,
-                        retryCount: PingProcessingMigrationHistoryFailedRetryCount,
+                        retryCount: SaveMigrationHistoryFailedRetryCount,
                         onRetry: (ex, delayRetryTime, retryAttempt, context) =>
                         {
-                            if (retryAttempt > 1) Logger.LogError(ex, "Upsert DataMigrationHistory LastProcessingPingTime failed");
+                            if (retryAttempt > 3) Logger.LogError(ex, "Upsert DataMigrationHistory LastProcessingPingTime failed");
                         });
             },
             () => Logger,
