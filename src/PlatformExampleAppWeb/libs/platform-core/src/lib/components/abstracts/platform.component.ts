@@ -633,6 +633,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
 
         return returnFunc as unknown as ReturnType;
     }
+
     /**
      * * ThrottleTime explain: Delay to enhance performance
      * { leading: true, trailing: true } <=> emit the first item to ensure not delay, but also ignore the sub-sequence,

@@ -638,7 +638,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
 
         this.updateState(<Partial<TViewModel>>{
             errorMsgMap: immutableUpdate(this.currentState().errorMsgMap, { [requestKey]: errorMsg }),
-            error: errorMsg === undefined ? null : errorMsg
+            error: errorMsg ?? null
         });
     };
 

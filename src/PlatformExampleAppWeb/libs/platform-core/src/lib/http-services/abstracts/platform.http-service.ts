@@ -52,13 +52,13 @@ export abstract class PlatformHttpService {
                     );
 
                 for (let index = 0; index < stressTestValueCount; index++) {
-                    this.http.get(url, finalOptions).subscribe();
+                    this.http.get(url, <any>finalOptions).subscribe();
                 }
             });
         }
 
         return this.http
-            .get(url, finalOptions)
+            .get(url, <any>finalOptions)
             .pipe(
                 <OperatorFunction<Object, T>>(
                     timeout(
@@ -74,7 +74,7 @@ export abstract class PlatformHttpService {
         const finalOptions = this.getFinalOptions(options);
         const finalBody = this.buildHttpBody(body, finalOptions);
         return this.http
-            .post(url, finalBody, finalOptions)
+            .post(url, finalBody, <any>finalOptions)
             .pipe(
                 <OperatorFunction<Object, TResult>>(
                     timeout(
@@ -101,7 +101,7 @@ export abstract class PlatformHttpService {
         delete (<any>finalOptions.headers)['Content-Type'];
 
         return this.http
-            .post(url, finalBody, finalOptions)
+            .post(url, finalBody, <any>finalOptions)
             .pipe(
                 <OperatorFunction<Object, TResult>>(
                     timeout(
@@ -117,7 +117,7 @@ export abstract class PlatformHttpService {
         const finalOptions = this.getFinalOptions(options);
         const finalBody = this.buildHttpBody(body, finalOptions);
         return this.http
-            .put(url, finalBody, finalOptions)
+            .put(url, finalBody, <any>finalOptions)
             .pipe(
                 <OperatorFunction<Object, T>>(
                     timeout(
@@ -132,7 +132,7 @@ export abstract class PlatformHttpService {
     protected httpDelete<T>(url: string, options?: HttpClientOptions | (() => HttpClientOptions)) {
         const finalOptions = this.getFinalOptions(options);
         return this.http
-            .delete(url, finalOptions)
+            .delete(url, <any>finalOptions)
             .pipe(
                 <OperatorFunction<Object, T>>(
                     timeout(

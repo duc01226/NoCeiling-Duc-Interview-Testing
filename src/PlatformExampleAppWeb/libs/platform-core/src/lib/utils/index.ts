@@ -4,6 +4,7 @@ export * from './utils.dom';
 export * from './utils.enum';
 export * from './utils.file';
 export * from './utils.guid';
+export * from './utils.http-response';
 export * from './utils.list';
 export * from './utils.number';
 export * from './utils.object';
