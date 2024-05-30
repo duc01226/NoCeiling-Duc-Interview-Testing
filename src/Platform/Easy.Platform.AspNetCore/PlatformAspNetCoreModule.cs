@@ -141,7 +141,9 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
     /// </summary>
     protected virtual string[] DefaultCorsPolicyExposedHeaders()
     {
-        return Util.ListBuilder.NewArray(PlatformAspnetConstant.CommonHttpHeaderNames.RequestId);
+        return Util.ListBuilder.NewArray(
+            PlatformAspnetConstant.CommonHttpHeaderNames.RequestId,
+            "Content-Disposition");
     }
 
     /// <summary>

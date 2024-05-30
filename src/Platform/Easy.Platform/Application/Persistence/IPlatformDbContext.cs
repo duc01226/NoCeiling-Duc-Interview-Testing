@@ -20,7 +20,6 @@ namespace Easy.Platform.Application.Persistence;
 public interface IPlatformDbContext : IDisposable
 {
     public const int DefaultPageSize = 10;
-    public const int DefaultRunDataMigrationInBackgroundRetryCount = 3;
 
     public const int SaveMigrationHistoryFailedRetryCount = 1000;
     public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformDbContext)}");
@@ -44,63 +43,23 @@ public interface IPlatformDbContext : IDisposable
         PlatformDataMigrationExecutor<TDbContext>
             .EnsureAllDataMigrationExecutorsHasUniqueName(GetType().Assembly, serviceProvider);
 
-        await PlatformDataMigrationExecutor<TDbContext>
-            .GetCanExecuteDataMigrationExecutors(GetType().Assembly, serviceProvider, ApplicationDataMigrationHistoryQuery)
-            .ForEachAsync(
-                async migrationExecution =>
-                {
-                    try
-                    {
-                        if (migrationExecution.AllowRunInBackgroundThread)
-                            ExecuteDataMigrationInBackgroundThread(rootServiceProvider, migrationExecution, GetType(), Logger);
-                        else
-                            await ExecuteDataMigrationExecutor(migrationExecution);
+        var canExecuteMigrations = PlatformDataMigrationExecutor<TDbContext>
+            .GetCanExecuteDataMigrationExecutors(GetType().Assembly, serviceProvider, ApplicationDataMigrationHistoryQuery);
 
-                        migrationExecution.Dispose();
-                    }
-                    catch (Exception ex)
-                    {
-                        LogDataMigrationFailedError(Logger, ex, migrationExecution.Name);
+        var mainThreadMigrations = canExecuteMigrations.Where(p => !p.AllowRunInBackgroundThread).ToList();
+        var backgroundThreadMigrations = canExecuteMigrations.Where(p => p.AllowRunInBackgroundThread).ToList();
 
-                        throw;
-                    }
-                });
-    }
-
-    public static void ExecuteDataMigrationInBackgroundThread<TDbContext>(
-        IPlatformRootServiceProvider rootServiceProvider,
-        PlatformDataMigrationExecutor<TDbContext> migrationExecution,
-        Type dbContextType,
-        ILogger logger) where TDbContext : class, IPlatformDbContext<TDbContext>
-    {
-        var migrationExecutionType = migrationExecution.GetType();
-        var migrationExecutionName = migrationExecution.Name;
-
-        logger.LogInformation("Wait To Execute DataMigration {MigrationExecutionName} in background thread", migrationExecutionName);
-
+        await mainThreadMigrations.ForEachAsync(async migrationExecution => await ExecuteDataMigrationExecutor(migrationExecution));
         Util.TaskRunner.QueueActionInBackground(
             async () =>
             {
-                var currentDbContextPersistenceModule = rootServiceProvider
-                    .GetRequiredService(dbContextType.Assembly.GetTypes().First(p => p.IsAssignableTo(typeof(PlatformPersistenceModule<TDbContext>))))
-                    .As<PlatformPersistenceModule<TDbContext>>();
-
-                try
-                {
-                    await currentDbContextPersistenceModule.BackgroundThreadDataMigrationLock.WaitAsync();
-
-                    await ExecuteDataMigrationExecutorInNewScope<TDbContext>(
-                        rootServiceProvider,
-                        migrationExecutionName,
-                        migrationExecutionType,
-                        () => rootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(dbContextType));
-                }
-                finally
-                {
-                    currentDbContextPersistenceModule.BackgroundThreadDataMigrationLock.Release();
-                }
+                await backgroundThreadMigrations.ForEachAsync(
+                    async migrationExecution => await rootServiceProvider.ExecuteInjectScopedAsync(
+                        async (IServiceProvider sp, TDbContext dbContext) =>
+                            await dbContext.ExecuteDataMigrationExecutor(
+                                PlatformDataMigrationExecutor<TDbContext>.CreateNewInstance(sp, migrationExecution.GetType()))));
             },
-            () => rootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(dbContextType));
+            () => rootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType()));
     }
 
     public static void LogDataMigrationFailedError(ILogger logger, Exception ex, string migrationExecutionName)
@@ -112,115 +71,103 @@ public interface IPlatformDbContext : IDisposable
             ex.Message);
     }
 
-    public static async Task ExecuteDataMigrationExecutorInNewScope<TDbContext>(
-        IPlatformRootServiceProvider rootServiceProvider,
-        string migrationExecutionName,
-        Type migrationExecutionType,
-        Func<ILogger> loggerFactory)
-        where TDbContext : class, IPlatformDbContext<TDbContext>
-    {
-        try
-        {
-            await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                async () =>
-                {
-                    await rootServiceProvider.ExecuteInjectScopedAsync(
-                        async (IServiceProvider sp, TDbContext dbContext) =>
-                        {
-                            await dbContext.ExecuteDataMigrationExecutor(
-                                PlatformDataMigrationExecutor<TDbContext>.CreateNewInstance(sp, migrationExecutionType));
-                        });
-                },
-                retryCount: DefaultRunDataMigrationInBackgroundRetryCount,
-                sleepDurationProvider: retryAttempt => 20.Seconds(),
-                onRetry: (ex, timeSpan, currentRetry, ctx) =>
-                {
-                    LogDataMigrationFailedError(loggerFactory(), ex, migrationExecutionName);
-                });
-        }
-        catch (Exception ex)
-        {
-            LogDataMigrationFailedError(loggerFactory(), ex, migrationExecutionName);
-        }
-    }
-
     public async Task ExecuteDataMigrationExecutor<TDbContext>(PlatformDataMigrationExecutor<TDbContext> migrationExecution)
         where TDbContext : class, IPlatformDbContext
     {
-        using (var activity = IPlatformCqrsEventHandler.ActivitySource.StartActivity($"{nameof(IPlatformDbContext)}.{nameof(ExecuteDataMigrationExecutor)}"))
+        try
         {
-            activity?.AddTag("MigrationName", migrationExecution.Name);
-
-            var existingMigrationHistory = DataMigrationHistoryQuery().FirstOrDefault(p => p.Name == migrationExecution.Name);
-
-            if (existingMigrationHistory == null || existingMigrationHistory.CanStartOrRetryProcess())
+            using (var activity = IPlatformCqrsEventHandler.ActivitySource.StartActivity())
             {
-                Logger.LogInformation("DataMigration {MigrationExecutionName} STARTED.", migrationExecution.Name);
+                activity?.AddTag("MigrationName", migrationExecution.Name);
 
-                var toUpsertMigrationHistory = existingMigrationHistory ?? new PlatformDataMigrationHistory(migrationExecution.Name);
+                var existingMigrationHistory = DataMigrationHistoryQuery().FirstOrDefault(p => p.Name == migrationExecution.Name);
 
-                await UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(
-                    toUpsertMigrationHistory
-                        .With(p => p.Status = PlatformDataMigrationHistory.Statuses.Processing)
-                        .With(p => p.LastProcessError = null)
-                        .With(p => p.LastProcessingPingTime = Clock.UtcNow));
-
-                var startIntervalPingProcessingMigrationHistoryCts = new CancellationTokenSource();
-
-                StartIntervalPingProcessingMigrationHistory(migrationExecution.Name, startIntervalPingProcessingMigrationHistoryCts.Token);
-
-                try
+                if (existingMigrationHistory == null || existingMigrationHistory.CanStartOrRetryProcess())
                 {
-                    await migrationExecution.Execute(this.As<TDbContext>());
+                    Logger.LogInformation("DataMigration {MigrationExecutionName} STARTED.", migrationExecution.Name);
 
-                    await startIntervalPingProcessingMigrationHistoryCts.CancelAsync();
+                    var toUpsertMigrationHistory = existingMigrationHistory ?? new PlatformDataMigrationHistory(migrationExecution.Name);
 
-                    // Retry in case interval ping make it failed for concurrency token
-                    await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                        async () => await UpsertOneDataMigrationHistoryAsync(
-                            DataMigrationHistoryQuery()
-                                .First(p => p.Name == migrationExecution.Name)
-                                .With(p => p.Status = PlatformDataMigrationHistory.Statuses.Processed)
-                                .With(p => p.LastProcessingPingTime = Clock.UtcNow),
-                            CancellationToken.None),
-                        retryTime => retryTime.Seconds(),
-                        SaveMigrationHistoryFailedRetryCount,
-                        onRetry: (ex, delayRetryTime, retryAttempt, context) =>
-                        {
-                            if (retryAttempt > 3) Logger.LogError(ex, "Upsert DataMigrationHistory Status=Processed failed");
-                        },
-                        cancellationToken: CancellationToken.None);
+                    await UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(
+                        toUpsertMigrationHistory
+                            .With(p => p.Status = PlatformDataMigrationHistory.Statuses.Processing)
+                            .With(p => p.LastProcessError = null)
+                            .With(p => p.LastProcessingPingTime = Clock.UtcNow));
 
-                    await SaveChangesAsync(CancellationToken.None);
+                    var startIntervalPingProcessingMigrationHistoryCts = new CancellationTokenSource();
 
-                    this.As<TDbContext>().Logger.LogInformation("DataMigration {MigrationExecutionName} FINISHED.", migrationExecution.Name);
-                }
-                catch (Exception e)
-                {
-                    // Retry in case interval ping make it failed for concurrency token
-                    await Util.TaskRunner.WaitRetryAsync(
-                        async ct => await UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(
-                            DataMigrationHistoryQuery()
-                                .First(p => p.Name == migrationExecution.Name)
-                                .With(p => p.Status = PlatformDataMigrationHistory.Statuses.Failed)
-                                .With(p => p.LastProcessError = e.Serialize()),
-                            ct),
-                        retryTime => retryTime.Seconds(),
-                        SaveMigrationHistoryFailedRetryCount,
-                        (ex, delayRetryTime, retryAttempt, context) =>
-                        {
-                            if (retryAttempt > 3) Logger.LogError(ex, "Upsert DataMigrationHistory Status=Failed failed");
-                        },
-                        CancellationToken.None);
-                    throw;
-                }
-                finally
-                {
-                    if (!startIntervalPingProcessingMigrationHistoryCts.IsCancellationRequested)
+                    StartIntervalPingProcessingMigrationHistory(migrationExecution.Name, startIntervalPingProcessingMigrationHistoryCts.Token);
+
+                    try
+                    {
+                        await migrationExecution.Execute(this.As<TDbContext>());
+
                         await startIntervalPingProcessingMigrationHistoryCts.CancelAsync();
-                    startIntervalPingProcessingMigrationHistoryCts.Dispose();
+
+                        // Retry in case interval ping make it failed for concurrency token
+                        await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                            async () =>
+                            {
+                                var processingMigrationHistoryItem = DataMigrationHistoryQuery()
+                                    .FirstOrDefault(p => p.Name == migrationExecution.Name && p.Status == PlatformDataMigrationHistory.Statuses.Processing);
+
+                                if (processingMigrationHistoryItem != null)
+                                    await UpsertOneDataMigrationHistoryAsync(
+                                        processingMigrationHistoryItem
+                                            .With(p => p.Status = PlatformDataMigrationHistory.Statuses.Processed)
+                                            .With(p => p.LastProcessingPingTime = Clock.UtcNow),
+                                        CancellationToken.None);
+
+                                await SaveChangesAsync(CancellationToken.None);
+                            },
+                            retryTime => retryTime.Seconds(),
+                            SaveMigrationHistoryFailedRetryCount,
+                            onRetry: (ex, delayRetryTime, retryAttempt, context) =>
+                            {
+                                if (retryAttempt > 3) Logger.LogError(ex, "Upsert DataMigrationHistory Status=Processed failed");
+                            },
+                            cancellationToken: CancellationToken.None);
+
+                        this.As<TDbContext>().Logger.LogInformation("DataMigration {MigrationExecutionName} FINISHED.", migrationExecution.Name);
+                    }
+                    catch (Exception e)
+                    {
+                        // Retry in case interval ping make it failed for concurrency token
+                        await Util.TaskRunner.WaitRetryAsync(
+                            async ct => await UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(
+                                DataMigrationHistoryQuery()
+                                    .First(p => p.Name == migrationExecution.Name)
+                                    .With(p => p.Status = PlatformDataMigrationHistory.Statuses.Failed)
+                                    .With(p => p.LastProcessError = e.Serialize()),
+                                ct),
+                            retryTime => retryTime.Seconds(),
+                            SaveMigrationHistoryFailedRetryCount,
+                            (ex, delayRetryTime, retryAttempt, context) =>
+                            {
+                                if (retryAttempt > 3) Logger.LogError(ex, "Upsert DataMigrationHistory Status=Failed failed");
+                            },
+                            CancellationToken.None);
+                        throw;
+                    }
+                    finally
+                    {
+                        if (!startIntervalPingProcessingMigrationHistoryCts.IsCancellationRequested)
+                            await startIntervalPingProcessingMigrationHistoryCts.CancelAsync();
+                        startIntervalPingProcessingMigrationHistoryCts.Dispose();
+                    }
                 }
             }
+        }
+        catch (Exception ex)
+        {
+            LogDataMigrationFailedError(Logger, ex, migrationExecution.Name);
+
+            throw;
+        }
+        finally
+        {
+            migrationExecution.Dispose();
+            Util.GarbageCollector.Collect();
         }
     }
 

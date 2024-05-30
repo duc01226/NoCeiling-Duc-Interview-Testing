@@ -143,7 +143,9 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
     {
         var dbInitializedMigrationHistory = allApplicationDataMigrationHistoryQuery
             .First(p => p.Name == PlatformDataMigrationHistory.DbInitializedMigrationHistoryName);
-        var executedOrProcessingMigrationNames = allApplicationDataMigrationHistoryQuery.Where(PlatformDataMigrationHistory.ProcessedOrProcessingExpr())
+        var executedOrProcessingMigrationNames = allApplicationDataMigrationHistoryQuery
+            .Where(PlatformDataMigrationHistory.ProcessedOrProcessingExpr())
+            .Where(p => p.Name != PlatformDataMigrationHistory.DbInitializedMigrationHistoryName)
             .Select(p => p.Name)
             .ToHashSet();
 

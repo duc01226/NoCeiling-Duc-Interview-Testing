@@ -223,9 +223,6 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
     {
     }
 
-    // Use this to lock to allow only ony background data migration run at a time
-    public SemaphoreSlim BackgroundThreadDataMigrationLock { get; } = new(1, 1);
-
     public override int ExecuteInitPriority => DefaultExecuteInitPriority;
 
     public override async Task MigrateApplicationDataAsync(IServiceScope serviceScope)
