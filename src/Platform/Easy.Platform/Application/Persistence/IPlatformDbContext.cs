@@ -162,6 +162,7 @@ public interface IPlatformDbContext : IDisposable
                 await UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(
                     toUpsertMigrationHistory
                         .With(p => p.Status = PlatformDataMigrationHistory.Statuses.Processing)
+                        .With(p => p.LastProcessError = null)
                         .With(p => p.LastProcessingPingTime = Clock.UtcNow));
 
                 var startIntervalPingProcessingMigrationHistoryCts = new CancellationTokenSource();
@@ -175,20 +176,20 @@ public interface IPlatformDbContext : IDisposable
                     await startIntervalPingProcessingMigrationHistoryCts.CancelAsync();
 
                     // Retry in case interval ping make it failed for concurrency token
-                    await Util.TaskRunner.WaitRetryAsync(
-                        async ct => await UpsertOneDataMigrationHistoryAsync(
+                    await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                        async () => await UpsertOneDataMigrationHistoryAsync(
                             DataMigrationHistoryQuery()
                                 .First(p => p.Name == migrationExecution.Name)
                                 .With(p => p.Status = PlatformDataMigrationHistory.Statuses.Processed)
                                 .With(p => p.LastProcessingPingTime = Clock.UtcNow),
-                            ct),
+                            CancellationToken.None),
                         retryTime => retryTime.Seconds(),
                         SaveMigrationHistoryFailedRetryCount,
-                        (ex, delayRetryTime, retryAttempt, context) =>
+                        onRetry: (ex, delayRetryTime, retryAttempt, context) =>
                         {
                             if (retryAttempt > 3) Logger.LogError(ex, "Upsert DataMigrationHistory Status=Processed failed");
                         },
-                        default);
+                        cancellationToken: CancellationToken.None);
 
                     await SaveChangesAsync(CancellationToken.None);
 
@@ -210,7 +211,7 @@ public interface IPlatformDbContext : IDisposable
                         {
                             if (retryAttempt > 3) Logger.LogError(ex, "Upsert DataMigrationHistory Status=Failed failed");
                         },
-                        default);
+                        CancellationToken.None);
                     throw;
                 }
                 finally
