@@ -216,6 +216,8 @@ public interface IPlatformDbContext : IDisposable
                 }
                 finally
                 {
+                    if (!startIntervalPingProcessingMigrationHistoryCts.IsCancellationRequested)
+                        await startIntervalPingProcessingMigrationHistoryCts.CancelAsync();
                     startIntervalPingProcessingMigrationHistoryCts.Dispose();
                 }
             }
