@@ -147,7 +147,10 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         {
             if (!await ApplicationDataMigrationHistoryDbSet.AnyAsync(p => p.Name == PlatformDataMigrationHistory.DbInitializedMigrationHistoryName))
                 await ApplicationDataMigrationHistoryDbSet.AddAsync(
-                    new PlatformDataMigrationHistory(PlatformDataMigrationHistory.DbInitializedMigrationHistoryName));
+                    new PlatformDataMigrationHistory(PlatformDataMigrationHistory.DbInitializedMigrationHistoryName)
+                    {
+                        Status = PlatformDataMigrationHistory.Statuses.Processed
+                    });
         }
     }
 
@@ -278,9 +281,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                     return entity;
                 },
                 dismissSendEvent,
-                eventCustomConfig: eventCustomConfig,
-                requestContext: () => RequestContextAccessor.Current.GetAllKeyValues(),
-                eventStackTrace: PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
+                eventCustomConfig,
+                () => RequestContextAccessor.Current.GetAllKeyValues(),
+                PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
         }
         catch (Exception)
@@ -334,7 +337,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 .PipeIf(
                     entity.IsAuditedUserEntity(),
                     p => p.As<IUserAuditedEntity>()
-                        .SetCreatedBy(RequestContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
+                        .SetCreatedBy(RequestContextAccessor.Current.UserId(entity.GetAuditedUserIdType()))
                         .As<TEntity>())
                 .WithIf(
                     entity is IRowVersionEntity { ConcurrencyUpdateToken: null },
@@ -353,9 +356,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                     return result;
                 },
                 dismissSendEvent,
-                eventCustomConfig: eventCustomConfig,
-                requestContext: () => RequestContextAccessor.Current.GetAllKeyValues(),
-                eventStackTrace: PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
+                eventCustomConfig,
+                () => RequestContextAccessor.Current.GetAllKeyValues(),
+                PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
             return result;
@@ -503,7 +506,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 .PipeIf(
                     entity.IsAuditedUserEntity(),
                     p => p.As<IUserAuditedEntity>()
-                        .SetLastUpdatedBy(RequestContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
+                        .SetLastUpdatedBy(RequestContextAccessor.Current.UserId(entity.GetAuditedUserIdType()))
                         .As<TEntity>());
 
             var result = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, TEntity>(
@@ -523,9 +526,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                     return result;
                 },
                 dismissSendEvent,
-                eventCustomConfig: eventCustomConfig,
-                requestContext: () => RequestContextAccessor.Current.GetAllKeyValues(),
-                eventStackTrace: PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
+                eventCustomConfig,
+                () => RequestContextAccessor.Current.GetAllKeyValues(),
+                PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
             return result;
@@ -572,8 +575,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             entities,
             crudAction,
             eventCustomConfig,
-            requestContext: () => RequestContextAccessor.Current.GetAllKeyValues(),
-            eventStackTrace: PlatformCqrsEntityEvent.GetBulkEntitiesEventStackTrace<TEntity, TPrimaryKey>(RootServiceProvider),
+            () => RequestContextAccessor.Current.GetAllKeyValues(),
+            PlatformCqrsEntityEvent.GetBulkEntitiesEventStackTrace<TEntity, TPrimaryKey>(RootServiceProvider),
             cancellationToken);
     }
 

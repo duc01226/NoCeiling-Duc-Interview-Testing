@@ -105,11 +105,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                           ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken),
                     entity,
                     new ReplaceOptions { IsUpsert = false },
-                    cancellationToken: cancellationToken);
+                    cancellationToken);
 
             if (result.MatchedCount <= 0)
             {
-                if (await ApplicationDataMigrationHistoryCollection.AsQueryable().AnyAsync(p => p.Name == entity.Name, cancellationToken: cancellationToken))
+                if (await ApplicationDataMigrationHistoryCollection.AsQueryable().AnyAsync(p => p.Name == entity.Name, cancellationToken))
                     throw new PlatformDomainRowVersionConflictException(
                         $"Update {nameof(PlatformDataMigrationHistory)} with Name:{toBeUpdatedEntity.Name} has conflicted version.");
                 throw new PlatformDomainEntityNotFoundException<PlatformDataMigrationHistory>(toBeUpdatedEntity.Name);
@@ -156,7 +156,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             if (!await ApplicationDataMigrationHistoryCollection.AsQueryable()
                 .AnyAsync(p => p.Name == PlatformDataMigrationHistory.DbInitializedMigrationHistoryName))
                 await ApplicationDataMigrationHistoryCollection.InsertOneAsync(
-                    new PlatformDataMigrationHistory(PlatformDataMigrationHistory.DbInitializedMigrationHistoryName));
+                    new PlatformDataMigrationHistory(PlatformDataMigrationHistory.DbInitializedMigrationHistoryName)
+                    {
+                        Status = PlatformDataMigrationHistory.Statuses.Processed
+                    });
         }
     }
 
@@ -256,7 +259,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 (skipCount, pageSize) => entities.Skip(skipCount)
                     .Take(pageSize)
                     .SelectAsync(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken)),
-                maxItemCount: entities.Count,
+                entities.Count,
                 IPlatformDbContext.DefaultPageSize,
                 cancellationToken: cancellationToken)
             .Then(result => result.SelectMany(p => p).ToList())
@@ -286,7 +289,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 (skipCount, pageSize) => entities.Skip(skipCount)
                     .Take(pageSize)
                     .SelectAsync(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken)),
-                maxItemCount: entities.Count,
+                entities.Count,
                 IPlatformDbContext.DefaultPageSize,
                 cancellationToken: cancellationToken)
             .Then(result => result.SelectMany(p => p).ToList())
@@ -327,9 +330,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 return entity;
             },
             dismissSendEvent,
-            eventCustomConfig: eventCustomConfig,
-            requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
-            eventStackTrace: PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
+            eventCustomConfig,
+            () => UserContextAccessor.Current.GetAllKeyValues(),
+            PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
             cancellationToken);
     }
 
@@ -364,7 +367,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, upsert: false, eventCustomConfig, cancellationToken);
+        return CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, false, eventCustomConfig, cancellationToken);
     }
 
     public async Task<TEntity> CreateOrUpdateAsync<TEntity, TPrimaryKey>(
@@ -389,7 +392,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 eventCustomConfig,
                 cancellationToken);
 
-        return await CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, upsert: true, eventCustomConfig, cancellationToken);
+        return await CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, true, eventCustomConfig, cancellationToken);
     }
 
     public async Task<List<TEntity>> CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
@@ -498,7 +501,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             .PipeIf(
                 entity.IsAuditedUserEntity(),
                 p => p.As<IUserAuditedEntity>()
-                    .SetLastUpdatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
+                    .SetLastUpdatedBy(UserContextAccessor.Current.UserId(entity.GetAuditedUserIdType()))
                     .As<TEntity>());
 
         if (toBeUpdatedEntity is IRowVersionEntity toBeUpdatedRowVersionEntity)
@@ -523,9 +526,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         new ReplaceOptions { IsUpsert = false },
                         cancellationToken),
                 dismissSendEvent,
-                eventCustomConfig: eventCustomConfig,
-                requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
-                eventStackTrace: PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
+                eventCustomConfig,
+                () => UserContextAccessor.Current.GetAllKeyValues(),
+                PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -550,9 +553,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         new ReplaceOptions { IsUpsert = false },
                         cancellationToken),
                 dismissSendEvent,
-                eventCustomConfig: eventCustomConfig,
-                requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
-                eventStackTrace: PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
+                eventCustomConfig,
+                () => UserContextAccessor.Current.GetAllKeyValues(),
+                PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
             if (result.MatchedCount <= 0)
@@ -765,7 +768,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             .PipeIf(
                 entity.IsAuditedUserEntity(),
                 p => p.As<IUserAuditedEntity>()
-                    .SetCreatedBy(UserContextAccessor.Current.UserId(userIdType: entity.GetAuditedUserIdType()))
+                    .SetCreatedBy(UserContextAccessor.Current.UserId(entity.GetAuditedUserIdType()))
                     .As<TEntity>())
             .WithIf(
                 entity is IRowVersionEntity { ConcurrencyUpdateToken: null },
@@ -778,9 +781,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 toBeCreatedEntity,
                 entity => GetTable<TEntity>().InsertOneAsync(entity, null, cancellationToken).Then(() => entity),
                 dismissSendEvent,
-                eventCustomConfig: eventCustomConfig,
-                requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
-                eventStackTrace: PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
+                eventCustomConfig,
+                () => UserContextAccessor.Current.GetAllKeyValues(),
+                PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
         else
             await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
@@ -795,9 +798,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         cancellationToken)
                     .Then(() => entity),
                 dismissSendEvent,
-                eventCustomConfig: eventCustomConfig,
-                requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
-                eventStackTrace: PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
+                eventCustomConfig,
+                () => UserContextAccessor.Current.GetAllKeyValues(),
+                PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
         return toBeCreatedEntity;
@@ -891,8 +894,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             entities,
             crudAction,
             eventCustomConfig,
-            requestContext: () => UserContextAccessor.Current.GetAllKeyValues(),
-            eventStackTrace: PlatformCqrsEntityEvent.GetBulkEntitiesEventStackTrace<TEntity, TPrimaryKey>(RootServiceProvider),
+            () => UserContextAccessor.Current.GetAllKeyValues(),
+            PlatformCqrsEntityEvent.GetBulkEntitiesEventStackTrace<TEntity, TPrimaryKey>(RootServiceProvider),
             cancellationToken);
     }
 }
