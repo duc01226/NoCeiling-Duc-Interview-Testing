@@ -288,6 +288,13 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
+    public abstract Task<TEntity> CreateOrUpdateAsync(
+        IPlatformUnitOfWork uow,
+        TEntity entity,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default);
+
     public abstract Task<List<TEntity>> CreateOrUpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,

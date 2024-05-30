@@ -135,10 +135,62 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         }
     }
 
+    public async Task<TEntity> CreateOrUpdateImmediatelyAsync(
+        TEntity entity,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+    {
+        using (var immediatelyUow = UowManager().CreateNewUow(true))
+        {
+            var result = await CreateOrUpdateAsync(
+                immediatelyUow,
+                entity,
+                dismissSendEvent,
+                eventCustomConfig: eventCustomConfig,
+                cancellationToken: cancellationToken);
+
+            await immediatelyUow.CompleteAsync(cancellationToken);
+
+            return result;
+        }
+    }
+
+    public async Task<List<TEntity>> CreateOrUpdateManyImmediatelyAsync(
+        List<TEntity> entities,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+    {
+        using (var immediatelyUow = UowManager().CreateNewUow(true))
+        {
+            var result = await CreateOrUpdateManyAsync(
+                immediatelyUow,
+                entities,
+                dismissSendEvent,
+                eventCustomConfig: eventCustomConfig,
+                cancellationToken: cancellationToken);
+
+            await immediatelyUow.CompleteAsync(cancellationToken);
+
+            return result;
+        }
+    }
+
     /// <summary>
     /// Asynchronously creates or updates entity in the repository within the context of current active unit of work or single commit create immediately.
     /// </summary>
     public Task<TEntity> CreateOrUpdateAsync(
+        TEntity entity,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Asynchronously creates or updates entity in the repository within the context of a given unit of work or single commit create immediately.
+    /// </summary>
+    public Task<TEntity> CreateOrUpdateAsync(
+        IPlatformUnitOfWork uow,
         TEntity entity,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,

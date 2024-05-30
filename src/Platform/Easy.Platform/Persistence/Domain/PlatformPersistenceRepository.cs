@@ -296,6 +296,16 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
+        return await CreateOrUpdateAsync(null, entity, dismissSendEvent, eventCustomConfig, cancellationToken);
+    }
+
+    public override async Task<TEntity> CreateOrUpdateAsync(
+        IPlatformUnitOfWork uow,
+        TEntity entity,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+    {
         if (IsDistributedTracingEnabled)
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateAsync)}"))
             {
@@ -303,11 +313,13 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                 activity?.AddTag("Entity", entity.ToFormattedJson());
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-                    uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken));
+                    uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken),
+                    uow);
             }
 
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken));
+            uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken),
+            uow);
     }
 
     public override async Task<TEntity> CreateOrUpdateAsync(
@@ -340,34 +352,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entities.IsEmpty()) return entities;
-
-        EnsureNoDuplicatedUniqueCompositeIdEntities(entities);
-
-        if (IsDistributedTracingEnabled)
-            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateManyAsync)}"))
-            {
-                activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entities.ToFormattedJson());
-
-                return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-                    uow => GetUowDbContext(uow)
-                        .CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
-                            entities,
-                            customCheckExistingPredicateBuilder,
-                            dismissSendEvent,
-                            eventCustomConfig,
-                            cancellationToken));
-            }
-
-        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow)
-                .CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
-                    entities,
-                    customCheckExistingPredicateBuilder,
-                    dismissSendEvent,
-                    eventCustomConfig,
-                    cancellationToken));
+        return await CreateOrUpdateManyAsync(null, entities, dismissSendEvent, customCheckExistingPredicateBuilder, eventCustomConfig, cancellationToken);
     }
 
     public override async Task<List<TEntity>> CreateOrUpdateManyAsync(
@@ -388,7 +373,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
                 activity?.AddTag("Entity", entities.ToFormattedJson());
 
-                return await ExecuteWithBadQueryWarningForWriteHandling(
+                return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow)
                         .CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
                             entities,
@@ -399,7 +384,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                     uow);
             }
 
-        return await ExecuteWithBadQueryWarningForWriteHandling(
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow)
                 .CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
                     entities,
