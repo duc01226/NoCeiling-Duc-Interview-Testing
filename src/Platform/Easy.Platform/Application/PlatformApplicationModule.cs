@@ -93,14 +93,17 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                         .GetServices<IPlatformApplicationDataSeeder>()
                         .DistinctBy(p => p.GetType())
                         .Where(p => p.DelaySeedingInBackgroundBySeconds == 0)
-                        .OrderBy(p => p.SeedOrder));
+                        .OrderBy(p => p.SeedOrder)
+                        .ToList());
 
                 await ExecuteDataSeeders(
                     serviceScope.ServiceProvider
                         .GetServices<IPlatformApplicationDataSeeder>()
                         .DistinctBy(p => p.GetType())
                         .Where(p => p.DelaySeedingInBackgroundBySeconds > 0)
-                        .OrderBy(p => p.SeedOrder));
+                        .OrderBy(p => p.SeedOrder)
+                        .ToList(),
+                    inBackground: true);
             },
             retryAttempt => 10.Seconds(),
             10,
@@ -159,7 +162,17 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             logger.LogInformation("[SeedData] {DataSeeder} FINISHED.", dataSeeder.GetType().Name);
         }
 
-        async Task ExecuteDataSeeders(IOrderedEnumerable<IPlatformApplicationDataSeeder> dataSeeders)
+        async Task ExecuteDataSeeders(List<IPlatformApplicationDataSeeder> dataSeeders, bool inBackground = false)
+        {
+            if (inBackground)
+                Util.TaskRunner.QueueActionInBackground(
+                    async () => await RunDataSeeders(dataSeeders, inNewScope: true),
+                    () => CreateLogger(LoggerFactory));
+            else
+                await RunDataSeeders(dataSeeders);
+        }
+
+        async Task RunDataSeeders(List<IPlatformApplicationDataSeeder> dataSeeders, bool inNewScope = false)
         {
             await dataSeeders.ForEachAsync(
                 async seeder =>
@@ -167,19 +180,22 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                     if (seeder.DelaySeedingInBackgroundBySeconds > 0)
                     {
                         Logger.LogInformation(
-                            "[SeedData] {Seeder} is scheduled running in background after {DelaySeedingInBackgroundBySeconds} seconds.",
+                            "[SeedData] {Seeder} is SCHEDULED running in background after {DelaySeedingInBackgroundBySeconds} seconds.",
                             seeder.GetType().Name,
                             seeder.DelaySeedingInBackgroundBySeconds);
 
-                        Util.TaskRunner.QueueActionInBackground(
-                            async () => await ExecuteSeedingWithNewScopeInBackground(seeder.GetType(), Logger),
-                            () => CreateLogger(LoggerFactory),
-                            seeder.DelaySeedingInBackgroundBySeconds);
+                        await Task.Delay(seeder.DelaySeedingInBackgroundBySeconds.Seconds());
                     }
+
+                    if (inNewScope)
+                        using (var newScope = ServiceProvider.CreateScope())
+                        {
+                            var dataSeeder = newScope.ServiceProvider.GetService(seeder.GetType()).As<IPlatformApplicationDataSeeder>();
+
+                            await ExecuteDataSeederWithLog(dataSeeder, Logger);
+                        }
                     else
-                    {
                         await ExecuteDataSeederWithLog(seeder, Logger);
-                    }
                 });
         }
     }
