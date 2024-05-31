@@ -341,7 +341,10 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 : null;
             // WHY: Do not need to wait for uow completed if the uow for db do not handle actually transaction.
             // Can execute it immediately without waiting for uow to complete
-            if (currentActiveUow == null || currentActiveUow.IsPseudoTransactionUow())
+            // Explain 2: (currentActiveUow.IsPseudoTransactionUow() && outboxBusMessageRepository.TryGetCurrentOrCreatedActiveUow(sourceOutboxUowId) != null) =>
+            // Check to ensure that currentActiveUow is the same uow type (db context type) of outbox repository, support case outbox repo use different db context type
+            if (currentActiveUow == null ||
+                (currentActiveUow.IsPseudoTransactionUow() && outboxBusMessageRepository.TryGetCurrentOrCreatedActiveUow(sourceOutboxUowId) != null))
             {
                 // Check try CompleteAsync current active uow if any to ensure that newOutboxMessage will be saved
                 // Do this to fix if someone open uow without complete/save it for some legacy project

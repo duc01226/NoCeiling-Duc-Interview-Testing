@@ -34,6 +34,18 @@ public interface IPlatformRepository
     /// <exception cref="Exception">Thrown if there is no active unit of work.</exception>
     public IPlatformUnitOfWork CurrentOrCreatedActiveUow(string uowId);
 
+    public IPlatformUnitOfWork TryGetCurrentOrCreatedActiveUow(string uowId)
+    {
+        try
+        {
+            return CurrentOrCreatedActiveUow(uowId);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
     /// <summary>
     /// Gets the unit of work manager.
     /// </summary>
