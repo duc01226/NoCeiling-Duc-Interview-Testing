@@ -13,6 +13,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import {
     asyncScheduler,
     BehaviorSubject,
+    catchError,
     combineLatest,
     defer,
     delay,
@@ -208,7 +209,8 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                     this.setupIntervalCheckDataMutation();
 
                     return this.vmStateInitiated;
-                })
+                }),
+                catchError(err => of(false))
             );
         }
 

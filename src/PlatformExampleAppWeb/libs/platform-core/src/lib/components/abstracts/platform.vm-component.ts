@@ -191,7 +191,7 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
             this.internalSetVm(newUpdatedVm, true, onVmChanged);
         }
 
-        return this._vm!;
+        return this._vm;
     }
 
     /**

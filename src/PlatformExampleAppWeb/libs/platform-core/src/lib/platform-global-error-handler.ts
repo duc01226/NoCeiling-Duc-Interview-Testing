@@ -1,5 +1,6 @@
 import { ErrorHandler, Injectable } from '@angular/core';
 
+import { PlatformApiServiceErrorResponse } from './api-services';
 import { PlatformCachingService } from './caching';
 import { PlatformServiceWorkerService } from './platform-service-worker';
 
@@ -13,11 +14,12 @@ export class PlatformGlobalErrorHandler extends ErrorHandler {
     }
 
     public override handleError(error: unknown) {
-        super.handleError(error);
-
-        setTimeout(() => {
-            this.clearCache();
-        });
+        if (!(error instanceof PlatformApiServiceErrorResponse)) {
+            super.handleError(error);
+            setTimeout(() => {
+                this.clearCache();
+            });
+        }
     }
 
     public clearCache() {
