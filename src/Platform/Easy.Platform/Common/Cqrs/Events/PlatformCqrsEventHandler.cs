@@ -101,7 +101,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
             couldRunInBackgroundThread())
             Util.TaskRunner.QueueActionInBackground(
                 async () => await ExecuteHandleInNewScopeAsync(@event, cancellationToken),
-                () => LoggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>)),
+                () => LoggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}"),
                 cancellationToken: default);
         else
             await ExecuteRetryHandleAsync(this, @event);
@@ -198,8 +198,8 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     protected abstract Task HandleAsync(TEvent @event, CancellationToken cancellationToken);
 
-    public static ILogger CreateLogger(ILoggerFactory loggerFactory)
+    public ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
-        return loggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>));
+        return loggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}");
     }
 }

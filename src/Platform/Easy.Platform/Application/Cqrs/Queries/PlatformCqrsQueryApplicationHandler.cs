@@ -82,7 +82,7 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
                         () => HandleAsync(request, cancellationToken),
                         onException: ex =>
                         {
-                            LoggerFactory.CreateLogger(typeof(PlatformCqrsQueryApplicationHandler<,>))
+                            LoggerFactory.CreateLogger(typeof(PlatformCqrsQueryApplicationHandler<,>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}")
                                 .Log(
                                     ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
                                     ex,

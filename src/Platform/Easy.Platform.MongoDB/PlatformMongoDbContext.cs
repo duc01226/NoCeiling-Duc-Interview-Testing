@@ -472,7 +472,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     public ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
-        return loggerFactory.CreateLogger(typeof(IPlatformDbContext));
+        return loggerFactory.CreateLogger(typeof(IPlatformDbContext).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}");
     }
 
     public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(

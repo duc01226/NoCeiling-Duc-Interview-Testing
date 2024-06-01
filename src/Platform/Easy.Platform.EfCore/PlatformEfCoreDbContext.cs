@@ -474,7 +474,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     public ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
-        return loggerFactory.CreateLogger(typeof(IPlatformDbContext));
+        return loggerFactory.CreateLogger(typeof(IPlatformDbContext).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}");
     }
 
     public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(

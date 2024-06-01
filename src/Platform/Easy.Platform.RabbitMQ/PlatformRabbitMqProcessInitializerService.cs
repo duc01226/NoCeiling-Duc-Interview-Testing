@@ -79,13 +79,10 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         this.consumeInboxBusMessageHostedService = consumeInboxBusMessageHostedService;
         this.inboxBusMessageCleanerHostedService = inboxBusMessageCleanerHostedService;
         this.rootServiceProvider = rootServiceProvider;
-        Logger = loggerFactory.CreateLogger(typeof(PlatformRabbitMqProcessInitializerService));
-        InvokeConsumerLogger = loggerFactory.CreateLogger(typeof(PlatformMessageBusConsumer));
+        Logger = loggerFactory.CreateLogger(GetType());
     }
 
     protected ILogger Logger { get; }
-
-    protected ILogger InvokeConsumerLogger { get; }
 
     protected bool CheckAllModulesInitiatedToAllowConsumeMessages { get; set; }
 
@@ -441,7 +438,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                 busMessage,
                 args.RoutingKey,
                 messageBusConfig,
-                InvokeConsumerLogger);
+                Logger);
         }
     }
 

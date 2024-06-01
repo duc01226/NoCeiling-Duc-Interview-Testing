@@ -147,17 +147,27 @@ public interface IPlatformCacheRepository
     Task ProcessClearDeprecatedGlobalRequestCachedKeys();
 }
 
-public abstract class PlatformCacheRepository(
-    IServiceProvider provider,
-    ILoggerFactory loggerFactory,
-    PlatformCacheSettings cacheSettings)
-    : IPlatformCacheRepository
+public abstract class PlatformCacheRepository : IPlatformCacheRepository
 {
     public static readonly string CachedKeysCollectionName = "___PlatformGlobalCacheKeys___";
 
-    protected readonly PlatformCacheSettings CacheSettings = cacheSettings;
+    protected readonly PlatformCacheSettings CacheSettings;
 
-    private readonly Lazy<ILogger> loggerLazy = new(() => loggerFactory.CreateLogger(typeof(PlatformCacheRepository)));
+    protected readonly IServiceProvider ServiceProvider;
+
+    private readonly Lazy<ILogger> loggerLazy;
+
+    public PlatformCacheRepository(
+        IServiceProvider serviceProvider,
+        ILoggerFactory loggerFactory,
+        PlatformCacheSettings cacheSettings)
+    {
+        ServiceProvider = serviceProvider;
+        loggerLazy = new Lazy<ILogger>(
+            () => loggerFactory.CreateLogger(typeof(PlatformCacheRepository).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}"));
+        CacheSettings = cacheSettings;
+    }
+
     protected ILogger Logger => loggerLazy.Value;
 
     public abstract T Get<T>(PlatformCacheKey cacheKey);
@@ -206,7 +216,7 @@ public abstract class PlatformCacheRepository(
         where TCollectionCacheKeyProvider : PlatformCollectionCacheKeyProvider
     {
         await RemoveAsync(
-            provider.GetService<TCollectionCacheKeyProvider>()!.MatchCollectionKeyPredicate(),
+            ServiceProvider.GetService<TCollectionCacheKeyProvider>()!.MatchCollectionKeyPredicate(),
             token);
     }
 
@@ -259,7 +269,7 @@ public abstract class PlatformCacheRepository(
 
     public PlatformCacheEntryOptions GetDefaultCacheEntryOptions()
     {
-        return provider.GetService<PlatformCacheEntryOptions>() ?? CacheSettings.DefaultCacheEntryOptions;
+        return ServiceProvider.GetService<PlatformCacheEntryOptions>() ?? CacheSettings.DefaultCacheEntryOptions;
     }
 
     public abstract Task ProcessClearDeprecatedGlobalRequestCachedKeys();

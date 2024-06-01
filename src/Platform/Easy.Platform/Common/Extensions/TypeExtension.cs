@@ -43,6 +43,19 @@ public static class TypeExtension
     }
 
     /// <summary>
+    /// Gets the full name of the type or, if the type is generic, gets the generic type full name.
+    /// </summary>
+    /// <param name="t">The type to get the full name for.</param>
+    /// <returns>The name of the type or the generic type full name.</returns>
+    public static string GetFullNameOrGenericTypeFullName(this Type t)
+    {
+        if (!t.IsGenericType)
+            return t.FullName;
+
+        return !t.IsGenericType ? t.FullName : GetGenericTypeFullName(t);
+    }
+
+    /// <summary>
     /// Gets the generic type name of a type.
     /// </summary>
     /// <param name="t">The type to get the generic type name for.</param>
@@ -55,7 +68,23 @@ public static class TypeExtension
 
         var genericArgs = t.GetGenericArguments().Select(GetNameOrGenericTypeName).JoinToString(",");
 
-        return genericTypeClassNameOnly + "<" + genericArgs + ">";
+        return $"{genericTypeClassNameOnly}<{genericArgs}>";
+    }
+
+    /// <summary>
+    /// Gets the generic type full name of a type.
+    /// </summary>
+    /// <param name="t">The type to get the generic type full name for.</param>
+    /// <returns>The generic type full name of the type.</returns>
+    public static string GetGenericTypeFullName(this Type t)
+    {
+        var genericTypeName = t.GetGenericTypeDefinition().Name;
+
+        var genericTypeClassNameOnly = genericTypeName.Substring(0, genericTypeName.IndexOf('`'));
+
+        var genericArgs = t.GetGenericArguments().Select(GetNameOrGenericTypeName).JoinToString(",");
+
+        return $"{t.Namespace}.{genericTypeClassNameOnly}<{genericArgs}>";
     }
 
     /// <summary>

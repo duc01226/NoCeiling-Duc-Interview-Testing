@@ -24,7 +24,7 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
         BlobServiceClient blobServiceClient,
         PlatformFileStorageOptions fileStorageOptions)
     {
-        logger = loggerFactory.CreateLogger(typeof(PlatformAzureFileStorageService));
+        logger = loggerFactory.CreateLogger(typeof(PlatformAzureFileStorageService).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}");
         this.blobServiceClient = blobServiceClient;
         this.fileStorageOptions = fileStorageOptions;
         fileStorageConfiguration = fileStorageConfigurationOptions;

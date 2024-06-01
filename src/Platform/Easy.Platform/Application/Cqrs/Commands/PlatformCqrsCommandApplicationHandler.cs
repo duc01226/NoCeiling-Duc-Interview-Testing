@@ -98,7 +98,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                         () => ExecuteHandleAsync(request, cancellationToken),
                         onException: ex =>
                         {
-                            LoggerFactory.CreateLogger(typeof(PlatformCqrsCommandApplicationHandler<>))
+                            LoggerFactory.CreateLogger(typeof(PlatformCqrsCommandApplicationHandler<>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}")
                                 .Log(
                                     ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
                                     ex,

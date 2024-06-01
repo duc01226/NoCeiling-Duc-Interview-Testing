@@ -42,7 +42,7 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
     public PlatformBackgroundJobExecutor(ILoggerFactory loggerFactory, IPlatformRootServiceProvider rootServiceProvider)
     {
         RootServiceProvider = rootServiceProvider;
-        Logger = loggerFactory.CreateLogger(typeof(PlatformBackgroundJobExecutor));
+        Logger = loggerFactory.CreateLogger(typeof(PlatformBackgroundJobExecutor).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}");
     }
 
     protected IPlatformRootServiceProvider RootServiceProvider { get; }

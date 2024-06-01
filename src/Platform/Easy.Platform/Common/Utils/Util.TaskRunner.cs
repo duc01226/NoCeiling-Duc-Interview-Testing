@@ -78,7 +78,7 @@ public static partial class Util
             Task.Run(
                 async () =>
                 {
-                    PlatformGlobalLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
+                    PlatformLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
 
                     try
                     {
@@ -115,7 +115,7 @@ public static partial class Util
             Task.Run(
                 async () =>
                 {
-                    PlatformGlobalLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
+                    PlatformLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
 
                     try
                     {
@@ -152,7 +152,7 @@ public static partial class Util
             Task.Run(
                 async () =>
                 {
-                    PlatformGlobalLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
+                    PlatformLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
 
                     try
                     {
@@ -226,7 +226,7 @@ public static partial class Util
             Task.Run(
                 async () =>
                 {
-                    PlatformGlobalLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
+                    PlatformLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
 
                     try
                     {

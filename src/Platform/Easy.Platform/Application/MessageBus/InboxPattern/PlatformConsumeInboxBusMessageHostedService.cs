@@ -34,7 +34,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
         AvailableConsumerByNameToTypeDic = messageBusScanner
             .ScanAllDefinedConsumerTypes()
             .ToDictionary(PlatformInboxBusMessage.GetConsumerByValue);
-        InvokeConsumerLogger = loggerFactory.CreateLogger(typeof(PlatformMessageBusConsumer));
+        InvokeConsumerLogger = loggerFactory.CreateLogger(typeof(PlatformMessageBusConsumer).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}");
     }
 
     public override bool LogIntervalProcessInformation => InboxConfig.LogIntervalProcessInformation;

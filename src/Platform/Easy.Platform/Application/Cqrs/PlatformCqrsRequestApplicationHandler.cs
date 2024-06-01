@@ -1,6 +1,7 @@
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Validations;
 using Microsoft.Extensions.Logging;
 
@@ -45,7 +46,8 @@ public abstract class PlatformCqrsRequestApplicationHandler<TRequest> : Platform
         RequestContextAccessor = requestContextAccessor ?? throw new ArgumentNullException(nameof(requestContextAccessor));
         LoggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
         RootServiceProvider = rootServiceProvider ?? throw new ArgumentNullException(nameof(rootServiceProvider));
-        loggerLazy = new Lazy<ILogger>(() => loggerFactory.CreateLogger(typeof(PlatformCqrsRequestApplicationHandler<>)));
+        loggerLazy = new Lazy<ILogger>(
+            () => loggerFactory.CreateLogger(typeof(PlatformCqrsRequestApplicationHandler<>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}"));
     }
 
     /// <summary>

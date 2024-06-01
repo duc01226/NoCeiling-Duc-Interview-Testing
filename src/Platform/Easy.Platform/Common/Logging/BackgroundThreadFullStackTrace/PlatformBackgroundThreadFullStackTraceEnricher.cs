@@ -9,12 +9,12 @@ public class PlatformBackgroundThreadFullStackTraceEnricher : ILogEventEnricher
 
     public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
     {
-        if (PlatformGlobalLogger.BackgroundThreadFullStackTraceContextAccessor.Current != null && logEvent.Exception != null)
+        if (PlatformLogger.BackgroundThreadFullStackTraceContextAccessor.Current != null && logEvent.Exception != null)
         {
             var enrichProperty = propertyFactory
                 .CreateProperty(
                     PlatformBackgroundThreadFullStackTraceLogPropertyName,
-                    $"PlatformBackgroundThreadFullStackTrace: {PlatformGlobalLogger.BackgroundThreadFullStackTraceContextAccessor.Current}");
+                    $"PlatformBackgroundThreadFullStackTrace: {PlatformLogger.BackgroundThreadFullStackTraceContextAccessor.Current}");
 
             logEvent.AddOrUpdateProperty(enrichProperty);
         }

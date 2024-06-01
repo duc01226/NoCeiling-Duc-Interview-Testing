@@ -24,7 +24,9 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         IServiceProvider serviceProvider) : base(unitOfWorkManager, serviceProvider)
     {
         PersistenceConfiguration = serviceProvider.GetRequiredService<PlatformPersistenceConfiguration<TDbContext>>();
-        loggerLazy = new Lazy<ILogger>(() => serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(PlatformPersistenceRepository<,,,>)));
+        loggerLazy = new Lazy<ILogger>(
+            () => serviceProvider.GetRequiredService<ILoggerFactory>()
+                .CreateLogger(typeof(PlatformPersistenceRepository<,,,>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}"));
     }
 
     /// <summary>

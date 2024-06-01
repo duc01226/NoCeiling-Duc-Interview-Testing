@@ -82,7 +82,7 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
                 retryCount: DefaultStartBackgroundJobProcessingRetryCount,
                 onRetry: (exception, timeSpan, currentRetry, ctx) =>
                 {
-                    LoggerFactory.CreateLogger(typeof(PlatformBackgroundJobModule))
+                    LoggerFactory.CreateLogger(typeof(PlatformBackgroundJobModule).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}")
                         .LogError(
                             exception.BeautifyStackTrace(),
                             "[StartBackgroundJobProcessing] Exception {ExceptionType} detected on attempt StartBackgroundJobProcessing {Retry} of {Retries}",
@@ -126,7 +126,7 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
             retryCount: DefaultStartBackgroundJobProcessingRetryCount,
             onRetry: (exception, timeSpan, currentRetry, ctx) =>
             {
-                LoggerFactory.CreateLogger(typeof(PlatformBackgroundJobModule))
+                LoggerFactory.CreateLogger(typeof(PlatformBackgroundJobModule).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}")
                     .LogError(
                         exception.BeautifyStackTrace(),
                         "[Init][ReplaceAllLatestRecurringBackgroundJobs] Exception {ExceptionType} detected on attempt ReplaceAllLatestRecurringBackgroundJobs {Retry} of {Retries}",

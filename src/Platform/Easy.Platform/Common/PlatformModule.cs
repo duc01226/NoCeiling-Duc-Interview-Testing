@@ -85,7 +85,7 @@ public interface IPlatformModule
 
         var useLogger = logger ?? CreateDefaultLogger(serviceProvider);
 
-        useLogger.LogInformation("[Platform] Start WaitAllModulesInitiated of type {ModuleType} {LogSuffix} STARTED", moduleType.Name, logSuffix);
+        useLogger.LogInformation("[PlatformModule] Start WaitAllModulesInitiated of type {ModuleType} {LogSuffix} STARTED", moduleType.Name, logSuffix);
 
         await Util.TaskRunner.WaitUntilAsync(
             async () =>
@@ -460,9 +460,9 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
         return Util.ListBuilder.New(IPlatformCqrsEventHandler.ActivitySource.Name, PlatformIntervalHostingBackgroundService.ActivitySource.Name);
     }
 
-    public static ILogger CreateLogger(ILoggerFactory loggerFactory)
+    public ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
-        return loggerFactory.CreateLogger(typeof(PlatformModule));
+        return loggerFactory.CreateLogger(typeof(PlatformModule).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}");
     }
 
     protected static void ExecuteRegisterByAssemblyOnlyOnce(Action<Assembly> action, List<Assembly> assemblies, string actionName)
