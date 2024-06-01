@@ -296,83 +296,95 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             if (AllowHandleInBackgroundThread(@event) && @event.RequestContext?.Any() == true)
                 requestContextAccessor.Current.SetValues(@event.RequestContext);
 
+
             if (CanExecuteHandlingEventUsingInboxConsumer(
                     hasInboxMessageSupport: HasInboxMessageSupport(),
                     @event) &&
                 !IsCurrentInstanceCalledFromInboxBusMessageConsumer &&
                 !IsInjectingUserContextAccessor &&
                 !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()))
-            {
-                var eventSourceUow = TryGetCurrentOrCreatedActiveUow(@event);
-                var currentBusMessageIdentity = BuildCurrentBusMessageIdentity(@event.RequestContext);
-
-                if (@event is IPlatformUowEvent && eventSourceUow != null && !eventSourceUow.IsPseudoTransactionUow())
-                    await HandleExecutingInboxConsumerAsync(
-                        @event,
-                        ServiceProvider,
-                        ServiceProvider.GetRequiredService<PlatformInboxConfig>(),
-                        ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>(),
-                        ServiceProvider.GetRequiredService<IPlatformApplicationSettingContext>(),
-                        currentBusMessageIdentity,
-                        eventSourceUow,
-                        cancellationToken);
-                else
-                    await RootServiceProvider.ExecuteInjectScopedAsync(
-                        async (
-                            IServiceProvider serviceProvider,
-                            PlatformInboxConfig inboxConfig,
-                            IPlatformInboxBusMessageRepository inboxMessageRepository,
-                            IPlatformApplicationSettingContext applicationSettingContext) =>
-                        {
-                            await HandleExecutingInboxConsumerAsync(
-                                @event,
-                                serviceProvider,
-                                inboxConfig,
-                                inboxMessageRepository,
-                                applicationSettingContext,
-                                currentBusMessageIdentity,
-                                null,
-                                cancellationToken);
-                        });
-            }
-            else
-            {
-                if (AutoOpenUow)
+                // If can use inbox message for event handler, try to run handle immediately first
+                // If successful => no need to use inbox for secure
+                // If failed => use inbox normally to ensure that if failed can retry later
+                try
                 {
-                    // If handler already executed in background or from inbox consumer, not need to open new scope for open uow
-                    // If not then create new scope to open new uow so that multiple events handlers from an event do not get conflicted
-                    // uow in the same scope if not open new scope
-                    if (AllowHandleInBackgroundThread(@event) ||
-                        CanExecuteHandlingEventUsingInboxConsumer(HasInboxMessageSupport(), @event))
-                        using (var uow = UnitOfWorkManager.Begin())
-                        {
-                            await HandleAsync(@event, cancellationToken);
-                            await uow.CompleteAsync(cancellationToken);
-                        }
+                    await RunHandleAsync(@event, cancellationToken);
+                }
+                catch (Exception)
+                {
+                    var eventSourceUow = TryGetCurrentOrCreatedActiveUow(@event);
+                    var currentBusMessageIdentity = BuildCurrentBusMessageIdentity(@event.RequestContext);
+
+                    if (@event is IPlatformUowEvent && eventSourceUow != null && !eventSourceUow.IsPseudoTransactionUow())
+                        await HandleExecutingInboxConsumerAsync(
+                            @event,
+                            ServiceProvider,
+                            ServiceProvider.GetRequiredService<PlatformInboxConfig>(),
+                            ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>(),
+                            ServiceProvider.GetRequiredService<IPlatformApplicationSettingContext>(),
+                            currentBusMessageIdentity,
+                            eventSourceUow,
+                            cancellationToken);
                     else
-                        using (var newScope = RootServiceProvider.CreateScope())
-                        {
-                            using (var uow = newScope.ServiceProvider.GetRequiredService<IPlatformUnitOfWorkManager>().Begin())
+                        await RootServiceProvider.ExecuteInjectScopedAsync(
+                            async (
+                                IServiceProvider serviceProvider,
+                                PlatformInboxConfig inboxConfig,
+                                IPlatformInboxBusMessageRepository inboxMessageRepository,
+                                IPlatformApplicationSettingContext applicationSettingContext) =>
                             {
-                                await newScope.ServiceProvider.GetRequiredService(GetType())
-                                    .As<PlatformCqrsEventApplicationHandler<TEvent>>()
-                                    .With(newInstance => CopyPropertiesToNewInstanceBeforeExecution(this, newInstance))
-                                    .HandleAsync(@event, cancellationToken);
-
-                                await uow.CompleteAsync(cancellationToken);
-                            }
-                        }
+                                await HandleExecutingInboxConsumerAsync(
+                                    @event,
+                                    serviceProvider,
+                                    inboxConfig,
+                                    inboxMessageRepository,
+                                    applicationSettingContext,
+                                    currentBusMessageIdentity,
+                                    null,
+                                    cancellationToken);
+                            });
                 }
-                else
-                {
-                    await HandleAsync(@event, cancellationToken);
-                }
-            }
+            else
+                await RunHandleAsync(@event, cancellationToken);
         }
         finally
         {
             if (ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
                 Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
+        }
+    }
+
+    protected async Task RunHandleAsync(TEvent @event, CancellationToken cancellationToken)
+    {
+        if (AutoOpenUow)
+        {
+            // If handler already executed in background or from inbox consumer, not need to open new scope for open uow
+            // If not then create new scope to open new uow so that multiple events handlers from an event do not get conflicted
+            // uow in the same scope if not open new scope
+            if (AllowHandleInBackgroundThread(@event) ||
+                CanExecuteHandlingEventUsingInboxConsumer(HasInboxMessageSupport(), @event))
+                using (var uow = UnitOfWorkManager.Begin())
+                {
+                    await HandleAsync(@event, cancellationToken);
+                    await uow.CompleteAsync(cancellationToken);
+                }
+            else
+                using (var newScope = RootServiceProvider.CreateScope())
+                {
+                    using (var uow = newScope.ServiceProvider.GetRequiredService<IPlatformUnitOfWorkManager>().Begin())
+                    {
+                        await newScope.ServiceProvider.GetRequiredService(GetType())
+                            .As<PlatformCqrsEventApplicationHandler<TEvent>>()
+                            .With(newInstance => CopyPropertiesToNewInstanceBeforeExecution(this, newInstance))
+                            .HandleAsync(@event, cancellationToken);
+
+                        await uow.CompleteAsync(cancellationToken);
+                    }
+                }
+        }
+        else
+        {
+            await HandleAsync(@event, cancellationToken);
         }
     }
 
