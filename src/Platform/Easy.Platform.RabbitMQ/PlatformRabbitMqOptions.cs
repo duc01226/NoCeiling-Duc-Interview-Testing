@@ -29,11 +29,11 @@ public class PlatformRabbitMqOptions
     /// Default value to one to distribute message equally for parallel processing.
     /// If you have many consumers and/or long processing time, we recommend setting the prefetch count to one (1) so that messages are evenly distributed among all your workers.
     /// </summary>
-    public ushort QueuePrefetchCount { get; set; } = 10;
+    public ushort QueuePrefetchCount { get; set; } = 5;
 
     public int NumberOfParallelConsumersPerCpu { get; set; } = PlatformEnvironment.IsDevelopment ? 1 : 2;
 
-    public int MaxNumberOfParallelConsumers { get; set; } = PlatformEnvironment.IsDevelopment ? 4 : 20;
+    public int MaxNumberOfParallelConsumers { get; set; } = PlatformEnvironment.IsDevelopment ? 10 : 20;
 
     /// <summary>
     /// Used to set <see cref="ConnectionFactory.NetworkRecoveryInterval" />

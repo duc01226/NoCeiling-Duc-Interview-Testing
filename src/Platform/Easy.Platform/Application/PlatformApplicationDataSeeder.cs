@@ -65,7 +65,7 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
 
     public static int DefaultActiveDelaySeedingInBackgroundBySeconds => 5;
     public static int DefaultDelayRetryCheckSeedDataBySeconds => 5;
-    public static int DefaultMaxWaitSeedDataBySyncMessagesBySeconds => 300;
+    public static int DefaultMaxWaitSeedDataBySyncMessagesBySeconds => 600;
     protected ILogger Logger => loggerLazy.Value;
 
     /// <summary>
