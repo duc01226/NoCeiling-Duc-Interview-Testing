@@ -194,7 +194,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
 
                         forAConsumerQueueParallelChannels.ForEach(channel => channelPool.Return(channel));
 
-                        Logger.LogInformation("Consumers connected to queue {QueueName}", queueName);
+                        Logger.LogDebug("Consumers connected to queue {QueueName}", queueName);
                     });
 
             Logger.LogInformation("Start connect all consumers to rabbitmq queue FINISHED");
@@ -563,7 +563,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
             exchange,
             $"{consumerBindingRoutingKey}.{PlatformRabbitMqConstants.FanoutBindingChar}");
 
-        Logger.LogInformation(
+        Logger.LogDebug(
             message:
             "Queue {QueueName} has been declared. Exchange:{Exchange}. RoutingKey:{ConsumerBindingRoutingKey}",
             queueName,

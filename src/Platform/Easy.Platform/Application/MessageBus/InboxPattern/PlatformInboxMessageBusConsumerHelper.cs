@@ -238,6 +238,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                     var consumer = serviceProvider.GetService(consumerType)
                         .Cast<IPlatformApplicationMessageBusConsumer<TMessage>>()
                         .With(_ => _.HandleExistingInboxMessage = newInboxMessage)
+                        .With(_ => _.NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage = false)
                         .With(_ => _.AutoDeleteProcessedInboxEventMessageImmediately = autoDeleteProcessedMessage);
 
                     await consumer

@@ -34,7 +34,6 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
         AvailableConsumerByNameToTypeDic = messageBusScanner
             .ScanAllDefinedConsumerTypes()
             .ToDictionary(PlatformInboxBusMessage.GetConsumerByValue);
-        InvokeConsumerLogger = loggerFactory.CreateLogger(typeof(PlatformMessageBusConsumer).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}");
     }
 
     public override bool LogIntervalProcessInformation => InboxConfig.LogIntervalProcessInformation;
@@ -43,7 +42,6 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
     protected PlatformInboxConfig InboxConfig { get; }
     protected PlatformMessageBusConfig MessageBusConfig { get; }
     protected Dictionary<string, Type> AvailableConsumerByNameToTypeDic { get; }
-    protected ILogger InvokeConsumerLogger { get; }
 
     protected override TimeSpan ProcessTriggerIntervalTime()
     {
@@ -250,7 +248,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                             busMessage,
                             toHandleInboxMessage.RoutingKey,
                             MessageBusConfig,
-                            InvokeConsumerLogger);
+                            Logger);
                     else
                         await scope.ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>()
                             .DeleteImmediatelyAsync(toHandleInboxMessage.Id, cancellationToken: cancellationToken);

@@ -137,7 +137,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
         IPlatformMessageBusConfig messageBusConfig,
         ILogger? logger = null)
     {
-        logger?.LogInformation(
+        logger?.LogDebug(
             "[MessageBus] Start invoking consumer. Name: {ConsumerName}. RoutingKey: {RoutingKey}. TrackingId: {TrackingId}",
             consumer.GetType().FullName,
             routingKey,
@@ -167,7 +167,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
                 busMessage,
                 routingKey);
 
-        logger?.LogInformation(
+        logger?.LogDebug(
             "[MessageBus] Finished invoking consumer. Name: {ConsumerName}. RoutingKey: {RoutingKey}. TrackingId: {TrackingId}",
             consumer.GetType().FullName,
             routingKey,
