@@ -303,49 +303,43 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                 !IsCurrentInstanceCalledFromInboxBusMessageConsumer &&
                 !IsInjectingUserContextAccessor &&
                 !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()))
-                // If can use inbox message for event handler, try to run handle immediately first
-                // If successful => no need to use inbox for secure
-                // If failed => use inbox normally to ensure that if failed can retry later
-                try
-                {
-                    await RunHandleAsync(@event, cancellationToken);
-                }
-                catch (Exception)
-                {
-                    var eventSourceUow = TryGetCurrentOrCreatedActiveUow(@event);
-                    var currentBusMessageIdentity = BuildCurrentBusMessageIdentity(@event.RequestContext);
+            {
+                var eventSourceUow = TryGetCurrentOrCreatedActiveUow(@event);
+                var currentBusMessageIdentity = BuildCurrentBusMessageIdentity(@event.RequestContext);
 
-                    if (@event is IPlatformUowEvent && eventSourceUow != null && !eventSourceUow.IsPseudoTransactionUow())
-                        await HandleExecutingInboxConsumerAsync(
-                            @event,
-                            ServiceProvider,
-                            ServiceProvider.GetRequiredService<PlatformInboxConfig>(),
-                            ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>(),
-                            ServiceProvider.GetRequiredService<IPlatformApplicationSettingContext>(),
-                            currentBusMessageIdentity,
-                            eventSourceUow,
-                            cancellationToken);
-                    else
-                        await RootServiceProvider.ExecuteInjectScopedAsync(
-                            async (
-                                IServiceProvider serviceProvider,
-                                PlatformInboxConfig inboxConfig,
-                                IPlatformInboxBusMessageRepository inboxMessageRepository,
-                                IPlatformApplicationSettingContext applicationSettingContext) =>
-                            {
-                                await HandleExecutingInboxConsumerAsync(
-                                    @event,
-                                    serviceProvider,
-                                    inboxConfig,
-                                    inboxMessageRepository,
-                                    applicationSettingContext,
-                                    currentBusMessageIdentity,
-                                    null,
-                                    cancellationToken);
-                            });
-                }
+                if (@event is IPlatformUowEvent && eventSourceUow != null && !eventSourceUow.IsPseudoTransactionUow())
+                    await HandleExecutingInboxConsumerAsync(
+                        @event,
+                        ServiceProvider,
+                        ServiceProvider.GetRequiredService<PlatformInboxConfig>(),
+                        ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>(),
+                        ServiceProvider.GetRequiredService<IPlatformApplicationSettingContext>(),
+                        currentBusMessageIdentity,
+                        eventSourceUow,
+                        cancellationToken);
+                else
+                    await RootServiceProvider.ExecuteInjectScopedAsync(
+                        async (
+                            IServiceProvider serviceProvider,
+                            PlatformInboxConfig inboxConfig,
+                            IPlatformInboxBusMessageRepository inboxMessageRepository,
+                            IPlatformApplicationSettingContext applicationSettingContext) =>
+                        {
+                            await HandleExecutingInboxConsumerAsync(
+                                @event,
+                                serviceProvider,
+                                inboxConfig,
+                                inboxMessageRepository,
+                                applicationSettingContext,
+                                currentBusMessageIdentity,
+                                null,
+                                cancellationToken);
+                        });
+            }
             else
+            {
                 await RunHandleAsync(@event, cancellationToken);
+            }
         }
         finally
         {
