@@ -439,7 +439,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
             console.error(
                 `[ClonedDeepStateToCheckDataMutationJson Original Value]:\n${
                     this.clonedDeepStateToCheckDataMutationJson
-                }\n###\n[CurrentState Mutated Value]:\n${JSON.stringify(this.currentState())}`
+                }\n###\n[CurrentState Mutated Value]:\n${JSON.stringify(currentStatePlainObj)}`
             );
             console.error(new Error(msg));
         }
