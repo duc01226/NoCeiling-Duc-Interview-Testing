@@ -192,7 +192,11 @@ export function date_addDays(date: Date, days: number): Date {
 }
 
 export function date_addMonths(date: Date, months: number): Date {
-    return new Date(date.setMonth(date.getMonth() + months));
+    const result = new Date(date.getTime());
+
+    result.setMonth(date.getMonth() + months);
+
+    return result;
 }
 
 export function date_now(): Date {

@@ -1,5 +1,10 @@
 import { HttpClient } from '@angular/common/http';
-import { ApplicationConfig, LOCALE_ID, importProvidersFrom } from '@angular/core';
+import {
+    ApplicationConfig,
+    LOCALE_ID,
+    importProvidersFrom,
+    provideExperimentalZonelessChangeDetection
+} from '@angular/core';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { ServiceWorkerModule } from '@angular/service-worker';
@@ -22,6 +27,7 @@ export function TranslateHttpLoaderFactory(http: HttpClient) {
 
 export const appConfig: ApplicationConfig = {
     providers: [
+        provideExperimentalZonelessChangeDetection(),
         provideRouter(appRoutes, withComponentInputBinding()),
         { provide: LOCALE_ID, useValue: 'en-GB' },
         importProvidersFrom(
