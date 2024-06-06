@@ -2,20 +2,32 @@
 export interface SimpleChange<T> {
     previousValue: T;
     currentValue: T;
+    isFirstTimeSet: boolean;
 }
 
 export type WatchCallBackFunction<T, TTargetObj> = (value: T, change: SimpleChange<T>, targetObj: TTargetObj) => void;
 
 /**
- * Operator used to watch a property when it is set
+ * Operator used to watch a property when it is set.
  *
- * Example:
+ * @template TTargetObj The type of the target object, defaults to object.
+ * @template TProp The type of the property being watched, defaults to object.
  *
- * // Shorthand execute a target function doing something directly if on change only do this logic
+ * @param {WatchCallBackFunction<TProp, TTargetObj> | keyof TTargetObj} callbackFnOrName
+ *        A callback function to be executed when the watched property changes, or the name of a method on the component.
+ * @param {(obj: TTargetObj, change: SimpleChange<TProp>) => boolean} [onlyWhen]
+ *        An optional function that determines if the callback should be executed based on the change.
+ * @param {(target: TTargetObj) => void} [afterCallback]
+ *        An optional function to be executed after the main callback.
+ *
+ * @returns {MethodDecorator} A method decorator to watch the specified property.
+ *
+ * @example
+ * // Shorthand to execute a target function directly on change
  * @Watch('pagedResultWatch')
  * public pagedResult?: PlatformPagedResultDto<LeaveType>;
  *
- * // Full syntax execute a NORMAL FUNCTION
+ * // Full syntax to execute a normal function
  * @Watch<LeaveTypesState, PlatformPagedQueryDto>((value, change, targetObj) => {
  *   targetObj.updatePageInfo();
  * })
@@ -30,25 +42,29 @@ export type WatchCallBackFunction<T, TTargetObj> = (value: T, change: SimpleChan
  */
 export function Watch<TTargetObj extends object = object, TProp = object>(
     callbackFnOrName: WatchCallBackFunction<TProp, TTargetObj> | keyof TTargetObj,
-    onlyWhen?: (obj: TTargetObj) => boolean,
+    onlyWhen?: (obj: TTargetObj, change: SimpleChange<TProp>) => boolean,
     afterCallback?: (target: TTargetObj) => void
 ) {
     return (target: TTargetObj, key: keyof TTargetObj) => {
         EnsureNotExistingSetterForKey(target, key);
 
         const privatePropKey = `_${key.toString()}`;
+        let isFirstTimeSet: boolean | undefined;
 
         Object.defineProperty(target, key, {
             set: function (value: TProp) {
                 const oldValue = this[privatePropKey];
                 this[privatePropKey] = value;
 
-                if (onlyWhen != null && !onlyWhen(this)) return;
+                isFirstTimeSet = isFirstTimeSet == undefined;
 
                 const simpleChange: SimpleChange<TProp> = {
                     previousValue: oldValue,
-                    currentValue: this[privatePropKey]
+                    currentValue: this[privatePropKey],
+                    isFirstTimeSet: isFirstTimeSet
                 };
+
+                if (onlyWhen != null && !onlyWhen(this, simpleChange)) return;
 
                 if (typeof callbackFnOrName === 'string') {
                     const callBackMethod = (target as any)[callbackFnOrName];
