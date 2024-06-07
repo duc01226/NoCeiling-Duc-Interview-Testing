@@ -27,6 +27,7 @@ import {
     of,
     OperatorFunction,
     share,
+    shareReplay,
     Subject,
     Subscription,
     switchMap,
@@ -43,7 +44,7 @@ import { PlatformApiServiceErrorResponse } from '../api-services';
 import { PlatformCachingService } from '../caching';
 import { PLATFORM_CORE_GLOBAL_ENV } from '../platform-core-global-environment';
 import { distinctUntilObjectValuesChanged, onCancel, subscribeUntil, tapOnce } from '../rxjs';
-import { immutableUpdate, ImmutableUpdateOptions, isDifferent, list_remove, toPlainObj } from '../utils';
+import { immutableUpdate, ImmutableUpdateOptions, list_remove, toPlainObj } from '../utils';
 import { PlatformVm } from './generic.view-model';
 
 export const requestStateDefaultKey = 'Default';
@@ -145,12 +146,10 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
     private _vm$?: Observable<TViewModel>;
     public get vm$(): Observable<TViewModel> {
         if (this._vm$ == undefined) {
-            this._vm$ = <Observable<TViewModel>>combineLatest([
-                this.initVmState().pipe(take(1)),
-                this.internalSelect(s => s)
-            ]).pipe(
+            this._vm$ = <Observable<TViewModel>>combineLatest([this.initVmState(), this.internalSelect(s => s)]).pipe(
                 map(([_, vm]) => (this.vmStateInitiated || this.vmStateDataLoaded ? vm : undefined)),
-                filter(vm => vm != null)
+                filter(vm => vm != null),
+                shareReplay({ bufferSize: 1, refCount: true })
             );
         }
 
@@ -201,16 +200,20 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
             const initOrReloadVm$ = this.initOrReloadVm(false) ?? of(null);
 
             return initOrReloadVm$.pipe(
+                delay(1, asyncScheduler), // Mimic real async incase observable is not async
                 map(_ => {
-                    this.vmStateInitiating = false;
-                    this.vmStateInitiated = true;
-                    this.vmStateDataLoaded = true;
+                    if (!this.vmStateInitiated) {
+                        this.vmStateInitiating = false;
+                        this.vmStateInitiated = true;
+                        this.vmStateDataLoaded = true;
 
-                    this.setupIntervalCheckDataMutation();
+                        this.setupIntervalCheckDataMutation();
+                    }
 
                     return this.vmStateInitiated;
                 }),
-                catchError(err => of(false))
+                catchError(err => of(false)),
+                distinctUntilObjectValuesChanged()
             );
         }
 
@@ -263,7 +266,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
      * Return observable to wait for the observable finished to ensure vm is not null only when first time load data successfully.
      * Return null to ignore wait for first-time loading to return vm not null with default initiated value from constructor.
      */
-    public abstract initOrReloadVm: (isReload: boolean) => Observable<unknown> | null;
+    public abstract initOrReloadVm: (isReload: boolean) => Observable<unknown>;
 
     public reload() {
         this.clearAllErrorMsgs();
@@ -867,7 +870,10 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
             );
 
             return combineLatest([newRequestObservable, newResultObservable]).pipe(
-                filter(([request, result]) => !isDifferent(request, <ObservableType>result.request.request)),
+                // Some case continous request, next request cancel old request, return result
+                // with different request original. If check diff => observable do not return anything =>
+                // cause issues. Need to find a better way to fix this.
+                // filter(([request, result]) => !isDifferent(request, <ObservableType>result.request.request)),
                 map(([request, result]) => result.result),
                 share()
             );

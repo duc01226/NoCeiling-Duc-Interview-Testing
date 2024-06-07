@@ -1,4 +1,14 @@
-import { Directive, EventEmitter, Input, OnInit, Output, signal, WritableSignal } from '@angular/core';
+import {
+    computed,
+    Directive,
+    EventEmitter,
+    Input,
+    OnInit,
+    Output,
+    Signal,
+    signal,
+    WritableSignal
+} from '@angular/core';
 
 import { cloneDeep } from 'lodash-es';
 import { filter, map, Observable, share } from 'rxjs';
@@ -69,6 +79,11 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
         return this._vm;
     }
 
+    public override get isStateInitVmLoading(): Signal<boolean> {
+        this._isStateInitVmLoading ??= computed(() => this.isStateLoading() == true && this.vm() == undefined);
+        return this._isStateInitVmLoading;
+    }
+
     /**
      * The original initialized view model.
      * @public
@@ -107,13 +122,19 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
                     'initVm',
                     initialVm$.subscribe({
                         next: initialVm => {
-                            autoInitVmStatus.bind(this)(initialVm);
+                            if (initialVm) {
+                                autoInitVmStatus.bind(this)(initialVm);
 
-                            this.internalSetVm(initialVm);
-                            this.originalInitVm = cloneDeep(initialVm);
-                            super.ngOnInit();
+                                this.internalSetVm(initialVm);
+                                this.originalInitVm = cloneDeep(initialVm);
+                                super.ngOnInit();
 
-                            executeOnSuccessDelay.bind(this)();
+                                executeOnSuccessDelay.bind(this)();
+                            } else {
+                                super.ngOnInit();
+
+                                executeOnSuccessDelay.bind(this)();
+                            }
                         },
                         error: (error: PlatformApiServiceErrorResponse | Error) => {
                             this.loadingState$.set(LoadingState.Error);
@@ -159,7 +180,7 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
      * Reloads the view model.
      * @public
      */
-    public reload() {
+    public override reload() {
         this.initVm(true);
         this.clearErrorMsg();
     }
@@ -168,7 +189,7 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
      * Hook to be implemented by derived classes to provide the initial view model.
      * @protected
      */
-    protected abstract initOrReloadVm: (isReload: boolean) => TViewModel | undefined | Observable<TViewModel>;
+    protected abstract initOrReloadVm: (isReload: boolean) => Observable<TViewModel | undefined>;
 
     /**
      * Updates the view model with partial state or an updater function.

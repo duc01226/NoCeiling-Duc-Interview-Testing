@@ -1,10 +1,13 @@
-import { ElementRef } from '@angular/core';
+import { Injector, ViewContainerRef, inject } from '@angular/core';
 import { PlatformComponent } from '../../components';
 
-export class PlatformDirective extends PlatformComponent {
-    constructor(public elementRef: ElementRef) {
+export abstract class PlatformDirective extends PlatformComponent {
+    constructor() {
         super();
     }
+
+    protected viewContainerRef: ViewContainerRef = inject(ViewContainerRef);
+    protected injector: Injector = inject(Injector);
 
     public get element(): HTMLElement {
         return this.elementRef.nativeElement;

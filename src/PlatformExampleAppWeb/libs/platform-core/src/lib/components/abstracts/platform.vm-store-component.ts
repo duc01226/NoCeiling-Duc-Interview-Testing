@@ -150,6 +150,9 @@ export abstract class PlatformVmStoreComponent<
                 // toSignal must be used in an injection context
                 runInInjectionContext(this.environmentInjector, () => {
                     this._vm = toSignal(this.vm$);
+
+                    // Init all additionalStores signal by accessing it
+                    this.additionalStores.forEach(p => p.vm());
                 });
             });
         }
@@ -183,6 +186,11 @@ export abstract class PlatformVmStoreComponent<
         }
 
         return this._isStateLoading!;
+    }
+
+    public override get isStateInitVmLoading(): Signal<boolean> {
+        this._isStateInitVmLoading ??= computed(() => this.isStateLoading() == true && this.vm() == undefined);
+        return this._isStateInitVmLoading;
     }
 
     public override get isStateSuccess(): Signal<boolean> {
@@ -309,7 +317,7 @@ export abstract class PlatformVmStoreComponent<
      * @method
      * @returns {void}
      */
-    public reload(): void {
+    public override reload(): void {
         this.store.reload();
         this.additionalStores.forEach(p => p.reload());
     }

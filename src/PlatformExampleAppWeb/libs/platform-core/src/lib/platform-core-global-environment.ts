@@ -1,7 +1,9 @@
 export const PLATFORM_CORE_GLOBAL_ENV: IPlatformCoreGlobalEnvironment = {
-    isLocalDev: false
+    isLocalDev: false,
+    localDevApiDelayMilliseconds: () => (window.location.hostname == 'localhost' ? 500 : 0)
 };
 
 export interface IPlatformCoreGlobalEnvironment {
     isLocalDev: boolean;
+    localDevApiDelayMilliseconds: () => number;
 }

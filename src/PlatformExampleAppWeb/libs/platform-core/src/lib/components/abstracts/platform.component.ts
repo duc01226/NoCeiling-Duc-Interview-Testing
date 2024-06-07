@@ -4,6 +4,8 @@ import {
     ChangeDetectorRef,
     computed,
     Directive,
+    effect,
+    ElementRef,
     inject,
     OnChanges,
     OnDestroy,
@@ -35,7 +37,7 @@ import { LifeCycleHelper } from '../../helpers';
 import { PLATFORM_CORE_GLOBAL_ENV } from '../../platform-core-global-environment';
 import { distinctUntilObjectValuesChanged, onCancel, subscribeUntil, tapOnce } from '../../rxjs';
 import { PlatformTranslateService } from '../../translations';
-import { clone, guid_generate, immutableUpdate, isDifferent, keys, list_remove, task_delay } from '../../utils';
+import { clone, guid_generate, immutableUpdate, keys, list_remove, task_delay } from '../../utils';
 import { requestStateDefaultKey } from '../../view-models';
 
 export const enum LoadingState {
@@ -57,9 +59,79 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     public static readonly defaultDetectChangesDelay: number = 0;
     public static readonly defaultDetectChangesThrottleTime: number = defaultThrottleDurationMs;
 
+    constructor() {
+        // Setup dev mode check has loading
+        if (this.devModeCheckLoadingStateElement != undefined && PLATFORM_CORE_GLOBAL_ENV.isLocalDev) {
+            effect(() => {
+                if (this.isStateLoading()) {
+                    setTimeout(() => {
+                        if (this.devModeCheckLoadingStateElement == undefined) return;
+
+                        const devModeCheckLoadingStateElements =
+                            typeof this.devModeCheckLoadingStateElement == 'string'
+                                ? [this.devModeCheckLoadingStateElement]
+                                : this.devModeCheckLoadingStateElement;
+                        const findInRootElement = this.devModeCheckLoadingOrErrorAllowInGlobalDocumentBody
+                            ? document
+                            : this.elementRef.nativeElement;
+
+                        if (
+                            this.isStateLoading() &&
+                            this.devModeCheckLoadingStateElementOnlyWhen &&
+                            devModeCheckLoadingStateElements.find(
+                                elementSelector =>
+                                    !this.isStateLoading() || findInRootElement.querySelector(elementSelector) != null
+                            ) == null
+                        ) {
+                            if (!this.isStateLoading() || this.destroyed$.value) return;
+
+                            const msg = `[DEV-ERROR] ${this.elementRef.nativeElement.tagName} Component in loading state but no loading element found`;
+                            alert(msg);
+                            console.error(new Error(msg));
+                        }
+                    });
+                }
+            });
+        }
+
+        //Setup dev mode check error has alert
+        if (this.devModeCheckErrorStateElement != undefined && PLATFORM_CORE_GLOBAL_ENV.isLocalDev) {
+            effect(() => {
+                if (this.errorMsg$() != null) {
+                    setTimeout(() => {
+                        if (this.devModeCheckErrorStateElement == undefined) return;
+
+                        const devModeCheckErrorStateElements =
+                            typeof this.devModeCheckErrorStateElement == 'string'
+                                ? [this.devModeCheckErrorStateElement]
+                                : this.devModeCheckErrorStateElement;
+                        const findInRootElement = this.devModeCheckLoadingOrErrorAllowInGlobalDocumentBody
+                            ? document
+                            : this.elementRef.nativeElement;
+
+                        if (
+                            this.errorMsg$() != null &&
+                            devModeCheckErrorStateElements.find(
+                                elementSelector =>
+                                    this.errorMsg$() == null || findInRootElement.querySelector(elementSelector) != null
+                            ) == null
+                        ) {
+                            if (this.errorMsg$() == null || this.destroyed$.value) return;
+
+                            const msg = `[DEV-ERROR] ${this.elementRef.nativeElement.tagName} Component in error state but no error element found`;
+                            alert(msg);
+                            console.error(new Error(msg));
+                        }
+                    });
+                }
+            });
+        }
+    }
+
     public toast: ToastrService = inject(ToastrService);
     public changeDetector: ChangeDetectorRef = inject(ChangeDetectorRef);
     public translateSrv: PlatformTranslateService = inject(PlatformTranslateService);
+    public elementRef: ElementRef<HTMLElement> = inject(ElementRef);
 
     public initiated$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
     public ngOnInitCalled$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
@@ -78,6 +150,30 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     protected cachedLoading$: Dictionary<Signal<boolean | null>> = {};
     protected cachedReloading$: Dictionary<Signal<boolean | null>> = {};
     protected allErrorMsgs$!: Signal<string | null>;
+    /**
+     * Element selectors. If return not null and any, will check element exist when is loading
+     */
+    protected get devModeCheckLoadingStateElement(): string | string[] | undefined {
+        return undefined;
+    }
+    /**
+     * Default is True. Custom condition for dev-mode when to check loading element
+     */
+    protected get devModeCheckLoadingStateElementOnlyWhen(): boolean {
+        return true;
+    }
+    /**
+     * Element selectors. If return not null and any, will check element exist when has error
+     */
+    protected get devModeCheckErrorStateElement(): string | string[] | undefined {
+        return undefined;
+    }
+    /**
+     * Default return false. If true, search check loading or error element in whole document body
+     */
+    protected get devModeCheckLoadingOrErrorAllowInGlobalDocumentBody(): boolean {
+        return false;
+    }
 
     protected detectChangesThrottleSource = new Subject<DetectChangesParams>();
     protected detectChangesThrottle$ = this.detectChangesThrottleSource.pipe(
@@ -111,6 +207,12 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
             () => this.loadingState$() == 'Loading' || this.loadingMap$()[requestStateDefaultKey] == true
         );
         return this._isStateLoading;
+    }
+
+    protected _isStateInitVmLoading?: Signal<boolean>;
+    public get isStateInitVmLoading(): Signal<boolean> {
+        this._isStateInitVmLoading ??= computed(() => false);
+        return this._isStateInitVmLoading;
     }
 
     protected _isStateSuccess?: Signal<boolean>;
@@ -227,8 +329,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         this.detectChanges();
 
         if (PLATFORM_CORE_GLOBAL_ENV.isLocalDev && this.ngOnInitCalled$.getValue() == false) {
-            const msg =
-                'Base Platform Component ngOnInit is not called. Please call super.ngOnInit() in the child component ngOnInit() method or manually ngOnInitCalled$.next(true) in the child component ngOnInit() method';
+            const msg = `[DEV-ERROR] Component ${this.elementRef.nativeElement.tagName}: Base Platform Component ngOnInit is not called. Please call super.ngOnInit() in the child component ngOnInit() method or manually ngOnInitCalled$.next(true) in the child component ngOnInit() method`;
 
             if (PLATFORM_CORE_GLOBAL_ENV.isLocalDev) {
                 alert(msg);
@@ -418,18 +519,21 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     /**
      * Returns an Signal that emits all error messages combined into a single string.
      */
-    public getAllErrorMsgs$(): Signal<string | null> {
+    public getAllErrorMsgs$(requestKeys?: string[]): Signal<string | undefined> {
         if (this.allErrorMsgs$ == null) {
             this.allErrorMsgs$ = computed(() => {
                 const errorMsgMap = this.errorMsgMap$();
                 return keys(errorMsgMap)
-                    .map(key => errorMsgMap[key] ?? '')
+                    .map(key => {
+                        if (requestKeys != undefined && !requestKeys.includes(key)) return '';
+                        return errorMsgMap[key] ?? '';
+                    })
                     .filter(msg => msg != '' && msg != null)
                     .join('; ');
             });
         }
 
-        return this.allErrorMsgs$;
+        return <Signal<string | undefined>>this.allErrorMsgs$;
     }
 
     /**
@@ -551,7 +655,10 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
             );
 
             return combineLatest([newRequestObservable, newResultObservable]).pipe(
-                filter(([request, result]) => !isDifferent(request, <ObservableType>result.request.request)),
+                // Some case continous request, next request cancel old request, return result
+                // with different request original. If check diff => observable do not return anything =>
+                // cause issues. Need to find a better way to fix this.
+                // filter(([request, result]) => !isDifferent(request, <ObservableType>result.request.request)),
                 map(([request, result]) => result.result),
                 share()
             );
@@ -774,7 +881,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
      * // Clear the error message for a specific request key
      * clearErrorMsg("customRequestKey");
      */
-    protected clearErrorMsg = (requestKey: string = requestStateDefaultKey) => {
+    public clearErrorMsg = (requestKey: string = requestStateDefaultKey) => {
         const currentErrorMsgMap = this.errorMsgMap$();
 
         this.errorMsgMap$.set(
@@ -839,6 +946,12 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         // Unsubscribe from all anonymous subscriptions
         this.cancelAllStoredAnonymousSubscriptions();
     }
+
+    /**
+     * Reloads data
+     * @public
+     */
+    public reload() {}
 
     /**
      * Track-by function for ngFor that uses an immutable list as the tracking target. Use this to improve performance

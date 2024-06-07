@@ -1,14 +1,19 @@
-import { AfterViewInit, Directive, ElementRef } from '@angular/core';
+import { AfterViewInit, Directive } from '@angular/core';
+import { PlatformDirective } from './abstracts/platform.directive';
 
 @Directive({ selector: '[platformSwipeToScroll]', standalone: true })
-export class SwipeToScrollDirective implements AfterViewInit {
+export class SwipeToScrollDirective extends PlatformDirective implements AfterViewInit {
     public isMousePress = false;
     public scrollLeft = 0;
     public startX = 0;
 
-    constructor(public elementRef: ElementRef<HTMLElement>) {}
+    constructor() {
+        super();
+    }
 
-    public ngAfterViewInit(): void {
+    public override ngAfterViewInit(): void {
+        super.ngAfterViewInit();
+
         this.elementRef.nativeElement.addEventListener('mousedown', (e: MouseEvent) => {
             if (e.button === 0) {
                 this.isMousePress = true;

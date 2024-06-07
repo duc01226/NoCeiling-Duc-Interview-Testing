@@ -4,9 +4,10 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Optional } from '@angular/core';
 
 import { Observable, OperatorFunction } from 'rxjs';
-import { timeout } from 'rxjs/operators';
+import { delay, timeout } from 'rxjs/operators';
 
 import { FormHelpers } from '../../helpers';
+import { PLATFORM_CORE_GLOBAL_ENV } from '../../platform-core-global-environment';
 import { PlatformCoreModuleConfig } from '../../platform-core.config';
 import { clone, immutableUpdate, keys, toPlainObj } from '../../utils';
 import { HttpClientOptions } from './platform.http-client-options';
@@ -66,7 +67,8 @@ export abstract class PlatformHttpService {
                             ? finalOptions.timeoutSeconds * 1000
                             : this.requestTimeoutInMs
                     )
-                )
+                ),
+                delay(PLATFORM_CORE_GLOBAL_ENV.isLocalDev ? PLATFORM_CORE_GLOBAL_ENV.localDevApiDelayMilliseconds() : 0)
             );
     }
 
@@ -82,7 +84,8 @@ export abstract class PlatformHttpService {
                             ? finalOptions.timeoutSeconds * 1000
                             : this.requestTimeoutInMs
                     )
-                )
+                ),
+                delay(PLATFORM_CORE_GLOBAL_ENV.isLocalDev ? PLATFORM_CORE_GLOBAL_ENV.localDevApiDelayMilliseconds() : 0)
             );
     }
 
@@ -109,7 +112,8 @@ export abstract class PlatformHttpService {
                             ? finalOptions.timeoutSeconds * 1000
                             : this.requestTimeoutInMs
                     )
-                )
+                ),
+                delay(PLATFORM_CORE_GLOBAL_ENV.isLocalDev ? PLATFORM_CORE_GLOBAL_ENV.localDevApiDelayMilliseconds() : 0)
             );
     }
 
@@ -125,7 +129,8 @@ export abstract class PlatformHttpService {
                             ? finalOptions.timeoutSeconds * 1000
                             : this.requestTimeoutInMs
                     )
-                )
+                ),
+                delay(PLATFORM_CORE_GLOBAL_ENV.isLocalDev ? PLATFORM_CORE_GLOBAL_ENV.localDevApiDelayMilliseconds() : 0)
             );
     }
 
@@ -140,7 +145,8 @@ export abstract class PlatformHttpService {
                             ? finalOptions.timeoutSeconds * 1000
                             : this.requestTimeoutInMs
                     )
-                )
+                ),
+                delay(PLATFORM_CORE_GLOBAL_ENV.isLocalDev ? PLATFORM_CORE_GLOBAL_ENV.localDevApiDelayMilliseconds() : 0)
             );
     }
 
