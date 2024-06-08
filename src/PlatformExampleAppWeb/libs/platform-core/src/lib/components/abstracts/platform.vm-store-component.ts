@@ -15,7 +15,7 @@ import { PartialDeep } from 'type-fest';
 
 import { keys, list_all } from '../../utils';
 import { PlatformVm, PlatformVmStore, requestStateDefaultKey } from '../../view-models';
-import { PlatformComponent } from './platform.component';
+import { PlatformComponent, PlatformObserverLoadingErrorStateOptions } from './platform.component';
 
 /**
  * @classdesc
@@ -89,6 +89,7 @@ export abstract class PlatformVmStoreComponent<
                 'additionalStores',
                 'isStateError',
                 'isStateLoading',
+                'isStateReloading',
                 'isStateSuccess',
                 'isStatePending',
                 'errorMsg$',
@@ -186,6 +187,30 @@ export abstract class PlatformVmStoreComponent<
         }
 
         return this._isStateLoading!;
+    }
+
+    public override get isStateReloading(): Signal<boolean> {
+        if (this._isStateReloading == null) {
+            //untracked to fix NG0602: A disallowed function is called inside a reactive context
+            untracked(() => {
+                // toSignal must be used in an injection context
+                runInInjectionContext(this.environmentInjector, () => {
+                    this._isStateReloading = toSignal(
+                        combineLatest(
+                            this.additionalStores
+                                .concat([<PlatformVmStore<PlatformVm>>(<unknown>this.store)])
+                                .map(store => store.isStateReloading$)
+                        ).pipe(
+                            this.untilDestroyed(),
+                            map(isReloadings => isReloadings.find(isReloading => isReloading) != undefined)
+                        ),
+                        { initialValue: false }
+                    );
+                });
+            });
+        }
+
+        return this._isStateReloading!;
     }
 
     public override get isStateInitVmLoading(): Signal<boolean> {
@@ -320,5 +345,12 @@ export abstract class PlatformVmStoreComponent<
     public override reload(): void {
         this.store.reload();
         this.additionalStores.forEach(p => p.reload());
+    }
+
+    public override observerLoadingErrorState<T>(
+        requestKey?: string,
+        options?: PlatformObserverLoadingErrorStateOptions<T> | undefined
+    ): (source: Observable<T>) => Observable<T> {
+        return this.store.observerLoadingErrorState(requestKey, options);
     }
 }

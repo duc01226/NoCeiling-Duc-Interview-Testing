@@ -43,6 +43,7 @@ import { requestStateDefaultKey } from '../../view-models';
 export const enum LoadingState {
     Error = 'Error',
     Loading = 'Loading',
+    Reloading = 'Reloading',
     Success = 'Success',
     Pending = 'Pending'
 }
@@ -150,6 +151,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     protected cachedLoading$: Dictionary<Signal<boolean | null>> = {};
     protected cachedReloading$: Dictionary<Signal<boolean | null>> = {};
     protected allErrorMsgs$!: Signal<string | null>;
+
     /**
      * Element selectors. If return not null and any, will check element exist when is loading
      */
@@ -204,10 +206,26 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     protected _isStateLoading?: Signal<boolean>;
     public get isStateLoading(): Signal<boolean> {
         this._isStateLoading ??= computed(
-            () => this.loadingState$() == 'Loading' || this.loadingMap$()[requestStateDefaultKey] == true
+            () => this.loadingState$() == 'Loading' || this.isAnyLoadingRequest() == true
         );
         return this._isStateLoading;
     }
+
+    protected _isStateReloading?: Signal<boolean>;
+    public get isStateReloading(): Signal<boolean> {
+        this._isStateReloading ??= computed(
+            () => this.loadingState$() == 'Reloading' || this.isAnyReloadingRequest() == true
+        );
+        return this._isStateReloading;
+    }
+
+    public isAnyLoadingRequest = computed(() => {
+        return keys(this.loadingMap$()).find(requestKey => this.loadingMap$()[requestKey]) != undefined;
+    });
+
+    public isAnyReloadingRequest = computed(() => {
+        return keys(this.reloadingMap$()).find(requestKey => this.reloadingMap$()[requestKey]) != undefined;
+    });
 
     protected _isStateInitVmLoading?: Signal<boolean>;
     public get isStateInitVmLoading(): Signal<boolean> {
@@ -416,6 +434,8 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         const setLoadingState = () => {
             if (!this.isForSetReloadingState(options) && this.loadingState$() != LoadingState.Loading)
                 this.loadingState$.set(LoadingState.Loading);
+            else if (this.isForSetReloadingState(options) && this.loadingState$() != LoadingState.Loading)
+                this.loadingState$.set(LoadingState.Reloading);
 
             if (this.isForSetReloadingState(options)) this.setReloading(true, requestKey);
             else this.setLoading(true, requestKey);
@@ -436,8 +456,8 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                         else this.setLoading(false, requestKey);
 
                         if (
-                            this.loadingState$() == 'Loading' &&
-                            this.loadingRequestsCount() <= 0 &&
+                            ((this.loadingState$() == 'Loading' && this.loadingRequestsCount() <= 0) ||
+                                (this.loadingState$() == 'Reloading' && this.reloadingRequestsCount() <= 0)) &&
                             previousLoadingState == 'Success'
                         )
                             this.loadingState$.set(LoadingState.Success);
@@ -462,7 +482,8 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                             if (
                                 this.loadingState$() != LoadingState.Error &&
                                 this.loadingState$() != LoadingState.Success &&
-                                this.loadingRequestsCount() <= 0
+                                this.loadingRequestsCount() <= 0 &&
+                                this.reloadingRequestsCount() <= 0
                             )
                                 this.loadingState$.set(LoadingState.Success);
                         },
@@ -476,7 +497,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         };
     }
 
-    private isForSetReloadingState<T>(options: PlatformObserverLoadingErrorStateOptions<T> | undefined) {
+    protected isForSetReloadingState<T>(options: PlatformObserverLoadingErrorStateOptions<T> | undefined) {
         return options?.isReloading && this.getErrorMsg() == null && !this.isStateLoading();
     }
 

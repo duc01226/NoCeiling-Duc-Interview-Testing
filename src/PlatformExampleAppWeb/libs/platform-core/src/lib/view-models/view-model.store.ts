@@ -359,9 +359,20 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
 
     private _isStateLoading$?: Observable<boolean>;
     public get isStateLoading$(): Observable<boolean> {
-        this._isStateLoading$ ??= this.select(_ => _.isStateLoading || this.currentState().isLoading());
+        this._isStateLoading$ ??= this.select(
+            _ => _.isStateLoading || this.currentState().isAnyReloadingRequest() == true
+        );
 
         return this._isStateLoading$;
+    }
+
+    private _isStateReloading$?: Observable<boolean>;
+    public get isStateReloading$(): Observable<boolean> {
+        this._isStateReloading$ ??= this.select(
+            _ => _.isStateReloading || this.currentState().isAnyLoadingRequest() == true
+        );
+
+        return this._isStateReloading$;
     }
 
     private _isStateSuccess$?: Observable<boolean>;
@@ -534,11 +545,15 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                 this.updateState(<Partial<TViewModel>>{
                     status: 'Loading'
                 });
+            else if (this.isForSetReloadingState(requestKey, options) && this.currentState().status != 'Loading')
+                this.updateState(<Partial<TViewModel>>{
+                    status: 'Reloading'
+                });
 
-            if (this.isForSetReloadingState(requestKey, options)) this.setReloading(true, requestKey!);
-            else this.setLoading(true, requestKey!);
+            if (this.isForSetReloadingState(requestKey, options)) this.setReloading(true, requestKey);
+            else this.setLoading(true, requestKey);
 
-            this.setErrorMsg(undefined, requestKey!);
+            this.setErrorMsg(undefined, requestKey);
 
             if (options?.onShowLoading != null && !this.isForSetReloadingState(requestKey, options))
                 options.onShowLoading();
@@ -552,44 +567,35 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
 
                 return source.pipe(
                     onCancel(() => {
-                        if (this.isForSetReloadingState(<string>requestKey, options))
-                            this.setReloading(false, requestKey!);
-                        else this.setLoading(false, requestKey!);
+                        if (this.isForSetReloadingState(requestKey, options)) this.setReloading(false, requestKey);
+                        else this.setLoading(false, requestKey);
 
                         if (
-                            this.currentState().status == 'Loading' &&
-                            this.loadingRequestsCount() <= 0 &&
+                            ((this.currentState().status == 'Loading' && this.loadingRequestsCount() <= 0) ||
+                                (this.currentState().status == 'Reloading' && this.reloadingRequestsCount() <= 0)) &&
                             previousStatus == 'Success'
                         )
                             this.updateState(<Partial<TViewModel>>{ status: 'Success' });
 
-                        if (options?.onHideLoading != null && !this.isForSetReloadingState(<string>requestKey, options))
+                        if (options?.onHideLoading != null && !this.isForSetReloadingState(requestKey, options))
                             options.onHideLoading();
                     }),
 
                     tapOnce({
                         next: result => {
-                            if (this.isForSetReloadingState(<string>requestKey, options))
-                                this.setReloading(false, requestKey!);
-                            else this.setLoading(false, requestKey!);
+                            if (this.isForSetReloadingState(requestKey, options)) this.setReloading(false, requestKey);
+                            else this.setLoading(false, requestKey);
 
-                            if (
-                                options?.onHideLoading != null &&
-                                !this.isForSetReloadingState(<string>requestKey, options)
-                            )
+                            if (options?.onHideLoading != null && !this.isForSetReloadingState(requestKey, options))
                                 options.onHideLoading();
 
                             if (options?.onSuccess != null) options.onSuccess(result);
                         },
                         error: (err: PlatformApiServiceErrorResponse | Error) => {
-                            if (this.isForSetReloadingState(<string>requestKey, options))
-                                this.setReloading(false, requestKey!);
-                            else this.setLoading(false, requestKey!);
+                            if (this.isForSetReloadingState(requestKey, options)) this.setReloading(false, requestKey);
+                            else this.setLoading(false, requestKey);
 
-                            if (
-                                options?.onHideLoading != null &&
-                                !this.isForSetReloadingState(<string>requestKey, options)
-                            )
+                            if (options?.onHideLoading != null && !this.isForSetReloadingState(requestKey, options))
                                 options.onHideLoading();
 
                             if (options?.onError != null) options.onError(err);
@@ -600,12 +606,13 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                             if (
                                 this.currentState().status != 'Error' &&
                                 this.currentState().status != 'Success' &&
-                                this.loadingRequestsCount() <= 0
+                                this.loadingRequestsCount() <= 0 &&
+                                this.reloadingRequestsCount() <= 0
                             )
                                 this.updateState(<Partial<TViewModel>>{ status: 'Success' });
                         },
                         error: (err: PlatformApiServiceErrorResponse | Error) => {
-                            this.setErrorMsg(err, requestKey!);
+                            this.setErrorMsg(err, requestKey);
                             this.setErrorState(err);
                         }
                     })
@@ -614,15 +621,14 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         };
     }
 
-    private isForSetReloadingState<T = unknown>(
+    protected isForSetReloadingState<T = unknown>(
         requestKey: string | undefined | null,
         options: PlatformVmObserverLoadingOptions<T> | undefined
     ) {
         return (
             options?.isReloading &&
-            this.currentState().isStateSuccess &&
             this.currentState().error == null &&
-            !this.isLoading$(requestKey ?? undefined)()
+            !this.isLoading$(requestKey ?? requestStateDefaultKey)()
         );
     }
 

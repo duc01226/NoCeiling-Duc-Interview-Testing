@@ -2,7 +2,7 @@ import { PlatformApiServiceErrorResponse } from '../api-services';
 import { immutableUpdate, keys } from '../utils';
 
 const requestStateDefaultKey = 'Default';
-export type StateStatus = 'Pending' | 'Loading' | 'Success' | 'Error';
+export type StateStatus = 'Pending' | 'Loading' | 'Success' | 'Error' | 'Reloading';
 
 export interface IPlatformVm {
     status?: StateStatus;
@@ -59,6 +59,10 @@ export class PlatformVm implements IPlatformVm {
 
     public get isStateLoading(): boolean {
         return this.status == 'Loading';
+    }
+
+    public get isStateReloading(): boolean {
+        return this.status == 'Reloading';
     }
 
     public get isStateSuccess(): boolean {
