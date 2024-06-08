@@ -33,7 +33,7 @@ public class PlatformRabbitMqOptions
 
     public int NumberOfParallelConsumersPerCpu { get; set; } = PlatformEnvironment.IsDevelopment ? 1 : 2;
 
-    public int MaxNumberOfParallelConsumers { get; set; } = PlatformEnvironment.IsDevelopment ? 10 : 20;
+    public int MaxNumberOfParallelConsumers { get; set; } = PlatformEnvironment.IsDevelopment ? 4 : 10;
 
     /// <summary>
     /// Used to set <see cref="ConnectionFactory.NetworkRecoveryInterval" />

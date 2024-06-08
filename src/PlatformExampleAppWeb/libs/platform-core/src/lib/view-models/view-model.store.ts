@@ -360,7 +360,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
     private _isStateLoading$?: Observable<boolean>;
     public get isStateLoading$(): Observable<boolean> {
         this._isStateLoading$ ??= this.select(
-            _ => _.isStateLoading || this.currentState().isAnyReloadingRequest() == true
+            _ => _.isStateLoading || this.currentState().isAnyLoadingRequest() == true
         );
 
         return this._isStateLoading$;
@@ -369,7 +369,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
     private _isStateReloading$?: Observable<boolean>;
     public get isStateReloading$(): Observable<boolean> {
         this._isStateReloading$ ??= this.select(
-            _ => _.isStateReloading || this.currentState().isAnyLoadingRequest() == true
+            _ => _.isStateReloading || this.currentState().isAnyReloadingRequest() == true
         );
 
         return this._isStateReloading$;

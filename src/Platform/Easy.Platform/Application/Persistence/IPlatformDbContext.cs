@@ -21,7 +21,7 @@ public interface IPlatformDbContext : IDisposable
 {
     public const int DefaultPageSize = 10;
 
-    public const int SaveMigrationHistoryFailedRetryCount = 1000;
+    public const int SaveMigrationHistoryFailedRetryCount = 100;
     public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformDbContext)}");
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery { get; }
@@ -104,6 +104,9 @@ public interface IPlatformDbContext : IDisposable
 
                         await startIntervalPingProcessingMigrationHistoryCts.CancelAsync();
 
+                        // Delay ton ensure interval finished
+                        await Task.Delay(10.Seconds(), CancellationToken.None);
+
                         // Retry in case interval ping make it failed for concurrency token
                         await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                             async () =>
@@ -132,14 +135,23 @@ public interface IPlatformDbContext : IDisposable
                     }
                     catch (Exception e)
                     {
+                        Logger.LogError(e, "DataMigrationHistory execution failed");
+
                         // Retry in case interval ping make it failed for concurrency token
                         await Util.TaskRunner.WaitRetryAsync(
-                            async ct => await UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(
-                                DataMigrationHistoryQuery()
-                                    .First(p => p.Name == migrationExecution.Name)
-                                    .With(p => p.Status = PlatformDataMigrationHistory.Statuses.Failed)
-                                    .With(p => p.LastProcessError = e.Serialize()),
-                                ct),
+                            async ct => await ExecuteWithNewDbContextInstanceAsync(
+                                async newContextInstance =>
+                                {
+                                    var toUpdatePingTimeMigrationHistory = newContextInstance.DataMigrationHistoryQuery()
+                                        .FirstOrDefault(p => p.Name == migrationExecution.Name && p.Status == PlatformDataMigrationHistory.Statuses.Processing);
+
+                                    if (toUpdatePingTimeMigrationHistory != null)
+                                        await newContextInstance.UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(
+                                            toUpdatePingTimeMigrationHistory
+                                                .With(p => p.Status = PlatformDataMigrationHistory.Statuses.Failed)
+                                                .With(p => p.LastProcessError = e.Serialize()),
+                                            CancellationToken.None);
+                                }),
                             retryTime => retryTime.Seconds(),
                             SaveMigrationHistoryFailedRetryCount,
                             (ex, delayRetryTime, retryAttempt, context) =>
