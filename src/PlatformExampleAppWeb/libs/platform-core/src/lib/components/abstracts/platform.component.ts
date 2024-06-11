@@ -37,7 +37,7 @@ import { LifeCycleHelper } from '../../helpers';
 import { PLATFORM_CORE_GLOBAL_ENV } from '../../platform-core-global-environment';
 import { distinctUntilObjectValuesChanged, onCancel, subscribeUntil, tapOnce } from '../../rxjs';
 import { PlatformTranslateService } from '../../translations';
-import { clone, guid_generate, immutableUpdate, keys, list_remove, task_delay } from '../../utils';
+import { clone, guid_generate, immutableUpdate, keys, list_distinct, list_remove, task_delay } from '../../utils';
 import { requestStateDefaultKey } from '../../view-models';
 
 export const enum LoadingState {
@@ -155,7 +155,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     protected cachedErrorMsg$: Dictionary<Signal<string | undefined>> = {};
     protected cachedLoading$: Dictionary<Signal<boolean | null>> = {};
     protected cachedReloading$: Dictionary<Signal<boolean | null>> = {};
-    protected allErrorMsgs$!: Signal<string | null>;
+    protected cachedAllErrorMsgs$: Dictionary<Signal<string | null | undefined>> = {};
 
     /**
      * Element selectors. If return not null and any, will check element exist when is loading
@@ -547,21 +547,30 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     /**
      * Returns an Signal that emits all error messages combined into a single string.
      */
-    public getAllErrorMsgs$(requestKeys?: string[]): Signal<string | undefined> {
-        if (this.allErrorMsgs$ == null) {
-            this.allErrorMsgs$ = computed(() => {
+    public getAllErrorMsgs$(requestKeys?: string[], excludeKeys?: string[]): Signal<string | undefined> {
+        const combinedCacheRequestKey = `${requestKeys != null ? JSON.stringify(requestKeys) : 'All'}_excludeKeys:${
+            excludeKeys != null ? JSON.stringify(excludeKeys) : 'null'
+        }`;
+
+        if (this.cachedAllErrorMsgs$[combinedCacheRequestKey] == null) {
+            this.cachedAllErrorMsgs$[combinedCacheRequestKey] = computed(() => {
                 const errorMsgMap = this.errorMsgMap$();
-                return keys(errorMsgMap)
-                    .map(key => {
-                        if (requestKeys != undefined && !requestKeys.includes(key)) return '';
-                        return errorMsgMap[key] ?? '';
-                    })
-                    .filter(msg => msg != '' && msg != null)
-                    .join('; ');
+                return list_distinct(
+                    keys(errorMsgMap)
+                        .map(key => {
+                            if (
+                                (requestKeys != undefined && !requestKeys.includes(key)) ||
+                                excludeKeys?.includes(key) == true
+                            )
+                                return '';
+                            return errorMsgMap[key] ?? '';
+                        })
+                        .filter(msg => msg != '' && msg != null)
+                ).join('; ');
             });
         }
 
-        return <Signal<string | undefined>>this.allErrorMsgs$;
+        return <Signal<string | undefined>>this.cachedAllErrorMsgs$[combinedCacheRequestKey];
     }
 
     /**
@@ -573,6 +582,14 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
             this.cachedLoading$[requestKey] = computed(() => this.loadingMap$()[requestKey]!);
         }
         return this.cachedLoading$[requestKey]!;
+    }
+
+    /**
+     * Returns the loading state (true or false) associated with the specified request key.
+     * @param requestKey (optional): A key to identify the request. Default is requestStateDefaultKey.
+     */
+    public isLoading(requestKey: string = requestStateDefaultKey): boolean | null {
+        return this.loadingMap$()[requestKey]!;
     }
 
     /**
@@ -589,10 +606,10 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
 
     /**
      * Returns the reloading state (true or false) associated with the specified request key.
-     * @param errorKey (optional): A key to identify the request. Default is requestStateDefaultKey.
+     * @param requestKey (optional): A key to identify the request. Default is requestStateDefaultKey.
      */
-    public isReloading(errorKey: string = requestStateDefaultKey): boolean | null {
-        return this.reloadingMap$()[errorKey]!;
+    public isReloading(requestKey: string = requestStateDefaultKey): boolean | null {
+        return this.reloadingMap$()[requestKey]!;
     }
 
     /**

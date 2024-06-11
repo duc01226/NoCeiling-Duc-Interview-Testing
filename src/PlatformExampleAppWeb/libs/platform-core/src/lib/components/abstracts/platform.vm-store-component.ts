@@ -13,7 +13,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest, map, Observable } from 'rxjs';
 import { PartialDeep } from 'type-fest';
 
-import { keys, list_all } from '../../utils';
+import { keys, list_all, list_distinct } from '../../utils';
 import { PlatformVm, PlatformVmStore, requestStateDefaultKey } from '../../view-models';
 import { PlatformComponent, PlatformObserverLoadingErrorStateOptions } from './platform.component';
 
@@ -295,6 +295,33 @@ export abstract class PlatformVmStoreComponent<
         }
 
         return this.cachedErrorMsg$[requestKey]!;
+    }
+
+    public override getAllErrorMsgs$(requestKeys?: string[], excludeKeys?: string[]): Signal<string | undefined> {
+        const combinedCacheRequestKey = `${requestKeys != null ? JSON.stringify(requestKeys) : 'All'}_excludeKeys:${
+            excludeKeys != null ? JSON.stringify(excludeKeys) : 'null'
+        }`;
+
+        if (this.cachedAllErrorMsgs$[combinedCacheRequestKey] == null) {
+            //untracked to fix NG0602: A disallowed function is called inside a reactive context
+            untracked(() => {
+                // toSignal must be used in an injection context
+                runInInjectionContext(this.environmentInjector, () => {
+                    this.cachedAllErrorMsgs$[combinedCacheRequestKey] = toSignal(
+                        combineLatest(
+                            this.additionalStores
+                                .concat([<PlatformVmStore<PlatformVm>>(<unknown>this.store)])
+                                .map(store => store.getAllErrorMsgObservable$(requestKeys, excludeKeys)!)
+                        ).pipe(
+                            this.untilDestroyed(),
+                            map(errors => list_distinct(errors).join('; '))
+                        )
+                    );
+                });
+            });
+        }
+
+        return <Signal<string | undefined>>this.cachedAllErrorMsgs$[combinedCacheRequestKey];
     }
 
     /**

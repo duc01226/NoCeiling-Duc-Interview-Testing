@@ -659,7 +659,9 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
      * @param requestKey - Key to identify the request.
      * @returns Error message Signal.
      */
-    public getErrorMsg$ = (requestKey: string = requestStateDefaultKey) => {
+    public getErrorMsg$ = (requestKey?: string) => {
+        requestKey ??= requestStateDefaultKey;
+
         if (this.cachedErrorMsg$[requestKey] == null) {
             //untracked to fix NG0602: A disallowed function is called inside a reactive context
             untracked(() => {
@@ -678,11 +680,26 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
      * @param requestKey - Key to identify the request.
      * @returns Error message observable.
      */
-    public getErrorMsgObservable$ = (requestKey: string = requestStateDefaultKey) => {
+    public getErrorMsgObservable$ = (requestKey?: string) => {
+        requestKey ??= requestStateDefaultKey;
+
         if (this.cachedErrorMsgObservable$[requestKey] == null) {
             this.cachedErrorMsgObservable$[requestKey] = this.select(_ => _.getErrorMsg(requestKey));
         }
         return this.cachedErrorMsgObservable$[requestKey];
+    };
+
+    public getAllErrorMsgObservable$ = (requestKeys?: string[], excludeKeys?: string[]) => {
+        const combinedCacheRequestKey = `${requestKeys != null ? JSON.stringify(requestKeys) : 'All'}_excludeKeys:${
+            excludeKeys != null ? JSON.stringify(excludeKeys) : 'null'
+        }`;
+
+        if (this.cachedErrorMsgObservable$[combinedCacheRequestKey] == null) {
+            this.cachedErrorMsgObservable$[combinedCacheRequestKey] = this.select(_ =>
+                _.getAllErrorMsgs(requestKeys, excludeKeys)
+            );
+        }
+        return this.cachedErrorMsgObservable$[combinedCacheRequestKey];
     };
 
     /**

@@ -1,5 +1,5 @@
 import { PlatformApiServiceErrorResponse } from '../api-services';
-import { immutableUpdate, keys } from '../utils';
+import { immutableUpdate, keys, list_distinct } from '../utils';
 
 const requestStateDefaultKey = 'Default';
 export type StateStatus = 'Pending' | 'Loading' | 'Success' | 'Error' | 'Reloading';
@@ -73,12 +73,18 @@ export class PlatformVm implements IPlatformVm {
         return this.status == 'Error' || this.error != undefined;
     }
 
-    public getAllErrorMsgs(): string | undefined {
-        const joinedErrorsStr = keys(this.errorMsgMap)
-            .map(key => this.errorMsgMap[key] ?? '')
-            .concat([this.error ?? ''])
-            .filter(msg => msg != '' && msg != null)
-            .join('; ');
+    public getAllErrorMsgs(requestKeys?: string[], excludeKeys?: string[]): string | undefined {
+        const joinedErrorsStr = list_distinct(
+            keys(this.errorMsgMap)
+                .map(key => {
+                    if ((requestKeys != undefined && !requestKeys.includes(key)) || excludeKeys?.includes(key) == true)
+                        return '';
+
+                    return this.errorMsgMap[key] ?? '';
+                })
+                .concat([this.error ?? ''])
+                .filter(msg => msg != '' && msg != null)
+        ).join('; ');
 
         return joinedErrorsStr == '' ? undefined : joinedErrorsStr;
     }
