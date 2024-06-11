@@ -409,21 +409,22 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     }
 
     protected override internalSetVm = (
-        v: TViewModel,
+        v: TViewModel | undefined,
         shallowCheckDiff: boolean = true,
-        onVmChanged?: (vm: TViewModel) => unknown
+        onVmChanged?: (vm: TViewModel | undefined) => unknown
     ): boolean => {
         if (shallowCheckDiff == false || this._vm != v) {
+            const prevVm = this._vm;
+
             this._vm = v;
             this.vm.set(v);
 
-            if (this.initiated$.value) {
-                this.patchVmValuesToForm(v);
-                this.detectChanges();
-                this.vmChangeEvent.emit(v);
-            }
+            if (v != undefined && this.initiated$.value) this.patchVmValuesToForm(v);
+            if (this.initiated$.value || prevVm == undefined) this.vmChangeEvent.emit(v);
+
             if (onVmChanged != undefined) onVmChanged(this._vm);
 
+            this.detectChanges();
             return true;
         }
 

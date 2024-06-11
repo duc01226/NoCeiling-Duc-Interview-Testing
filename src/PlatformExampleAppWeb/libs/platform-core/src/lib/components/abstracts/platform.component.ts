@@ -565,7 +565,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                                 return '';
                             return errorMsgMap[key] ?? '';
                         })
-                        .filter(msg => msg != '' && msg != null)
+                        .filter(msg => msg != null && msg.trim() != '')
                 ).join('; ');
             });
         }

@@ -83,7 +83,7 @@ export class PlatformVm implements IPlatformVm {
                     return this.errorMsgMap[key] ?? '';
                 })
                 .concat([this.error ?? ''])
-                .filter(msg => msg != '' && msg != null)
+                .filter(msg => msg != null && msg.trim() != '')
         ).join('; ');
 
         return joinedErrorsStr == '' ? undefined : joinedErrorsStr;

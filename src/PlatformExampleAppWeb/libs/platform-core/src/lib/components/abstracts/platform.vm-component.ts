@@ -53,7 +53,7 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
      * Sets the view model and performs change detection if the new view model is different.
      */
     @Input('vm')
-    public set vmInput(v: TViewModel) {
+    public set vmInput(v: TViewModel | undefined) {
         if (isDifferent(this._vm, v)) {
             this.internalSetVm(v, false);
         }
@@ -206,7 +206,7 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
     ): TViewModel {
         if (this._vm == undefined) return this._vm!;
 
-        const newUpdatedVm: TViewModel = immutableUpdate(this._vm!, partialStateOrUpdaterFn);
+        const newUpdatedVm: TViewModel = immutableUpdate(this._vm, partialStateOrUpdaterFn);
 
         if (newUpdatedVm != this._vm) {
             this.internalSetVm(newUpdatedVm, true, onVmChanged);
@@ -222,15 +222,18 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
      * @param shallowCheckDiff - Whether to shallow check for differences before updating.
      */
     protected internalSetVm = (
-        v: TViewModel,
+        v: TViewModel | undefined,
         shallowCheckDiff: boolean = true,
-        onVmChanged?: (vm: TViewModel) => unknown
+        onVmChanged?: (vm: TViewModel | undefined) => unknown
     ): boolean => {
         if (shallowCheckDiff == false || this._vm != v) {
+            const prevVm = this._vm;
+
             this._vm = v;
             this.vm.set(v);
 
-            if (this.initiated$.value) this.vmChangeEvent.emit(v);
+            if (this.initiated$.value || prevVm == undefined) this.vmChangeEvent.emit(v);
+
             if (onVmChanged != undefined) onVmChanged(this._vm);
 
             return true;
