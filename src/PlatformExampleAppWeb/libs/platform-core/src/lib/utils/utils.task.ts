@@ -16,7 +16,7 @@ export function task_delay(
         cancelOnFirstTrueValue$ != null
             ? rxjs_takeUntil(cancelOnFirstTrueValue$?.pipe(rxjs_filter(x => x == true)))
             : (obs: Observable<unknown>) => obs,
-        rxjs_delay(delayTimeMilliseconds == null ? 10 : delayTimeMilliseconds, asyncScheduler)
+        rxjs_delay(delayTimeMilliseconds ?? 10, asyncScheduler)
     );
     return delayObs(of({})).subscribe(() => {
         callback();

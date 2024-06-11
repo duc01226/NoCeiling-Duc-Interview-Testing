@@ -59,14 +59,19 @@ export const defaultThrottleDurationMs = 500;
 export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges {
     public static readonly defaultDetectChangesDelay: number = 0;
     public static readonly defaultDetectChangesThrottleTime: number = defaultThrottleDurationMs;
+    public static readonly checkLoadingDelayTimeMs = 100;
+
+    private devModeCheckLoadingStateElementTimeoutId?: number;
 
     constructor() {
         // Setup dev mode check has loading
         if (this.devModeCheckLoadingStateElement != undefined && PLATFORM_CORE_GLOBAL_ENV.isLocalDev) {
             effect(() => {
+                if (this.devModeCheckLoadingStateElementTimeoutId != undefined)
+                    clearTimeout(this.devModeCheckLoadingStateElementTimeoutId);
                 if (this.isStateLoading()) {
-                    setTimeout(() => {
-                        if (this.devModeCheckLoadingStateElement == undefined) return;
+                    this.devModeCheckLoadingStateElementTimeoutId = setTimeout(() => {
+                        if (this.devModeCheckLoadingStateElement == undefined || !this.isStateLoading()) return;
 
                         const devModeCheckLoadingStateElements =
                             typeof this.devModeCheckLoadingStateElement == 'string'
@@ -90,7 +95,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                             alert(msg);
                             console.error(new Error(msg));
                         }
-                    });
+                    }, PlatformComponent.checkLoadingDelayTimeMs + 100);
                 }
             });
         }
@@ -428,9 +433,11 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
      *   );
      */
     public observerLoadingErrorState<T>(
-        requestKey: string = requestStateDefaultKey,
+        requestKey?: string | null,
         options?: PlatformObserverLoadingErrorStateOptions<T>
     ): (source: Observable<T>) => Observable<T> {
+        if (requestKey == undefined) requestKey = requestStateDefaultKey;
+
         const setLoadingState = () => {
             if (!this.isForSetReloadingState(options) && this.loadingState$() != LoadingState.Loading)
                 this.loadingState$.set(LoadingState.Loading);
@@ -626,12 +633,12 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
      * @template ReturnObservableType - The type of the observable returned by the generator function.
      * @template ReturnType - The type of the return value of the `effect` method.
      *
-     * @param {function(origin$: OriginType, isReloading?: boolean): Observable<ReturnObservableType>} generator - The generator function that defines the effect.
+     * @param {function(origin$: OriginType): Observable<ReturnObservableType>} generator - The generator function that defines the effect.
      * @param { throttleTimeMs?: number} [options] - An optional object that can contain a throttle time in milliseconds for the effect and a function to handle the effect subscription.
      *
      * @returns {ReturnType} - The function that can be used to trigger the effect. The function params including: observableOrValue, isReloading, otherOptions. In otherOptions including: effectSubscriptionHandleFn - a function to handle the effect subscription.
      *
-     * @example this.effect((query$: Observable<(any type here, can be void too)>, isReloading?: boolean) => { return $query.pipe(switchMap(query => callApi(query)), this.tapResponse(...), this.observerLoadingState('key', {isReloading:isReloading})) }, {throttleTimeMs: 300}).
+     * @example this.effect((query$: Observable<(any type here, can be void too)>) => { return $query.pipe(switchMap(query => callApi(query)), this.tapResponse(...), this.observerLoadingState('key', {isReloading:isReloading})) }, {throttleTimeMs: 300}).
      * The returned function could be used like: effectFunc(query, isLoading, {effectSubscriptionHandleFn: sub => this.storeSubscription('key', sub)})
      */
     public effect<
@@ -651,8 +658,12 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                   options?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
               ) => Observable<ReturnObservableType>
     >(
-        generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
-        effectOptions?: { throttleTimeMs?: number }
+        generator: (origin$: OriginType) => Observable<ReturnObservableType>,
+        requestKey?: string | null,
+        effectOptions?: {
+            throttleTimeMs?: number;
+            observerLoadingoptions?: PlatformObserverLoadingErrorStateOptions<ReturnObservableType>;
+        }
     ): ReturnType {
         const effectRequestSubject = new Subject<{
             request: ProvidedType;
@@ -718,6 +729,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                 const newResultObservable = this.createNewEffectResultObservable(
                     effectRequestSubject.asObservable(),
                     generator,
+                    requestKey,
                     {
                         throttleTimeMs: effectOptions?.throttleTimeMs,
                         onInnerGeneratorObservableCompleted: request => {
@@ -777,6 +789,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
             isReloading?: boolean;
         }>,
         generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
+        requestKey: string | null | undefined,
         options?: {
             throttleTimeMs?: number;
             onInnerGeneratorObservableCompleted?: (request: ObservableType | null | undefined) => unknown;
@@ -803,6 +816,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
             }),
             switchMap(request =>
                 generator(<OriginType>of(request.request), request.isReloading).pipe(
+                    this.observerLoadingErrorState(requestKey, { isReloading: request.isReloading }),
                     map(result => ({ request, result })),
                     tap({
                         complete: () => {

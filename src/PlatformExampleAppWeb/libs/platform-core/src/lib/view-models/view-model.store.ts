@@ -831,7 +831,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
      *
      * @returns {ReturnType} - The function that can be used to trigger the effect. The function params including: observableOrValue, isReloading, otherOptions. In otherOptions including: effectSubscriptionHandleFn - a function to handle the effect subscription.
      *
-     * @example this.effect((query$: Observable<(any type here, can be void too)>, isReloading?: boolean) => { return $query.pipe(switchMap(query => callApi(query)), this.tapResponse(...), this.observerLoadingState('key', {isReloading:isReloading})) }, {throttleTimeMs: 300}).
+     * @example this.effect((query$: Observable<(any type here, can be void too)>) => { return $query.pipe(switchMap(query => callApi(query)), this.tapResponse(...), this.observerLoadingState('key', {isReloading:isReloading})) }, {throttleTimeMs: 300}).
      * The returned function could be used like: effectFunc(query, isLoading, {effectSubscriptionHandleFn: sub => this.storeSubscription('key', sub)})
      */
     public effect<
@@ -852,8 +852,13 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
               ) => Observable<ReturnObservableType>
     >(
         generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
-        effectOptions?: { throttleTimeMs?: number }
+        requestKey?: string | null,
+        effectOptions?: {
+            throttleTimeMs?: number;
+            observerLoadingoptions?: PlatformVmObserverLoadingOptions<ReturnObservableType>;
+        }
     ): ReturnType {
+        if (requestKey == undefined) requestKey = PlatformVm.requestStateDefaultKey;
         const effectRequestSubject = new Subject<{
             request: ProvidedType;
             isReloading?: boolean;
@@ -918,6 +923,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                 const newResultObservable = this.createNewEffectResultObservable(
                     effectRequestSubject.asObservable(),
                     generator,
+                    requestKey,
                     {
                         throttleTimeMs: effectOptions?.throttleTimeMs,
                         onInnerGeneratorObservableCompleted: request => {
@@ -976,6 +982,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
             isReloading?: boolean;
         }>,
         generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
+        requestKey: string | null | undefined,
         options?: {
             throttleTimeMs?: number;
             onInnerGeneratorObservableCompleted?: (request: ObservableType | null | undefined) => unknown;
@@ -1002,6 +1009,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
             }),
             switchMap(request =>
                 generator(<OriginType>of(request.request), request.isReloading).pipe(
+                    this.observerLoadingErrorState(requestKey, { isReloading: request.isReloading }),
                     map(result => ({ request, result })),
                     tap({
                         complete: () => {

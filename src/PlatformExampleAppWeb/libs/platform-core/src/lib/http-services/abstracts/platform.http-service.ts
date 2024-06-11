@@ -3,7 +3,7 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Optional } from '@angular/core';
 
-import { Observable, OperatorFunction } from 'rxjs';
+import { Observable, OperatorFunction, asyncScheduler } from 'rxjs';
 import { delay, timeout } from 'rxjs/operators';
 
 import { FormHelpers } from '../../helpers';
@@ -58,17 +58,15 @@ export abstract class PlatformHttpService {
             });
         }
 
+        const timeoutMs = finalOptions.timeoutSeconds != null ? finalOptions.timeoutSeconds * 1000 : null;
         return this.http
             .get(url, <any>finalOptions)
             .pipe(
-                <OperatorFunction<Object, T>>(
-                    timeout(
-                        finalOptions.timeoutSeconds != null
-                            ? finalOptions.timeoutSeconds * 1000
-                            : this.requestTimeoutInMs
-                    )
-                ),
-                delay(PLATFORM_CORE_GLOBAL_ENV.isLocalDev ? PLATFORM_CORE_GLOBAL_ENV.localDevApiDelayMilliseconds() : 0)
+                <OperatorFunction<Object, T>>timeout(timeoutMs ?? this.requestTimeoutInMs),
+                delay(
+                    PLATFORM_CORE_GLOBAL_ENV.isLocalDev ? PLATFORM_CORE_GLOBAL_ENV.localDevApiDelayMilliseconds() : 0,
+                    asyncScheduler
+                )
             );
     }
 
@@ -85,7 +83,10 @@ export abstract class PlatformHttpService {
                             : this.requestTimeoutInMs
                     )
                 ),
-                delay(PLATFORM_CORE_GLOBAL_ENV.isLocalDev ? PLATFORM_CORE_GLOBAL_ENV.localDevApiDelayMilliseconds() : 0)
+                delay(
+                    PLATFORM_CORE_GLOBAL_ENV.isLocalDev ? PLATFORM_CORE_GLOBAL_ENV.localDevApiDelayMilliseconds() : 0,
+                    asyncScheduler
+                )
             );
     }
 
@@ -113,7 +114,10 @@ export abstract class PlatformHttpService {
                             : this.requestTimeoutInMs
                     )
                 ),
-                delay(PLATFORM_CORE_GLOBAL_ENV.isLocalDev ? PLATFORM_CORE_GLOBAL_ENV.localDevApiDelayMilliseconds() : 0)
+                delay(
+                    PLATFORM_CORE_GLOBAL_ENV.isLocalDev ? PLATFORM_CORE_GLOBAL_ENV.localDevApiDelayMilliseconds() : 0,
+                    asyncScheduler
+                )
             );
     }
 
@@ -130,7 +134,10 @@ export abstract class PlatformHttpService {
                             : this.requestTimeoutInMs
                     )
                 ),
-                delay(PLATFORM_CORE_GLOBAL_ENV.isLocalDev ? PLATFORM_CORE_GLOBAL_ENV.localDevApiDelayMilliseconds() : 0)
+                delay(
+                    PLATFORM_CORE_GLOBAL_ENV.isLocalDev ? PLATFORM_CORE_GLOBAL_ENV.localDevApiDelayMilliseconds() : 0,
+                    asyncScheduler
+                )
             );
     }
 
@@ -146,7 +153,10 @@ export abstract class PlatformHttpService {
                             : this.requestTimeoutInMs
                     )
                 ),
-                delay(PLATFORM_CORE_GLOBAL_ENV.isLocalDev ? PLATFORM_CORE_GLOBAL_ENV.localDevApiDelayMilliseconds() : 0)
+                delay(
+                    PLATFORM_CORE_GLOBAL_ENV.isLocalDev ? PLATFORM_CORE_GLOBAL_ENV.localDevApiDelayMilliseconds() : 0,
+                    asyncScheduler
+                )
             );
     }
 
