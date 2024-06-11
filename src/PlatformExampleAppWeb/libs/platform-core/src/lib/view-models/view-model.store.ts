@@ -118,7 +118,6 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
     private cachedErrorMsgObservable$: Dictionary<Observable<string | undefined>> = {};
     private cachedLoading$: Dictionary<Signal<boolean | undefined>> = {};
     private cachedReloading$: Dictionary<Signal<boolean | undefined>> = {};
-    private cacheService = inject(PlatformCachingService);
     private defaultState?: TViewModel;
     private environmentInjector = inject(EnvironmentInjector);
 
@@ -131,6 +130,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
     public vmStateInitiating: boolean = false;
     public vmStateInitiated: boolean = false;
     public vmStateDataLoaded: boolean = false;
+    public cacheService = inject(PlatformCachingService);
 
     public get enableCache(): boolean {
         return true;
@@ -390,6 +390,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
     }
 
     private clonedDeepStateToCheckDataMutationJson?: string;
+
     /**
      * Updates the state of the innerStore of the component with the provided partial state or updater function.
      *
@@ -492,6 +493,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
     }
 
     private loadingRequestsCountMap: Dictionary<number> = {};
+
     public loadingRequestsCount() {
         let result = 0;
         Object.keys(this.loadingRequestsCountMap).forEach(key => {
@@ -501,6 +503,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
     }
 
     private reloadingRequestsCountMap: Dictionary<number> = {};
+
     public reloadingRequestsCount() {
         let result = 0;
         Object.keys(this.reloadingRequestsCountMap).forEach(key => {
@@ -984,6 +987,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
 
         return returnFunc as unknown as ReturnType;
     }
+
     /**
      * * ThrottleTime explain: Delay to enhance performance
      * { leading: true, trailing: true } <=> emit the first item to ensure not delay, but also ignore the sub-sequence,
