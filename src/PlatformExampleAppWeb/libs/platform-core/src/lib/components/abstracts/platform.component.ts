@@ -874,11 +874,11 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         // effect could subscribe to do some action like show loading, hide loading, etc.
         return request$.pipe(
             delay(1, asyncScheduler), // (III)
-            distinctUntilObjectValuesChanged(),
             throttleTime(options?.throttleTimeMs ?? defaultThrottleDurationMs, asyncScheduler, {
                 leading: true,
                 trailing: true
             }),
+            distinctUntilObjectValuesChanged(),
             switchMap(request =>
                 generator(<OriginType>of(request.request), request.isReloading).pipe(
                     this.observerLoadingErrorState(requestKey, { isReloading: request.isReloading }),

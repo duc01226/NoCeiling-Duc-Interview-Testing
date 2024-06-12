@@ -333,6 +333,23 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         return this._isStateSuccess!;
     }
 
+    private _isStateSuccessOrReloading?: Signal<boolean>;
+    public get isStateSuccessOrReloading(): Signal<boolean> {
+        if (this._isStateSuccessOrReloading == null) {
+            //untracked to fix NG0602: A disallowed function is called inside a reactive context
+            untracked(() => {
+                // toSignal must be used in an injection context
+                runInInjectionContext(this.environmentInjector, () => {
+                    this._isStateSuccess = toSignal(
+                        this.select(_ => _.isStateSuccessOrReloading),
+                        { initialValue: false }
+                    );
+                });
+            });
+        }
+        return this._isStateSuccessOrReloading!;
+    }
+
     private _isStateError?: Signal<boolean>;
     public get isStateError(): Signal<boolean> {
         if (this._isStateError == null) {
@@ -380,6 +397,13 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         this._isStateSuccess$ ??= this.select(_ => _.isStateSuccess);
 
         return this._isStateSuccess$;
+    }
+
+    private _isStateSuccessOrReloading$?: Observable<boolean>;
+    public get isStateSuccessOrReloading$(): Observable<boolean> {
+        this._isStateSuccessOrReloading$ ??= this.select(_ => _.isStateSuccess || _.isStateReloading);
+
+        return this._isStateSuccessOrReloading$;
     }
 
     private _isStateError$?: Observable<boolean>;
@@ -1059,11 +1083,11 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         // effect could subscribe to do some action like show loading, hide loading, etc.
         return request$.pipe(
             delay(1, asyncScheduler), // (III)
-            distinctUntilObjectValuesChanged(),
             throttleTime(options?.throttleTimeMs ?? defaultThrottleDurationMs, asyncScheduler, {
                 leading: true,
                 trailing: true
             }),
+            distinctUntilObjectValuesChanged(),
             switchMap(request =>
                 generator(<OriginType>of(request.request), request.isReloading).pipe(
                     delay(1, asyncScheduler),

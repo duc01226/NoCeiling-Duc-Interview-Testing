@@ -69,6 +69,10 @@ export class PlatformVm implements IPlatformVm {
         return this.status == 'Success' && this.error == undefined;
     }
 
+    public get isStateSuccessOrReloading(): boolean {
+        return (this.status == 'Success' || this.status == 'Reloading') && this.error == undefined;
+    }
+
     public get isStateError(): boolean {
         return this.status == 'Error' || this.error != undefined;
     }
