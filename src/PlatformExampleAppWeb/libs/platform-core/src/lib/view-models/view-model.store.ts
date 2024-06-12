@@ -197,7 +197,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
 
             this.onInitVm();
 
-            const initOrReloadVm$ = this.initOrReloadVm(false) ?? of(null);
+            const initOrReloadVm$ = this.initOrReloadVm(this.vmStateDataLoaded).pipe(take(1)) ?? of(null);
 
             return initOrReloadVm$.pipe(
                 delay(1, asyncScheduler), // Mimic real async incase observable is not async
@@ -208,6 +208,10 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                         this.vmStateDataLoaded = true;
 
                         this.setupIntervalCheckDataMutation();
+
+                        if (this.currentState().status == 'Pending') {
+                            this.updateState(<Partial<TViewModel>>{ status: 'Success' });
+                        }
                     }
 
                     return this.vmStateInitiated;
@@ -1083,11 +1087,11 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         // effect could subscribe to do some action like show loading, hide loading, etc.
         return request$.pipe(
             delay(1, asyncScheduler), // (III)
+            distinctUntilObjectValuesChanged(),
             throttleTime(options?.throttleTimeMs ?? defaultThrottleDurationMs, asyncScheduler, {
                 leading: true,
                 trailing: true
             }),
-            distinctUntilObjectValuesChanged(),
             switchMap(request =>
                 generator(<OriginType>of(request.request), request.isReloading).pipe(
                     delay(1, asyncScheduler),
