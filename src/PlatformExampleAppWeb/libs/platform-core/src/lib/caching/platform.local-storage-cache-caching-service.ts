@@ -93,7 +93,7 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
                 localStorage.setItem(key, JSON.stringify(toPlainObj(cacheItem)));
             });
         } catch (error) {
-            console.error('Local Storage is full, Please empty data', error);
+            console.warn('Local Storage is full, Please empty data', error);
             this.clear();
         }
     };
@@ -190,7 +190,7 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
     public override clear(): void {
         try {
             this.cache.clear();
-            this.saveCache(false);
+            localStorage.clear();
         } catch (error) {
             console.error(error);
         }

@@ -620,7 +620,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
      * @param completeFn (optional): A function to handle the complete event emitted by the source observable.
      */
     protected tapResponse<T>(
-        nextFn: (next: T) => void,
+        nextFn?: (next: T) => void,
         errorFn?: (error: PlatformApiServiceErrorResponse | Error) => any,
         completeFn?: () => void
     ): (source: Observable<T>) => Observable<T> {
@@ -628,15 +628,27 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         return tap({
             next: data => {
                 try {
-                    nextFn(data);
-                    this.detectChanges();
+                    if (nextFn) {
+                        nextFn(data);
+                        this.detectChanges();
+                    }
                 } catch (error) {
                     console.error(error);
                     throw error;
                 }
             },
-            error: errorFn,
-            complete: completeFn
+            error: err => {
+                if (errorFn) {
+                    errorFn(err);
+                    this.detectChanges();
+                }
+            },
+            complete: () => {
+                if (completeFn) {
+                    completeFn();
+                    this.detectChanges();
+                }
+            }
         });
     }
 
@@ -675,7 +687,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                   options?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
               ) => Observable<ReturnObservableType>
     >(
-        generator: (origin$: OriginType) => Observable<ReturnObservableType>,
+        generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
         requestKey?: string | null,
         effectOptions?: {
             throttleTimeMs?: number;
@@ -789,6 +801,42 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         };
 
         return returnFunc as unknown as ReturnType;
+    }
+
+    public effectSimple<
+        ProvidedType = void,
+        ReturnObservableType = unknown,
+        ReturnType = [ProvidedType] extends [void]
+            ? (
+                  observableOrValue?: null | undefined | void | Observable<null | undefined | void>,
+                  isReloading?: boolean,
+                  options?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
+              ) => Observable<ReturnObservableType>
+            : (
+                  observableOrValue: ProvidedType | Observable<ProvidedType>,
+                  isReloading?: boolean,
+                  options?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
+              ) => Observable<ReturnObservableType>
+    >(
+        generator: (origin: ProvidedType, isReloading?: boolean) => Observable<ReturnObservableType> | void,
+        requestKey?: string | null,
+        effectOptions?: {
+            throttleTimeMs?: number;
+            observerLoadingoptions?: PlatformObserverLoadingErrorStateOptions<ReturnObservableType>;
+        }
+    ): ReturnType {
+        return this.effect(
+            (origin$: Observable<ProvidedType>, isReloading?: boolean) => {
+                return origin$.pipe(
+                    switchMap(origin => {
+                        const returnObservableOrVoid = generator(origin, isReloading);
+                        return returnObservableOrVoid instanceof Observable ? returnObservableOrVoid : of(undefined);
+                    })
+                );
+            },
+            requestKey,
+            effectOptions
+        );
     }
 
     /**

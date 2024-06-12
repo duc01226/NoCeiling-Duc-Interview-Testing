@@ -114,13 +114,14 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
     public initVm(forceReinit: boolean = false, onSuccess?: () => unknown) {
         if (forceReinit) this.cancelStoredSubscription('initVm');
 
-        const initialVm$ = this.initOrReloadVm(forceReinit && this._vm?.status == 'Success');
+        const isReload = forceReinit && this._vm?.status == 'Success';
+        const initialVm$ = this.initOrReloadVm(isReload);
 
         if ((this.vm() == undefined || forceReinit) && initialVm$ != undefined) {
             if (initialVm$ instanceof Observable) {
                 this.storeSubscription(
                     'initVm',
-                    initialVm$.subscribe({
+                    initialVm$.pipe(this.observerLoadingErrorState(undefined, { isReloading: isReload })).subscribe({
                         next: initialVm => {
                             if (initialVm) {
                                 autoInitVmStatus.bind(this)(initialVm);
