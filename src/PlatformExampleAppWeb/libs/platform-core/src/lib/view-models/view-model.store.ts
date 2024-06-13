@@ -630,8 +630,10 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                             if (options?.onSuccess != null) options.onSuccess(result);
                         },
                         error: (err: PlatformApiServiceErrorResponse | Error) => {
-                            if (options?.isReloading) this.setReloading(false, requestKey);
-                            else this.setLoading(false, requestKey);
+                            if (!options?.isReloading) this.setLoading(false, requestKey);
+                            this.setReloading(false, requestKey);
+
+                            checkSetStatus.bind(this)();
 
                             if (options?.onHideLoading != null && !options?.isReloading) options.onHideLoading();
 

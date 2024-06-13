@@ -474,8 +474,10 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                             if (options?.onSuccess != null) options.onSuccess(value);
                         },
                         error: (err: PlatformApiServiceErrorResponse | Error) => {
-                            if (options?.isReloading) this.setReloading(false, requestKey);
-                            else this.setLoading(false, requestKey);
+                            if (!options?.isReloading) this.setLoading(false, requestKey);
+                            this.setReloading(false, requestKey);
+
+                            checkSetStatus.bind(this)();
 
                             if (options?.onError != null) options.onError(err);
                         }
