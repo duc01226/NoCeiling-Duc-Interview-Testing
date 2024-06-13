@@ -23,14 +23,20 @@ export function task_delay(
     });
 }
 
-export function task_debounce(func: (...args: any[]) => void, wait: number): (...args: any[]) => void {
+export function task_debounce(func: (...args: any[]) => void, wait: number): (...args: any[]) => number | undefined {
     if (wait <= 0) {
-        return func;
+        return (...args: any[]) => {
+            func(args);
+
+            return undefined;
+        };
     }
 
     let timeout: number;
     return (...args: any[]) => {
         clearTimeout(timeout);
         timeout = <number>(<any>setTimeout(() => func(args), wait));
+
+        return timeout;
     };
 }
