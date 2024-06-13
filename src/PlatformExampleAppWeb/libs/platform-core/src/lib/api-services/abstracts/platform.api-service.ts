@@ -90,7 +90,7 @@ export abstract class PlatformApiService extends PlatformHttpService {
         return this.cacheService.cacheImplicitReloadRequest(
             requestCacheKey,
             () => this.getFromServer<T>(path, params, configureOptions),
-            undefined,
+            { ttl: this.moduleConfig.apiGetCacheTimeToLeaveSeconds },
             (requestCacheKey, data) => {
                 this.setCachedRequestData(requestCacheKey, data);
             }

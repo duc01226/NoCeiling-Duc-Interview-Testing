@@ -197,7 +197,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
 
             this.onInitVm();
 
-            const initOrReloadVm$ = this.initOrReloadVm(this.vmStateDataLoaded).pipe(take(1)) ?? of(null);
+            const initOrReloadVm$ = this.initOrReloadVm(this.vmStateDataLoaded).pipe(take(2)) ?? of(null); //take(2) support api cache and implicit reload
 
             return initOrReloadVm$.pipe(
                 delay(1, asyncScheduler), // Mimic real async incase observable is not async
@@ -344,7 +344,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
             untracked(() => {
                 // toSignal must be used in an injection context
                 runInInjectionContext(this.environmentInjector, () => {
-                    this._isStateSuccess = toSignal(
+                    this._isStateSuccessOrReloading = toSignal(
                         this.select(_ => _.isStateSuccessOrReloading),
                         { initialValue: false }
                     );

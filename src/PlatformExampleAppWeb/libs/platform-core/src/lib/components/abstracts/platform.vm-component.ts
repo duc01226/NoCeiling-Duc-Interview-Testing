@@ -122,7 +122,7 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
                 this.storeSubscription(
                     'initVm',
                     initialVm$
-                        .pipe(take(1), this.observerLoadingErrorState(undefined, { isReloading: isReload }))
+                        .pipe(take(2), this.observerLoadingErrorState(undefined, { isReloading: isReload })) //take(2) support api cache and implicit reload
                         .subscribe({
                             next: initialVm => {
                                 if (initialVm) {
