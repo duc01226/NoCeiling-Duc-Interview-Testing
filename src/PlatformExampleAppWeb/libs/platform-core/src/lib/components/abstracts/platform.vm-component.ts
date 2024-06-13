@@ -19,7 +19,7 @@ import { PlatformApiServiceErrorResponse } from '../../api-services';
 import { distinctUntilObjectValuesChanged } from '../../rxjs';
 import { immutableUpdate, isDifferent } from '../../utils';
 import { IPlatformVm } from '../../view-models';
-import { LoadingState, PlatformComponent } from './platform.component';
+import { ComponentStateStatus, PlatformComponent } from './platform.component';
 
 /**
  * Abstract class representing a platform view model component.
@@ -114,7 +114,7 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
     public initVm(forceReinit: boolean = false, onSuccess?: () => unknown) {
         if (forceReinit) this.cancelStoredSubscription('initVm');
 
-        const isReload = forceReinit && this._vm?.status == 'Success';
+        const isReload = forceReinit && (this._vm?.status == 'Success' || this._vm?.status == 'Reloading');
         const initialVm$ = this.initOrReloadVm(isReload);
 
         if ((this.vm() == undefined || forceReinit) && initialVm$ != undefined) {
@@ -140,7 +140,7 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
                                 }
                             },
                             error: (error: PlatformApiServiceErrorResponse | Error) => {
-                                this.loadingState$.set(LoadingState.Error);
+                                this.status$.set(ComponentStateStatus.Error);
                                 this.setErrorMsg(error);
                             }
                         })

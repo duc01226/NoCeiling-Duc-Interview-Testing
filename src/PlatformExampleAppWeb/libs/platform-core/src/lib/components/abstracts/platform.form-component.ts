@@ -23,7 +23,7 @@ import { FormHelpers } from '../../helpers';
 import { distinctUntilObjectValuesChanged } from '../../rxjs';
 import { immutableUpdate, isDifferent, keys, task_delay, toPlainObj } from '../../utils';
 import { IPlatformVm, PlatformFormMode, requestStateDefaultKey } from '../../view-models';
-import { LoadingState, PlatformComponent } from './platform.component';
+import { ComponentStateStatus, PlatformComponent } from './platform.component';
 import { PlatformVmComponent } from './platform.vm-component';
 
 export interface IPlatformFormComponent<TViewModel extends IPlatformVm> {
@@ -135,7 +135,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 
     public isFormGivenFromInput = false;
     public isFormPending = signal(false);
-    public isFormLoading = computed(() => this.isFormPending() || this.loadingState$() == LoadingState.Loading);
+    public isFormLoading = computed(() => this.isFormPending() || this.status$() == ComponentStateStatus.Loading);
 
     protected cachedFormLoading$: Dictionary<Signal<boolean | null>> = {};
 

@@ -40,7 +40,7 @@ import { PlatformTranslateService } from '../../translations';
 import { clone, guid_generate, immutableUpdate, keys, list_distinct, list_remove, task_delay } from '../../utils';
 import { requestStateDefaultKey } from '../../view-models';
 
-export const enum LoadingState {
+export const enum ComponentStateStatus {
     Error = 'Error',
     Loading = 'Loading',
     Reloading = 'Reloading',
@@ -48,7 +48,7 @@ export const enum LoadingState {
     Pending = 'Pending'
 }
 
-export const defaultThrottleDurationMs = 500;
+const defaultThrottleDurationMs = 300;
 
 /**
  * Abstract class representing a platform component with common functionality.
@@ -143,8 +143,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     public ngOnInitCalled$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
     public viewInitiated$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
     public destroyed$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
-    // General loadingState when not specific requestKey, requestKey = requestStateDefaultKey;
-    public loadingState$: WritableSignal<LoadingState> = signal(LoadingState.Pending);
+    public status$: WritableSignal<ComponentStateStatus> = signal(ComponentStateStatus.Pending);
     public errorMsgMap$: WritableSignal<Dictionary<string | undefined>> = signal({});
     public loadingMap$: WritableSignal<Dictionary<boolean | null>> = signal({});
     public reloadingMap$: WritableSignal<Dictionary<boolean | null>> = signal({});
@@ -204,22 +203,20 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
 
     protected _isStatePending?: Signal<boolean>;
     public get isStatePending(): Signal<boolean> {
-        this._isStatePending ??= computed(() => this.loadingState$() == 'Pending');
+        this._isStatePending ??= computed(() => this.status$() == 'Pending');
         return this._isStatePending;
     }
 
     protected _isStateLoading?: Signal<boolean>;
     public get isStateLoading(): Signal<boolean> {
-        this._isStateLoading ??= computed(
-            () => this.loadingState$() == 'Loading' || this.isAnyLoadingRequest() == true
-        );
+        this._isStateLoading ??= computed(() => this.status$() == 'Loading' || this.isAnyLoadingRequest() == true);
         return this._isStateLoading;
     }
 
     protected _isStateReloading?: Signal<boolean>;
     public get isStateReloading(): Signal<boolean> {
         this._isStateReloading ??= computed(
-            () => this.loadingState$() == 'Reloading' || this.isAnyReloadingRequest() == true
+            () => this.status$() == 'Reloading' || this.isAnyReloadingRequest() == true
         );
         return this._isStateReloading;
     }
@@ -240,13 +237,13 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
 
     protected _isStateSuccess?: Signal<boolean>;
     public get isStateSuccess(): Signal<boolean> {
-        this._isStateSuccess ??= computed(() => this.loadingState$() == 'Success');
+        this._isStateSuccess ??= computed(() => this.status$() == 'Success');
         return this._isStateSuccess;
     }
 
     protected _isStateError?: Signal<boolean>;
     public get isStateError(): Signal<boolean> {
-        this._isStateError ??= computed(() => this.loadingState$() == 'Error');
+        this._isStateError ??= computed(() => this.status$() == 'Error');
         return this._isStateError;
     }
 
@@ -439,73 +436,74 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         if (requestKey == undefined) requestKey = requestStateDefaultKey;
 
         const setLoadingState = () => {
-            if (!this.isForSetReloadingState(options) && this.loadingState$() != LoadingState.Loading)
-                this.loadingState$.set(LoadingState.Loading);
-            else if (this.isForSetReloadingState(options) && this.loadingState$() != LoadingState.Loading)
-                this.loadingState$.set(LoadingState.Reloading);
-
-            if (this.isForSetReloadingState(options)) this.setReloading(true, requestKey);
+            if (options?.isReloading) this.setReloading(true, requestKey);
             else this.setLoading(true, requestKey);
 
             this.setErrorMsg(undefined, requestKey);
+
+            checkSetStatus.bind(this)();
         };
 
         return (source: Observable<T>) => {
             return defer(() => {
-                const previousLoadingState = this.loadingState$();
-
                 setLoadingState();
 
                 return source.pipe(
                     this.untilDestroyed(),
                     onCancel(() => {
-                        if (this.isForSetReloadingState(options)) this.setReloading(false, requestKey);
+                        if (options?.isReloading) this.setReloading(false, requestKey);
                         else this.setLoading(false, requestKey);
 
-                        if (
-                            ((this.loadingState$() == 'Loading' && this.loadingRequestsCount() <= 0) ||
-                                (this.loadingState$() == 'Reloading' && this.reloadingRequestsCount() <= 0)) &&
-                            previousLoadingState == 'Success'
-                        )
-                            this.loadingState$.set(LoadingState.Success);
+                        checkSetStatus.bind(this)();
                     }),
 
                     tapOnce({
                         next: value => {
-                            if (this.isForSetReloadingState(options)) this.setReloading(false, requestKey);
-                            else this.setLoading(false, requestKey);
+                            // Set to reloading if is loading after first successful item
+                            // So that if observable is not completed yet, support get case get api
+                            // service has implicit caching reload, the observable return 2 items.
+                            // First item from cache, second item is from server
+                            // Set reloading for waiting second item to be completed then set to success
+                            if (!options?.isReloading) {
+                                this.setLoading(false, requestKey);
+                                this.setReloading(true, requestKey);
+
+                                checkSetStatus.bind(this)();
+                            }
 
                             if (options?.onSuccess != null) options.onSuccess(value);
                         },
                         error: (err: PlatformApiServiceErrorResponse | Error) => {
-                            if (this.isForSetReloadingState(options)) this.setReloading(false, requestKey);
+                            if (options?.isReloading) this.setReloading(false, requestKey);
                             else this.setLoading(false, requestKey);
 
                             if (options?.onError != null) options.onError(err);
                         }
                     }),
                     tap({
-                        next: value => {
-                            if (
-                                this.loadingState$() != LoadingState.Error &&
-                                this.loadingState$() != LoadingState.Success &&
-                                this.loadingRequestsCount() <= 0 &&
-                                this.reloadingRequestsCount() <= 0
-                            )
-                                this.loadingState$.set(LoadingState.Success);
-                        },
+                        next: undefined,
                         error: (err: PlatformApiServiceErrorResponse | Error) => {
                             this.setErrorMsg(err, requestKey);
-                            this.loadingState$.set(LoadingState.Error);
+                            this.status$.set(ComponentStateStatus.Error);
+                        },
+                        complete: () => {
+                            this.setReloading(false, requestKey);
+                            checkSetStatus.bind(this)();
                         }
                     })
                 );
             });
         };
-    }
 
-    protected isForSetReloadingState<T>(options: PlatformObserverLoadingErrorStateOptions<T> | undefined) {
-        return options?.isReloading && this.getErrorMsg() == null && !this.isStateLoading();
+        function checkSetStatus(this: PlatformComponent) {
+            if (this.loadingRequestsCount() > 0) {
+                if (this.status$() != ComponentStateStatus.Loading) this.status$.set(ComponentStateStatus.Loading);
+            } else if (this.reloadingRequestsCount() > 0) {
+                if (this.status$() != ComponentStateStatus.Reloading) this.status$.set(ComponentStateStatus.Reloading);
+            } else if (this.getErrorMsg() != null && this.getErrorMsg()?.trim() != '') {
+                if (this.status$() != ComponentStateStatus.Error) this.status$.set(ComponentStateStatus.Error);
+            } else if (this.status$() != ComponentStateStatus.Success) this.status$.set(ComponentStateStatus.Success);
+        }
     }
 
     /**
@@ -690,7 +688,6 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
         requestKey?: string | null,
         effectOptions?: {
-            throttleTimeMs?: number;
             observerLoadingoptions?: PlatformObserverLoadingErrorStateOptions<ReturnObservableType>;
         }
     ): ReturnType {
@@ -760,7 +757,6 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                     generator,
                     requestKey,
                     {
-                        throttleTimeMs: effectOptions?.throttleTimeMs,
                         onInnerGeneratorObservableCompleted: request => {
                             newInnerGeneratorResultObservableCompleted = true;
                             if (newRequestObservableCompletedSubjectCompleted) {
@@ -856,7 +852,6 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
         requestKey: string | null | undefined,
         options?: {
-            throttleTimeMs?: number;
             onInnerGeneratorObservableCompleted?: (request: ObservableType | null | undefined) => unknown;
         }
     ): Observable<{
@@ -875,10 +870,6 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         return request$.pipe(
             delay(1, asyncScheduler), // (III)
             distinctUntilObjectValuesChanged(),
-            throttleTime(options?.throttleTimeMs ?? defaultThrottleDurationMs, asyncScheduler, {
-                leading: true,
-                trailing: true
-            }),
             switchMap(request =>
                 generator(<OriginType>of(request.request), request.isReloading).pipe(
                     this.observerLoadingErrorState(requestKey, { isReloading: request.isReloading }),

@@ -36,7 +36,7 @@ export interface IPlatformVm {
  * @method isAnyReloadingRequest - Checks if there is any request with a reloading state in the view model state.
  */
 export class PlatformVm implements IPlatformVm {
-    public static requestStateDefaultKey = requestStateDefaultKey;
+    public static readonly requestStateDefaultKey = requestStateDefaultKey;
 
     public status: StateStatus = 'Pending';
     public error: string | undefined | null = undefined;
@@ -150,11 +150,11 @@ export class PlatformVm implements IPlatformVm {
     }
 
     public isAnyLoadingRequest(): boolean | undefined {
-        return keys(this.loadingMap).find(requestKey => this.loadingMap[requestKey]) != undefined;
+        return keys(this.loadingMap).find(requestKey => this.loadingMap[requestKey] == true) != undefined;
     }
 
     public isAnyReloadingRequest(): boolean | undefined {
-        return keys(this.reloadingMap).find(requestKey => this.reloadingMap[requestKey]) != undefined;
+        return keys(this.reloadingMap).find(requestKey => this.reloadingMap[requestKey] == true) != undefined;
     }
 
     public clearAllErrorMsgs() {
