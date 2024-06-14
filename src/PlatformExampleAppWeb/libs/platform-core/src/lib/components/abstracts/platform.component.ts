@@ -35,7 +35,7 @@ import { delay, filter, finalize, map, share, switchMap, takeUntil, tap, throttl
 import { PlatformApiServiceErrorResponse } from '../../api-services';
 import { LifeCycleHelper } from '../../helpers';
 import { PLATFORM_CORE_GLOBAL_ENV } from '../../platform-core-global-environment';
-import { distinctUntilObjectValuesChanged, onCancel, subscribeUntil, tapOnce } from '../../rxjs';
+import { distinctUntilObjectValuesChanged, onCancel, subscribeUntil, tapLimit, tapOnce } from '../../rxjs';
 import { PlatformTranslateService } from '../../translations';
 import { clone, guid_generate, immutableUpdate, keys, list_distinct, list_remove, task_delay } from '../../utils';
 import { requestStateDefaultKey } from '../../view-models';
@@ -483,16 +483,20 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                         }
                     }),
                     tap({
-                        next: undefined,
                         error: (err: PlatformApiServiceErrorResponse | Error) => {
                             this.setErrorMsg(err, requestKey);
                             this.status$.set(ComponentStateStatus.Error);
-                        },
-                        complete: () => {
-                            this.setReloading(false, requestKey);
-                            checkSetStatus.bind(this)();
                         }
-                    })
+                    }),
+                    tapLimit(
+                        {
+                            complete: () => {
+                                this.setReloading(false, requestKey);
+                                checkSetStatus.bind(this)();
+                            }
+                        },
+                        2 // limit first 2 item for complete reloading. The second item is the item implicit load if api cached
+                    )
                 );
             });
         };

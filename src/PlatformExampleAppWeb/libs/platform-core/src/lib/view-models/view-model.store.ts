@@ -43,7 +43,7 @@ import { ComponentStore, SelectConfig } from '@ngrx/component-store';
 import { PlatformApiServiceErrorResponse } from '../api-services';
 import { PlatformCachingService } from '../caching';
 import { PLATFORM_CORE_GLOBAL_ENV } from '../platform-core-global-environment';
-import { distinctUntilObjectValuesChanged, onCancel, subscribeUntil, tapOnce } from '../rxjs';
+import { distinctUntilObjectValuesChanged, onCancel, subscribeUntil, tapLimit, tapOnce } from '../rxjs';
 import { immutableUpdate, ImmutableUpdateOptions, list_remove, toPlainObj } from '../utils';
 import { PlatformVm } from './generic.view-model';
 
@@ -642,16 +642,20 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                         }
                     }),
                     tap({
-                        next: undefined,
                         error: (err: PlatformApiServiceErrorResponse | Error) => {
                             this.setErrorMsg(err, requestKey);
                             this.setErrorState(err);
-                        },
-                        complete: () => {
-                            this.setReloading(false, requestKey);
-                            checkSetStatus.bind(this)();
                         }
-                    })
+                    }),
+                    tapLimit(
+                        {
+                            complete: () => {
+                                this.setReloading(false, requestKey);
+                                checkSetStatus.bind(this)();
+                            }
+                        },
+                        2 // limit first 2 item for complete reloading. The second item is the item implicit load if api cached
+                    )
                 );
             });
         };
