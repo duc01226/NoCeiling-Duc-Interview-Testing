@@ -274,7 +274,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
 
     public reload() {
         this.clearAllErrorMsgs();
-        return this.initOrReloadVm(this.currentState().isStateSuccessOrReloading);
+        return this.initOrReloadVm(this.currentState().isStateSuccessOrReloading).pipe(take(2));
     }
 
     public clearAllErrorMsgs() {
@@ -1117,17 +1117,21 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                     delay(1, asyncScheduler),
                     this.observerLoadingErrorState(requestKey, { isReloading: request.isReloading }),
                     map(result => ({ request, result })),
-                    tap({
-                        complete: () => {
-                            // Delay to mimic async operation, ensure this run only after previous request observable completed
-                            setTimeout(() => {
-                                if (options?.onInnerGeneratorObservableCompleted != null)
-                                    options.onInnerGeneratorObservableCompleted(request.request);
-                            });
-                        }
-                    })
+                    tapLimit(
+                        {
+                            complete: () => {
+                                // Delay to mimic async operation, ensure this run only after previous request observable completed
+                                setTimeout(() => {
+                                    if (options?.onInnerGeneratorObservableCompleted != null)
+                                        options.onInnerGeneratorObservableCompleted(request.request);
+                                });
+                            }
+                        },
+                        2
+                    )
                 )
             ),
+            distinctUntilObjectValuesChanged(),
             this.untilDestroyed(),
             share() // (IV)
         );

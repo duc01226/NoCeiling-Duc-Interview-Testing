@@ -1,8 +1,6 @@
 import { asyncScheduler, BehaviorSubject, concat, delay, Observable, of, tap } from 'rxjs';
 import { TapObserver } from 'rxjs/internal/operators/tap';
 
-import { distinctUntilObjectValuesChanged } from '../rxjs';
-
 /**
  * Abstract class for platform caching service.
  *
@@ -81,7 +79,7 @@ export abstract class PlatformCachingService {
                 request().pipe(
                     tap(this.tapCacheDataObserver<T>(customSetCachedRequestDataFn, requestCacheKey, options))
                 )
-            ).pipe(distinctUntilObjectValuesChanged());
+            );
         }
     }
 

@@ -880,17 +880,21 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                 generator(<OriginType>of(request.request), request.isReloading).pipe(
                     this.observerLoadingErrorState(requestKey, { isReloading: request.isReloading }),
                     map(result => ({ request, result })),
-                    tap({
-                        complete: () => {
-                            // Delay to mimic async operation, ensure this run only after previous request observable completed
-                            setTimeout(() => {
-                                if (options?.onInnerGeneratorObservableCompleted != null)
-                                    options.onInnerGeneratorObservableCompleted(request.request);
-                            });
-                        }
-                    })
+                    tapLimit(
+                        {
+                            complete: () => {
+                                // Delay to mimic async operation, ensure this run only after previous request observable completed
+                                setTimeout(() => {
+                                    if (options?.onInnerGeneratorObservableCompleted != null)
+                                        options.onInnerGeneratorObservableCompleted(request.request);
+                                });
+                            }
+                        },
+                        2
+                    )
                 )
             ),
+            distinctUntilObjectValuesChanged(),
             this.untilDestroyed(),
             share() // (IV)
         );
