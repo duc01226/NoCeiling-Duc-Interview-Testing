@@ -453,6 +453,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
             onDone?: (newState: TViewModel) => unknown;
         }
     ): void {
+        this.setupSetClonedDeepStateToCheckDataMutation();
         this.ensureStateNotMutated();
 
         const processedOptions: ImmutableUpdateOptions = {
