@@ -8,23 +8,24 @@ import {
 } from './platform.caching-service';
 
 /**
- * Local storage caching service implementation.
+ * CacheStorage caching service implementation.
  *
  * @remarks
  * This class extends the {@link PlatformCachingService} abstract class and provides a caching service
- * that utilizes the browser's local storage for storing cached data.
+ * that utilizes the browser's CacheStorage for storing cached data.
  *
  * @example
  * ```typescript
- * // Create an instance of PlatformLocalStorageCachingService
- * const localStorageCacheService = new PlatformLocalStorageCachingService();
+ * // Create an instance of PlatformCacheStorageCachingService
+ * const cacheStorageCacheService = new PlatformCacheStorageCachingService();
  *
  * // Use caching methods such as get, set, delete, etc.
- * const cachedData = localStorageCacheService.get<MyData>('myDataCacheKey');
+ * const cachedData = cacheStorageCacheService.get<MyData>('myDataCacheKey');
  * ```
  */
-export class PlatformLocalStorageCachingService extends PlatformCachingService {
-    protected cacheKeyPrefix: string = '__PlatformLocalStorageCaching__';
+export class PlatformCacheStorageCachingService extends PlatformCachingService {
+    protected cacheKeyPrefix: string = '__PlatformCacheStorageCaching__';
+    protected cacheName: string = 'platform-cache-storage';
     protected cache: Map<string, PlatformCachingItem> = new Map();
 
     constructor(options?: PlatformCachingServiceOptions) {
@@ -33,18 +34,20 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
     }
 
     /**
-     * Loads cached data from local storage.
+     * Loads cached data from CacheStorage.
      */
     public override async loadCache() {
-        // Load keys
-        const keys = this.getAllCacheKeys();
+        const cache = await caches.open(this.cacheName);
+        const keys = await cache.keys();
 
-        // build cache data
         const cacheMap = new Map();
-        keys.forEach(key => {
-            const cacheDataItem = localStorage.getItem(key);
-            if (cacheDataItem != null) cacheMap.set(key, JSON.parse(cacheDataItem));
-        });
+        for (const request of keys) {
+            const response = await cache.match(request);
+            if (response) {
+                const cacheDataItem = await response.json();
+                cacheMap.set(request.url, cacheDataItem);
+            }
+        }
 
         this.cache = cacheMap;
         this.removeExpiredItems();
@@ -52,50 +55,42 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
         this.cacheLoaded$.next(true);
     }
 
-    private getAllCacheKeys() {
-        let currentLoadKeyIndex = 0;
-        const keys = <string[]>[];
-        while (localStorage.key(currentLoadKeyIndex) != null && localStorage.key(currentLoadKeyIndex) != '') {
-            if (localStorage.key(currentLoadKeyIndex)?.startsWith(this.cacheKeyPrefix) == true)
-                keys.push(localStorage.key(currentLoadKeyIndex)!);
-            currentLoadKeyIndex += 1;
-        }
-
-        return keys;
-    }
-
     /**
      * Removes expired items from the cache.
      */
-    public removeExpiredItems() {
+    private async removeExpiredItems() {
+        const cache = await caches.open(this.cacheName);
         for (const [key, value] of this.cache.entries()) {
             if (this.isItemExpired(value)) {
                 this.cache.delete(key);
-                localStorage.removeItem(key);
+                await cache.delete(new Request(key));
             }
         }
     }
 
     /**
-     * Saves the cache to local storage.
+     * Saves the cache to CacheStorage.
      *
      * @param debounceSaveCache - Determines whether to debounce saving the cache.
      */
-    public saveCache(debounceSaveCache?: boolean) {
-        if (debounceSaveCache == false) this.doSaveCache();
-        // Schedule in background to save cache to not block current thread and improve performance
-        else this.doSaveCacheDebounce();
+    private async saveCache(debounceSaveCache?: boolean) {
+        if (debounceSaveCache == false) await this.doSaveCache();
+        else await this.doSaveCacheDebounce();
     }
 
-    private doSaveCache = () => {
+    private doSaveCache = async () => {
         try {
-            this.getAllCacheKeys().forEach(key => localStorage.removeItem(key));
-            Array.from(this.cache.entries()).forEach(([key, cacheItem]) => {
-                localStorage.setItem(key, JSON.stringify(toPlainObj(cacheItem)));
-            });
+            const cache = await caches.open(this.cacheName);
+            const keys = await cache.keys();
+            for (const request of keys) {
+                await cache.delete(request);
+            }
+            for (const [key, cacheItem] of this.cache.entries()) {
+                await cache.put(new Request(key), new Response(JSON.stringify(toPlainObj(cacheItem))));
+            }
         } catch (error) {
-            console.warn('Local Storage is full, Please empty data', error);
-            this.clear();
+            console.warn('CacheStorage is full, Please empty data', error);
+            await this.clear();
         }
     };
 
@@ -180,7 +175,7 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
     }
 
     private buildFinalCacheKey(key: string): string {
-        return `${this.cacheKeyPrefix}` + key;
+        return `${location.origin}/${encodeURI(this.cacheKeyPrefix + key)}`;
     }
 
     public override delete(key: string): void {
@@ -188,10 +183,14 @@ export class PlatformLocalStorageCachingService extends PlatformCachingService {
         this.saveCache();
     }
 
-    public override clear(): void {
+    public async clear(): Promise<void> {
         try {
             this.cache.clear();
-            localStorage.clear();
+            const cache = await caches.open(this.cacheName);
+            const keys = await cache.keys();
+            for (const request of keys) {
+                await cache.delete(request);
+            }
         } catch (error) {
             console.error(error);
         }

@@ -1,4 +1,4 @@
-import { asyncScheduler, concat, delay, Observable, of, tap } from 'rxjs';
+import { asyncScheduler, BehaviorSubject, concat, delay, Observable, of, tap } from 'rxjs';
 import { TapObserver } from 'rxjs/internal/operators/tap';
 
 import { distinctUntilObjectValuesChanged } from '../rxjs';
@@ -47,6 +47,10 @@ export abstract class PlatformCachingService {
     public abstract delete(key: string): void;
 
     public abstract clear(): void;
+
+    public abstract loadCache(): Promise<void>;
+
+    public cacheLoaded$: BehaviorSubject<boolean> = new BehaviorSubject(false);
 
     /**
      * Caches data with implicit reload request.

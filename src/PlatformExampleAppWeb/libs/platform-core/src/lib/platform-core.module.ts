@@ -14,7 +14,7 @@ import {
     PlatformApiService,
     PlatformHttpOptionsConfigService
 } from './api-services';
-import { PlatformCachingService, PlatformLocalStorageCachingService } from './caching';
+import { PlatformCacheStorageCachingService, PlatformCachingService } from './caching';
 import {
     IPlatformEventManager,
     PlatformEvent,
@@ -144,7 +144,7 @@ export class PlatformCoreModule {
                         useFactory: () =>
                             config.cachingServiceFactory != null
                                 ? config.cachingServiceFactory()
-                                : new PlatformLocalStorageCachingService()
+                                : new PlatformCacheStorageCachingService()
                     },
                     PlatformServiceWorkerService,
                     { provide: ErrorHandler, useClass: PlatformGlobalErrorHandler },
@@ -242,7 +242,12 @@ export class PlatformCoreModule {
         ];
     }
 
-    constructor(public moduleConfig: PlatformCoreModuleConfig) {
+    constructor(
+        public moduleConfig: PlatformCoreModuleConfig,
+        public cachingService: PlatformCachingService // (I)
+    ) {
         PLATFORM_CORE_GLOBAL_ENV.isLocalDev = moduleConfig.isDevelopment;
+
+        // (I) Inject PlatformCachingService to make it init asap
     }
 }
