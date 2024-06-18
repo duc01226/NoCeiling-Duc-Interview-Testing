@@ -27,7 +27,7 @@ public abstract class PlatformCqrsCommandEventBusMessageProducer<TCommand>
     protected override PlatformCqrsCommandEventBusMessage<TCommand> BuildMessage(PlatformCqrsCommandEvent<TCommand> @event)
     {
         return PlatformCqrsCommandEventBusMessage<TCommand>.New<PlatformCqrsCommandEventBusMessage<TCommand>>(
-            trackId: Guid.NewGuid().ToString(),
+            trackId: Ulid.NewUlid().ToString(),
             payload: @event,
             identity: BuildPlatformEventBusMessageIdentity(@event.RequestContext),
             producerContext: ApplicationSettingContext.ApplicationName,

@@ -173,7 +173,7 @@ public static class StringExtension
 
     public static string ToUniqueStr(this string str)
     {
-        return str + " " + Guid.NewGuid();
+        return str + " " + Ulid.NewUlid();
     }
 
     public static string ConcatString(this ReadOnlySpan<char> str1, params string[] otherStrings)

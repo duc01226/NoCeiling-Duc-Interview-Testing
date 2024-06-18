@@ -47,10 +47,9 @@ internal sealed class DemoUseCreateOrUpdateManyCommandHandler
                 .Select(
                     p =>
                     {
-                        var id = Guid.NewGuid();
                         return new TextSnippetEntity
                         {
-                            Id = id,
+                            Id = Ulid.NewUlid().ToString(),
                             SnippetText = "SnippetText " + p,
                             FullText = "FullText " + p
                         };

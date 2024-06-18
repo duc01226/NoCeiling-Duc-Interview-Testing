@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Easy.Platform.EfCore.EntityConfiguration;
 
-public class PlatformOutboxEventBusMessageEntityConfiguration : PlatformEntityConfiguration<PlatformOutboxBusMessage, string>
+public class PlatformOutboxBusMessageEntityConfiguration : PlatformEntityConfiguration<PlatformOutboxBusMessage, string>
 {
     public const string PlatformOutboxBusMessageTableName = "PlatformOutboxEventBusMessage";
 

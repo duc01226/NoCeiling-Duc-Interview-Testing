@@ -32,7 +32,7 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
 
     public string LastSendError { get; set; }
 
-    public Guid? ConcurrencyUpdateToken { get; set; }
+    public string? ConcurrencyUpdateToken { get; set; }
 
     public static Expression<Func<PlatformOutboxBusMessage, bool>> CanHandleMessagesExpr(
         double messageProcessingMaximumTimeInSeconds)
@@ -94,7 +94,7 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
 
     public static string BuildId(Type messageType, string trackId, string extendedMessageIdPrefix)
     {
-        return $"{BuildIdGroupedByTypePrefix(messageType, extendedMessageIdPrefix)}{BuildIdSeparator}{trackId ?? Guid.NewGuid().ToString()}".TakeTop(IdMaxLength);
+        return $"{BuildIdGroupedByTypePrefix(messageType, extendedMessageIdPrefix)}{BuildIdSeparator}{trackId ?? Ulid.NewUlid().ToString()}".TakeTop(IdMaxLength);
     }
 
     public static string BuildIdGroupedByTypePrefix(Type messageType, string extendedMessageIdPrefix)

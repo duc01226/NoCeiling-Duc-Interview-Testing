@@ -5,7 +5,7 @@ using PlatformExampleApp.TextSnippet.Domain.ValueObjects;
 
 namespace PlatformExampleApp.TextSnippet.Application.EntityDtos;
 
-public sealed class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, Guid>
+public sealed class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, string>
 {
     public TextSnippetEntityDto() { }
 
@@ -19,7 +19,7 @@ public sealed class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, 
         TimeOnly = entity.TimeOnly;
     }
 
-    public Guid? Id { get; set; }
+    public string Id { get; set; }
 
     public string SnippetText { get; set; }
 
@@ -48,7 +48,7 @@ public sealed class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, 
 
     protected override TextSnippetEntity MapToEntity(TextSnippetEntity entity, MapToEntityModes mode)
     {
-        entity.Id = mode == MapToEntityModes.MapNewEntity || IsSubmitToCreate() ? Guid.NewGuid() : Id!.Value;
+        entity.Id = mode == MapToEntityModes.MapNewEntity || IsSubmitToCreate() ? Ulid.NewUlid().ToString() : Id!;
         entity.SnippetText = SnippetText;
         entity.FullText = FullText;
 

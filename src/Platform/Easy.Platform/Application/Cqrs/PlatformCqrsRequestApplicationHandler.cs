@@ -68,7 +68,7 @@ public abstract class PlatformCqrsRequestApplicationHandler<TRequest> : Platform
     public IPlatformCqrsRequestAuditInfo BuildRequestAuditInfo(TRequest request)
     {
         return new PlatformCqrsRequestAuditInfo(
-            auditTrackId: Guid.NewGuid(),
+            auditTrackId: Ulid.NewUlid().ToString(),
             auditRequestByUserId: RequestContextAccessor.Current.UserId());
     }
 

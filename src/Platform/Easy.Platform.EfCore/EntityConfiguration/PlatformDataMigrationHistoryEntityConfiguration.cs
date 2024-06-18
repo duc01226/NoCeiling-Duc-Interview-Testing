@@ -13,7 +13,6 @@ public class PlatformDataMigrationHistoryEntityConfiguration : IEntityTypeConfig
         builder.Property(p => p.ConcurrencyUpdateToken).IsConcurrencyToken();
         builder.Property(p => p.Status).HasConversion(new EnumToStringConverter<PlatformDataMigrationHistory.Statuses>());
 
-        builder.HasIndex(p => p.ConcurrencyUpdateToken);
         builder.HasIndex(p => p.Status);
     }
 }

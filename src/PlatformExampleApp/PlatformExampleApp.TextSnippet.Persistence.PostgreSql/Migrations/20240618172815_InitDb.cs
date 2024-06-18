@@ -1,10 +1,12 @@
+using System;
+using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
 using PlatformExampleApp.TextSnippet.Domain.ValueObjects;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitDb : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -14,15 +16,22 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
                 columns: table => new
                 {
                     Name = table.Column<string>(type: "text", nullable: false),
-                    CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    Status = table.Column<string>(type: "text", nullable: true),
+                    LastProcessingPingTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    LastProcessError = table.Column<string>(type: "text", nullable: true),
+                    CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ConcurrencyUpdateToken = table.Column<string>(type: "text", nullable: true)
                 },
-                constraints: table => table.PrimaryKey("PK_ApplicationDataMigrationHistoryDbSet", x => x.Name));
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ApplicationDataMigrationHistoryDbSet", x => x.Name);
+                });
 
             migrationBuilder.CreateTable(
                 name: "PlatformInboxEventBusMessage",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Id = table.Column<string>(type: "character varying(400)", maxLength: 400, nullable: false),
                     JsonMessage = table.Column<string>(type: "text", nullable: true),
                     MessageTypeFullName = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
                     ProduceFrom = table.Column<string>(type: "text", nullable: true),
@@ -30,19 +39,23 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
                     ConsumerBy = table.Column<string>(type: "text", nullable: true),
                     ConsumeStatus = table.Column<string>(type: "text", nullable: false),
                     RetriedProcessCount = table.Column<int>(type: "integer", nullable: true),
+                    ForApplicationName = table.Column<string>(type: "text", nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     LastConsumeDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     NextRetryProcessAfter = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     LastConsumeError = table.Column<string>(type: "text", nullable: true),
-                    ConcurrencyUpdateToken = table.Column<Guid>(type: "uuid", nullable: true)
+                    ConcurrencyUpdateToken = table.Column<string>(type: "text", nullable: true)
                 },
-                constraints: table => table.PrimaryKey("PK_PlatformInboxEventBusMessage", x => x.Id));
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PlatformInboxEventBusMessage", x => x.Id);
+                });
 
             migrationBuilder.CreateTable(
                 name: "PlatformOutboxEventBusMessage",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Id = table.Column<string>(type: "character varying(400)", maxLength: 400, nullable: false),
                     JsonMessage = table.Column<string>(type: "text", nullable: true),
                     MessageTypeFullName = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
                     RoutingKey = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
@@ -52,73 +65,85 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
                     CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     LastSendDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     LastSendError = table.Column<string>(type: "text", nullable: true),
-                    ConcurrencyUpdateToken = table.Column<Guid>(type: "uuid", nullable: true)
+                    ConcurrencyUpdateToken = table.Column<string>(type: "text", nullable: true)
                 },
-                constraints: table => table.PrimaryKey("PK_PlatformOutboxEventBusMessage", x => x.Id));
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PlatformOutboxEventBusMessage", x => x.Id);
+                });
 
             migrationBuilder.CreateTable(
                 name: "TextSnippetEntity",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<string>(type: "text", nullable: false),
                     SnippetText = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     FullText = table.Column<string>(type: "character varying(4000)", maxLength: 4000, nullable: false),
-                    CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: true),
+                    TimeOnly = table.Column<TimeOnly>(type: "time without time zone", nullable: false),
+                    CreatedByUserId = table.Column<string>(type: "text", nullable: true),
                     Address = table.Column<ExampleAddressValueObject>(type: "jsonb", nullable: true),
                     AddressStrings = table.Column<List<string>>(type: "text[]", nullable: true),
                     Addresses = table.Column<List<ExampleAddressValueObject>>(type: "jsonb", nullable: true),
-                    ConcurrencyUpdateToken = table.Column<Guid>(type: "uuid", nullable: true),
-                    CreatedBy = table.Column<Guid>(type: "uuid", nullable: true),
-                    LastUpdatedBy = table.Column<Guid>(type: "uuid", nullable: true),
+                    ConcurrencyUpdateToken = table.Column<string>(type: "text", nullable: true),
+                    CreatedBy = table.Column<string>(type: "text", nullable: true),
+                    LastUpdatedBy = table.Column<string>(type: "text", nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     LastUpdatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
-                constraints: table => table.PrimaryKey("PK_TextSnippetEntity", x => x.Id));
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TextSnippetEntity", x => x.Id);
+                });
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformInboxEventBusMessage_ConsumeStatus_LastConsumeDate",
+                name: "IX_ApplicationDataMigrationHistoryDbSet_Status",
+                table: "ApplicationDataMigrationHistoryDbSet",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PlatformInboxEventBusMessage_ConsumeStatus_CreatedDate",
                 table: "PlatformInboxEventBusMessage",
-                columns: ["ConsumeStatus", "LastConsumeDate"]);
+                columns: ["ConsumeStatus", "CreatedDate"]);
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformInboxEventBusMessage_ConsumeStatus_NextRetryProcess~",
+                name: "IX_PlatformInboxEventBusMessage_CreatedDate_ConsumeStatus",
                 table: "PlatformInboxEventBusMessage",
-                columns: ["ConsumeStatus", "NextRetryProcessAfter", "LastConsumeDate"]);
+                columns: ["CreatedDate", "ConsumeStatus"]);
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformInboxEventBusMessage_LastConsumeDate_ConsumeStatus",
+                name: "IX_PlatformInboxEventBusMessage_ForApplicationName_ConsumeStat~",
                 table: "PlatformInboxEventBusMessage",
-                columns: ["LastConsumeDate", "ConsumeStatus"]);
+                columns: ["ForApplicationName", "ConsumeStatus", "LastConsumeDate", "CreatedDate"]);
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformInboxEventBusMessage_RoutingKey",
-                table: "PlatformInboxEventBusMessage",
-                column: "RoutingKey");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlatformOutboxEventBusMessage_LastSendDate_SendStatus",
+                name: "IX_PlatformOutboxEventBusMessage_CreatedDate_SendStatus",
                 table: "PlatformOutboxEventBusMessage",
-                columns: ["LastSendDate", "SendStatus"]);
+                columns: ["CreatedDate", "SendStatus"]);
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformOutboxEventBusMessage_NextRetryProcessAfter",
+                name: "IX_PlatformOutboxEventBusMessage_SendStatus_CreatedDate",
                 table: "PlatformOutboxEventBusMessage",
-                column: "NextRetryProcessAfter");
+                columns: ["SendStatus", "CreatedDate"]);
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformOutboxEventBusMessage_RoutingKey",
+                name: "IX_PlatformOutboxEventBusMessage_SendStatus_LastSendDate_Creat~",
                 table: "PlatformOutboxEventBusMessage",
-                column: "RoutingKey");
+                columns: ["SendStatus", "LastSendDate", "CreatedDate"]);
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformOutboxEventBusMessage_SendStatus_LastSendDate",
-                table: "PlatformOutboxEventBusMessage",
-                columns: ["SendStatus", "LastSendDate"]);
+                name: "IX_TextSnippet_FullText_FullTextSearch",
+                table: "TextSnippetEntity",
+                column: "FullText")
+                .Annotation("Npgsql:IndexMethod", "GIN")
+                .Annotation("Npgsql:TsVectorConfig", "english");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformOutboxEventBusMessage_SendStatus_NextRetryProcessAf~",
-                table: "PlatformOutboxEventBusMessage",
-                columns: ["SendStatus", "NextRetryProcessAfter", "LastSendDate"]);
+                name: "IX_TextSnippet_SnippetText_FullTextSearch",
+                table: "TextSnippetEntity",
+                column: "SnippetText")
+                .Annotation("Npgsql:IndexMethod", "GIN")
+                .Annotation("Npgsql:IndexOperators", new[] { "gin_trgm_ops" })
+                .Annotation("Npgsql:TsVectorConfig", "english");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TextSnippetEntity_Address",
@@ -157,13 +182,6 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
                 name: "IX_TextSnippetEntity_LastUpdatedDate",
                 table: "TextSnippetEntity",
                 column: "LastUpdatedDate");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TextSnippetEntity_SnippetText",
-                table: "TextSnippetEntity",
-                column: "SnippetText")
-                .Annotation("Npgsql:IndexMethod", "GIN")
-                .Annotation("Npgsql:TsVectorConfig", "english");
         }
 
         /// <inheritdoc />

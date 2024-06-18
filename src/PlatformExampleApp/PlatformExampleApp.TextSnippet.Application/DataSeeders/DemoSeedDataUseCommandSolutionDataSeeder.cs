@@ -50,7 +50,7 @@ public sealed class DemoSeedDataUseCommandSolutionDataSeeder : PlatformApplicati
             {
                 Data = new TextSnippetEntityDto
                 {
-                    Id = Guid.Parse("671e5fff-2282-4d57-ac93-9dd4ea50985d"),
+                    Id = Ulid.Parse("01J0P1CE4TW4RY3TKZ9CNX73NR").ToString(),
                     SnippetText = "Dummy Seed SnippetText",
                     FullText = "Dummy Seed FullText"
                 },

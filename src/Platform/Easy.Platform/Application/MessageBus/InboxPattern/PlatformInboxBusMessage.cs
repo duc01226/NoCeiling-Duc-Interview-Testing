@@ -43,7 +43,7 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
 
     public string LastConsumeError { get; set; }
 
-    public Guid? ConcurrencyUpdateToken { get; set; }
+    public string? ConcurrencyUpdateToken { get; set; }
 
     public static Expression<Func<PlatformInboxBusMessage, bool>> CanHandleMessagesExpr(
         double messageProcessingMaximumTimeInSeconds,
@@ -107,7 +107,7 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
 
     public static string BuildId(Type consumerType, string trackId, string extendedMessageIdPrefix)
     {
-        return $"{BuildIdGroupedByConsumerPrefix(consumerType, extendedMessageIdPrefix)}{BuildIdSeparator}{trackId ?? Guid.NewGuid().ToString()}".TakeTop(IdMaxLength);
+        return $"{BuildIdGroupedByConsumerPrefix(consumerType, extendedMessageIdPrefix)}{BuildIdSeparator}{trackId ?? Ulid.NewUlid().ToString()}".TakeTop(IdMaxLength);
     }
 
     public string GetIdPrefix()

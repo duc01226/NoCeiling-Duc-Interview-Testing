@@ -145,7 +145,7 @@ public class TextSnippetController : PlatformBaseController
     [Route("testSaveUsingDirectDbContext")]
     public async Task<SaveSnippetTextCommandResult> TestSaveUsingDirectDbContext([FromBody] SaveSnippetTextCommand request)
     {
-        var savedEntity = await textSnippetDbContext.CreateOrUpdateAsync<TextSnippetEntity, Guid>(request.Data.MapToEntity());
+        var savedEntity = await textSnippetDbContext.CreateOrUpdateAsync<TextSnippetEntity, string>(request.Data.MapToEntity());
 
         await textSnippetDbContext.SaveChangesAsync();
 

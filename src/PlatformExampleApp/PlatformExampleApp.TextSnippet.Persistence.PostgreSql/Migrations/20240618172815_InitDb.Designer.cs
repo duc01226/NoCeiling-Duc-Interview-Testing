@@ -14,15 +14,15 @@ using PlatformExampleApp.TextSnippet.Persistence.PostgreSql;
 namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
 {
     [DbContext(typeof(TextSnippetDbContext))]
-    [Migration("20230417040947_UpdateIndexFtsAndStartWith")]
-    partial class UpdateIndexFtsAndStartWith
+    [Migration("20240618172815_InitDb")]
+    partial class InitDb
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.3")
+                .HasAnnotation("ProductVersion", "8.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -30,12 +30,12 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
             modelBuilder.Entity("Easy.Platform.Application.MessageBus.InboxPattern.PlatformInboxBusMessage", b =>
                 {
                     b.Property<string>("Id")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
 
-                    b.Property<Guid?>("ConcurrencyUpdateToken")
+                    b.Property<string>("ConcurrencyUpdateToken")
                         .IsConcurrencyToken()
-                        .HasColumnType("uuid");
+                        .HasColumnType("text");
 
                     b.Property<string>("ConsumeStatus")
                         .IsRequired()
@@ -46,6 +46,9 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ForApplicationName")
+                        .HasColumnType("text");
 
                     b.Property<string>("JsonMessage")
                         .HasColumnType("text");
@@ -77,13 +80,11 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RoutingKey");
+                    b.HasIndex("ConsumeStatus", "CreatedDate");
 
-                    b.HasIndex("ConsumeStatus", "LastConsumeDate");
+                    b.HasIndex("CreatedDate", "ConsumeStatus");
 
-                    b.HasIndex("LastConsumeDate", "ConsumeStatus");
-
-                    b.HasIndex("ConsumeStatus", "NextRetryProcessAfter", "LastConsumeDate");
+                    b.HasIndex("ForApplicationName", "ConsumeStatus", "LastConsumeDate", "CreatedDate");
 
                     b.ToTable("PlatformInboxEventBusMessage", (string)null);
                 });
@@ -91,12 +92,12 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
             modelBuilder.Entity("Easy.Platform.Application.MessageBus.OutboxPattern.PlatformOutboxBusMessage", b =>
                 {
                     b.Property<string>("Id")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
 
-                    b.Property<Guid?>("ConcurrencyUpdateToken")
+                    b.Property<string>("ConcurrencyUpdateToken")
                         .IsConcurrencyToken()
-                        .HasColumnType("uuid");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
@@ -132,15 +133,11 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("NextRetryProcessAfter");
+                    b.HasIndex("CreatedDate", "SendStatus");
 
-                    b.HasIndex("RoutingKey");
+                    b.HasIndex("SendStatus", "CreatedDate");
 
-                    b.HasIndex("LastSendDate", "SendStatus");
-
-                    b.HasIndex("SendStatus", "LastSendDate");
-
-                    b.HasIndex("SendStatus", "NextRetryProcessAfter", "LastSendDate");
+                    b.HasIndex("SendStatus", "LastSendDate", "CreatedDate");
 
                     b.ToTable("PlatformOutboxEventBusMessage", (string)null);
                 });
@@ -150,19 +147,35 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("text");
 
+                    b.Property<string>("ConcurrencyUpdateToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("LastProcessError")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("LastProcessingPingTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .HasColumnType("text");
+
                     b.HasKey("Name");
+
+                    b.HasIndex("ConcurrencyUpdateToken");
+
+                    b.HasIndex("Status");
 
                     b.ToTable("ApplicationDataMigrationHistoryDbSet");
                 });
 
             modelBuilder.Entity("PlatformExampleApp.TextSnippet.Domain.Entities.TextSnippetEntity", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
 
                     b.Property<ExampleAddressValueObject>("Address")
                         .HasColumnType("jsonb");
@@ -173,15 +186,15 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
                     b.Property<List<ExampleAddressValueObject>>("Addresses")
                         .HasColumnType("jsonb");
 
-                    b.Property<Guid?>("ConcurrencyUpdateToken")
+                    b.Property<string>("ConcurrencyUpdateToken")
                         .IsConcurrencyToken()
-                        .HasColumnType("uuid");
+                        .HasColumnType("text");
 
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid");
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
 
-                    b.Property<Guid?>("CreatedByUserId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("CreatedByUserId")
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
@@ -191,8 +204,8 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
 
-                    b.Property<Guid?>("LastUpdatedBy")
-                        .HasColumnType("uuid");
+                    b.Property<string>("LastUpdatedBy")
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("LastUpdatedDate")
                         .HasColumnType("timestamp with time zone");

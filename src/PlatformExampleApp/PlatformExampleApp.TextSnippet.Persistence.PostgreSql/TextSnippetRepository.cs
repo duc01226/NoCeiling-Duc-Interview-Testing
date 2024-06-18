@@ -7,8 +7,8 @@ using PlatformExampleApp.TextSnippet.Domain.Repositories;
 namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql;
 
 internal sealed class TextSnippetRepository<TEntity>
-    : PlatformEfCoreRepository<TEntity, Guid, TextSnippetDbContext>, ITextSnippetRepository<TEntity>
-    where TEntity : class, IEntity<Guid>, new()
+    : PlatformEfCoreRepository<TEntity, string, TextSnippetDbContext>, ITextSnippetRepository<TEntity>
+    where TEntity : class, IEntity<string>, new()
 {
     public TextSnippetRepository(
         IPlatformUnitOfWorkManager unitOfWorkManager,
@@ -22,8 +22,8 @@ internal sealed class TextSnippetRepository<TEntity>
 }
 
 internal sealed class TextSnippetRootRepository<TEntity>
-    : PlatformEfCoreRootRepository<TEntity, Guid, TextSnippetDbContext>, ITextSnippetRootRepository<TEntity>
-    where TEntity : class, IRootEntity<Guid>, new()
+    : PlatformEfCoreRootRepository<TEntity, string, TextSnippetDbContext>, ITextSnippetRootRepository<TEntity>
+    where TEntity : class, IRootEntity<string>, new()
 {
     public TextSnippetRootRepository(
         IPlatformUnitOfWorkManager unitOfWorkManager,

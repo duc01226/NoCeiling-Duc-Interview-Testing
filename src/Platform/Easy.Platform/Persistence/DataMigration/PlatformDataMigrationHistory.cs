@@ -39,7 +39,7 @@ public class PlatformDataMigrationHistory : IRowVersionEntity
         set => createdDate = value;
     }
 
-    public Guid? ConcurrencyUpdateToken { get; set; }
+    public string? ConcurrencyUpdateToken { get; set; }
 
     public object GetId()
     {

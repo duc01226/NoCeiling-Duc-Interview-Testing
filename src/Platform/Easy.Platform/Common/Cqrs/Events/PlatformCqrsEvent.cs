@@ -88,7 +88,7 @@ public abstract class PlatformCqrsEvent : IPlatformCqrsEvent
 
     public Dictionary<string, object> AdditionalMetadata { get; set; } = [];
 
-    public string AuditTrackId { get; set; } = Guid.NewGuid().ToString();
+    public string AuditTrackId { get; set; } = Ulid.NewUlid().ToString();
 
     public DateTime CreatedDate { get; } = Clock.UtcNow;
 

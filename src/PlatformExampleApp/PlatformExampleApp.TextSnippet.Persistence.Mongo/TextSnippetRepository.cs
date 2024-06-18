@@ -5,8 +5,8 @@ using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.Mongo;
 
-internal sealed class TextSnippetRepository<TEntity> : PlatformMongoDbRepository<TEntity, Guid, TextSnippetDbContext>, ITextSnippetRepository<TEntity>
-    where TEntity : class, IEntity<Guid>, new()
+internal sealed class TextSnippetRepository<TEntity> : PlatformMongoDbRepository<TEntity, string, TextSnippetDbContext>, ITextSnippetRepository<TEntity>
+    where TEntity : class, IEntity<string>, new()
 {
     public TextSnippetRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IServiceProvider serviceProvider) : base(
         unitOfWorkManager,
@@ -15,8 +15,8 @@ internal sealed class TextSnippetRepository<TEntity> : PlatformMongoDbRepository
     }
 }
 
-internal sealed class TextSnippetRootRepository<TEntity> : PlatformMongoDbRootRepository<TEntity, Guid, TextSnippetDbContext>, ITextSnippetRootRepository<TEntity>
-    where TEntity : class, IRootEntity<Guid>, new()
+internal sealed class TextSnippetRootRepository<TEntity> : PlatformMongoDbRootRepository<TEntity, string, TextSnippetDbContext>, ITextSnippetRootRepository<TEntity>
+    where TEntity : class, IRootEntity<string>, new()
 {
     public TextSnippetRootRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IServiceProvider serviceProvider) : base(
         unitOfWorkManager,

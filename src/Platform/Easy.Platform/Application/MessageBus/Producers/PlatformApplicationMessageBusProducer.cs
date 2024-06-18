@@ -145,7 +145,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
     {
         if (message is IPlatformTrackableBusMessage trackableBusMessage)
         {
-            trackableBusMessage.TrackingId ??= Guid.NewGuid().ToString();
+            trackableBusMessage.TrackingId ??= Ulid.NewUlid().ToString();
             trackableBusMessage.ProduceFrom ??= ApplicationSettingContext.ApplicationName;
             trackableBusMessage.CreatedUtcDate ??= DateTime.UtcNow;
             if (trackableBusMessage.RequestContext == null || trackableBusMessage.RequestContext.IsEmpty())

@@ -93,7 +93,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             ApplicationDataMigrationHistoryDbSet
                 .Update(toBeUpdatedEntity)
                 .Entity
-                .Pipe(p => p.With(dataMigrationHistory => dataMigrationHistory.ConcurrencyUpdateToken = Guid.NewGuid()));
+                .Pipe(p => p.With(dataMigrationHistory => dataMigrationHistory.ConcurrencyUpdateToken = Ulid.NewUlid().ToString()));
         }
     }
 
@@ -341,7 +341,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                         .As<TEntity>())
                 .WithIf(
                     entity is IRowVersionEntity { ConcurrencyUpdateToken: null },
-                    entity => entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = Guid.NewGuid());
+                    entity => entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = Ulid.NewUlid().ToString());
 
             var result = await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
                 RootServiceProvider,
@@ -519,7 +519,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                     var result = GetTable<TEntity>()
                         .Update(entity)
                         .Entity
-                        .PipeIf(entity is IRowVersionEntity, p => p.As<IRowVersionEntity>().With(_ => _.ConcurrencyUpdateToken = Guid.NewGuid()).As<TEntity>());
+                        .PipeIf(
+                            entity is IRowVersionEntity,
+                            p => p.As<IRowVersionEntity>().With(_ => _.ConcurrencyUpdateToken = Ulid.NewUlid().ToString()).As<TEntity>());
 
                     NotThreadSafeDbContextQueryLock.Release();
 
@@ -590,8 +592,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         ApplyEntityConfigurationsFromAssembly(modelBuilder);
 
         modelBuilder.ApplyConfiguration(new PlatformDataMigrationHistoryEntityConfiguration());
-        modelBuilder.ApplyConfiguration(new PlatformInboxEventBusMessageEntityConfiguration());
-        modelBuilder.ApplyConfiguration(new PlatformOutboxEventBusMessageEntityConfiguration());
+        modelBuilder.ApplyConfiguration(new PlatformInboxBusMessageEntityConfiguration());
+        modelBuilder.ApplyConfiguration(new PlatformOutboxBusMessageEntityConfiguration());
     }
 
     protected void ApplyEntityConfigurationsFromAssembly(ModelBuilder modelBuilder)

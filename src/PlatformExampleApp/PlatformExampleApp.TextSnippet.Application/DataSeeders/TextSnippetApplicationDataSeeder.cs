@@ -47,7 +47,7 @@ public sealed class TextSnippetApplicationDataSeeder : PlatformApplicationDataSe
             await multiDbDemoEntityRepository.CreateOrUpdateAsync(
                 new MultiDbDemoEntity
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Ulid.NewUlid().ToString(),
                     Name = $"Multi Db Demo Entity {i}"
                 });
         }
@@ -63,13 +63,13 @@ public sealed class TextSnippetApplicationDataSeeder : PlatformApplicationDataSe
         for (var i = 0; i < numberOfItemsGroupSeedTextSnippet; i++)
         {
             await textSnippetRepository.CreateOrUpdateAsync(
-                TextSnippetEntity.Create(id: Guid.NewGuid(), snippetText: $"Example Abc {i}", fullText: $"This is full text of Example Abc {i} snippet text"),
+                TextSnippetEntity.Create(id: Ulid.NewUlid().ToString(), snippetText: $"Example Abc {i}", fullText: $"This is full text of Example Abc {i} snippet text"),
                 customCheckExistingPredicate: p => p.SnippetText == $"Example Abc {i}");
             await textSnippetRepository.CreateOrUpdateAsync(
-                TextSnippetEntity.Create(id: Guid.NewGuid(), snippetText: $"Example Def {i}", fullText: $"This is full text of Example Def {i} snippet text"),
+                TextSnippetEntity.Create(id: Ulid.NewUlid().ToString(), snippetText: $"Example Def {i}", fullText: $"This is full text of Example Def {i} snippet text"),
                 customCheckExistingPredicate: p => p.SnippetText == $"Example Def {i}");
             await textSnippetRepository.CreateOrUpdateAsync(
-                TextSnippetEntity.Create(id: Guid.NewGuid(), snippetText: $"Example Ghi {i}", fullText: $"This is full text of Example Ghi {i} snippet text"),
+                TextSnippetEntity.Create(id: Ulid.NewUlid().ToString(), snippetText: $"Example Ghi {i}", fullText: $"This is full text of Example Ghi {i} snippet text"),
                 customCheckExistingPredicate: p => p.SnippetText == $"Example Ghi {i}");
         }
     }

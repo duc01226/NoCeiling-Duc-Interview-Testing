@@ -31,6 +31,6 @@ public class TextSnippetAssociatedEntity : TextSnippetEntity
     public async Task<TextSnippetAssociatedEntity> WithCreatedByUser(ITextSnippetRepository<UserEntity> userRepo)
     {
         return WithCreatedByUser(
-            CreatedByUserId.HasValue ? await userRepo.GetByIdAsync(CreatedByUserId.Value) : null);
+            CreatedByUserId != null ? await userRepo.GetByIdAsync(CreatedByUserId) : null);
     }
 }

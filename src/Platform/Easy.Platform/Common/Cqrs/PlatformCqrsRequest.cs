@@ -9,7 +9,7 @@ public interface IPlatformCqrsRequest : IPlatformDto<IPlatformCqrsRequest>, IClo
     public IPlatformCqrsRequestAuditInfo AuditInfo { get; set; }
 
     public TRequest SetAuditInfo<TRequest>(
-        Guid auditTrackId,
+        string auditTrackId,
         string auditRequestByUserId) where TRequest : class, IPlatformCqrsRequest;
 
     public TRequest SetAuditInfo<TRequest>(IPlatformCqrsRequestAuditInfo auditInfo) where TRequest : class, IPlatformCqrsRequest;
@@ -36,7 +36,7 @@ public class PlatformCqrsRequest : IPlatformCqrsRequest
     public IPlatformCqrsRequestAuditInfo AuditInfo { get; set; }
 
     public TRequest SetAuditInfo<TRequest>(
-        Guid auditTrackId,
+        string auditTrackId,
         string auditRequestByUserId) where TRequest : class, IPlatformCqrsRequest
     {
         AuditInfo = new PlatformCqrsRequestAuditInfo(auditTrackId, auditRequestByUserId);
@@ -64,7 +64,7 @@ public class PlatformCqrsRequest : IPlatformCqrsRequest
 
 public interface IPlatformCqrsRequestAuditInfo
 {
-    public Guid AuditTrackId { get; }
+    public string AuditTrackId { get; }
 
     public DateTime AuditRequestDate { get; }
 
@@ -76,7 +76,7 @@ public class PlatformCqrsRequestAuditInfo : IPlatformCqrsRequestAuditInfo
     public PlatformCqrsRequestAuditInfo() { }
 
     public PlatformCqrsRequestAuditInfo(
-        Guid auditTrackId,
+        string auditTrackId,
         string auditRequestByUserId)
     {
         AuditTrackId = auditTrackId;
@@ -84,7 +84,7 @@ public class PlatformCqrsRequestAuditInfo : IPlatformCqrsRequestAuditInfo
         AuditRequestByUserId = auditRequestByUserId;
     }
 
-    public Guid AuditTrackId { get; } = Guid.NewGuid();
+    public string AuditTrackId { get; } = Ulid.NewUlid().ToString();
     public DateTime AuditRequestDate { get; } = DateTime.UtcNow;
     public string AuditRequestByUserId { get; }
 }

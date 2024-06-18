@@ -48,7 +48,7 @@ public class PlatformBusMessage<TPayload> : IPlatformTrackableBusMessage, IPlatf
         };
     }
 
-    public string TrackingId { get; set; } = Guid.NewGuid().ToString();
+    public string TrackingId { get; set; } = Ulid.NewUlid().ToString();
     public DateTime? CreatedUtcDate { get; set; } = Clock.UtcNow;
     public string ProduceFrom { get; set; } = Assembly.GetEntryAssembly()?.FullName;
     public IDictionary<string, object> RequestContext { get; set; } = new Dictionary<string, object>();

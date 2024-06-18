@@ -6,7 +6,7 @@ using PlatformExampleApp.TextSnippet.Domain.Entities;
 
 namespace PlatformExampleApp.TextSnippet.Application.UseCaseEvents;
 
-internal sealed class DemoBulkEntitiesEventHandler : PlatformCqrsBulkEntitiesEventApplicationHandler<TextSnippetEntity, Guid>
+internal sealed class DemoBulkEntitiesEventHandler : PlatformCqrsBulkEntitiesEventApplicationHandler<TextSnippetEntity, string>
 {
     public DemoBulkEntitiesEventHandler(
         ILoggerFactory loggerFactory,
@@ -20,7 +20,7 @@ internal sealed class DemoBulkEntitiesEventHandler : PlatformCqrsBulkEntitiesEve
     {
     }
 
-    protected override async Task HandleAsync(PlatformCqrsBulkEntitiesEvent<TextSnippetEntity, Guid> @event, CancellationToken cancellationToken)
+    protected override async Task HandleAsync(PlatformCqrsBulkEntitiesEvent<TextSnippetEntity, string> @event, CancellationToken cancellationToken)
     {
         @event.Entities.ForEach(
             entity =>

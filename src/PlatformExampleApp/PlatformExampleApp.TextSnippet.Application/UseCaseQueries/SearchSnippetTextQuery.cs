@@ -16,7 +16,7 @@ namespace PlatformExampleApp.TextSnippet.Application.UseCaseQueries;
 public sealed class SearchSnippetTextQuery : PlatformCqrsPagedQuery<SearchSnippetTextQueryResult, TextSnippetEntityDto>
 {
     public string SearchText { get; set; }
-    public Guid? SearchId { get; set; }
+    public string SearchId { get; set; }
     public string SearchAddress { get; set; }
     public string SearchAddressString { get; set; }
     public string SearchSingleAddress { get; set; }
@@ -91,19 +91,17 @@ internal sealed class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicati
 
         // STEP 1: Build Queries
         var fullItemsQueryBuilder = repository.GetQueryBuilder(
-            query => query
+            builderFn: query => query
                 .PipeIf(
                     request.SearchText.IsNotNullOrEmpty(),
                     _ => fullTextSearchPersistenceService.Search(
                         query,
                         request.SearchText,
-                        inFullTextSearchProps:
                         [
                             e => e.SnippetText,
                             e => e.FullText
                         ],
-                        fullTextAccurateMatch: true,
-                        includeStartWithProps:
+                        true,
                         [
                             e => e.SnippetText
                         ]))

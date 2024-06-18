@@ -1,9 +1,10 @@
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitDb : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -13,7 +14,11 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                 columns: table => new
                 {
                     Name = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    Status = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    LastProcessingPingTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastProcessError = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ConcurrencyUpdateToken = table.Column<string>(type: "nvarchar(450)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -24,7 +29,7 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                 name: "PlatformInboxEventBusMessage",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Id = table.Column<string>(type: "nvarchar(400)", maxLength: 400, nullable: false),
                     JsonMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     MessageTypeFullName = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
                     ProduceFrom = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -32,11 +37,12 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                     ConsumerBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ConsumeStatus = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     RetriedProcessCount = table.Column<int>(type: "int", nullable: true),
+                    ForApplicationName = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     LastConsumeDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     NextRetryProcessAfter = table.Column<DateTime>(type: "datetime2", nullable: true),
                     LastConsumeError = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ConcurrencyUpdateToken = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    ConcurrencyUpdateToken = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -47,7 +53,7 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                 name: "PlatformOutboxEventBusMessage",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Id = table.Column<string>(type: "nvarchar(400)", maxLength: 400, nullable: false),
                     JsonMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     MessageTypeFullName = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
                     RoutingKey = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
@@ -57,7 +63,7 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                     CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     LastSendDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     LastSendError = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ConcurrencyUpdateToken = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    ConcurrencyUpdateToken = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -68,17 +74,18 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                 name: "TextSnippetEntity",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     SnippetText = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     FullText = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: false),
-                    CreatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    AddressNumber = table.Column<string>(name: "Address_Number", type: "nvarchar(max)", nullable: true),
-                    AddressStreet = table.Column<string>(name: "Address_Street", type: "nvarchar(max)", nullable: true),
+                    TimeOnly = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedByUserId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Address_Number = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Address_Street = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     AddressStrings = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Addresses = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ConcurrencyUpdateToken = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    CreatedBy = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    LastUpdatedBy = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ConcurrencyUpdateToken = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedBy = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    LastUpdatedBy = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     LastUpdatedDate = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -88,49 +95,39 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformInboxEventBusMessage_ConsumeStatus_LastConsumeDate",
+                name: "IX_ApplicationDataMigrationHistoryDbSet_Status",
+                table: "ApplicationDataMigrationHistoryDbSet",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PlatformInboxEventBusMessage_ConsumeStatus_CreatedDate",
                 table: "PlatformInboxEventBusMessage",
-                columns: ["ConsumeStatus", "LastConsumeDate"]);
+                columns: ["ConsumeStatus", "CreatedDate"]);
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformInboxEventBusMessage_ConsumeStatus_NextRetryProcessAfter_LastConsumeDate",
+                name: "IX_PlatformInboxEventBusMessage_CreatedDate_ConsumeStatus",
                 table: "PlatformInboxEventBusMessage",
-                columns: ["ConsumeStatus", "NextRetryProcessAfter", "LastConsumeDate"]);
+                columns: ["CreatedDate", "ConsumeStatus"]);
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformInboxEventBusMessage_LastConsumeDate_ConsumeStatus",
+                name: "IX_PlatformInboxEventBusMessage_ForApplicationName_ConsumeStatus_LastConsumeDate_CreatedDate",
                 table: "PlatformInboxEventBusMessage",
-                columns: ["LastConsumeDate", "ConsumeStatus"]);
+                columns: ["ForApplicationName", "ConsumeStatus", "LastConsumeDate", "CreatedDate"]);
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformInboxEventBusMessage_RoutingKey",
-                table: "PlatformInboxEventBusMessage",
-                column: "RoutingKey");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlatformOutboxEventBusMessage_LastSendDate_SendStatus",
+                name: "IX_PlatformOutboxEventBusMessage_CreatedDate_SendStatus",
                 table: "PlatformOutboxEventBusMessage",
-                columns: ["LastSendDate", "SendStatus"]);
+                columns: ["CreatedDate", "SendStatus"]);
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformOutboxEventBusMessage_NextRetryProcessAfter",
+                name: "IX_PlatformOutboxEventBusMessage_SendStatus_CreatedDate",
                 table: "PlatformOutboxEventBusMessage",
-                column: "NextRetryProcessAfter");
+                columns: ["SendStatus", "CreatedDate"]);
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlatformOutboxEventBusMessage_RoutingKey",
+                name: "IX_PlatformOutboxEventBusMessage_SendStatus_LastSendDate_CreatedDate",
                 table: "PlatformOutboxEventBusMessage",
-                column: "RoutingKey");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlatformOutboxEventBusMessage_SendStatus_LastSendDate",
-                table: "PlatformOutboxEventBusMessage",
-                columns: ["SendStatus", "LastSendDate"]);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlatformOutboxEventBusMessage_SendStatus_NextRetryProcessAfter_LastSendDate",
-                table: "PlatformOutboxEventBusMessage",
-                columns: ["SendStatus", "NextRetryProcessAfter", "LastSendDate"]);
+                columns: ["SendStatus", "LastSendDate", "CreatedDate"]);
 
             migrationBuilder.CreateIndex(
                 name: "IX_TextSnippetEntity_CreatedBy",

@@ -273,7 +273,7 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent, IPlatfo
         TEntity entityData,
         PlatformCqrsEntityEventCrudAction crudAction)
     {
-        AuditTrackId = Guid.NewGuid().ToString();
+        AuditTrackId = Ulid.NewUlid().ToString();
         EntityData = entityData;
         CrudAction = crudAction;
 
@@ -388,7 +388,7 @@ public class PlatformCqrsBulkEntitiesEvent<TEntity, TPrimaryKey> : PlatformCqrsE
         IList<TEntity> entities,
         PlatformCqrsEntityEventCrudAction crudAction)
     {
-        AuditTrackId = Guid.NewGuid().ToString();
+        AuditTrackId = Ulid.NewUlid().ToString();
         Entities = entities;
         CrudAction = crudAction;
 

@@ -310,7 +310,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
                 {
                     //toSaveEntity.SnippetText += " Update";  //Demo Update Data By With Support Chaining
                 })
-            .ValidateSavePermission(userId: RequestContext.UserId<Guid?>()) // Demo Permission Logic
+            .ValidateSavePermission(userId: RequestContext.UserId<string>()) // Demo Permission Logic
             .And(entity => toSaveEntity.ValidateSomeSpecificIsXxxLogic()) // Demo domain business logic
             .AndAsync(entity => toSaveEntity.ValidateSomeSpecificIsXxxLogicAsync(textSnippetEntityRepository, multiDbDemoEntityRepository)) // Demo domain business logic
             .AndAsync(ValidateSomeThisCommandApplicationLogic) // Demo application business logic
@@ -321,7 +321,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
         var validToSaveEntity1 = toSaveEntity
             .Validate(
                 must: toSaveEntity =>
-                    toSaveEntity.CreatedByUserId == null || RequestContext.UserId<Guid?>() == null || toSaveEntity.CreatedByUserId == RequestContext.UserId<Guid?>(),
+                    toSaveEntity.CreatedByUserId == null || RequestContext.UserId<Guid?>() == null || toSaveEntity.CreatedByUserId == RequestContext.UserId<string>(),
                 "User must be the creator to update text snippet entity")
             .WithPermissionException() // Equivalent to ValidateSavePermission
             .And(
@@ -348,7 +348,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
 
         // ADDITIONAL DEMO STEP 2 - DEMO Reuse logic and expression
         var hasSavePermissionSnippetTextEntities = await textSnippetEntityRepository.GetAllAsync(
-            predicate: TextSnippetEntity.SavePermissionValidator(RequestContext.UserId<Guid?>()).ValidExpr,
+            predicate: TextSnippetEntity.SavePermissionValidator(RequestContext.UserId<string>()).ValidExpr,
             cancellationToken);
         var isXxxTextSnippetEntityIds = await textSnippetEntityRepository.GetAllAsync(
             queryBuilder: query => query.Where(TextSnippetEntity.SomeSpecificIsXxxLogicValidator().ValidExpr).Select(p => p.Id),
@@ -395,7 +395,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
             await multiDbDemoEntityRepository.FirstOrDefaultAsync(cancellationToken: cancellationToken) ??
             new MultiDbDemoEntity
             {
-                Id = Guid.NewGuid(),
+                Id = Ulid.NewUlid().ToString(),
                 Name = "First Multi Db Demo Entity"
             };
 

@@ -172,7 +172,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     protected SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(ContextMaxConcurrentThreadLock, ContextMaxConcurrentThreadLock);
     protected ILoggerFactory LoggerFactory { get; }
 
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string Id { get; set; } = Ulid.NewUlid().ToString();
 
     public bool IsUsingOnceTransientUow { get; set; }
 

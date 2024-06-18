@@ -93,7 +93,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             var toBeUpdatedEntity = entity;
 
             var currentInMemoryConcurrencyUpdateToken = toBeUpdatedEntity.ConcurrencyUpdateToken;
-            var newUpdateConcurrencyUpdateToken = Guid.NewGuid();
+            var newUpdateConcurrencyUpdateToken = Ulid.NewUlid().ToString();
 
             toBeUpdatedEntity.ConcurrencyUpdateToken = newUpdateConcurrencyUpdateToken;
 
@@ -101,7 +101,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 .ReplaceOneAsync(
                     p => p.Name == entity.Name &&
                          (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
-                          ((IRowVersionEntity)p).ConcurrencyUpdateToken == Guid.Empty ||
+                          ((IRowVersionEntity)p).ConcurrencyUpdateToken == "" ||
                           ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken),
                     entity,
                     new ReplaceOptions { IsUpsert = false },
@@ -507,7 +507,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         if (toBeUpdatedEntity is IRowVersionEntity toBeUpdatedRowVersionEntity)
         {
             var currentInMemoryConcurrencyUpdateToken = toBeUpdatedRowVersionEntity.ConcurrencyUpdateToken;
-            var newUpdateConcurrencyUpdateToken = Guid.NewGuid();
+            var newUpdateConcurrencyUpdateToken = Ulid.NewUlid().ToString();
 
             toBeUpdatedRowVersionEntity.ConcurrencyUpdateToken = newUpdateConcurrencyUpdateToken;
 
@@ -520,7 +520,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                     .ReplaceOneAsync(
                         p => p.Id.Equals(entity.Id) &&
                              (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
-                              ((IRowVersionEntity)p).ConcurrencyUpdateToken == Guid.Empty ||
+                              ((IRowVersionEntity)p).ConcurrencyUpdateToken == "" ||
                               ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken),
                         entity,
                         new ReplaceOptions { IsUpsert = false },
@@ -671,8 +671,6 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         Unique = true
                     }),
                 new CreateIndexModel<PlatformDataMigrationHistory>(
-                    Builders<PlatformDataMigrationHistory>.IndexKeys.Ascending(p => p.ConcurrencyUpdateToken)),
-                new CreateIndexModel<PlatformDataMigrationHistory>(
                     Builders<PlatformDataMigrationHistory>.IndexKeys.Ascending(p => p.Status))
             ]);
     }
@@ -772,7 +770,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                     .As<TEntity>())
             .WithIf(
                 entity is IRowVersionEntity { ConcurrencyUpdateToken: null },
-                entity => entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = Guid.NewGuid());
+                entity => entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = Ulid.NewUlid().ToString());
 
         if (upsert == false)
             await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(

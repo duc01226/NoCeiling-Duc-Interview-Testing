@@ -32,7 +32,7 @@ public class PlatformRequestIdGeneratorMiddleware : PlatformMiddleware
             string.IsNullOrEmpty(existedRequestId))
             context.Request.Headers.Upsert(
                 PlatformAspnetConstant.CommonHttpHeaderNames.RequestId,
-                Guid.NewGuid().ToString());
+                Ulid.NewUlid().ToString());
 
         // Set the trace identifier for the context
         context.TraceIdentifier = context.Request.Headers[PlatformAspnetConstant.CommonHttpHeaderNames.RequestId];

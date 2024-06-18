@@ -16,7 +16,7 @@ public interface IPlatformTrackableBusMessage : IPlatformSubMessageQueuePrefixSu
 
 public abstract class PlatformTrackableBusMessage : IPlatformTrackableBusMessage
 {
-    public string TrackingId { get; set; } = Guid.NewGuid().ToString();
+    public string TrackingId { get; set; } = Ulid.NewUlid().ToString();
     public DateTime? CreatedUtcDate { get; set; } = DateTime.UtcNow;
     public string ProduceFrom { get; set; }
     public IDictionary<string, object> RequestContext { get; set; } = new Dictionary<string, object>();

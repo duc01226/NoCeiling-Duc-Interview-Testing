@@ -12,8 +12,8 @@ using PlatformExampleApp.TextSnippet.Persistence;
 namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
 {
     [DbContext(typeof(TextSnippetDbContext))]
-    [Migration("20240503153627_UpdateOutboxIndexes2")]
-    partial class UpdateOutboxIndexes2
+    [Migration("20240618172744_InitDb")]
+    partial class InitDb
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -31,9 +31,9 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                         .HasMaxLength(400)
                         .HasColumnType("nvarchar(400)");
 
-                    b.Property<Guid?>("ConcurrencyUpdateToken")
+                    b.Property<string>("ConcurrencyUpdateToken")
                         .IsConcurrencyToken()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ConsumeStatus")
                         .IsRequired()
@@ -80,6 +80,8 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
 
                     b.HasIndex("ConsumeStatus", "CreatedDate");
 
+                    b.HasIndex("CreatedDate", "ConsumeStatus");
+
                     b.HasIndex("ForApplicationName", "ConsumeStatus", "LastConsumeDate", "CreatedDate");
 
                     b.ToTable("PlatformInboxEventBusMessage", (string)null);
@@ -91,9 +93,9 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                         .HasMaxLength(400)
                         .HasColumnType("nvarchar(400)");
 
-                    b.Property<Guid?>("ConcurrencyUpdateToken")
+                    b.Property<string>("ConcurrencyUpdateToken")
                         .IsConcurrencyToken()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
@@ -129,6 +131,8 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedDate", "SendStatus");
+
                     b.HasIndex("SendStatus", "CreatedDate");
 
                     b.HasIndex("SendStatus", "LastSendDate", "CreatedDate");
@@ -141,9 +145,9 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<Guid?>("ConcurrencyUpdateToken")
+                    b.Property<string>("ConcurrencyUpdateToken")
                         .IsConcurrencyToken()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
@@ -168,9 +172,8 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
 
             modelBuilder.Entity("PlatformExampleApp.TextSnippet.Domain.Entities.TextSnippetEntity", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("AddressStrings")
                         .HasColumnType("nvarchar(max)");
@@ -178,15 +181,15 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                     b.Property<string>("Addresses")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid?>("ConcurrencyUpdateToken")
+                    b.Property<string>("ConcurrencyUpdateToken")
                         .IsConcurrencyToken()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(450)");
 
-                    b.Property<Guid?>("CreatedByUserId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("CreatedByUserId")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("datetime2");
@@ -196,8 +199,8 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
 
-                    b.Property<Guid?>("LastUpdatedBy")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("LastUpdatedBy")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("LastUpdatedDate")
                         .HasColumnType("datetime2");
@@ -231,8 +234,8 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
                 {
                     b.OwnsOne("PlatformExampleApp.TextSnippet.Domain.ValueObjects.ExampleAddressValueObject", "Address", b1 =>
                         {
-                            b1.Property<Guid>("TextSnippetEntityId")
-                                .HasColumnType("uniqueidentifier");
+                            b1.Property<string>("TextSnippetEntityId")
+                                .HasColumnType("nvarchar(450)");
 
                             b1.Property<string>("Number")
                                 .HasColumnType("nvarchar(max)");

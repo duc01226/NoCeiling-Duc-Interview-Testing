@@ -2,7 +2,6 @@ using Easy.Platform.Application.RequestContext;
 using Easy.Platform.MongoDB;
 using Easy.Platform.Persistence;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 
@@ -38,7 +37,7 @@ public sealed class DemoMigrateDataCrossDbContext : PlatformMongoDbContext<DemoM
             .Any(p => p.SnippetText == "DemoMigrateApplicationDataDbContext Entity"))
             await TextSnippetEntityCollection.InsertOneAsync(
                 TextSnippetEntity.Create(
-                    id: Guid.NewGuid(),
+                    id: Ulid.NewUlid().ToString(),
                     snippetText: "DemoMigrateApplicationDataDbContext Entity",
                     fullText: "DemoMigrateApplicationDataDbContext Entity"));
 

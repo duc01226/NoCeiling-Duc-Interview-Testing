@@ -42,13 +42,13 @@ public sealed class DummyPerformanceTestTextSnippetApplicationDataSeeder : Platf
             using (var uow = UnitOfWorkManager.Begin())
             {
                 await textSnippetRepository.CreateOrUpdateAsync(
-                    TextSnippetEntity.Create(id: Guid.NewGuid(), snippetText: $"Dummy Abc {i}", fullText: $"This is full text of Dummy Abc {i} snippet text"),
+                    TextSnippetEntity.Create(id: Ulid.NewUlid().ToString(), snippetText: $"Dummy Abc {i}", fullText: $"This is full text of Dummy Abc {i} snippet text"),
                     customCheckExistingPredicate: p => p.SnippetText == $"Dummy Abc {i}");
                 await textSnippetRepository.CreateOrUpdateAsync(
-                    TextSnippetEntity.Create(id: Guid.NewGuid(), snippetText: $"Dummy Def {i}", fullText: $"This is full text of Dummy Def {i} snippet text"),
+                    TextSnippetEntity.Create(id: Ulid.NewUlid().ToString(), snippetText: $"Dummy Def {i}", fullText: $"This is full text of Dummy Def {i} snippet text"),
                     customCheckExistingPredicate: p => p.SnippetText == $"Dummy Def {i}");
                 await textSnippetRepository.CreateOrUpdateAsync(
-                    TextSnippetEntity.Create(id: Guid.NewGuid(), snippetText: $"Dummy Ghi {i}", fullText: $"This is full text of Dummy Ghi {i} snippet text"),
+                    TextSnippetEntity.Create(id: Ulid.NewUlid().ToString(), snippetText: $"Dummy Ghi {i}", fullText: $"This is full text of Dummy Ghi {i} snippet text"),
                     customCheckExistingPredicate: p => p.SnippetText == $"Dummy Ghi {i}");
 
                 await uow.CompleteAsync();

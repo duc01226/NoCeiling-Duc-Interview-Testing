@@ -11,7 +11,7 @@ namespace PlatformExampleApp.TextSnippet.Domain.Entities;
 
 // DEMO USING AutoAddFieldUpdatedEvent to track entity property updated
 [TrackFieldUpdatedDomainEvent]
-public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid?>, IRowVersionEntity
+public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, string, string>, IRowVersionEntity
 {
     public const int FullTextMaxLength = 4000;
     public const int SnippetTextMaxLength = 100;
@@ -27,7 +27,7 @@ public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid
     /// <summary>
     /// Demo ForeignKey for TextSnippetAssociatedEntity
     /// </summary>
-    public Guid? CreatedByUserId { get; set; }
+    public string CreatedByUserId { get; set; }
 
     public ExampleAddressValueObject Address { get; set; } = new()
     {
@@ -64,14 +64,14 @@ public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid
         }
     ];
 
-    public Guid? ConcurrencyUpdateToken { get; set; }
+    public string? ConcurrencyUpdateToken { get; set; }
 
     public override string UniqueCompositeId()
     {
-        return Id.ToString();
+        return Id;
     }
 
-    public static TextSnippetEntity Create(Guid id, string snippetText, string fullText)
+    public static TextSnippetEntity Create(string id, string snippetText, string fullText)
     {
         return new TextSnippetEntity
         {
@@ -161,7 +161,7 @@ public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid
 
     #region Demo Validation Logic, Reuse logic and Expression
 
-    public static PlatformExpressionValidator<TextSnippetEntity> SavePermissionValidator(Guid? userId)
+    public static PlatformExpressionValidator<TextSnippetEntity> SavePermissionValidator(string userId)
     {
         return new PlatformExpressionValidator<TextSnippetEntity>(
             must: p => p.CreatedByUserId == null || userId == null || p.CreatedByUserId == userId,
@@ -180,7 +180,7 @@ public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, Guid, Guid
         return SomeSpecificIsXxxLogicValidator().Validate(this).WithDomainException();
     }
 
-    public PlatformValidationResult<TextSnippetEntity> ValidateSavePermission(Guid? userId)
+    public PlatformValidationResult<TextSnippetEntity> ValidateSavePermission(string userId)
     {
         return SavePermissionValidator(userId).Validate(this).WithPermissionException();
     }
