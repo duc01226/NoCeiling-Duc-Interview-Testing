@@ -185,6 +185,6 @@ public class TextSnippetController : PlatformBaseController
     private async IAsyncEnumerable<string> GetAsyncContent()
     {
         for (var i = 0; i < int.MaxValue; i++)
-            yield return await Task.Run(() => Guid.NewGuid().ToString());
+            yield return await Task.Run(() => Ulid.NewUlid().ToString());
     }
 }

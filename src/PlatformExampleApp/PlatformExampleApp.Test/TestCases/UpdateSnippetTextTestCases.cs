@@ -23,7 +23,7 @@ public class UpdateSnippetTextTestCases : TestCase
 
         // WHEN: Update first item snippet text by different valid unique name
         var beforeUpdateFirstItemSnippetText = loadedHomePage.DoSelectTextSnippetItemToEditInForm(itemIndex: 0);
-        var toUpdateSnippetText = "WHEN_UpdateSnippetText " + Guid.NewGuid();
+        var toUpdateSnippetText = "WHEN_UpdateSnippetText " + Ulid.NewUlid();
         loadedHomePage.DoFillInAndSubmitSaveSnippetTextForm(
             textSnippetEntityData: new TextSnippetEntityData(toUpdateSnippetText, fulltext: toUpdateSnippetText + " FullText"));
 

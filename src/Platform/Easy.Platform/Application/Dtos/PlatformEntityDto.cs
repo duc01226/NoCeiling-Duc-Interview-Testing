@@ -119,6 +119,7 @@ public abstract class PlatformEntityDto<TEntity, TId> : IPlatformDto<PlatformEnt
         {
             string strId => strId.IsNotNullOrEmpty(),
             Guid guidId => guidId != Guid.Empty,
+            Ulid guidId => guidId != Ulid.Empty,
             long longId => longId != default,
             int intId => intId != default,
             _ => false

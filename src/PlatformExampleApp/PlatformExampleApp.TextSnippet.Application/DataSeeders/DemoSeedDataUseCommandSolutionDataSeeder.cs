@@ -42,7 +42,7 @@ public sealed class DemoSeedDataUseCommandSolutionDataSeeder : PlatformApplicati
     {
         if (await snippetRepository.AnyAsync(p => p.SnippetText == "Dummy Seed SnippetText") && !isReplaceNewSeed) return;
 
-        userContextAccessor.Current.SetUserId(Guid.NewGuid().ToString());
+        userContextAccessor.Current.SetUserId(Ulid.NewUlid().ToString());
         userContextAccessor.Current.SetEmail("SeedUserEmail");
 
         await cqrs.SendCommand(

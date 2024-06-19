@@ -45,8 +45,8 @@ public class SearchSnippetTextTestCases : TestCase
         var loadedHomePage = GlobalWebDriver.GetLoadingDataFinishedWithFullPagingDataHomePage(Settings);
 
         // WHEN: Search with random guid + "NotExistingItemSearchText"
-        var searchText = "NotExistingItemSearchText" + Guid.NewGuid();
-        loadedHomePage.DoSearchTextSnippet(searchText: "NotExistingItemSearchText" + Guid.NewGuid());
+        var searchText = "NotExistingItemSearchText" + Ulid.NewUlid();
+        loadedHomePage.DoSearchTextSnippet(searchText: "NotExistingItemSearchText" + Ulid.NewUlid());
 
         // THEN: No item is displayed
         loadedHomePage.WaitUntilAssertSuccess(
