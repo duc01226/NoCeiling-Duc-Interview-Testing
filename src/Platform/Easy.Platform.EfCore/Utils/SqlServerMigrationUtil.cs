@@ -57,6 +57,45 @@ public static class SqlServerMigrationUtil
             true);
     }
 
+    public static void DropConstraintIfExists(MigrationBuilder migrationBuilder, string constraintName, string tableName)
+    {
+        // Drop foreign key constraint if it exists
+        migrationBuilder.Sql(
+            @$"IF EXISTS (
+                SELECT 1 FROM sys.foreign_keys
+                WHERE name = '{constraintName}' AND parent_object_id = OBJECT_ID('dbo.{tableName}'))
+            BEGIN
+                ALTER TABLE [{tableName}] DROP CONSTRAINT [{constraintName}];
+            END");
+
+        // Drop check constraint if it exists
+        migrationBuilder.Sql(
+            @$"IF EXISTS (
+                SELECT 1 FROM sys.check_constraints
+                WHERE name = '{constraintName}' AND parent_object_id = OBJECT_ID('dbo.{tableName}'))
+            BEGIN
+                ALTER TABLE [{tableName}] DROP CONSTRAINT [{constraintName}];
+            END");
+
+        // Drop default constraint if it exists
+        migrationBuilder.Sql(
+            @$"IF EXISTS (
+                SELECT 1 FROM sys.default_constraints
+                WHERE name = '{constraintName}' AND parent_object_id = OBJECT_ID('dbo.{tableName}'))
+            BEGIN
+                ALTER TABLE [{tableName}] DROP CONSTRAINT [{constraintName}];
+            END");
+
+        // Drop unique constraint if it exists
+        migrationBuilder.Sql(
+            @$"IF EXISTS (
+                SELECT 1 FROM sys.objects
+                WHERE name = '{constraintName}' AND type = 'UQ' AND parent_object_id = OBJECT_ID('dbo.{tableName}'))
+            BEGIN
+                ALTER TABLE [{tableName}] DROP CONSTRAINT [{constraintName}];
+            END");
+    }
+
     public static void CreateIndex(MigrationBuilder migrationBuilder, string tableName, params string[] cols)
     {
         migrationBuilder.Sql(

@@ -80,6 +80,11 @@ public static class StringExtension
         return string.IsNullOrEmpty(strValue);
     }
 
+    public static bool IsNullOrEmptyId(this string? strValue)
+    {
+        return strValue == Guid.Empty.ToString() || strValue == Ulid.Empty.ToString() || strValue.IsNullOrEmpty();
+    }
+
     public static bool IsNullOrWhiteSpace(this string? strValue)
     {
         return string.IsNullOrWhiteSpace(strValue);
