@@ -61,7 +61,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     protected SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(ContextMaxConcurrentThreadLock, ContextMaxConcurrentThreadLock);
 
-    public IPlatformUnitOfWork? MappedUnitOfWork { get; set; }
+    public IPlatformUnitOfWork MappedUnitOfWork { get; set; }
 
     public ILogger Logger => lazyLogger.Value;
 
@@ -378,13 +378,19 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        var existingEntity = await GetQuery<TEntity>()
-            .AsNoTracking()
-            .Pipe(
-                query => customCheckExistingPredicate != null || entity.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() != null
-                    ? query.Where(customCheckExistingPredicate ?? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!)
-                    : query.Where(p => p.Id.Equals(entity.Id)))
-            .FirstOrDefaultAsync(cancellationToken);
+        var existingEntityPredicate = customCheckExistingPredicate != null ||
+                                      entity.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() != null
+            ? customCheckExistingPredicate ?? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!
+            : p => p.Id.Equals(entity.Id);
+
+        var existingEntity = MappedUnitOfWork.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
+                             await GetQuery<TEntity>()
+                                 .AsNoTracking()
+                                 .Where(existingEntityPredicate)
+                                 .FirstOrDefaultAsync(cancellationToken)
+                                 .ThenActionIf(
+                                     p => p != null && MappedUnitOfWork.CreatedByUnitOfWorkManager.HasCurrentActiveUow(),
+                                     p => MappedUnitOfWork.SetCachedExistingOriginalEntity(p));
 
         if (existingEntity != null)
             return await UpdateAsync<TEntity, TPrimaryKey>(
@@ -493,7 +499,23 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
             if (existingEntity == null &&
                 ((!dismissSendEvent && entity.HasTrackValueUpdatedDomainEventAttribute()) || entity is IRowVersionEntity { ConcurrencyUpdateToken: null }))
-                existingEntity = await GetQuery<TEntity>().AsNoTracking().Where(p => p.Id.Equals(entity.Id)).FirstOrDefaultAsync(cancellationToken);
+            {
+                var existingEntityPredicate = entity.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() != null
+                    ? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!
+                    : p => p.Id.Equals(entity.Id);
+
+                existingEntity = MappedUnitOfWork.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
+                                 await GetQuery<TEntity>()
+                                     .AsNoTracking()
+                                     .Where(existingEntityPredicate)
+                                     .FirstOrDefaultAsync(cancellationToken)
+                                     .EnsureFound($"Entity {typeof(TEntity).Name} with [Id:{entity.Id}] not found to update")
+                                     .ThenActionIf(
+                                         MappedUnitOfWork.CreatedByUnitOfWorkManager.HasCurrentActiveUow(),
+                                         p => MappedUnitOfWork.SetCachedExistingOriginalEntity(p));
+
+                if (!existingEntity.Id.Equals(entity.Id)) entity.Id = existingEntity.Id;
+            }
 
             if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })
                 entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = existingEntity.As<IRowVersionEntity>().ConcurrencyUpdateToken;

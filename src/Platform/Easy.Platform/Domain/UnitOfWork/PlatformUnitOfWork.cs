@@ -1,8 +1,10 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
+using Easy.Platform.Domain.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -111,6 +113,31 @@ public interface IPlatformUnitOfWork : IDisposable
     public Task SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves a cached existing original entity by its ID.
+    /// </summary>
+    /// <typeparam name="TEntity">The type of the entity.</typeparam>
+    /// <param name="entityId">The ID of the entity.</param>
+    /// <returns>The cached existing original entity if found; otherwise, null.</returns>
+    /// <remarks>
+    /// This method is used to retrieve an entity from the cache if it has been previously cached.
+    /// It helps in reducing database calls by using the cached version of the entity.
+    /// </remarks>
+    public TEntity? GetCachedExistingOriginalEntity<TEntity>(string entityId) where TEntity : class, IEntity;
+
+    /// <summary>
+    /// Sets a cached existing original entity.
+    /// </summary>
+    /// <typeparam name="TEntity">The type of the entity.</typeparam>
+    /// <param name="existingEntity">The existing entity to cache.</param>
+    /// <param name="runtimeEntityType">The runtime type of the entity, if different from the compile-time type.</param>
+    /// <returns>The cached existing original entity.</returns>
+    /// <remarks>
+    /// This method is used to cache an entity, so it can be retrieved later without querying the database again.
+    /// It helps in improving performance by reducing the number of database calls.
+    /// </remarks>
+    public TEntity SetCachedExistingOriginalEntity<TEntity>(TEntity existingEntity, Type runtimeEntityType = null) where TEntity : class, IEntity;
+
+    /// <summary>
     /// Get itself or inner uow which is TUnitOfWork.
     /// </summary>
     /// <remarks>
@@ -171,12 +198,13 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 
     protected SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(ContextMaxConcurrentThreadLock, ContextMaxConcurrentThreadLock);
     protected ILoggerFactory LoggerFactory { get; }
+    protected ConcurrentDictionary<string, object> CachedExistingOriginalEntities { get; } = new();
 
     public string Id { get; set; } = Ulid.NewUlid().ToString();
 
     public bool IsUsingOnceTransientUow { get; set; }
 
-    public IPlatformUnitOfWork ParentUnitOfWork { get; set; }
+    public IPlatformUnitOfWork? ParentUnitOfWork { get; set; }
 
     public List<Func<Task>> OnSaveChangesCompletedActions { get; set; } = [];
     public List<Func<Task>> OnDisposedActions { get; set; } = [];
@@ -239,6 +267,8 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
             await InternalSaveChangesAsync(cancellationToken);
 
             await InvokeOnSaveChangesCompletedActions();
+
+            CachedExistingOriginalEntities.Clear();
         }
         catch (Exception ex)
         {
@@ -248,6 +278,28 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
                 $"{GetType().Name} save changes uow failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
                 ex);
         }
+    }
+
+    public TEntity? GetCachedExistingOriginalEntity<TEntity>(string entityId) where TEntity : class, IEntity
+    {
+        if (entityId == null) return null;
+
+        if (!CachedExistingOriginalEntities.TryGetValue(entityId, out var cachedExistingOriginalEntity))
+            return ParentUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entityId);
+
+        return cachedExistingOriginalEntity.As<TEntity>();
+    }
+
+    public TEntity SetCachedExistingOriginalEntity<TEntity>(TEntity existingEntity, Type runtimeEntityType = null) where TEntity : class, IEntity
+    {
+        var castedRuntimeTypeExistingEntity = runtimeEntityType != null ? Convert.ChangeType(existingEntity, runtimeEntityType) : existingEntity;
+
+        CachedExistingOriginalEntities.AddOrUpdate(
+            existingEntity.GetId().ToString(),
+            castedRuntimeTypeExistingEntity,
+            (key, oldItem) => castedRuntimeTypeExistingEntity);
+
+        return existingEntity;
     }
 
     protected abstract Task InternalSaveChangesAsync(CancellationToken cancellationToken);
@@ -263,7 +315,11 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
         if (!Disposed)
         {
             // Release managed resources
-            if (disposing) NotThreadSafeDbContextQueryLock.Dispose();
+            if (disposing)
+            {
+                NotThreadSafeDbContextQueryLock.Dispose();
+                CachedExistingOriginalEntities.Clear();
+            }
 
             // Release unmanaged resources
 

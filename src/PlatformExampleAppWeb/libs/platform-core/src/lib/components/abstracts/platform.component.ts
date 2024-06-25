@@ -20,7 +20,6 @@ import { ToastrService } from 'ngx-toastr';
 import {
     asyncScheduler,
     BehaviorSubject,
-    combineLatest,
     defer,
     isObservable,
     MonoTypeOperatorFunction,
@@ -30,12 +29,12 @@ import {
     Subject,
     Subscription
 } from 'rxjs';
-import { delay, filter, finalize, map, share, switchMap, takeUntil, tap, throttleTime } from 'rxjs/operators';
+import { delay, filter, finalize, share, switchMap, takeUntil, tap, throttleTime } from 'rxjs/operators';
 
 import { PlatformApiServiceErrorResponse } from '../../api-services';
 import { LifeCycleHelper } from '../../helpers';
 import { PLATFORM_CORE_GLOBAL_ENV } from '../../platform-core-global-environment';
-import { distinctUntilObjectValuesChanged, onCancel, subscribeUntil, tapLimit, tapOnce } from '../../rxjs';
+import { onCancel, skipDuplicates, skipTime, subscribeUntil, tapLimit, tapOnce } from '../../rxjs';
 import { PlatformTranslateService } from '../../translations';
 import { clone, guid_generate, immutableUpdate, keys, list_distinct, list_remove, task_delay } from '../../utils';
 import { requestStateDefaultKey } from '../../view-models';
@@ -291,32 +290,37 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
      * Creates an RxJS operator function that subscribes to the observable until the component is destroyed.
      */
     public subscribeUntilDestroyed<T>(
-        observerOrNext?: Partial<Observer<T>> | ((value: T) => void)
+        observerOrNext?: Partial<Observer<T>> | ((value: T) => void),
+        outSubscriptionFn?: (subscription: Subscription) => void
     ): MonoTypeOperatorFunction<T> {
         const next = typeof observerOrNext === 'function' ? observerOrNext : observerOrNext?.next;
         const error = typeof observerOrNext === 'function' ? undefined : observerOrNext?.error;
         const complete = typeof observerOrNext === 'function' ? undefined : observerOrNext?.complete;
 
-        return subscribeUntil(this.destroyed$.pipe(filter(destroyed => destroyed == true)), {
-            next: v => {
-                if (next) {
-                    next(v);
-                    this.detectChanges();
+        return subscribeUntil(
+            this.destroyed$.pipe(filter(destroyed => destroyed == true)),
+            {
+                next: v => {
+                    if (next) {
+                        next(v);
+                        this.detectChanges();
+                    }
+                },
+                error: e => {
+                    if (error) {
+                        error(e);
+                        this.detectChanges();
+                    }
+                },
+                complete: () => {
+                    if (complete) {
+                        complete();
+                        this.detectChanges();
+                    }
                 }
             },
-            error: e => {
-                if (error) {
-                    error(e);
-                    this.detectChanges();
-                }
-            },
-            complete: () => {
-                if (complete) {
-                    complete();
-                    this.detectChanges();
-                }
-            }
-        });
+            outSubscriptionFn
+        );
     }
 
     /**
@@ -431,7 +435,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
      */
     public observerLoadingErrorState<T>(
         requestKey?: string | null,
-        options?: PlatformObserverLoadingErrorStateOptions<T>
+        options?: PlatformObserverLoadingErrorStateOptions
     ): (source: Observable<T>) => Observable<T> {
         if (requestKey == undefined) requestKey = requestStateDefaultKey;
 
@@ -470,16 +474,12 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
 
                                 checkSetStatus.bind(this)();
                             }
-
-                            if (options?.onSuccess != null) options.onSuccess(value);
                         },
                         error: (err: PlatformApiServiceErrorResponse | Error) => {
                             if (!options?.isReloading) this.setLoading(false, requestKey);
                             this.setReloading(false, requestKey);
 
                             checkSetStatus.bind(this)();
-
-                            if (options?.onError != null) options.onError(err);
                         }
                     }),
                     tap({
@@ -692,114 +692,39 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
               ) => Observable<ReturnObservableType>
     >(
         generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
-        requestKey?: string | null,
-        effectOptions?: {
-            observerLoadingoptions?: PlatformObserverLoadingErrorStateOptions<ReturnObservableType>;
-        }
+        requestKey?: string | null
     ): ReturnType {
-        const effectRequestSubject = new Subject<{
-            request: ProvidedType;
-            isReloading?: boolean;
-        }>();
-        let effectRequestSelfSubscription = new Subscription();
-
         const returnFunc = (
             observableOrValue?: ObservableType | Observable<ObservableType> | null,
             isReloading?: boolean,
             otherOptions?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
         ) => {
-            const newRequestObservableCompletedSubject = new Subject<unknown>();
-            const newRequestObservable = setupAddingNewRequestIntoEffectRequestSubject(() => {
-                newRequestObservableCompletedSubject.next(undefined);
-                newRequestObservableCompletedSubject.complete();
-            });
+            // observableOrValue.pipe(skipTime(100)) => skipTime(100) to skip first item of observable
+            // within first 100ms to prevent if obserable is from an behavior subject
+            // only start subscribe for item emit after subscribe listen for some thing changed new
+            // in the future
+            const request$ = isObservable(observableOrValue)
+                ? observableOrValue.pipe(skipTime(100))
+                : of(observableOrValue);
 
-            const newResultObservable = subscribeNewRequestEffectResultObservable.bind(this)(
-                newRequestObservableCompletedSubject
+            // (III)
+            // Delay to make the next api call asynchronous. When call an effect => loading. Call again => previousEffectSub.unsubscribe => cancel => back to success => call next api (async) => set loading again correctly.
+            // If not delay => call next api is sync => set loading is sync but previous cancel is not activated successfully yet, which status is not updated back to Success => which this new effect call skip set status to loading => but then the previous api cancel executing => update status to Success but actually it's loading => create incorrectly status
+            // (IV)
+            // Share so that later subscriber can receive the result, this will help component call
+            // effect could subscribe to do some action like show loading, hide loading, etc.
+            return request$.pipe(
+                skipDuplicates(500),
+                switchMap(request =>
+                    generator(<OriginType>of(request), isReloading).pipe(
+                        delay(1, asyncScheduler), // (III)
+                        this.observerLoadingErrorState(requestKey, { isReloading: isReloading })
+                    )
+                ),
+                this.untilDestroyed(),
+                share(), // (IV)
+                this.subscribeUntilDestroyed(undefined, otherOptions?.effectSubscriptionHandleFn)
             );
-
-            return combineLatest([newRequestObservable, newResultObservable]).pipe(
-                // Some case continous request, next request cancel old request, return result
-                // with different request original. If check diff => observable do not return anything =>
-                // cause issues. Need to find a better way to fix this.
-                // filter(([request, result]) => !isDifferent(request, <ObservableType>result.request.request)),
-                map(([request, result]) => result.result),
-                share()
-            );
-
-            function setupAddingNewRequestIntoEffectRequestSubject(onCompleted?: () => unknown) {
-                const newRequestObservable = isObservable(observableOrValue)
-                    ? observableOrValue.pipe(distinctUntilObjectValuesChanged())
-                    : of(observableOrValue).pipe(delay(1, asyncScheduler));
-
-                const newRequestSub = newRequestObservable.subscribe({
-                    next: request => {
-                        effectRequestSubject.next({ request: <ProvidedType>request, isReloading: isReloading });
-                    },
-                    complete: () => {
-                        if (onCompleted != null) onCompleted();
-                    }
-                });
-
-                if (otherOptions?.effectSubscriptionHandleFn) otherOptions.effectSubscriptionHandleFn(newRequestSub);
-
-                return newRequestObservable;
-            }
-
-            function subscribeNewRequestEffectResultObservable(
-                this: PlatformComponent,
-                newRequestObservableCompletedSubject: Subject<unknown>
-            ) {
-                effectRequestSelfSubscription.unsubscribe();
-
-                let newInnerGeneratorResultObservableCompleted = false;
-                let newRequestObservableCompletedSubjectCompleted = false;
-                let newResultObservableCompletedSubjectCompleted = false;
-
-                const newResultObservableCompletedSubject = new Subject<unknown>();
-
-                const newResultObservable = this.createNewEffectResultObservable(
-                    effectRequestSubject.asObservable(),
-                    generator,
-                    requestKey,
-                    {
-                        onInnerGeneratorObservableCompleted: request => {
-                            newInnerGeneratorResultObservableCompleted = true;
-                            if (newRequestObservableCompletedSubjectCompleted) {
-                                newResultObservableCompletedSubject.next(undefined);
-                                newResultObservableCompletedSubject.complete();
-                            }
-                        }
-                    }
-                );
-                newResultObservableCompletedSubject.subscribe({
-                    complete: () => {
-                        newResultObservableCompletedSubjectCompleted = true;
-                    }
-                });
-                newRequestObservableCompletedSubject.subscribe({
-                    complete: () => {
-                        newRequestObservableCompletedSubjectCompleted = true;
-                        if (
-                            newInnerGeneratorResultObservableCompleted &&
-                            !newResultObservableCompletedSubjectCompleted
-                        ) {
-                            newResultObservableCompletedSubject.next(undefined);
-                            newResultObservableCompletedSubject.complete();
-                        }
-                    }
-                });
-
-                effectRequestSelfSubscription = newResultObservable.subscribe({
-                    error: err => {
-                        // If error, resubscribe so that effect still works when observableOrValue is observable
-                        // new item from request observable still be subscribed
-                        subscribeNewRequestEffectResultObservable.bind(this)(newRequestObservableCompletedSubject);
-                    }
-                });
-
-                return newResultObservable.pipe(takeUntil(newResultObservableCompletedSubject));
-            }
         };
 
         return returnFunc as unknown as ReturnType;
@@ -821,83 +746,16 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
               ) => Observable<ReturnObservableType>
     >(
         generator: (origin: ProvidedType, isReloading?: boolean) => Observable<ReturnObservableType> | void,
-        requestKey?: string | null,
-        effectOptions?: {
-            throttleTimeMs?: number;
-            observerLoadingoptions?: PlatformObserverLoadingErrorStateOptions<ReturnObservableType>;
-        }
+        requestKey?: string | null
     ): ReturnType {
-        return this.effect(
-            (origin$: Observable<ProvidedType>, isReloading?: boolean) => {
-                return origin$.pipe(
-                    switchMap(origin => {
-                        const returnObservableOrVoid = generator(origin, isReloading);
-                        return returnObservableOrVoid instanceof Observable ? returnObservableOrVoid : of(undefined);
-                    })
-                );
-            },
-            requestKey,
-            effectOptions
-        );
-    }
-
-    /**
-     * * ThrottleTime explain: Delay to enhance performance
-     * { leading: true, trailing: true } <=> emit the first item to ensure not delay, but also ignore the sub-sequence,
-     * and still emit the latest item to ensure data is latest
-     */
-    private createNewEffectResultObservable<
-        ObservableType,
-        ReturnObservableType,
-        OriginType extends Observable<ObservableType>
-    >(
-        request$: Observable<{
-            request: ObservableType | null | undefined;
-            isReloading?: boolean;
-        }>,
-        generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
-        requestKey: string | null | undefined,
-        options?: {
-            onInnerGeneratorObservableCompleted?: (request: ObservableType | null | undefined) => unknown;
-        }
-    ): Observable<{
-        request: {
-            request: ObservableType | null | undefined;
-            isReloading?: boolean;
-        };
-        result: ReturnObservableType;
-    }> {
-        // (III)
-        // Delay to make the next api call asynchronous. When call an effect1 => loading. Call again => previousEffectSub.unsubscribe => cancel => back to success => call next api (async) => set loading again correctly.
-        // If not delay => call next api is sync => set loading is sync but previous cancel is not activated successfully yet, which status is not updated back to Success => which this new effect call skip set status to loading => but then the previous api cancel executing => update status to Success but actually it's loading => create incorrectly status
-        // (IV)
-        // Share so that later subscriber can receive the result, this will help component call
-        // effect could subscribe to do some action like show loading, hide loading, etc.
-        return request$.pipe(
-            delay(1, asyncScheduler), // (III)
-            distinctUntilObjectValuesChanged(),
-            switchMap(request =>
-                generator(<OriginType>of(request.request), request.isReloading).pipe(
-                    this.observerLoadingErrorState(requestKey, { isReloading: request.isReloading }),
-                    map(result => ({ request, result })),
-                    tapLimit(
-                        {
-                            complete: () => {
-                                // Delay to mimic async operation, ensure this run only after previous request observable completed
-                                setTimeout(() => {
-                                    if (options?.onInnerGeneratorObservableCompleted != null)
-                                        options.onInnerGeneratorObservableCompleted(request.request);
-                                });
-                            }
-                        },
-                        2
-                    )
-                )
-            ),
-            distinctUntilObjectValuesChanged(),
-            this.untilDestroyed(),
-            share() // (IV)
-        );
+        return this.effect((origin$: Observable<ProvidedType>, isReloading?: boolean) => {
+            return origin$.pipe(
+                switchMap(origin => {
+                    const returnObservableOrVoid = generator(origin, isReloading);
+                    return returnObservableOrVoid instanceof Observable ? returnObservableOrVoid : of(undefined);
+                })
+            );
+        }, requestKey);
     }
 
     protected get canDetectChanges(): boolean {
@@ -1090,9 +948,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     }
 }
 
-export interface PlatformObserverLoadingErrorStateOptions<T> {
-    onSuccess?: (value: T) => any;
-    onError?: (err: PlatformApiServiceErrorResponse | Error) => any;
+export interface PlatformObserverLoadingErrorStateOptions {
     isReloading?: boolean;
 }
 

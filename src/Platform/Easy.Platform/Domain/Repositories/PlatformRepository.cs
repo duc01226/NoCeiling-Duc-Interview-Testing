@@ -406,22 +406,36 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     {
         if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
         {
-            var uow = UnitOfWorkManager.CreateNewUow(true);
-            TResult result = default;
+            var useOnceTransientUow = UnitOfWorkManager.CreateNewUow(true);
+            TResult useOnceTransientUowResult = default;
 
             try
             {
-                result = await ExecuteReadData(uow, readDataFn, loadRelatedEntities);
+                useOnceTransientUowResult = await ExecuteReadData(useOnceTransientUow, readDataFn, loadRelatedEntities);
 
-                return result;
+                return useOnceTransientUowResult;
             }
             finally
             {
-                HandleDisposeUsingOnceTimeContextLogic(uow, DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result, uow), loadRelatedEntities, result);
+                HandleDisposeUsingOnceTimeContextLogic(
+                    useOnceTransientUow,
+                    DoesNeedKeepUowForQueryOrEnumerableExecutionLater(useOnceTransientUowResult, useOnceTransientUow),
+                    loadRelatedEntities,
+                    useOnceTransientUowResult);
             }
         }
 
-        return await ExecuteUowThreadSafe(UnitOfWorkManager.CurrentActiveUow(), uow => ExecuteReadData(uow, readDataFn, loadRelatedEntities));
+        var currentActiveUow = UnitOfWorkManager.CurrentActiveUow();
+
+        var result = await ExecuteUowThreadSafe(UnitOfWorkManager.CurrentActiveUow(), uow => ExecuteReadData(uow, readDataFn, loadRelatedEntities));
+
+        // save cached existing entities
+        if (result is TEntity resultSingleEntity)
+            currentActiveUow.SetCachedExistingOriginalEntity(resultSingleEntity.DeepClone());
+        if (result is ICollection<TEntity> resultMultipleEntities && resultMultipleEntities.Any())
+            resultMultipleEntities.ForEach(p => currentActiveUow.SetCachedExistingOriginalEntity(p.DeepClone()));
+
+        return result;
     }
 
     protected async Task<TResult> ExecuteUowThreadSafe<TResult>(IPlatformUnitOfWork uow, Func<IPlatformUnitOfWork, Task<TResult>> executeFn)

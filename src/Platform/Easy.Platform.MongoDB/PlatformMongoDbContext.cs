@@ -377,12 +377,18 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        var existingEntity = await GetQuery<TEntity>()
-            .Pipe(
-                query => customCheckExistingPredicate != null || entity.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() != null
-                    ? query.Where(customCheckExistingPredicate ?? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!)
-                    : query.Where(p => p.Id.Equals(entity.Id)))
-            .FirstOrDefaultAsync(cancellationToken);
+        var existingEntityPredicate = customCheckExistingPredicate != null ||
+                                      entity.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() != null
+            ? customCheckExistingPredicate ?? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!
+            : p => p.Id.Equals(entity.Id);
+
+        var existingEntity = MappedUnitOfWork.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
+                             await GetQuery<TEntity>()
+                                 .Where(existingEntityPredicate)
+                                 .FirstOrDefaultAsync(cancellationToken)
+                                 .ThenActionIf(
+                                     p => p != null && MappedUnitOfWork.CreatedByUnitOfWorkManager.HasCurrentActiveUow(),
+                                     p => MappedUnitOfWork.SetCachedExistingOriginalEntity(p));
 
         if (existingEntity != null)
             return await UpdateAsync<TEntity, TPrimaryKey>(
@@ -488,10 +494,22 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         if (existingEntity == null &&
             ((!dismissSendEvent && entity.HasTrackValueUpdatedDomainEventAttribute()) ||
              entity is IRowVersionEntity { ConcurrencyUpdateToken: null }))
-            existingEntity = await GetQuery<TEntity>()
-                .Where(p => p.Id.Equals(entity.Id))
-                .FirstOrDefaultAsync(cancellationToken)
-                .EnsureFound($"Entity {typeof(TEntity).Name} with [Id:{entity.Id}] not found to update");
+        {
+            var existingEntityPredicate = entity.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() != null
+                ? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!
+                : p => p.Id.Equals(entity.Id);
+
+            existingEntity = MappedUnitOfWork.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
+                             await GetQuery<TEntity>()
+                                 .Where(existingEntityPredicate)
+                                 .FirstOrDefaultAsync(cancellationToken)
+                                 .EnsureFound($"Entity {typeof(TEntity).Name} with [Id:{entity.Id}] not found to update")
+                                 .ThenActionIf(
+                                     MappedUnitOfWork.CreatedByUnitOfWorkManager.HasCurrentActiveUow(),
+                                     p => MappedUnitOfWork.SetCachedExistingOriginalEntity(p));
+
+            if (!existingEntity.Id.Equals(entity.Id)) entity.Id = existingEntity.Id;
+        }
 
         if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })
             entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = existingEntity.As<IRowVersionEntity>().ConcurrencyUpdateToken;

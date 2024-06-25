@@ -28,7 +28,6 @@ import {
     OperatorFunction,
     share,
     shareReplay,
-    Subject,
     Subscription,
     switchMap,
     take,
@@ -43,7 +42,15 @@ import { ComponentStore, SelectConfig } from '@ngrx/component-store';
 import { PlatformApiServiceErrorResponse } from '../api-services';
 import { PlatformCachingService } from '../caching';
 import { PLATFORM_CORE_GLOBAL_ENV } from '../platform-core-global-environment';
-import { distinctUntilObjectValuesChanged, onCancel, subscribeUntil, tapLimit, tapOnce } from '../rxjs';
+import {
+    distinctUntilObjectValuesChanged,
+    onCancel,
+    skipDuplicates,
+    skipTime,
+    subscribeUntil,
+    tapLimit,
+    tapOnce
+} from '../rxjs';
 import { immutableUpdate, ImmutableUpdateOptions, list_remove, toPlainObj } from '../utils';
 import { PlatformVm } from './generic.view-model';
 
@@ -182,7 +189,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
      * Run when first time select data from store or use $vm to get data.
      * Use this to set up subscription to listen to data change if needed
      */
-    protected abstract onInitVm: () => void;
+    protected abstract beforeInitVm: () => void;
 
     public abstract vmConstructor(data?: Partial<TViewModel>): TViewModel;
 
@@ -195,7 +202,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         if (!this.vmStateInitiating && !this.vmStateInitiated) {
             this.vmStateInitiating = true;
 
-            this.onInitVm();
+            this.beforeInitVm();
 
             const initOrReloadVm$ = this.initOrReloadVm(this.vmStateDataLoaded).pipe(take(2)) ?? of(null); //take(2) support api cache and implicit reload
 
@@ -583,7 +590,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
      */
     public observerLoadingErrorState<T>(
         requestKey?: string | null,
-        options?: PlatformVmObserverLoadingOptions<T>
+        options?: PlatformVmObserverLoadingOptions
     ): (source: Observable<T>) => Observable<T> {
         if (requestKey == undefined) requestKey = PlatformVm.requestStateDefaultKey;
 
@@ -594,8 +601,6 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
             this.setErrorMsg(undefined, requestKey);
 
             checkSetStatus.bind(this)();
-
-            if (options?.onShowLoading != null && !options?.isReloading) options.onShowLoading();
         };
 
         return (source: Observable<T>) => {
@@ -608,8 +613,6 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                         this.setReloading(false, requestKey);
 
                         checkSetStatus.bind(this)();
-
-                        if (options?.onHideLoading != null && !options?.isReloading) options.onHideLoading();
                     }),
 
                     tapOnce({
@@ -625,20 +628,12 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
 
                                 checkSetStatus.bind(this)();
                             }
-
-                            if (options?.onHideLoading != null && !options?.isReloading) options.onHideLoading();
-
-                            if (options?.onSuccess != null) options.onSuccess(result);
                         },
                         error: (err: PlatformApiServiceErrorResponse | Error) => {
                             if (!options?.isReloading) this.setLoading(false, requestKey);
                             this.setReloading(false, requestKey);
 
                             checkSetStatus.bind(this)();
-
-                            if (options?.onHideLoading != null && !options?.isReloading) options.onHideLoading();
-
-                            if (options?.onError != null) options.onError(err);
                         }
                     }),
                     tap({
@@ -709,7 +704,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
             untracked(() => {
                 // toSignal must be used in an injection context
                 runInInjectionContext(this.environmentInjector, () => {
-                    this.cachedErrorMsg$[requestKey] = toSignal(this.select(_ => _.getErrorMsg(requestKey)));
+                    this.cachedErrorMsg$[requestKey] = toSignal(this.getErrorMsgObservable$(requestKey));
                 });
             });
         }
@@ -728,7 +723,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         if (this.cachedErrorMsgObservable$[requestKey] == null) {
             this.cachedErrorMsgObservable$[requestKey] = this.select(_ => _.getErrorMsg(requestKey));
         }
-        return this.cachedErrorMsgObservable$[requestKey];
+        return this.cachedErrorMsgObservable$[requestKey]!;
     };
 
     public getAllErrorMsgObservable$ = (requestKeys?: string[], excludeKeys?: string[]) => {
@@ -741,7 +736,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                 _.getAllErrorMsgs(requestKeys, excludeKeys)
             );
         }
-        return this.cachedErrorMsgObservable$[combinedCacheRequestKey];
+        return this.cachedErrorMsgObservable$[combinedCacheRequestKey]!;
     };
 
     /**
@@ -927,115 +922,41 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
               ) => Observable<ReturnObservableType>
     >(
         generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
-        requestKey?: string | null,
-        effectOptions?: {
-            observerLoadingoptions?: PlatformVmObserverLoadingOptions<ReturnObservableType>;
-        }
+        requestKey?: string | null
     ): ReturnType {
         if (requestKey == undefined) requestKey = PlatformVm.requestStateDefaultKey;
-        const effectRequestSubject = new Subject<{
-            request: ProvidedType;
-            isReloading?: boolean;
-        }>();
-        let effectRequestSelfSubscription = new Subscription();
 
         const returnFunc = (
             observableOrValue?: ObservableType | Observable<ObservableType> | null,
             isReloading?: boolean,
             otherOptions?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
         ) => {
-            const newRequestObservableCompletedSubject = new Subject<unknown>();
-            const newRequestObservable = setupAddingNewRequestIntoEffectRequestSubject(() => {
-                newRequestObservableCompletedSubject.next(undefined);
-                newRequestObservableCompletedSubject.complete();
-            });
+            // observableOrValue.pipe(skipTime(100)) => skipTime(100) to skip first item of observable
+            // within first 100ms to prevent if obserable is from an behavior subject
+            // only start subscribe for item emit after subscribe listen for some thing changed new
+            // in the future
+            const request$ = isObservable(observableOrValue)
+                ? observableOrValue.pipe(skipTime(100))
+                : of(observableOrValue);
 
-            const newResultObservable = subscribeNewRequestEffectResultObservable.bind(this)(
-                newRequestObservableCompletedSubject
+            // (III)
+            // Delay to make the next api call asynchronous. When call an effect => loading. Call again => previousEffectSub.unsubscribe => cancel => back to success => call next api (async) => set loading again correctly.
+            // If not delay => call next api is sync => set loading is sync but previous cancel is not activated successfully yet, which status is not updated back to Success => which this new effect call skip set status to loading => but then the previous api cancel executing => update status to Success but actually it's loading => create incorrectly status
+            // (IV)
+            // Share so that later subscriber can receive the result, this will help component call
+            // effect could subscribe to do some action like show loading, hide loading, etc.
+            return request$.pipe(
+                skipDuplicates(500),
+                switchMap(request =>
+                    generator(<OriginType>of(request), isReloading).pipe(
+                        delay(1, asyncScheduler), // (III)
+                        this.observerLoadingErrorState(requestKey, { isReloading: isReloading })
+                    )
+                ),
+                this.untilDestroyed(),
+                share(), // (IV)
+                this.subscribeUntilDestroyed(undefined, otherOptions?.effectSubscriptionHandleFn)
             );
-
-            return combineLatest([newRequestObservable, newResultObservable]).pipe(
-                // Some case continous request, next request cancel old request, return result
-                // with different request original. If check diff => observable do not return anything =>
-                // cause issues. Need to find a better way to fix this.
-                // filter(([request, result]) => !isDifferent(request, <ObservableType>result.request.request)),
-                map(([request, result]) => result.result),
-                share()
-            );
-
-            function setupAddingNewRequestIntoEffectRequestSubject(onCompleted?: () => unknown) {
-                const newRequestObservable = isObservable(observableOrValue)
-                    ? observableOrValue.pipe(distinctUntilObjectValuesChanged())
-                    : of(observableOrValue).pipe(delay(1, asyncScheduler));
-
-                const newRequestSub = newRequestObservable.subscribe({
-                    next: request => {
-                        effectRequestSubject.next({ request: <ProvidedType>request, isReloading: isReloading });
-                    },
-                    complete: () => {
-                        if (onCompleted != null) onCompleted();
-                    }
-                });
-
-                if (otherOptions?.effectSubscriptionHandleFn) otherOptions.effectSubscriptionHandleFn(newRequestSub);
-
-                return newRequestObservable;
-            }
-
-            function subscribeNewRequestEffectResultObservable(
-                this: PlatformVmStore<TViewModel>,
-                newRequestObservableCompletedSubject: Subject<unknown>
-            ) {
-                effectRequestSelfSubscription.unsubscribe();
-
-                let newInnerGeneratorResultObservableCompleted = false;
-                let newRequestObservableCompletedSubjectCompleted = false;
-                let newResultObservableCompletedSubjectCompleted = false;
-
-                const newResultObservableCompletedSubject = new Subject<unknown>();
-
-                const newResultObservable = this.createNewEffectResultObservable(
-                    effectRequestSubject.asObservable(),
-                    generator,
-                    requestKey,
-                    {
-                        onInnerGeneratorObservableCompleted: request => {
-                            newInnerGeneratorResultObservableCompleted = true;
-                            if (newRequestObservableCompletedSubjectCompleted) {
-                                newResultObservableCompletedSubject.next(undefined);
-                                newResultObservableCompletedSubject.complete();
-                            }
-                        }
-                    }
-                );
-                newResultObservableCompletedSubject.subscribe({
-                    complete: () => {
-                        newResultObservableCompletedSubjectCompleted = true;
-                    }
-                });
-                newRequestObservableCompletedSubject.subscribe({
-                    complete: () => {
-                        newRequestObservableCompletedSubjectCompleted = true;
-                        if (
-                            newInnerGeneratorResultObservableCompleted &&
-                            !newResultObservableCompletedSubjectCompleted
-                        ) {
-                            newResultObservableCompletedSubject.next(undefined);
-                            newResultObservableCompletedSubject.complete();
-                        }
-                    }
-                });
-
-                effectRequestSelfSubscription = newResultObservable.subscribe({
-                    error: err => {
-                        // If error, resubscribe so that effect still works when observableOrValue is observable
-                        // new item from request observable still be subscribed
-                        subscribeNewRequestEffectResultObservable.bind(this)(newRequestObservableCompletedSubject);
-                    }
-                });
-
-                return newResultObservable.pipe(takeUntil(newResultObservableCompletedSubject));
-            }
         };
 
         return returnFunc as unknown as ReturnType;
@@ -1057,84 +978,16 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
               ) => Observable<ReturnObservableType>
     >(
         generator: (origin: ProvidedType, isReloading?: boolean) => Observable<ReturnObservableType> | void,
-        requestKey?: string | null,
-        effectOptions?: {
-            throttleTimeMs?: number;
-            observerLoadingoptions?: PlatformVmObserverLoadingOptions<ReturnObservableType>;
-        }
+        requestKey?: string | null
     ): ReturnType {
-        return this.effect(
-            (origin$: Observable<ProvidedType>, isReloading?: boolean) => {
-                return origin$.pipe(
-                    switchMap(origin => {
-                        const returnObservableOrVoid = generator(origin, isReloading);
-                        return returnObservableOrVoid instanceof Observable ? returnObservableOrVoid : of(undefined);
-                    })
-                );
-            },
-            requestKey,
-            effectOptions
-        );
-    }
-
-    /**
-     * * ThrottleTime explain: Delay to enhance performance
-     * { leading: true, trailing: true } <=> emit the first item to ensure not delay, but also ignore the sub-sequence,
-     * and still emit the latest item to ensure data is latest
-     */
-    private createNewEffectResultObservable<
-        ObservableType,
-        ReturnObservableType,
-        OriginType extends Observable<ObservableType>
-    >(
-        request$: Observable<{
-            request: ObservableType | null | undefined;
-            isReloading?: boolean;
-        }>,
-        generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
-        requestKey: string | null | undefined,
-        options?: {
-            onInnerGeneratorObservableCompleted?: (request: ObservableType | null | undefined) => unknown;
-        }
-    ): Observable<{
-        request: {
-            request: ObservableType | null | undefined;
-            isReloading?: boolean;
-        };
-        result: ReturnObservableType;
-    }> {
-        // (III)
-        // Delay to make the next api call asynchronous. When call an effect => loading. Call again => previousEffectSub.unsubscribe => cancel => back to success => call next api (async) => set loading again correctly.
-        // If not delay => call next api is sync => set loading is sync but previous cancel is not activated successfully yet, which status is not updated back to Success => which this new effect call skip set status to loading => but then the previous api cancel executing => update status to Success but actually it's loading => create incorrectly status
-        // (IV)
-        // Share so that later subscriber can receive the result, this will help component call
-        // effect could subscribe to do some action like show loading, hide loading, etc.
-        return request$.pipe(
-            delay(1, asyncScheduler), // (III)
-            distinctUntilObjectValuesChanged(),
-            switchMap(request =>
-                generator(<OriginType>of(request.request), request.isReloading).pipe(
-                    delay(1, asyncScheduler),
-                    this.observerLoadingErrorState(requestKey, { isReloading: request.isReloading }),
-                    map(result => ({ request, result })),
-                    tapLimit(
-                        {
-                            complete: () => {
-                                // Delay to mimic async operation, ensure this run only after previous request observable completed
-                                setTimeout(() => {
-                                    if (options?.onInnerGeneratorObservableCompleted != null)
-                                        options.onInnerGeneratorObservableCompleted(request.request);
-                                });
-                            }
-                        },
-                        2
-                    )
-                )
-            ),
-            distinctUntilObjectValuesChanged(),
-            this.untilDestroyed(),
-            share() // (IV)
-        );
+        return this.effect((origin$: Observable<ProvidedType>, isReloading?: boolean) => {
+            return origin$.pipe(
+                switchMap(origin => {
+                    const returnObservableOrVoid = generator(origin, isReloading);
+                    return returnObservableOrVoid instanceof Observable ? returnObservableOrVoid : of(undefined);
+                })
+            );
+        }, requestKey);
     }
 
     /**
@@ -1291,16 +1144,17 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
      * Creates an RxJS operator function that subscribes to the observable until the component is destroyed.
      */
     public subscribeUntilDestroyed<T>(
-        observerOrNext?: Partial<Observer<T>> | ((value: T) => void)
+        observerOrNext?: Partial<Observer<T>> | ((value: T) => void),
+        outSubscriptionFn?: (subscription: Subscription) => void
     ): MonoTypeOperatorFunction<T> {
-        return subscribeUntil(this.destroyed$.pipe(filter(destroyed => destroyed == true)), observerOrNext);
+        return subscribeUntil(
+            this.destroyed$.pipe(filter(destroyed => destroyed == true)),
+            observerOrNext,
+            outSubscriptionFn
+        );
     }
 }
 
-export type PlatformVmObserverLoadingOptions<T = unknown> = {
-    onShowLoading?: () => unknown;
-    onHideLoading?: () => unknown;
+export type PlatformVmObserverLoadingOptions = {
     isReloading?: boolean;
-    onSuccess?: (value: T) => any;
-    onError?: (err: PlatformApiServiceErrorResponse | Error) => any;
 };

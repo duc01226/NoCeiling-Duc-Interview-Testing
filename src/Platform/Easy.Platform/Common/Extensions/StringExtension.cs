@@ -199,4 +199,9 @@ public static class StringExtension
                 .Select(word => upperCase ? char.ToUpper(word[0]) : word[0])
                 .ToArray());
     }
+
+    public static bool EqualsIgnoreCase(this string? str, string? value)
+    {
+        return (str == null && value == null) || (str != null && value != null && str.Equals(value, StringComparison.InvariantCultureIgnoreCase));
+    }
 }

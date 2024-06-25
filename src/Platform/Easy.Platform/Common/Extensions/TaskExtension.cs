@@ -189,6 +189,26 @@ public static class TaskExtension
     }
 
     /// <summary>
+    /// Executes a specified action on the result of the Task if a given condition is true.
+    /// </summary>
+    /// <typeparam name="T">The type of result produced by the Task.</typeparam>
+    /// <param name="task">The Task on which the action is to be performed.</param>
+    /// <param name="actionIf">A boolean value that determines whether the action should be performed.</param>
+    /// <param name="action">The action to be performed on the result of the Task if the condition is true.</param>
+    /// <returns>The original result of the Task.</returns>
+    public static async Task<T> ThenActionIf<T>(
+        this Task<T> task,
+        Func<T, bool> actionIf,
+        Action<T> action)
+    {
+        var targetValue = await task;
+
+        if (actionIf(targetValue)) action(targetValue);
+
+        return targetValue;
+    }
+
+    /// <summary>
     /// Executes a given task and then performs another task if a specified condition is true.
     /// </summary>
     /// <typeparam name="T">The type of the result produced by the task.</typeparam>
@@ -204,6 +224,26 @@ public static class TaskExtension
         var targetValue = await task;
 
         if (actionIf) await nextTask(targetValue);
+
+        return targetValue;
+    }
+
+    /// <summary>
+    /// Executes a given task and then performs another task if a specified condition is true.
+    /// </summary>
+    /// <typeparam name="T">The type of the result produced by the task.</typeparam>
+    /// <param name="task">The task to be executed.</param>
+    /// <param name="actionIf">The condition that determines whether the next task should be executed.</param>
+    /// <param name="nextTask">The task to be executed if the condition is true.</param>
+    /// <returns>The result of the original task.</returns>
+    public static async Task<T> ThenActionIfAsync<T>(
+        this Task<T> task,
+        Func<T, bool> actionIf,
+        Func<T, Task> nextTask)
+    {
+        var targetValue = await task;
+
+        if (actionIf(targetValue)) await nextTask(targetValue);
 
         return targetValue;
     }

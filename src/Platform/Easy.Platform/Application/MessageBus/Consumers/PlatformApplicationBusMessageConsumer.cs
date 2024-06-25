@@ -70,7 +70,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
         ApplicationSettingContext = rootServiceProvider.GetRequiredService<IPlatformApplicationSettingContext>();
     }
 
-    public virtual bool AutoBeginUow => false;
+    public virtual bool AutoOpenUow => true;
 
     protected IPlatformApplicationRequestContextAccessor RequestContextAccessor { get; }
 
@@ -114,7 +114,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
             {
                 if (message is IPlatformTrackableBusMessage trackableBusMessage) RequestContextAccessor.Current.UpsertMany(trackableBusMessage.RequestContext);
 
-                if (AutoBeginUow)
+                if (AutoOpenUow)
                 {
                     using (var uow = UowManager.Begin())
                     {

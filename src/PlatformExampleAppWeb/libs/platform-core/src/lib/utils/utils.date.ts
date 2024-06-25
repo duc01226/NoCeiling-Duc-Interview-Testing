@@ -401,3 +401,7 @@ export function date_remainingDaysUntilToday(inputDateValue: string | Date): num
 export function date_setTime(date: Date, time: Time): Date {
     return new Date(new Date(date).setHours(time.hour, time.minute));
 }
+
+export function local_TimezoneOffset(): number {
+    return -(new Date().getTimezoneOffset() / 60);
+}

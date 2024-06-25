@@ -54,6 +54,11 @@ public static class PlatformJsonSerializer
         if (useCamelCaseNaming)
             options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
 
+        /*
+         * the order of converters in the Converters list in JsonSerializerOptions can affect how serialization and deserialization are handled in .NET.
+         * When serializing or deserializing objects, the System.Text.Json library processes the converters in the order they are added to the Converters list.
+         * The first converter that can handle the type being serialized or deserialized will be used.
+         */
         options.Converters.Clear();
 
         if (useJsonStringEnumConverter)

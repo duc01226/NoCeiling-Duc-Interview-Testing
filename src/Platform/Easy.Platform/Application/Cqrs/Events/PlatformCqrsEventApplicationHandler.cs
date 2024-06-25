@@ -72,7 +72,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     protected virtual bool AllowUsingUserContextAccessor => false;
 
-    protected virtual bool AutoOpenUow => false;
+    protected virtual bool AutoOpenUow => true;
 
     protected virtual bool MustWaitHandlerExecutionFinishedImmediately => false;
 

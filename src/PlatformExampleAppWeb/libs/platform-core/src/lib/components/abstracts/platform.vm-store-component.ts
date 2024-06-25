@@ -284,7 +284,7 @@ export abstract class PlatformVmStoreComponent<
                         combineLatest(
                             this.additionalStores
                                 .concat([<PlatformVmStore<PlatformVm>>(<unknown>this.store)])
-                                .map(store => store.getErrorMsgObservable$(requestKey)!)
+                                .map(store => store.getErrorMsgObservable$(requestKey))
                         ).pipe(
                             this.untilDestroyed(),
                             map(errors => errors.find(p => p != null))
@@ -311,10 +311,12 @@ export abstract class PlatformVmStoreComponent<
                         combineLatest(
                             this.additionalStores
                                 .concat([<PlatformVmStore<PlatformVm>>(<unknown>this.store)])
-                                .map(store => store.getAllErrorMsgObservable$(requestKeys, excludeKeys)!)
+                                .map(store => store.getAllErrorMsgObservable$(requestKeys, excludeKeys))
                         ).pipe(
                             this.untilDestroyed(),
-                            map(errors => list_distinct(errors).join('; '))
+                            map(errors =>
+                                list_distinct(errors.filter(msg => msg != null && msg.trim() != '')).join('; ')
+                            )
                         )
                     );
                 });
@@ -376,7 +378,7 @@ export abstract class PlatformVmStoreComponent<
 
     public override observerLoadingErrorState<T>(
         requestKey?: string,
-        options?: PlatformObserverLoadingErrorStateOptions<T> | undefined
+        options?: PlatformObserverLoadingErrorStateOptions | undefined
     ): (source: Observable<T>) => Observable<T> {
         return this.store.observerLoadingErrorState(requestKey, options);
     }
