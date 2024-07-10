@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 
 import { cloneDeep } from 'lodash-es';
-import { filter, map, Observable, share, take } from 'rxjs';
+import { filter, map, Observable, share } from 'rxjs';
 import { PartialDeep } from 'type-fest';
 
 import { toObservable } from '@angular/core/rxjs-interop';
@@ -121,29 +121,27 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
             if (initialVm$ instanceof Observable) {
                 this.storeSubscription(
                     'initVm',
-                    initialVm$
-                        .pipe(take(2), this.observerLoadingErrorState(undefined, { isReloading: isReload })) //take(2) support api cache and implicit reload
-                        .subscribe({
-                            next: initialVm => {
-                                if (initialVm) {
-                                    autoInitVmStatus.bind(this)(initialVm);
+                    initialVm$.pipe(this.observerLoadingErrorState(undefined, { isReloading: isReload })).subscribe({
+                        next: initialVm => {
+                            if (initialVm) {
+                                autoInitVmStatus.bind(this)(initialVm);
 
-                                    this.internalSetVm(initialVm);
-                                    this.originalInitVm = cloneDeep(initialVm);
-                                    super.ngOnInit();
+                                this.internalSetVm(initialVm);
+                                this.originalInitVm = cloneDeep(initialVm);
+                                super.ngOnInit();
 
-                                    executeOnSuccessDelay.bind(this)();
-                                } else {
-                                    super.ngOnInit();
+                                executeOnSuccessDelay.bind(this)();
+                            } else {
+                                super.ngOnInit();
 
-                                    executeOnSuccessDelay.bind(this)();
-                                }
-                            },
-                            error: (error: PlatformApiServiceErrorResponse | Error) => {
-                                this.status$.set(ComponentStateStatus.Error);
-                                this.setErrorMsg(error);
+                                executeOnSuccessDelay.bind(this)();
                             }
-                        })
+                        },
+                        error: (error: PlatformApiServiceErrorResponse | Error) => {
+                            this.status$.set(ComponentStateStatus.Error);
+                            this.setErrorMsg(error);
+                        }
+                    })
                 );
             } else {
                 autoInitVmStatus.bind(this)(initialVm$);

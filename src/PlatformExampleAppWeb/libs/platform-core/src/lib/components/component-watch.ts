@@ -4,7 +4,7 @@ import { isDifferent } from '../utils';
 import { PlatformComponent } from './abstracts';
 
 /**
- * Operator used to watch a component input when it is set after component init.
+ * Operator used to watch a component property when it is set after component init.
  *
  * @template TComponent The type of the component, defaults to PlatformComponent.
  * @template TProp The type of the property being watched, defaults to object.
@@ -20,11 +20,11 @@ import { PlatformComponent } from './abstracts';
  *
  * @example
  * // Shorthand to execute a target function directly on change
- * @WatchInput('pagedResultWatch')
+ * @ComponentWatch('pagedResultWatch')
  * public pagedResult?: PlatformPagedResultDto<LeaveType>;
  *
  * // Full syntax to execute a normal function
- * @WatchInput<LeaveTypesState, PlatformPagedQueryDto>((value, change, targetObj) => {
+ * @ComponentWatch<LeaveTypesState, PlatformPagedQueryDto>((value, change, targetObj) => {
  *   targetObj.updatePageInfo();
  * })
  * public pagedQuery: PlatformPagedQueryDto = new PlatformPagedQueryDto();
@@ -36,7 +36,7 @@ import { PlatformComponent } from './abstracts';
  *   this.updatePageInfo();
  * }
  */
-export function WatchInput<TComponent extends PlatformComponent = PlatformComponent, TProp = object>(
+export function ComponentWatch<TComponent extends PlatformComponent = PlatformComponent, TProp = object>(
     callbackFnOrName: WatchCallBackFunction<TProp, TComponent> | keyof TComponent,
     options?: { beforeInitiated?: boolean; checkDiff?: boolean | 'deep-check' }
 ) {
