@@ -1,9 +1,9 @@
 #nullable enable
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using Easy.Platform.Common.Utils;
 
 namespace Easy.Platform.Common.Extensions;
 
@@ -433,7 +433,8 @@ public static class ListExtension
             async (item, index) =>
             {
                 await action(item, index);
-                return true;
+
+                return ValueTuple.Create();
             },
             maxConcurrent);
     }
@@ -455,24 +456,44 @@ public static class ListExtension
         maxConcurrent ??= DefaultParallelAsyncMaxConcurrent;
 
         var itemsList = items.As<IList<T>>() ?? items.ToList();
-        var itemResultsList = new List<TResult>();
 
-        await Util.Pager.ExecutePagingAsync(
-            async (skipCount, maxResultCount) =>
+        var actionQueueList = itemsList.Reverse()
+            .Select<T, ValueTuple<int, Func<Task<ValueTuple<int, TResult, Exception?>>>>>(
+                (item, i) => (i,
+                    () => action(item, i)
+                        .Then<TResult, ValueTuple<TResult, Exception?>>(p => (p, null))
+                        .Recover(ex => (default!, ex))
+                        .Then<ValueTuple<TResult, Exception?>, ValueTuple<int, TResult, Exception?>>(
+                            itemActionResult => (i, itemActionResult.Item1, itemActionResult.Item2))))
+            .ToList();
+
+        var processingActionTasks = new ConcurrentDictionary<int, Task<ValueTuple<int, TResult, Exception?>>>();
+        var processedActionTaskResults = new ConcurrentDictionary<int, ValueTuple<TResult, Exception?>>();
+
+        while (processedActionTaskResults.Count < itemsList.Count)
+        {
+            while (processingActionTasks.Count < maxConcurrent.Value && actionQueueList.Any())
             {
-                var pagedItemsList = itemsList.Skip(skipCount).Take(maxResultCount).ToList();
+                var nextProcessItem = actionQueueList.Pop();
 
-                var taskActionList = new List<Task<TResult>>();
+                var (nextProcessItemIndex, nextProcessAction) = nextProcessItem;
 
-                for (var i = 0; i < pagedItemsList.Count; i++)
-                    taskActionList.Add(action(pagedItemsList[i], skipCount + i));
+                processingActionTasks.TryAdd(nextProcessItemIndex, nextProcessAction());
+            }
 
-                itemResultsList.AddRange(await Task.WhenAll(taskActionList));
-            },
-            itemsList.Count,
-            maxConcurrent.Value);
+            var nextProcessedActionTask = await Task.WhenAny(processingActionTasks.Values);
 
-        return itemResultsList;
+            var (nextProcessedItemIndex, nextProcessedActionResult, nextProcessedActionException) = nextProcessedActionTask.Result;
+
+            processedActionTaskResults.TryAdd(nextProcessedItemIndex, (nextProcessedActionResult, nextProcessedActionException));
+            processingActionTasks.TryRemove(nextProcessedItemIndex, out _);
+        }
+
+        var processedFailedActionExceptions = processedActionTaskResults.Where(p => p.Value.Item2 != null).Select(p => p.Value.Item2!).ToList();
+
+        return processedFailedActionExceptions.IsEmpty()
+            ? processedActionTaskResults.OrderBy(p => p.Key).Select(p => p.Value.Item1).ToList()
+            : throw new AggregateException(processedFailedActionExceptions);
     }
 
     /// <inheritdoc cref="ForEachAsync{T}(IEnumerable{T},Func{T,int,Task})" />
@@ -484,7 +505,7 @@ public static class ListExtension
     }
 
     /// <summary>
-    /// Example: await list.ForEach((item, itemIndex) => do some thing async)
+    /// Example: await list.ForEach((item, itemIndex) => do something async)
     /// </summary>
     public static async Task ForEachAsync<T>(this IList<T> items, Func<T, int, Task> action)
     {

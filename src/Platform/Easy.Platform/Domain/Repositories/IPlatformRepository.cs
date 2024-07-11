@@ -99,6 +99,15 @@ public interface IPlatformRepository<TEntity, TPrimaryKey> : IPlatformRepository
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
+
+    public void SetCachedExistingEntitiesForUow<TResult>(TResult result, IPlatformUnitOfWork uow)
+    {
+        // save cached existing entities
+        if (result is TEntity resultSingleEntity)
+            uow.SetCachedExistingOriginalEntity(resultSingleEntity.DeepClone());
+        if (result is ICollection<TEntity> resultMultipleEntities && resultMultipleEntities.Any())
+            resultMultipleEntities.ForEach(p => uow.SetCachedExistingOriginalEntity(p.DeepClone()));
+    }
 }
 
 public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformRepository<TEntity, TPrimaryKey>
@@ -765,7 +774,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
     /// </remarks>
     public async Task DeleteManyScrollingPagingAsync(
         Expression<Func<TEntity, bool>> predicate,
-        int pageSize,
+        int pageSize = 10,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
@@ -818,6 +827,8 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                             cancellationToken: cancellationToken)
                         .ThenAction(items => items.ForEach(updateAction));
 
+                    SetCachedExistingEntitiesForUow(pagingUpdateItems, uow);
+
                     await UpdateManyAsync(uow, pagingUpdateItems, dismissSendEvent, eventCustomConfig, cancellationToken);
 
                     await uow.CompleteAsync(cancellationToken);
@@ -855,6 +866,8 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                             GetQuery(uow).Where(predicate).Take(pageSize),
                             cancellationToken: cancellationToken)
                         .ThenAction(items => items.ForEach(updateAction));
+
+                    SetCachedExistingEntitiesForUow(pagingUpdateItems, uow);
 
                     var updatedItems = await UpdateManyAsync(uow, pagingUpdateItems, dismissSendEvent, eventCustomConfig, cancellationToken);
 

@@ -429,11 +429,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
         var result = await ExecuteUowThreadSafe(UnitOfWorkManager.CurrentActiveUow(), uow => ExecuteReadData(uow, readDataFn, loadRelatedEntities));
 
-        // save cached existing entities
-        if (result is TEntity resultSingleEntity)
-            currentActiveUow.SetCachedExistingOriginalEntity(resultSingleEntity.DeepClone());
-        if (result is ICollection<TEntity> resultMultipleEntities && resultMultipleEntities.Any())
-            resultMultipleEntities.ForEach(p => currentActiveUow.SetCachedExistingOriginalEntity(p.DeepClone()));
+        this.As<IPlatformRepository<TEntity, TPrimaryKey>>().SetCachedExistingEntitiesForUow(result, currentActiveUow);
 
         return result;
     }

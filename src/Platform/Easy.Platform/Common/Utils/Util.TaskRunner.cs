@@ -1667,38 +1667,16 @@ public static partial class Util
         /// </summary>
         public static async Task<bool> RunWithTimeout(Func<CancellationToken, Task> fn, TimeSpan timeout, CancellationToken cancellationToken = default)
         {
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var (isInTime, _) = await RunWithTimeout(
+                ct => fn(ct).Then(ValueTuple.Create),
+                timeout,
+                cancellationToken);
 
-            try
-            {
-                var mainFnTask = fn(cts.Token).Then(() => true);
-                var timeoutTask = Task.Delay(timeout, cts.Token).Then(() => false).ThenSideEffectAction(_ => cts?.Cancel());
-
-                var finalFirstCompletedTask = await Task.WhenAny(mainFnTask, timeoutTask);
-
-                var isMainFnCompletedSuccess = await finalFirstCompletedTask;
-
-                return isMainFnCompletedSuccess;
-            }
-            catch (TaskCanceledException)
-            {
-                return false;
-            }
-            finally
-            {
-                cts.Dispose();
-                cts = null;
-            }
-        }
-
-        /// <inheritdoc cref="RunWithTimeout(Func{CancellationToken,Task},TimeSpan,CancellationToken)" />
-        public static Task<bool> RunWithTimeout(Action fn, TimeSpan timeout, CancellationToken cancellationToken = default)
-        {
-            return RunWithTimeout(cts => Task.Run(fn, cts), timeout, cancellationToken);
+            return isInTime;
         }
 
         /// <summary>
-        /// Execute an action with timeout. Return false with default action result type is it's timed out. Return true with action result if the action execute successfully
+        /// Execute an action with timeout. Return (isInTime (value is false), result (default type value)) with default action result type is it's timed out. Return (isInTime (value is true), result) true with action result if the action execute successfully
         /// </summary>
         public static async Task<ValueTuple<bool, TResult>> RunWithTimeout<TResult>(
             Func<CancellationToken, Task<TResult>> fn,
@@ -1709,16 +1687,15 @@ public static partial class Util
 
             try
             {
-                var mainFnTask = Task.Run(() => fn(cts?.Token ?? cancellationToken), cancellationToken);
-
-                var mainFnCheckIsSuccessTask = mainFnTask.Then(() => true);
+                var mainFnTask = Task.Run(() => fn(cts.Token), cancellationToken);
                 var timeoutTask = Task.Delay(timeout, cts.Token).Then(() => false).ThenSideEffectAction(_ => cts?.Cancel());
 
-                var finalFirstCompletedTask = await Task.WhenAny(mainFnCheckIsSuccessTask, timeoutTask);
+                await Task.WhenAny(mainFnTask, timeoutTask);
 
-                var isMainFnCompletedSuccess = await finalFirstCompletedTask;
+                var isInTime = !timeoutTask.IsCompletedSuccessfully;
+                var result = mainFnTask.IsCompletedSuccessfully ? mainFnTask.Result : default;
 
-                return isMainFnCompletedSuccess ? (true, mainFnTask.Result) : (false, default);
+                return (isInTime, result);
             }
             catch (TaskCanceledException)
             {
