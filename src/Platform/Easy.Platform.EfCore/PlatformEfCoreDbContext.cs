@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Easy.Platform.Application;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
@@ -10,6 +11,7 @@ using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.EfCore;
@@ -18,12 +20,14 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     where TDbContext : PlatformEfCoreDbContext<TDbContext>, IPlatformDbContext<TDbContext>
 {
     public const int ContextMaxConcurrentThreadLock = 1;
+    private readonly IPlatformApplicationSettingContext applicationSettingContext;
 
     private readonly Lazy<ILogger> lazyLogger;
     private readonly Lazy<PlatformPersistenceConfiguration<TDbContext>> lazyPersistenceConfiguration;
     private readonly Lazy<IPlatformApplicationRequestContextAccessor> lazyRequestContextAccessor;
     private readonly Lazy<IPlatformRootServiceProvider> lazyRootServiceProvider;
 
+    // PlatformEfCoreDbContext take only options to support context pooling factory
     public PlatformEfCoreDbContext(
         DbContextOptions<TDbContext> options) : base(options)
     {
@@ -35,6 +39,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         lazyRequestContextAccessor = new Lazy<IPlatformApplicationRequestContextAccessor>(this.GetService<IPlatformApplicationRequestContextAccessor>);
         lazyRootServiceProvider = new Lazy<IPlatformRootServiceProvider>(this.GetService<IPlatformRootServiceProvider>);
         lazyLogger = new Lazy<ILogger>(() => CreateLogger(this.GetService<ILoggerFactory>()));
+        applicationSettingContext = lazyRootServiceProvider.Value.GetService<IPlatformApplicationSettingContext>();
     }
 
     public PlatformEfCoreDbContext(
@@ -42,13 +47,15 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
         IPlatformApplicationRequestContextAccessor requestContextAccessor,
         IPlatformRootServiceProvider rootServiceProvider,
-        ILoggerFactory loggerFactory) : base(options)
+        ILoggerFactory loggerFactory,
+        IPlatformApplicationSettingContext applicationSettingContext) : base(options)
     {
         // Use lazy because we are using this.GetService to support EfCore pooling => force constructor must take only DbContextOptions<TDbContext>
         lazyPersistenceConfiguration = new Lazy<PlatformPersistenceConfiguration<TDbContext>>(() => persistenceConfiguration);
         lazyRequestContextAccessor = new Lazy<IPlatformApplicationRequestContextAccessor>(() => requestContextAccessor);
         lazyRootServiceProvider = new Lazy<IPlatformRootServiceProvider>(() => rootServiceProvider);
         lazyLogger = new Lazy<ILogger>(() => CreateLogger(loggerFactory));
+        this.applicationSettingContext = applicationSettingContext;
     }
 
     public DbSet<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryDbSet => Set<PlatformDataMigrationHistory>();
@@ -282,7 +289,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 },
                 dismissSendEvent,
                 eventCustomConfig,
-                () => RequestContextAccessor.Current.GetAllKeyValues(),
+                () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
         }
@@ -357,7 +364,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 },
                 dismissSendEvent,
                 eventCustomConfig,
-                () => RequestContextAccessor.Current.GetAllKeyValues(),
+                () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
@@ -478,6 +485,11 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         return entities;
     }
 
+    protected HashSet<string> IgnoreLogRequestContextKeys()
+    {
+        return applicationSettingContext.GetIgnoreRequestContextKeys();
+    }
+
     public ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
         return loggerFactory.CreateLogger(typeof(IPlatformDbContext).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}");
@@ -551,7 +563,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 },
                 dismissSendEvent,
                 eventCustomConfig,
-                () => RequestContextAccessor.Current.GetAllKeyValues(),
+                () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
@@ -599,7 +611,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             entities,
             crudAction,
             eventCustomConfig,
-            () => RequestContextAccessor.Current.GetAllKeyValues(),
+            () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
             PlatformCqrsEntityEvent.GetBulkEntitiesEventStackTrace<TEntity, TPrimaryKey>(RootServiceProvider),
             cancellationToken);
     }

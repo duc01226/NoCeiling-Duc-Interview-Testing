@@ -5,6 +5,8 @@ namespace Easy.Platform.Application;
 
 public interface IPlatformApplicationSettingContext
 {
+    public static HashSet<string> DefaultIgnoreRequestContextKeys { get; } = ["Authorization"];
+
     public string ApplicationName { get; }
 
     public Assembly ApplicationAssembly { get; }
@@ -19,6 +21,19 @@ public interface IPlatformApplicationSettingContext
     /// maximum is 1 collect run per 5 seconds
     /// </summary>
     public double AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds { get; set; }
+
+    /// <summary>
+    /// Used to config which request context keys will be ignored in logs, events and bus messages. Default value is null, then it will fall back to use <see cref="DefaultIgnoreRequestContextKeys" />
+    /// </summary>
+    public HashSet<string>? IgnoreRequestContextKeys { get; set; }
+
+    /// <summary>
+    /// Return <see cref="IgnoreRequestContextKeys" /> or <see cref="DefaultIgnoreRequestContextKeys" /> if <see cref="IgnoreRequestContextKeys" /> is null
+    /// </summary>
+    public HashSet<string> GetIgnoreRequestContextKeys()
+    {
+        return IgnoreRequestContextKeys ?? DefaultIgnoreRequestContextKeys;
+    }
 }
 
 public class PlatformApplicationSettingContext : IPlatformApplicationSettingContext
@@ -45,4 +60,6 @@ public class PlatformApplicationSettingContext : IPlatformApplicationSettingCont
     /// Default value is <see cref="Util.GarbageCollector.DefaultCollectGarbageMemoryThrottleSeconds" />.
     /// </summary>
     public double AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds { get; set; } = Util.GarbageCollector.DefaultCollectGarbageMemoryThrottleSeconds;
+
+    public HashSet<string>? IgnoreRequestContextKeys { get; set; } = IPlatformApplicationSettingContext.DefaultIgnoreRequestContextKeys;
 }

@@ -91,7 +91,7 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
                                     request.GetType().Name,
                                     request.AuditInfo?.AuditTrackId,
                                     request.ToFormattedJson(),
-                                    RequestContext.GetAllKeyValues().ToFormattedJson());
+                                    RequestContext.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()).ToFormattedJson());
                         });
 
                     return result;

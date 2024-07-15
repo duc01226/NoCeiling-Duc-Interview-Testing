@@ -252,7 +252,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     protected override async Task DoHandle(TEvent @event, CancellationToken cancellationToken, Func<bool> couldRunInBackgroundThread)
     {
         if (@event.RequestContext == null || @event.RequestContext.IsEmpty())
-            @event.SetRequestContextValues(requestContextAccessor.Current.GetAllKeyValues());
+            @event.SetRequestContextValues(requestContextAccessor.Current.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()));
 
         if (!HandleWhen(@event)) return;
 

@@ -25,4 +25,6 @@ public class TextSnippetApplicationSettingContext : IPlatformApplicationSettingC
     public bool AutoGarbageCollectPerProcessRequestOrBusMessage { get; set; } = true;
 
     public double AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds { get; set; } = Util.GarbageCollector.DefaultCollectGarbageMemoryThrottleSeconds;
+
+    public HashSet<string> IgnoreRequestContextKeys { get; set; }
 }

@@ -3,11 +3,11 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using System.Security.Claims;
 using Easy.Platform.Application.RequestContext;
-using Easy.Platform.AspNetCore.Context.UserContext.UserContextKeyToClaimTypeMapper.Abstract;
+using Easy.Platform.AspNetCore.Context.RequestContext.UserContextKeyToClaimTypeMapper.Abstract;
 using Easy.Platform.Common.RequestContext;
 using Microsoft.AspNetCore.Http;
 
-namespace Easy.Platform.AspNetCore.Context.UserContext;
+namespace Easy.Platform.AspNetCore.Context.RequestContext;
 
 public class PlatformAspNetApplicationRequestContext : IPlatformApplicationRequestContext
 {
@@ -45,11 +45,11 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
         return GetAllKeys(CurrentHttpContext());
     }
 
-    public Dictionary<string, object> GetAllKeyValues()
+    public Dictionary<string, object> GetAllKeyValues(HashSet<string>? ignoreKeys = null)
     {
         InitAllKeyValuesForCachedUserContextData();
 
-        return GetAllKeyValues(CurrentHttpContext());
+        return GetAllKeyValues(CurrentHttpContext(), ignoreKeys);
     }
 
     public void Add(KeyValuePair<string, object> item)
@@ -206,9 +206,10 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
             .ToList();
     }
 
-    protected Dictionary<string, object> GetAllKeyValues(HttpContext useHttpContext)
+    protected Dictionary<string, object> GetAllKeyValues(HttpContext useHttpContext, HashSet<string>? ignoreKeys = null)
     {
         return GetAllKeys(useHttpContext)
+            .WhereIf(ignoreKeys?.Any() == true, key => !ignoreKeys.Contains(key))
             .Select(key => new KeyValuePair<string, object>(key, GetValue<object>(key, useHttpContext, CachedUserContextData, out var _, claimTypeMapper)))
             .ToDictionary(p => p.Key, p => p.Value);
     }

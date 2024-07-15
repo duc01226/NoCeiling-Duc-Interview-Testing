@@ -1,12 +1,12 @@
 using Easy.Platform.Application.RequestContext;
-using Easy.Platform.AspNetCore.Context.UserContext.UserContextKeyToClaimTypeMapper.Abstract;
+using Easy.Platform.AspNetCore.Context.RequestContext.UserContextKeyToClaimTypeMapper.Abstract;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Easy.Platform.AspNetCore.Context.UserContext;
+namespace Easy.Platform.AspNetCore.Context.RequestContext;
 
 /// <summary>
-/// Implementation of <see cref="IPlatformApplicationRequestContextAccessor"/>
+/// Implementation of <see cref="IPlatformApplicationRequestContextAccessor" />
 /// Inspired by Microsoft.AspNetCore.Http.HttpContextAccessor
 /// </summary>
 public class PlatformAspNetApplicationRequestContextAccessor : PlatformDefaultApplicationRequestContextAccessor

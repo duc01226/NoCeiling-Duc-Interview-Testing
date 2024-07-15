@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Easy.Platform.Application;
 using Easy.Platform.Application.Exceptions;
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.AspNetCore.Middleware.Abstracts;
@@ -18,22 +19,25 @@ namespace Easy.Platform.AspNetCore.ExceptionHandling;
 /// </summary>
 public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
 {
+    private readonly IPlatformApplicationSettingContext applicationSettingContext;
     private readonly Lazy<ILogger> loggerLazy;
 
     public PlatformGlobalExceptionHandlerMiddleware(
         RequestDelegate next,
         ILoggerFactory loggerFactory,
         IConfiguration configuration,
-        IPlatformApplicationRequestContextAccessor userContextAccessor) : base(next)
+        IPlatformApplicationRequestContextAccessor requestContextAccessor,
+        IPlatformApplicationSettingContext applicationSettingContext) : base(next)
     {
         loggerLazy = new Lazy<ILogger>(() => loggerFactory.CreateLogger<PlatformGlobalExceptionHandlerMiddleware>());
-        UserContextAccessor = userContextAccessor;
+        RequestContextAccessor = requestContextAccessor;
+        this.applicationSettingContext = applicationSettingContext;
         Configuration = configuration;
     }
 
     protected IConfiguration Configuration { get; }
     protected ILogger Logger => loggerLazy.Value;
-    protected IPlatformApplicationRequestContextAccessor UserContextAccessor { get; }
+    protected IPlatformApplicationRequestContextAccessor RequestContextAccessor { get; }
     protected bool DeveloperExceptionEnabled => PlatformEnvironment.IsDevelopment || Configuration.GetValue<bool>("DeveloperExceptionEnabled");
 
     protected override async Task InternalInvokeAsync(HttpContext context)
@@ -99,7 +103,7 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
                         exception.BeautifyStackTrace(),
                         "[UnexpectedRequestError] There is an unexpected exception during the processing of the request. RequestId: {RequestId}. UserContext: {UserContext}",
                         context.TraceIdentifier,
-                        UserContextAccessor.Current.GetAllKeyValues().ToFormattedJson());
+                        RequestContextAccessor.Current.GetAllKeyValues(applicationSettingContext.GetIgnoreRequestContextKeys()).ToFormattedJson());
 
                     return new PlatformAspNetMvcErrorResponse(
                         PlatformAspNetMvcErrorInfo.FromUnknownException(exception, DeveloperExceptionEnabled),

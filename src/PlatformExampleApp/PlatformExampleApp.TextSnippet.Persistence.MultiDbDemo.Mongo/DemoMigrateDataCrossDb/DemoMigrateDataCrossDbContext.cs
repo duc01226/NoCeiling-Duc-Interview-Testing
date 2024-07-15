@@ -1,3 +1,4 @@
+using Easy.Platform.Application;
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.MongoDB;
 using Easy.Platform.Persistence;
@@ -14,12 +15,14 @@ public sealed class DemoMigrateDataCrossDbContext : PlatformMongoDbContext<DemoM
         ILoggerFactory loggerFactory,
         IPlatformApplicationRequestContextAccessor userContextAccessor,
         PlatformPersistenceConfiguration<DemoMigrateDataCrossDbContext> persistenceConfiguration,
-        IPlatformRootServiceProvider rootServiceProvider) : base(
+        IPlatformRootServiceProvider rootServiceProvider,
+        IPlatformApplicationSettingContext applicationSettingContext) : base(
         database,
         loggerFactory,
         userContextAccessor,
         persistenceConfiguration,
-        rootServiceProvider)
+        rootServiceProvider,
+        applicationSettingContext)
     {
     }
 

@@ -107,14 +107,14 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                                     request.GetType().Name,
                                     request.AuditInfo?.AuditTrackId,
                                     request.ToFormattedJson(),
-                                    RequestContext.GetAllKeyValues().ToFormattedJson());
+                                    RequestContext.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()).ToFormattedJson());
                         });
 
                     if (RootServiceProvider.IsAnyImplementationAssignableToServiceTypeRegistered(
                         typeof(IPlatformCqrsEventHandler<PlatformCqrsCommandEvent<TCommand, TResult>>)))
                         await Cqrs.Value.SendEvent(
                             new PlatformCqrsCommandEvent<TCommand, TResult>(request, result, PlatformCqrsCommandEventAction.Executed)
-                                .With(p => p.SetRequestContextValues(RequestContext.GetAllKeyValues())),
+                                .With(p => p.SetRequestContextValues(RequestContext.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()))),
                             cancellationToken);
 
                     return result;

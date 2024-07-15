@@ -1,8 +1,8 @@
+using Easy.Platform.Application;
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.MongoDB;
 using Easy.Platform.Persistence;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 
@@ -15,12 +15,14 @@ public sealed class TextSnippetMultiDbDemoDbContext : PlatformMongoDbContext<Tex
         ILoggerFactory loggerFactory,
         IPlatformApplicationRequestContextAccessor userContextAccessor,
         PlatformPersistenceConfiguration<TextSnippetMultiDbDemoDbContext> persistenceConfiguration,
-        IPlatformRootServiceProvider rootServiceProvider) : base(
+        IPlatformRootServiceProvider rootServiceProvider,
+        IPlatformApplicationSettingContext applicationSettingContext) : base(
         database,
         loggerFactory,
         userContextAccessor,
         persistenceConfiguration,
-        rootServiceProvider)
+        rootServiceProvider,
+        applicationSettingContext)
     {
     }
 

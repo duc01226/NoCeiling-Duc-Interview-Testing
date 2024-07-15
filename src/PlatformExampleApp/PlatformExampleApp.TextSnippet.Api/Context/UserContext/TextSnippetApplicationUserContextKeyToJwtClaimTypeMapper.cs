@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using Easy.Platform.Application.RequestContext;
-using Easy.Platform.AspNetCore.Context.UserContext.UserContextKeyToClaimTypeMapper;
+using Easy.Platform.AspNetCore.Context.RequestContext.UserContextKeyToClaimTypeMapper;
 using PlatformExampleApp.TextSnippet.Application.Context.UserContext;
 
 namespace PlatformExampleApp.TextSnippet.Api.Context.UserContext;

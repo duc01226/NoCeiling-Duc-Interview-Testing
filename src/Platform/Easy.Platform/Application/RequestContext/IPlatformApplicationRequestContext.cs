@@ -56,7 +56,7 @@ public interface IPlatformApplicationRequestContext : IDictionary<string, object
 
     List<string> GetAllKeys();
 
-    Dictionary<string, object> GetAllKeyValues();
+    Dictionary<string, object> GetAllKeyValues(HashSet<string>? ignoreKeys = null);
 }
 
 public static class PlatformApplicationRequestContextExtensions

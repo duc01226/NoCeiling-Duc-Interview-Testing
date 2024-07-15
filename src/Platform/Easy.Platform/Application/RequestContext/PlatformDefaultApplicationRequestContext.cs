@@ -42,9 +42,12 @@ public class PlatformDefaultApplicationRequestContext : IPlatformApplicationRequ
         return [.. UserContextData.Keys];
     }
 
-    public Dictionary<string, object> GetAllKeyValues()
+    public Dictionary<string, object> GetAllKeyValues(HashSet<string>? ignoreKeys = null)
     {
-        return GetAllKeys().Select(key => new KeyValuePair<string, object>(key, GetValue<object>(key))).ToDictionary(p => p.Key, p => p.Value);
+        return GetAllKeys()
+            .WhereIf(ignoreKeys?.Any() == true, key => !ignoreKeys.Contains(key))
+            .Select(key => new KeyValuePair<string, object>(key, GetValue<object>(key)))
+            .ToDictionary(p => p.Key, p => p.Value);
     }
 
     public void Add(KeyValuePair<string, object> item)
