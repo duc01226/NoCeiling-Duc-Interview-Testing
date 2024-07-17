@@ -6,7 +6,7 @@ using Easy.Platform.Common.Dtos;
 using Easy.Platform.Infrastructures.Caching;
 using Easy.Platform.Persistence.Services;
 using Microsoft.Extensions.Logging;
-using PlatformExampleApp.TextSnippet.Application.EntityDtos;
+using PlatformExampleApp.TextSnippet.Application.Dtos.EntityDtos;
 using PlatformExampleApp.TextSnippet.Application.Helpers;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;

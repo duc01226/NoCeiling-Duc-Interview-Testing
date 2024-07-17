@@ -4,7 +4,7 @@ using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using PlatformExampleApp.TextSnippet.Application.EntityDtos;
+using PlatformExampleApp.TextSnippet.Application.Dtos.EntityDtos;
 using PlatformExampleApp.TextSnippet.Application.UseCaseCommands;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;

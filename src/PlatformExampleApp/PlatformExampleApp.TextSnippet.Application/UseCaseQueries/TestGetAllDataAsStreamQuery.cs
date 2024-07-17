@@ -4,7 +4,7 @@ using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common.Cqrs.Queries;
 using Easy.Platform.Infrastructures.Caching;
 using Microsoft.Extensions.Logging;
-using PlatformExampleApp.TextSnippet.Application.EntityDtos;
+using PlatformExampleApp.TextSnippet.Application.Dtos.EntityDtos;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
 

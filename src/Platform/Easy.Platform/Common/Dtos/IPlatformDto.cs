@@ -14,7 +14,6 @@ public interface IPlatformDto<TDto> : IPlatformDto
 
 public interface IPlatformDto<TDto, out TMapForObject> : IPlatformDto<TDto>
     where TDto : IPlatformDto<TDto>
-    where TMapForObject : class
 {
     TMapForObject MapToObject();
 }

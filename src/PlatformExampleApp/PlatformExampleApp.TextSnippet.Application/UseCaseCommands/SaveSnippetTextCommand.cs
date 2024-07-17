@@ -8,7 +8,7 @@ using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.Exceptions.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Logging;
-using PlatformExampleApp.TextSnippet.Application.EntityDtos;
+using PlatformExampleApp.TextSnippet.Application.Dtos.EntityDtos;
 using PlatformExampleApp.TextSnippet.Application.Infrastructures;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
@@ -297,7 +297,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
         }
 
         // STEP 1: Build saving entity data from request. Throw not found if update (when id is not null)
-        var toSaveEntity = request.Data.IsSubmitToUpdate()
+        var toSaveEntity = request.Data.HasSubmitId()
             ? await textSnippetEntityRepository.FirstOrDefaultAsync(predicate: p => p.Id == request.Data.Id, cancellationToken)
                 .PipeIf(request.AutoCreateIfNotExisting == false, p => p.EnsureFound($"Has not found text snippet for id {request.Data.Id}"))
                 .Then(existingEntity => existingEntity != null ? request.Data.UpdateToEntity(existingEntity) : request.Data.MapToEntity())
@@ -376,7 +376,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
         //        typeof(DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEventHandler)),
         //    cancellationToken: cancellationToken);
 
-        if (request.Data.IsSubmitToUpdate())
+        if (request.Data.HasSubmitId())
             // TEST DEMO Case update using CreateOrUpdate directly entity is mapped from dto. When update do not get from existing entity still should work normally, should also add domain event
             savedData = await textSnippetEntityRepository.CreateOrUpdateAsync(
                 request.Data.MapToEntity().With(p => p.FullText += " Updated TEST DEMO Case update using CreateOrUpdate"),

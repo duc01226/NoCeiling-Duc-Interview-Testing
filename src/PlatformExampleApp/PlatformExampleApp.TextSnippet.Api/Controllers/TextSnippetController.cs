@@ -4,7 +4,7 @@ using Easy.Platform.Infrastructures.Caching;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using PlatformExampleApp.TextSnippet.Application.Caching;
-using PlatformExampleApp.TextSnippet.Application.EntityDtos;
+using PlatformExampleApp.TextSnippet.Application.Dtos.EntityDtos;
 using PlatformExampleApp.TextSnippet.Application.Persistence;
 using PlatformExampleApp.TextSnippet.Application.UseCaseCommands;
 using PlatformExampleApp.TextSnippet.Application.UseCaseCommands.OtherDemos;

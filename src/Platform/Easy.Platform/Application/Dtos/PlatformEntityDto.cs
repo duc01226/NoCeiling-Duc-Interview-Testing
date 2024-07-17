@@ -1,5 +1,4 @@
 #nullable enable
-using Easy.Platform.Common.Dtos;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Validations;
 using Easy.Platform.Domain.Entities;
@@ -18,7 +17,7 @@ namespace Easy.Platform.Application.Dtos;
 /// </remarks>
 /// <typeparam name="TEntity">The type of the entity.</typeparam>
 /// <typeparam name="TId">The type of the entity's identifier.</typeparam>
-public abstract class PlatformEntityDto<TEntity, TId> : IPlatformDto<PlatformEntityDto<TEntity, TId>>
+public abstract class PlatformEntityDto<TEntity, TId> : PlatformDto<TEntity>
     where TEntity : IEntity<TId>, new()
 {
     public PlatformEntityDto() { }
@@ -27,7 +26,12 @@ public abstract class PlatformEntityDto<TEntity, TId> : IPlatformDto<PlatformEnt
     {
     }
 
-    public virtual PlatformValidationResult<PlatformEntityDto<TEntity, TId>> Validate()
+    public override TEntity MapToObject()
+    {
+        return MapToEntity();
+    }
+
+    public new virtual PlatformValidationResult<PlatformEntityDto<TEntity, TId>> Validate()
     {
         return PlatformValidationResult<PlatformEntityDto<TEntity, TId>>.Valid(this);
     }
@@ -47,7 +51,8 @@ public abstract class PlatformEntityDto<TEntity, TId> : IPlatformDto<PlatformEnt
     /// </returns>
     public virtual TEntity MapToNewEntity()
     {
-        var initialEntity = Activator.CreateInstance<TEntity>();
+        var initialEntity = Activator.CreateInstance<TEntity>()
+            .PipeAction(p => SetEntityId(p, MapToEntityModes.MapNewEntity));
 
         var updatedEntity = MapToEntity(initialEntity, MapToEntityModes.MapNewEntity);
 
@@ -73,7 +78,8 @@ public abstract class PlatformEntityDto<TEntity, TId> : IPlatformDto<PlatformEnt
     /// </remarks>
     public virtual TEntity MapToEntity()
     {
-        var initialEntity = Activator.CreateInstance<TEntity>();
+        var initialEntity = Activator.CreateInstance<TEntity>()
+            .PipeAction(p => SetEntityId(p, MapToEntityModes.MapAllProps));
 
         var updatedEntity = MapToEntity(initialEntity, MapToEntityModes.MapAllProps);
 
@@ -97,45 +103,44 @@ public abstract class PlatformEntityDto<TEntity, TId> : IPlatformDto<PlatformEnt
     /// <returns>Return the modified toBeUpdatedEntity</returns>
     public virtual TEntity UpdateToEntity(TEntity toBeUpdatedEntity)
     {
-        return MapToEntity(toBeUpdatedEntity, MapToEntityModes.MapToUpdateExistingEntity);
+        return MapToEntity(
+            toBeUpdatedEntity
+                .PipeAction(p => SetEntityId(p, MapToEntityModes.MapAllProps)),
+            MapToEntityModes.MapToUpdateExistingEntity);
     }
 
-    /// <summary>
-    /// Determines whether the current DTO is submitted for an update operation.
-    /// </summary>
-    /// <returns>
-    /// Returns true if the DTO is submitted for an update operation, otherwise false.
-    /// </returns>
-    /// <remarks>
-    /// This method checks the submitted ID of the DTO. If the ID is not null or default,
-    /// it further checks the type of the ID. If the ID is a non-empty string, a non-default GUID,
-    /// a non-default long, or a non-default int, it returns true. Otherwise, it returns false.
-    /// </remarks>
-    public virtual bool IsSubmitToUpdate()
+    public virtual bool HasSubmitId()
     {
-        if (GetSubmittedId() is null or default(object?)) return false;
+        var submittedId = GetSubmittedId();
 
-        return GetSubmittedId() switch
-        {
-            string strId => strId.IsNotNullOrEmpty(),
-            Guid guidId => guidId != Guid.Empty,
-            Ulid guidId => guidId != Ulid.Empty,
-            long longId => longId != default,
-            int intId => intId != default,
-            _ => false
-        };
+        if (submittedId is null or default(object?)) return false;
+        if (submittedId is string strId) return !string.IsNullOrEmpty(strId);
+        if (submittedId is Guid guidId) return guidId != Guid.Empty;
+        if (submittedId is Ulid ulidId) return ulidId != Ulid.Empty;
+        if (submittedId is long longId) return longId != default;
+        if (submittedId is short shortId) return shortId != default;
+        if (submittedId is int intId) return intId != default;
+
+        // If value is a struct and value is equal the default value of the struct
+        if (submittedId.GetType().IsValueType && submittedId.Equals(Activator.CreateInstance(submittedId.GetType()))) return false;
+
+        return true;
     }
 
-    /// <summary>
-    /// Determines whether the current DTO should be submitted to create a new entity.
-    /// </summary>
-    /// <returns>
-    /// Returns true if the current DTO should be submitted to create a new entity, otherwise false.
-    /// </returns>
-    public virtual bool IsSubmitToCreate()
+    public bool NotHasSubmitId()
     {
-        return !IsSubmitToUpdate();
+        return !HasSubmitId();
     }
+
+    protected virtual void SetEntityId(TEntity entity, MapToEntityModes mode)
+    {
+        if (mode != MapToEntityModes.MapToUpdateExistingEntity)
+            entity.Id = mode == MapToEntityModes.MapNewEntity || NotHasSubmitId() ? GenerateNewId() : (TId)GetSubmittedId()!;
+        else if (entity.Id == null && GetSubmittedId() != null)
+            entity.Id = (TId)GetSubmittedId()!;
+    }
+
+    protected abstract TId GenerateNewId();
 }
 
 public enum MapToEntityModes

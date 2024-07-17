@@ -3,7 +3,7 @@ using Easy.Platform.Common.ValueObjects;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.ValueObjects;
 
-namespace PlatformExampleApp.TextSnippet.Application.EntityDtos;
+namespace PlatformExampleApp.TextSnippet.Application.Dtos.EntityDtos;
 
 public sealed class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, string>
 {
@@ -48,7 +48,6 @@ public sealed class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, 
 
     protected override TextSnippetEntity MapToEntity(TextSnippetEntity entity, MapToEntityModes mode)
     {
-        entity.Id = mode == MapToEntityModes.MapNewEntity || IsSubmitToCreate() ? Ulid.NewUlid().ToString() : Id!;
         entity.SnippetText = SnippetText;
         entity.FullText = FullText;
 
@@ -58,5 +57,10 @@ public sealed class TextSnippetEntityDto : PlatformEntityDto<TextSnippetEntity, 
         entity.TimeOnly = TimeOnly ?? default;
 
         return entity;
+    }
+
+    protected override string GenerateNewId()
+    {
+        return Ulid.NewUlid().ToString();
     }
 }
