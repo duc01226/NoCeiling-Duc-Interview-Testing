@@ -479,7 +479,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Func<IPlatformUnitOfWork, Task<TResult>> action,
         IPlatformUnitOfWork forceUseUow = null)
     {
-        if (forceUseUow != null) return await ExecuteWriteData(action, forceUseUow);
+        if (forceUseUow != null) return await action(forceUseUow);
 
         if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
         {
@@ -488,7 +488,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
             try
             {
-                result = await ExecuteWriteData(action, uow);
+                result = await action(uow);
 
                 await uow.CompleteAsync();
 
@@ -500,13 +500,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
             }
         }
 
-        return await ExecuteWriteData(action, UnitOfWorkManager.CurrentActiveUow());
-    }
-
-    private static async Task<TResult> ExecuteWriteData<TResult>(Func<IPlatformUnitOfWork, Task<TResult>> action, IPlatformUnitOfWork uow)
-    {
-        var result = await action(uow);
-        return result;
+        return await action(UnitOfWorkManager.CurrentActiveUow());
     }
 
     protected abstract bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IPlatformUnitOfWork uow);

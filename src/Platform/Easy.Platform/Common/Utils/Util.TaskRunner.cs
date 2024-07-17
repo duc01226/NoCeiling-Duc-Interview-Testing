@@ -988,7 +988,7 @@ public static partial class Util
         {
             var startWaitTime = DateTime.UtcNow;
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
-            var result = await Task.Run(() => getResult(target), cancellationToken);
+            var result = getResult(target);
 
             while (!condition(result))
             {
@@ -997,7 +997,7 @@ public static partial class Util
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                 {
                     await Task.Delay((int)(delayRetryTimeSeconds * 1000), cancellationToken);
-                    result = await Task.Run(() => getResult(target), cancellationToken);
+                    result = getResult(target);
                 }
                 else
                 {
@@ -1032,13 +1032,13 @@ public static partial class Util
         {
             var startWaitTime = DateTime.UtcNow;
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
-            var result = await Task.Run(() => getResult(target), cancellationToken);
+            var result = getResult(target);
 
             while (!condition(result))
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                 {
                     await Task.Delay((int)(delayRetryTimeSeconds * 1000), cancellationToken);
-                    result = await Task.Run(() => getResult(target), cancellationToken);
+                    result = getResult(target);
                 }
                 else
                 {
@@ -1076,7 +1076,7 @@ public static partial class Util
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                 {
                     await Task.Delay((int)(delayRetryTimeSeconds * 1000), cancellationToken);
-                    result = await Task.Run(() => getResult(target), cancellationToken);
+                    result = await getResult(target);
                 }
                 else
                 {
@@ -1177,7 +1177,7 @@ public static partial class Util
 
             try
             {
-                var result = await Task.Run(() => getResult(target), cancellationToken);
+                var result = getResult(target);
 
                 while (!condition(result))
                 {
@@ -1188,7 +1188,7 @@ public static partial class Util
                     await WaitRetryThrowFinalExceptionAsync(
                         async () =>
                         {
-                            result = await Task.Run(() => getResult(target), cancellationToken);
+                            result = getResult(target);
 
                             if (!condition(result)) continueWaitOnlyWhen?.Invoke(target);
                         },
@@ -1197,7 +1197,7 @@ public static partial class Util
                     if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     {
                         await Task.Delay((int)(DefaultWaitIntervalSeconds * 1000), cancellationToken);
-                        result = await Task.Run(() => getResult(target), cancellationToken);
+                        result = getResult(target);
                     }
                     else
                     {
@@ -1341,7 +1341,7 @@ public static partial class Util
 
                     try
                     {
-                        var result = await Task.Run(() => getResult(target));
+                        var result = getResult(target);
 
                         return result == null ? throw new Exception("Result must be not null") : result;
                     }

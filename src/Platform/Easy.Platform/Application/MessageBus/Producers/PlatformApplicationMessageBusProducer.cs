@@ -59,7 +59,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
         IServiceProvider serviceProvider,
         ILoggerFactory loggerFactory,
         IPlatformApplicationSettingContext applicationSettingContext,
-        IPlatformApplicationRequestContextAccessor userContextAccessor,
+        IPlatformApplicationRequestContextAccessor requestContextAccessor,
         PlatformOutboxConfig outboxConfig,
         IPlatformUnitOfWorkManager unitOfWorkManager)
     {
@@ -67,7 +67,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
         loggerLazy = new Lazy<ILogger<PlatformApplicationBusMessageProducer>>(() => loggerFactory.CreateLogger<PlatformApplicationBusMessageProducer>());
         MessageBusProducer = serviceProvider.GetService<IPlatformMessageBusProducer>() ?? new PlatformPseudoMessageBusProducer();
         ApplicationSettingContext = applicationSettingContext;
-        UserContextAccessor = userContextAccessor;
+        RequestContextAccessor = requestContextAccessor;
         OutboxConfig = outboxConfig;
         UnitOfWorkManager = unitOfWorkManager;
     }
@@ -76,7 +76,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
     protected ILogger<PlatformApplicationBusMessageProducer> Logger => loggerLazy.Value;
     protected IPlatformMessageBusProducer MessageBusProducer { get; }
     protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
-    protected IPlatformApplicationRequestContextAccessor UserContextAccessor { get; }
+    protected IPlatformApplicationRequestContextAccessor RequestContextAccessor { get; }
     protected PlatformOutboxConfig OutboxConfig { get; }
     protected IPlatformUnitOfWorkManager UnitOfWorkManager { get; }
 
@@ -129,9 +129,9 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
     {
         return new PlatformBusMessageIdentity
         {
-            UserId = UserContextAccessor.Current.UserId(),
-            RequestId = UserContextAccessor.Current.RequestId(),
-            UserName = UserContextAccessor.Current.UserName()
+            UserId = RequestContextAccessor.Current.UserId(),
+            RequestId = RequestContextAccessor.Current.RequestId(),
+            UserName = RequestContextAccessor.Current.UserName()
         };
     }
 
@@ -149,7 +149,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
             trackableBusMessage.ProduceFrom ??= ApplicationSettingContext.ApplicationName;
             trackableBusMessage.CreatedUtcDate ??= DateTime.UtcNow;
             if (trackableBusMessage.RequestContext == null || trackableBusMessage.RequestContext.IsEmpty())
-                trackableBusMessage.RequestContext = UserContextAccessor.Current.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys());
+                trackableBusMessage.RequestContext = RequestContextAccessor.Current.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys());
         }
 
         if (autoSaveOutboxMessage && HasOutboxMessageSupport())
@@ -182,7 +182,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
             producerContext: ApplicationSettingContext.ApplicationName,
             messageGroup: messageGroup,
             messageAction: messageAction,
-            requestContext: UserContextAccessor.Current.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()));
+            requestContext: RequestContextAccessor.Current.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()));
     }
 
     public class PlatformPseudoMessageBusProducer : IPlatformMessageBusProducer

@@ -43,7 +43,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         Func<IPlatformUnitOfWork, Task<TResult>> action,
         IPlatformUnitOfWork forceUseUow = null)
     {
-        return ExecuteWithBadQueryWarningForWriteHandling(_ => base.ExecuteAutoOpenUowUsingOnceTimeForWrite(action, forceUseUow), null);
+        return ExecuteWithBadQueryWarningForWriteHandling(forceUseUow => base.ExecuteAutoOpenUowUsingOnceTimeForWrite(action, forceUseUow), forceUseUow);
     }
 
     protected Task<TResult> ExecuteWithBadQueryWarningForWriteHandling<TResult>(Func<IPlatformUnitOfWork, Task<TResult>> action, IPlatformUnitOfWork uow)

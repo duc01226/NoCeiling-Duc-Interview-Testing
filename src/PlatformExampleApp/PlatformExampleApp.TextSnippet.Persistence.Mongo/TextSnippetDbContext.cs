@@ -14,13 +14,13 @@ public sealed class TextSnippetDbContext : PlatformMongoDbContext<TextSnippetDbC
     public TextSnippetDbContext(
         IPlatformMongoDatabase<TextSnippetDbContext> database,
         ILoggerFactory loggerFactory,
-        IPlatformApplicationRequestContextAccessor userContextAccessor,
+        IPlatformApplicationRequestContextAccessor requestContextAccessor,
         PlatformPersistenceConfiguration<TextSnippetDbContext> persistenceConfiguration,
         IPlatformRootServiceProvider rootServiceProvider,
         IPlatformApplicationSettingContext applicationSettingContext) : base(
         database,
         loggerFactory,
-        userContextAccessor,
+        requestContextAccessor,
         persistenceConfiguration,
         rootServiceProvider,
         applicationSettingContext)

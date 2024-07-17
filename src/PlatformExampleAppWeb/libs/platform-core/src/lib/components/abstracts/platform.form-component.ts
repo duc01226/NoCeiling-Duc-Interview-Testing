@@ -12,7 +12,7 @@ import {
     signal,
     Signal
 } from '@angular/core';
-import { FormArray, FormControl, FormGroup } from '@angular/forms';
+import { FormArray, FormControl, FormGroup, ValidatorFn } from '@angular/forms';
 
 import { asyncScheduler, distinctUntilChanged, filter, map, merge, Observable, throttleTime } from 'rxjs';
 
@@ -1099,7 +1099,8 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
                     (<PlatformFormGroupControlsFormArray<TViewModel[keyof TViewModel]>>controls[key]) = new FormArray(
                         formArrayConfigItem.modelItems().map((modelItem, index) => {
                             return this.buildFromArrayControlItem(key, formArrayConfigItem, modelItem, index);
-                        })
+                        }),
+                        formArrayConfigItem.validators
                     );
                 }
 
@@ -1326,6 +1327,7 @@ export type PlatformFormGroupControlConfigPropArray<TItemModel> = {
      * This mean that dependentProp will trigger validation when dependedOnProp1 or dependedOnProp2 changed
      */
     dependentValidations?: Partial<Record<keyof TItemModel, (keyof TItemModel)[] | undefined>>;
+    validators?: ValidatorFn | ValidatorFn[] | null;
 };
 
 export type PlatformFormGroupControlConfigPropArrayItemControlFn<TItemModel> = (

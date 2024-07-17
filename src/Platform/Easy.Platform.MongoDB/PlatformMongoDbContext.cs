@@ -29,8 +29,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     protected readonly Lazy<Dictionary<Type, string>> EntityTypeToCollectionNameDictionary;
     protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
+    protected readonly IPlatformApplicationRequestContextAccessor RequestContextAccessor;
     protected readonly IPlatformRootServiceProvider RootServiceProvider;
-    protected readonly IPlatformApplicationRequestContextAccessor UserContextAccessor;
     private readonly IPlatformApplicationSettingContext applicationSettingContext;
 
     private readonly Lazy<ILogger> lazyLogger;
@@ -40,14 +40,14 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     public PlatformMongoDbContext(
         IPlatformMongoDatabase<TDbContext> database,
         ILoggerFactory loggerFactory,
-        IPlatformApplicationRequestContextAccessor userContextAccessor,
+        IPlatformApplicationRequestContextAccessor requestContextAccessor,
         PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
         IPlatformRootServiceProvider rootServiceProvider,
         IPlatformApplicationSettingContext applicationSettingContext)
     {
         Database = database.Value;
 
-        UserContextAccessor = userContextAccessor;
+        RequestContextAccessor = requestContextAccessor;
         PersistenceConfiguration = persistenceConfiguration;
         RootServiceProvider = rootServiceProvider;
         lazyLogger = new Lazy<ILogger>(() => CreateLogger(loggerFactory));
@@ -335,7 +335,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             },
             dismissSendEvent,
             eventCustomConfig,
-            () => UserContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
+            () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
             PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
             cancellationToken);
     }
@@ -528,7 +528,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             .PipeIf(
                 entity.IsAuditedUserEntity(),
                 p => p.As<IUserAuditedEntity>()
-                    .SetLastUpdatedBy(UserContextAccessor.Current.UserId(entity.GetAuditedUserIdType()))
+                    .SetLastUpdatedBy(RequestContextAccessor.Current.UserId(entity.GetAuditedUserIdType()))
                     .As<TEntity>());
 
         if (toBeUpdatedEntity is IRowVersionEntity toBeUpdatedRowVersionEntity)
@@ -554,7 +554,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         cancellationToken),
                 dismissSendEvent,
                 eventCustomConfig,
-                () => UserContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
+                () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
@@ -581,7 +581,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         cancellationToken),
                 dismissSendEvent,
                 eventCustomConfig,
-                () => UserContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
+                () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
@@ -793,7 +793,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             .PipeIf(
                 entity.IsAuditedUserEntity(),
                 p => p.As<IUserAuditedEntity>()
-                    .SetCreatedBy(UserContextAccessor.Current.UserId(entity.GetAuditedUserIdType()))
+                    .SetCreatedBy(RequestContextAccessor.Current.UserId(entity.GetAuditedUserIdType()))
                     .As<TEntity>())
             .WithIf(
                 entity is IRowVersionEntity { ConcurrencyUpdateToken: null },
@@ -807,7 +807,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 entity => GetTable<TEntity>().InsertOneAsync(entity, null, cancellationToken).Then(() => entity),
                 dismissSendEvent,
                 eventCustomConfig,
-                () => UserContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
+                () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
         else
@@ -824,7 +824,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                     .Then(() => entity),
                 dismissSendEvent,
                 eventCustomConfig,
-                () => UserContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
+                () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
@@ -919,7 +919,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             entities,
             crudAction,
             eventCustomConfig,
-            () => UserContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
+            () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
             PlatformCqrsEntityEvent.GetBulkEntitiesEventStackTrace<TEntity, TPrimaryKey>(RootServiceProvider),
             cancellationToken);
     }

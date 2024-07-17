@@ -1,12 +1,12 @@
 using Easy.Platform.Application.RequestContext;
 
-namespace PlatformExampleApp.TextSnippet.Application.Context.UserContext;
+namespace PlatformExampleApp.TextSnippet.Application.Context.RequestContext;
 
 /// <summary>
 /// An example if your application have custom user context data which you want to added into user context
 /// In this example imaging in jwt claim types you have "Organizations"
 /// </summary>
-public static class TextSnippetApplicationCustomUserContextKeys
+public static class TextSnippetApplicationCustomRequestContextKeys
 {
     public const string Organizations = "TextSnippet-Organizations";
 

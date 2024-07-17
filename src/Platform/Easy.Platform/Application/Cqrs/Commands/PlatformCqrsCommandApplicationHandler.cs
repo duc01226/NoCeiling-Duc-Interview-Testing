@@ -102,7 +102,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                                 .Log(
                                     ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
                                     ex,
-                                    "[{Tag1}] Command:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. UserContext:{UserContext}",
+                                    "[{Tag1}] Command:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. RequestContext:{RequestContext}",
                                     ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
                                     request.GetType().Name,
                                     request.AuditInfo?.AuditTrackId,

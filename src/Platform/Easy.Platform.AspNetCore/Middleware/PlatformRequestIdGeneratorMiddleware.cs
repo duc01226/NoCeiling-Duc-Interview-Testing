@@ -14,13 +14,13 @@ namespace Easy.Platform.AspNetCore.Middleware;
 /// </remarks>
 public class PlatformRequestIdGeneratorMiddleware : PlatformMiddleware
 {
-    private readonly IPlatformApplicationRequestContextAccessor applicationUserContextAccessor;
+    private readonly IPlatformApplicationRequestContextAccessor applicationRequestContextAccessor;
 
     public PlatformRequestIdGeneratorMiddleware(
         RequestDelegate next,
-        IPlatformApplicationRequestContextAccessor applicationUserContextAccessor) : base(next)
+        IPlatformApplicationRequestContextAccessor applicationRequestContextAccessor) : base(next)
     {
-        this.applicationUserContextAccessor = applicationUserContextAccessor;
+        this.applicationRequestContextAccessor = applicationRequestContextAccessor;
     }
 
     protected override async Task InternalInvokeAsync(HttpContext context)
@@ -36,7 +36,7 @@ public class PlatformRequestIdGeneratorMiddleware : PlatformMiddleware
 
         // Set the trace identifier for the context
         context.TraceIdentifier = context.Request.Headers[PlatformAspnetConstant.CommonHttpHeaderNames.RequestId];
-        applicationUserContextAccessor.Current.SetValue(
+        applicationRequestContextAccessor.Current.SetValue(
             context.TraceIdentifier,
             PlatformApplicationCommonRequestContextKeys.RequestIdContextKey);
 

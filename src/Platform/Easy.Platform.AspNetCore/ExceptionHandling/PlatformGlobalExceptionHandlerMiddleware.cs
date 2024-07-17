@@ -101,7 +101,7 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
                 {
                     Logger.LogError(
                         exception.BeautifyStackTrace(),
-                        "[UnexpectedRequestError] There is an unexpected exception during the processing of the request. RequestId: {RequestId}. UserContext: {UserContext}",
+                        "[UnexpectedRequestError] There is an unexpected exception during the processing of the request. RequestId: {RequestId}. RequestContext: {RequestContext}",
                         context.TraceIdentifier,
                         RequestContextAccessor.Current.GetAllKeyValues(applicationSettingContext.GetIgnoreRequestContextKeys()).ToFormattedJson());
 

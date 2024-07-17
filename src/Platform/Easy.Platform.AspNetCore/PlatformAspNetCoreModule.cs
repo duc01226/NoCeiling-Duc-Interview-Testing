@@ -3,8 +3,8 @@ using Easy.Platform.Application;
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.AspNetCore.Constants;
 using Easy.Platform.AspNetCore.Context.RequestContext;
-using Easy.Platform.AspNetCore.Context.RequestContext.UserContextKeyToClaimTypeMapper;
-using Easy.Platform.AspNetCore.Context.RequestContext.UserContextKeyToClaimTypeMapper.Abstract;
+using Easy.Platform.AspNetCore.Context.RequestContext.RequestContextKeyToClaimTypeMapper;
+using Easy.Platform.AspNetCore.Context.RequestContext.RequestContextKeyToClaimTypeMapper.Abstract;
 using Easy.Platform.Common;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Common.HostingBackgroundServices;
@@ -72,7 +72,7 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
     {
         base.InternalRegister(serviceCollection);
 
-        RegisterUserContext(serviceCollection);
+        RegisterRequestContext(serviceCollection);
         AddDefaultCorsPolicy(serviceCollection);
         serviceCollection.AddHttpClient();
         GetServicesRegisterScanAssemblies().ForEach(assembly => serviceCollection.RegisterHostedServicesFromType(assembly, typeof(PlatformHostingBackgroundService)));
@@ -160,9 +160,9 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
     /// <param name="serviceCollection">The service collection where the user context will be registered.</param>
     /// <remarks>
     /// This method adds the HttpContextAccessor to the service collection and registers the PlatformAspNetApplicationRequestContextAccessor as a singleton service for the IPlatformApplicationRequestContextAccessor interface.
-    /// It also registers the UserContextKeyToClaimTypeMapper in the service collection.
+    /// It also registers the RequestContextKeyToClaimTypeMapper in the service collection.
     /// </remarks>
-    protected void RegisterUserContext(IServiceCollection serviceCollection)
+    protected void RegisterRequestContext(IServiceCollection serviceCollection)
     {
         serviceCollection.AddHttpContextAccessor();
         serviceCollection.Register(
@@ -172,7 +172,7 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
             replaceIfExist: true,
             DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
 
-        RegisterUserContextKeyToClaimTypeMapper(serviceCollection);
+        RegisterRequestContextKeyToClaimTypeMapper(serviceCollection);
     }
 
     /// <summary>
@@ -181,20 +181,20 @@ public abstract class PlatformAspNetCoreModule : PlatformModule
     /// Default implementation is <see cref="PlatformApplicationRequestContextKeyToJwtClaimTypeMapper" />
     /// </summary>
     /// <returns></returns>
-    protected virtual Type UserContextKeyToClaimTypeMapperType()
+    protected virtual Type RequestContextKeyToClaimTypeMapperType()
     {
         return typeof(PlatformApplicationRequestContextKeyToJwtClaimTypeMapper);
     }
 
     /// <summary>
-    /// Registers the UserContextKeyToClaimTypeMapper in the service collection.
+    /// Registers the RequestContextKeyToClaimTypeMapper in the service collection.
     /// </summary>
     /// <param name="serviceCollection">The service collection to add the service to.</param>
-    private void RegisterUserContextKeyToClaimTypeMapper(IServiceCollection serviceCollection)
+    private void RegisterRequestContextKeyToClaimTypeMapper(IServiceCollection serviceCollection)
     {
         serviceCollection.Register(
             typeof(IPlatformApplicationRequestContextKeyToClaimTypeMapper),
-            UserContextKeyToClaimTypeMapperType(),
+            RequestContextKeyToClaimTypeMapperType(),
             ServiceLifeTime.Singleton);
     }
 }

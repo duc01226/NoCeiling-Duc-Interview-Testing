@@ -1,4 +1,4 @@
-namespace Easy.Platform.AspNetCore.Context.RequestContext.UserContextKeyToClaimTypeMapper.Abstract;
+namespace Easy.Platform.AspNetCore.Context.RequestContext.RequestContextKeyToClaimTypeMapper.Abstract;
 
 public interface IPlatformApplicationRequestContextKeyToClaimTypeMapper
 {

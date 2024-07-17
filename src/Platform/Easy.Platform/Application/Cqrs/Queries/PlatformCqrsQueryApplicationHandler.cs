@@ -86,7 +86,7 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
                                 .Log(
                                     ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
                                     ex,
-                                    "[{Tag1}] Query:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. UserContext:{UserContext}",
+                                    "[{Tag1}] Query:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. RequestContext:{RequestContext}",
                                     ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
                                     request.GetType().Name,
                                     request.AuditInfo?.AuditTrackId,

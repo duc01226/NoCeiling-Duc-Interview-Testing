@@ -1,9 +1,9 @@
 using System.Security.Claims;
 using Easy.Platform.Application.RequestContext;
-using Easy.Platform.AspNetCore.Context.RequestContext.UserContextKeyToClaimTypeMapper.Abstract;
+using Easy.Platform.AspNetCore.Context.RequestContext.RequestContextKeyToClaimTypeMapper.Abstract;
 using IdentityModel;
 
-namespace Easy.Platform.AspNetCore.Context.RequestContext.UserContextKeyToClaimTypeMapper;
+namespace Easy.Platform.AspNetCore.Context.RequestContext.RequestContextKeyToClaimTypeMapper;
 
 /// <summary>
 /// This will map <see cref="PlatformApplicationCommonRequestContextKeys" /> to <see cref="JwtClaimTypes" />

@@ -1,9 +1,9 @@
 using System.Security.Claims;
 using Easy.Platform.Application.RequestContext;
-using Easy.Platform.AspNetCore.Context.RequestContext.UserContextKeyToClaimTypeMapper;
-using PlatformExampleApp.TextSnippet.Application.Context.UserContext;
+using Easy.Platform.AspNetCore.Context.RequestContext.RequestContextKeyToClaimTypeMapper;
+using PlatformExampleApp.TextSnippet.Application.Context.RequestContext;
 
-namespace PlatformExampleApp.TextSnippet.Api.Context.UserContext;
+namespace PlatformExampleApp.TextSnippet.Api.Context.RequestContext;
 
 /// <summary>
 /// An example if your application have custom jwt which you want to added into user context
@@ -15,7 +15,7 @@ public class TextSnippetApplicationRequestContextKeyToJwtClaimTypeMapper : Platf
     {
         return contextKey switch
         {
-            TextSnippetApplicationCustomUserContextKeys.Organizations => "organization",
+            TextSnippetApplicationCustomRequestContextKeys.Organizations => "organization",
             _ => base.ToClaimType(contextKey)
         };
     }

@@ -12,13 +12,13 @@ public class PlatformDefaultApplicationRequestContext : IPlatformApplicationRequ
         typeof(PlatformDefaultApplicationRequestContext).GetMethods()
             .First(p => p.IsGenericMethod && p.Name == nameof(GetValue) && p.GetGenericArguments().Length == 1 && p.IsPublic);
 
-    protected readonly ConcurrentDictionary<string, object> UserContextData = new();
+    protected readonly ConcurrentDictionary<string, object> RequestContextData = new();
 
     public T GetValue<T>(string contextKey)
     {
         ArgumentNullException.ThrowIfNull(contextKey);
 
-        if (PlatformRequestContextHelper.TryGetValue(UserContextData, contextKey, out T item)) return item;
+        if (PlatformRequestContextHelper.TryGetValue(RequestContextData, contextKey, out T item)) return item;
 
         return default;
     }
@@ -34,12 +34,12 @@ public class PlatformDefaultApplicationRequestContext : IPlatformApplicationRequ
     {
         ArgumentNullException.ThrowIfNull(contextKey);
 
-        UserContextData.Upsert(contextKey, value);
+        RequestContextData.Upsert(contextKey, value);
     }
 
     public List<string> GetAllKeys()
     {
-        return [.. UserContextData.Keys];
+        return [.. RequestContextData.Keys];
     }
 
     public Dictionary<string, object> GetAllKeyValues(HashSet<string>? ignoreKeys = null)
@@ -52,35 +52,35 @@ public class PlatformDefaultApplicationRequestContext : IPlatformApplicationRequ
 
     public void Add(KeyValuePair<string, object> item)
     {
-        UserContextData.Upsert(item.Key, item.Value);
+        RequestContextData.Upsert(item.Key, item.Value);
     }
 
     public void Clear()
     {
-        UserContextData.Clear();
+        RequestContextData.Clear();
     }
 
     public bool Contains(KeyValuePair<string, object> item)
     {
-        return UserContextData.Contains(item);
+        return RequestContextData.Contains(item);
     }
 
     public void CopyTo(KeyValuePair<string, object>[] array, int arrayIndex)
     {
-        UserContextData.ToList().CopyTo(array, arrayIndex);
+        RequestContextData.ToList().CopyTo(array, arrayIndex);
     }
 
     public bool Remove(KeyValuePair<string, object> item)
     {
-        return UserContextData.Remove(item.Key, out _);
+        return RequestContextData.Remove(item.Key, out _);
     }
 
-    public int Count => UserContextData.Count;
+    public int Count => RequestContextData.Count;
     public bool IsReadOnly => false;
 
     public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
     {
-        return UserContextData.GetEnumerator();
+        return RequestContextData.GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()
@@ -90,30 +90,30 @@ public class PlatformDefaultApplicationRequestContext : IPlatformApplicationRequ
 
     public void Add(string key, object value)
     {
-        UserContextData.Upsert(key, value);
+        RequestContextData.Upsert(key, value);
     }
 
     public bool ContainsKey(string key)
     {
-        return UserContextData.ContainsKey(key);
+        return RequestContextData.ContainsKey(key);
     }
 
     public bool Remove(string key)
     {
-        return UserContextData.Remove(key, out _);
+        return RequestContextData.Remove(key, out _);
     }
 
     public bool TryGetValue(string key, out object value)
     {
-        return UserContextData.TryGetValue(key, out value);
+        return RequestContextData.TryGetValue(key, out value);
     }
 
     public object this[string key]
     {
-        get => UserContextData[key];
-        set => UserContextData[key] = value;
+        get => RequestContextData[key];
+        set => RequestContextData[key] = value;
     }
 
-    public ICollection<string> Keys => UserContextData.Keys;
-    public ICollection<object> Values => UserContextData.Values;
+    public ICollection<string> Keys => RequestContextData.Keys;
+    public ICollection<object> Values => RequestContextData.Values;
 }

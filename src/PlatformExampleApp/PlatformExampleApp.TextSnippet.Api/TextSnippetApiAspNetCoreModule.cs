@@ -2,7 +2,7 @@ using System.Text.Json;
 using Easy.Platform.AspNetCore;
 using Easy.Platform.Common.JsonSerialization;
 using Microsoft.Extensions.Configuration;
-using PlatformExampleApp.TextSnippet.Api.Context.UserContext;
+using PlatformExampleApp.TextSnippet.Api.Context.RequestContext;
 using PlatformExampleApp.TextSnippet.Application;
 using PlatformExampleApp.TextSnippet.Infrastructure;
 using PlatformExampleApp.TextSnippet.Persistence;
@@ -53,7 +53,7 @@ public class TextSnippetApiAspNetCoreModule : PlatformAspNetCoreModule
         return Configuration["AllowCorsOrigins"].Split(";");
     }
 
-    protected override Type UserContextKeyToClaimTypeMapperType()
+    protected override Type RequestContextKeyToClaimTypeMapperType()
     {
         return typeof(TextSnippetApplicationRequestContextKeyToJwtClaimTypeMapper);
     }

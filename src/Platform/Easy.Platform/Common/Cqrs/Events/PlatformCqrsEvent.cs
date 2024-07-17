@@ -20,7 +20,7 @@ public interface IPlatformCqrsEvent : INotification
     string StackTrace { get; set; }
 
     /// <summary>
-    /// This is used to store the context of the request which generate the event, for example the CurrentUserContext
+    /// This is used to store the context of the request which generate the event, for example the CurrentRequestContext
     /// </summary>
     ConcurrentDictionary<string, object> RequestContext { get; set; }
 
@@ -108,7 +108,7 @@ public abstract class PlatformCqrsEvent : IPlatformCqrsEvent
     public string StackTrace { get; set; }
 
     /// <summary>
-    /// This is used to store the context of the request which generate the event, for example the CurrentUserContext
+    /// This is used to store the context of the request which generate the event, for example the CurrentRequestContext
     /// </summary>
     public ConcurrentDictionary<string, object> RequestContext { get; set; }
 
