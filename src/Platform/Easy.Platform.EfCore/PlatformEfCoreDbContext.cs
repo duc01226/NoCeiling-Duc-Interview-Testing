@@ -20,8 +20,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     where TDbContext : PlatformEfCoreDbContext<TDbContext>, IPlatformDbContext<TDbContext>
 {
     public const int ContextMaxConcurrentThreadLock = 1;
-    private readonly IPlatformApplicationSettingContext applicationSettingContext;
 
+    private readonly Lazy<IPlatformApplicationSettingContext> applicationSettingContext;
     private readonly Lazy<ILogger> lazyLogger;
     private readonly Lazy<PlatformPersistenceConfiguration<TDbContext>> lazyPersistenceConfiguration;
     private readonly Lazy<IPlatformApplicationRequestContextAccessor> lazyRequestContextAccessor;
@@ -39,7 +39,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         lazyRequestContextAccessor = new Lazy<IPlatformApplicationRequestContextAccessor>(this.GetService<IPlatformApplicationRequestContextAccessor>);
         lazyRootServiceProvider = new Lazy<IPlatformRootServiceProvider>(this.GetService<IPlatformRootServiceProvider>);
         lazyLogger = new Lazy<ILogger>(() => CreateLogger(this.GetService<ILoggerFactory>()));
-        applicationSettingContext = lazyRootServiceProvider.Value.GetService<IPlatformApplicationSettingContext>();
+        applicationSettingContext = new Lazy<IPlatformApplicationSettingContext>(() => lazyRootServiceProvider.Value.GetService<IPlatformApplicationSettingContext>());
     }
 
     public PlatformEfCoreDbContext(
@@ -55,7 +55,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         lazyRequestContextAccessor = new Lazy<IPlatformApplicationRequestContextAccessor>(() => requestContextAccessor);
         lazyRootServiceProvider = new Lazy<IPlatformRootServiceProvider>(() => rootServiceProvider);
         lazyLogger = new Lazy<ILogger>(() => CreateLogger(loggerFactory));
-        this.applicationSettingContext = applicationSettingContext;
+        this.applicationSettingContext = new Lazy<IPlatformApplicationSettingContext>(() => applicationSettingContext);
     }
 
     public DbSet<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryDbSet => Set<PlatformDataMigrationHistory>();
@@ -487,7 +487,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     protected HashSet<string> IgnoreLogRequestContextKeys()
     {
-        return applicationSettingContext.GetIgnoreRequestContextKeys();
+        return applicationSettingContext.Value.GetIgnoreRequestContextKeys();
     }
 
     public ILogger CreateLogger(ILoggerFactory loggerFactory)

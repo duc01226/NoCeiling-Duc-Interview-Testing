@@ -105,7 +105,7 @@ public abstract class PlatformEntityDto<TEntity, TId> : PlatformDto<TEntity>
     {
         return MapToEntity(
             toBeUpdatedEntity
-                .PipeAction(p => SetEntityId(p, MapToEntityModes.MapAllProps)),
+                .PipeAction(p => SetEntityId(p, MapToEntityModes.MapToUpdateExistingEntity)),
             MapToEntityModes.MapToUpdateExistingEntity);
     }
 
