@@ -55,11 +55,11 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
             // WHY: Retry in case of the db is not started, initiated or restarting
             await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                 () => SendOutboxEventBusMessages(cancellationToken),
-                retryAttempt => 10.Seconds(),
-                retryCount: ProcessSendMessageRetryCount(),
+                retryAttempt => OutboxConfig.ProcessSendMessageRetryDelaySeconds.Seconds(),
+                retryCount: OutboxConfig.ProcessSendMessageRetryCount,
                 onRetry: (ex, timeSpan, currentRetry, ctx) =>
                 {
-                    if (currentRetry >= OutboxConfig.MinimumRetrySendOutboxMessageTimesToWarning)
+                    if (currentRetry >= OutboxConfig.MinimumRetrySendOutboxMessageTimesToLogError)
                         Logger.LogError(
                             ex.BeautifyStackTrace(),
                             "Retry SendOutboxEventBusMessages {CurrentRetry} time(s) failed. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
@@ -311,11 +311,6 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
             .WhereIf(messageGroupedByTypeIdPrefix.IsNotNullOrEmpty(), p => p.Id.StartsWith(messageGroupedByTypeIdPrefix))
             .Where(PlatformOutboxBusMessage.CanHandleMessagesExpr(OutboxConfig.MessageProcessingMaxSeconds))
             .OrderBy(p => p.CreatedDate);
-    }
-
-    protected virtual int ProcessSendMessageRetryCount()
-    {
-        return OutboxConfig.ProcessSendMessageRetryCount;
     }
 
     protected bool HasOutboxEventBusMessageRepositoryRegistered()

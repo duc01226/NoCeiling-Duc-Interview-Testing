@@ -2,6 +2,7 @@ namespace Easy.Platform.Application.MessageBus.InboxPattern;
 
 public class PlatformInboxConfig
 {
+    public const int DefaultProcessConsumeMessageRetryCount = 100;
     private double? messageProcessingMaxSecondsTimeout;
 
     /// <summary>
@@ -45,7 +46,9 @@ public class PlatformInboxConfig
 
     public int GetCanHandleMessageGroupedByConsumerIdPrefixesPageSize { get; set; } = 10000;
 
-    public int ProcessConsumeMessageRetryCount { get; set; } = 10;
+    public int ProcessConsumeMessageRetryCount { get; set; } = DefaultProcessConsumeMessageRetryCount;
+
+    public int ProcessConsumeMessageRetryDelaySeconds { get; set; } = 5;
 
     /// <summary>
     /// To config how long a message can live in the database as Processing status in seconds. Default is 3600 seconds;
@@ -66,7 +69,7 @@ public class PlatformInboxConfig
         set => messageProcessingMaxSecondsTimeout = value;
     }
 
-    public int MinimumRetryConsumeInboxMessageTimesToWarning { get; set; } = 3;
+    public int MinimumRetryConsumeInboxMessageTimesToLogError { get; set; } = DefaultProcessConsumeMessageRetryCount * 8 / 10;
 
     public bool LogIntervalProcessInformation { get; set; }
 

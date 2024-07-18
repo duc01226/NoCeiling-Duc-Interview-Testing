@@ -2,6 +2,7 @@ namespace Easy.Platform.Application.MessageBus.OutboxPattern;
 
 public class PlatformOutboxConfig
 {
+    public const int DefaultProcessSendMessageRetryCount = 100;
     private double? messageProcessingMaxSecondsTimeout;
 
     /// <summary>
@@ -50,7 +51,9 @@ public class PlatformOutboxConfig
 
     public int GetCanHandleMessageGroupedByTypeIdPrefixesPageSize { get; set; } = 10000;
 
-    public int ProcessSendMessageRetryCount { get; set; } = 10;
+    public int ProcessSendMessageRetryCount { get; set; } = DefaultProcessSendMessageRetryCount;
+
+    public int ProcessSendMessageRetryDelaySeconds { get; set; } = 5;
 
     /// <summary>
     /// To config how long a message can live in the database as Processing status in seconds. Default is 300 seconds;
@@ -75,7 +78,7 @@ public class PlatformOutboxConfig
 
     public int CheckToProcessTriggerIntervalTimeSeconds { get; set; } = 15;
 
-    public int MinimumRetrySendOutboxMessageTimesToWarning { get; set; } = 2;
+    public int MinimumRetrySendOutboxMessageTimesToLogError { get; set; } = DefaultProcessSendMessageRetryCount * 8 / 10;
 
     public double? CalcMessageProcessingMaxSecondsTimeout()
     {
