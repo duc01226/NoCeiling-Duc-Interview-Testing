@@ -133,7 +133,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
                     return toDeleteMessages;
                 });
 
-            Logger.LogInformation(
+            Logger.LogDebug(
                 "ProcessCleanMessageByMaxStoreProcessedMessageCount success. Number of deleted messages: {DeletedMessageCount}",
                 totalProcessedMessages - OutboxConfig.MaxStoreProcessedMessageCount);
         }
@@ -181,7 +181,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
                         return expiredMessages;
                     });
 
-                Logger.LogInformation("ProcessCleanMessageByExpiredTime success. Number of deleted messages: {ToCleanMessageCount}", toCleanMessageCount);
+                Logger.LogDebug("ProcessCleanMessageByExpiredTime success. Number of deleted messages: {ToCleanMessageCount}", toCleanMessageCount);
             }
         }
         catch (Exception e)
@@ -226,7 +226,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
                         return expiredMessages;
                     });
 
-                Logger.LogInformation("ProcessIgnoreFailedMessageByExpiredTime success. Number of ignored messages: {ToCleanMessageCount}", toIgnoreMessageCount);
+                Logger.LogDebug("ProcessIgnoreFailedMessageByExpiredTime success. Number of ignored messages: {ToCleanMessageCount}", toIgnoreMessageCount);
             }
         }
         catch (Exception e)
