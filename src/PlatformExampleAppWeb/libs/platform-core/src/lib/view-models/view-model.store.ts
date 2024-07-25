@@ -281,7 +281,7 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
 
     public reload() {
         this.clearAllErrorMsgs();
-        return this.initOrReloadVm(this.currentState().isStateSuccessOrReloading).pipe(take(2));
+        return this.initOrReloadVm(this.currentState().isStateSuccessOrReloading).pipe(take(2)); //take(2) support api cache and implicit reload
     }
 
     public clearAllErrorMsgs() {
@@ -922,7 +922,8 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
               ) => Observable<ReturnObservableType>
     >(
         generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
-        requestKey?: string | null
+        requestKey?: string | null,
+        options?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
     ): ReturnType {
         if (requestKey == undefined) requestKey = PlatformVm.requestStateDefaultKey;
 
@@ -955,7 +956,10 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                 ),
                 this.untilDestroyed(),
                 share(), // (IV)
-                this.subscribeUntilDestroyed(undefined, otherOptions?.effectSubscriptionHandleFn)
+                this.subscribeUntilDestroyed(undefined, sub => {
+                    if (options?.effectSubscriptionHandleFn != null) options?.effectSubscriptionHandleFn(sub);
+                    if (otherOptions?.effectSubscriptionHandleFn != null) otherOptions?.effectSubscriptionHandleFn(sub);
+                })
             );
         };
 
@@ -978,16 +982,21 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
               ) => Observable<ReturnObservableType>
     >(
         generator: (origin: ProvidedType, isReloading?: boolean) => Observable<ReturnObservableType> | void,
-        requestKey?: string | null
+        requestKey?: string | null,
+        options?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
     ): ReturnType {
-        return this.effect((origin$: Observable<ProvidedType>, isReloading?: boolean) => {
-            return origin$.pipe(
-                switchMap(origin => {
-                    const returnObservableOrVoid = generator(origin, isReloading);
-                    return returnObservableOrVoid instanceof Observable ? returnObservableOrVoid : of(undefined);
-                })
-            );
-        }, requestKey);
+        return this.effect(
+            (origin$: Observable<ProvidedType>, isReloading?: boolean) => {
+                return origin$.pipe(
+                    switchMap(origin => {
+                        const returnObservableOrVoid = generator(origin, isReloading);
+                        return returnObservableOrVoid instanceof Observable ? returnObservableOrVoid : of(undefined);
+                    })
+                );
+            },
+            requestKey,
+            options
+        );
     }
 
     /**

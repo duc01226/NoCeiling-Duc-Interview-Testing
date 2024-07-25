@@ -692,7 +692,8 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
               ) => Observable<ReturnObservableType>
     >(
         generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
-        requestKey?: string | null
+        requestKey?: string | null,
+        options?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
     ): ReturnType {
         const returnFunc = (
             observableOrValue?: ObservableType | Observable<ObservableType> | null,
@@ -723,7 +724,10 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                 ),
                 this.untilDestroyed(),
                 share(), // (IV)
-                this.subscribeUntilDestroyed(undefined, otherOptions?.effectSubscriptionHandleFn)
+                this.subscribeUntilDestroyed(undefined, sub => {
+                    if (options?.effectSubscriptionHandleFn != null) options?.effectSubscriptionHandleFn(sub);
+                    if (otherOptions?.effectSubscriptionHandleFn != null) otherOptions?.effectSubscriptionHandleFn(sub);
+                })
             );
         };
 
@@ -746,16 +750,21 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
               ) => Observable<ReturnObservableType>
     >(
         generator: (origin: ProvidedType, isReloading?: boolean) => Observable<ReturnObservableType> | void,
-        requestKey?: string | null
+        requestKey?: string | null,
+        options?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
     ): ReturnType {
-        return this.effect((origin$: Observable<ProvidedType>, isReloading?: boolean) => {
-            return origin$.pipe(
-                switchMap(origin => {
-                    const returnObservableOrVoid = generator(origin, isReloading);
-                    return returnObservableOrVoid instanceof Observable ? returnObservableOrVoid : of(undefined);
-                })
-            );
-        }, requestKey);
+        return this.effect(
+            (origin$: Observable<ProvidedType>, isReloading?: boolean) => {
+                return origin$.pipe(
+                    switchMap(origin => {
+                        const returnObservableOrVoid = generator(origin, isReloading);
+                        return returnObservableOrVoid instanceof Observable ? returnObservableOrVoid : of(undefined);
+                    })
+                );
+            },
+            requestKey,
+            options
+        );
     }
 
     protected get canDetectChanges(): boolean {

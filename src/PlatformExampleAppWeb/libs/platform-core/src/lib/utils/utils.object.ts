@@ -528,6 +528,10 @@ function assignOrSetDeep<T extends object>(
         }
 
         for (let i = 0; i < sourceArray.length; i++) {
+            if (targetArray.length <= i) {
+                targetArray.push(sourceArray[i]);
+                continue;
+            }
             if (checkDiff === true && targetArray[i] == sourceArray[i]) continue;
             if (checkDiff === 'deepCheck' && !isDifferent(targetArray[i], sourceArray[i])) continue;
 

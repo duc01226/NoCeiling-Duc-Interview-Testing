@@ -31,7 +31,11 @@ export class Time implements ITime {
             : new Time(time);
     }
 
-    public static compareTime(from: Time | undefined, to: Time | undefined, isEqual: boolean = false): boolean {
+    public static compareTime(
+        from: Time | undefined | null,
+        to: Time | undefined | null,
+        isEqual: boolean = false
+    ): boolean {
         if (from == undefined || to == undefined) return false;
 
         const fromDate = this.setTimeIntoDate(new Date(), from) as Date;
