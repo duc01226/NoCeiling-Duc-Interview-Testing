@@ -78,11 +78,11 @@ public abstract class PlatformCqrsRequestApplicationHandler<TRequest> : Platform
     /// <param name="requestSelfValidation">The validation result of the request itself.</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken" /> that can be used to cancel the operation.</param>
     /// <returns>The validated <see cref="PlatformValidationResult{TRequest}" />.</returns>
-    protected virtual async Task<PlatformValidationResult<TRequest>> ValidateRequestAsync(
+    protected virtual Task<PlatformValidationResult<TRequest>> ValidateRequestAsync(
         PlatformValidationResult<TRequest> requestSelfValidation,
         CancellationToken cancellationToken)
     {
-        return requestSelfValidation;
+        return Task.FromResult(requestSelfValidation);
     }
 
     /// <summary>

@@ -92,7 +92,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                 request,
                 async () =>
                 {
-                    await ValidateRequestAsync(request.Validate().Of<TCommand>(), cancellationToken).EnsureValidAsync();
+                    await ValidateRequestAsync(request, cancellationToken).EnsureValidAsync();
 
                     var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
                         () => ExecuteHandleAsync(request, cancellationToken),

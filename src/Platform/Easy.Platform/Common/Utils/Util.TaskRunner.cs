@@ -1665,12 +1665,17 @@ public static partial class Util
         /// <summary>
         /// Execute an action with timeout. Return false is it's timed out. Return true if the action execute successfully
         /// </summary>
-        public static async Task<bool> RunWithTimeout(Func<CancellationToken, Task> fn, TimeSpan timeout, CancellationToken cancellationToken = default)
+        public static async Task<bool> RunWithTimeout(
+            Func<CancellationToken, Task> fn,
+            TimeSpan timeout,
+            CancellationToken cancellationToken = default,
+            Action? onTimeoutAction = null)
         {
             var (isInTime, _) = await RunWithTimeout(
                 ct => fn(ct).Then(ValueTuple.Create),
                 timeout,
-                cancellationToken);
+                cancellationToken,
+                onTimeoutAction);
 
             return isInTime;
         }
@@ -1681,8 +1686,11 @@ public static partial class Util
         public static async Task<ValueTuple<bool, TResult>> RunWithTimeout<TResult>(
             Func<CancellationToken, Task<TResult>> fn,
             TimeSpan timeout,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            Action? onTimeoutAction = null)
         {
+            if (timeout.TotalMilliseconds <= 0) return (true, await fn(cancellationToken));
+
             var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
             try
@@ -1694,6 +1702,8 @@ public static partial class Util
 
                 var isInTime = !timeoutTask.IsCompletedSuccessfully;
                 var result = mainFnTask.IsCompletedSuccessfully ? mainFnTask.Result : default;
+
+                if (!isInTime) onTimeoutAction?.Invoke();
 
                 return (isInTime, result);
             }
@@ -1709,14 +1719,18 @@ public static partial class Util
         }
 
         /// <inheritdoc cref="RunWithTimeout{TResult}(Func{CancellationToken,Task{TResult}},TimeSpan,CancellationToken)" />
-        public static Task<(bool, TResult)> RunWithTimeout<TResult>(Func<TResult> fn, TimeSpan timeout, CancellationToken cancellationToken = default)
+        public static Task<(bool, TResult)> RunWithTimeout<TResult>(
+            Func<TResult> fn,
+            TimeSpan timeout,
+            CancellationToken cancellationToken = default,
+            Action? onTimeoutAction = null)
         {
-            return RunWithTimeout(cts => Task.Run(fn, cts), timeout, cancellationToken);
+            return RunWithTimeout(cts => Task.Run(fn, cts), timeout, cancellationToken, onTimeoutAction);
         }
 
-        public static Task<bool> RunWithTimeout(Func<Task> fn, TimeSpan timeout, CancellationToken cancellationToken = default)
+        public static Task<bool> RunWithTimeout(Func<Task> fn, TimeSpan timeout, CancellationToken cancellationToken = default, Action? onTimeoutAction = null)
         {
-            return RunWithTimeout(cts => fn(), timeout, cancellationToken);
+            return RunWithTimeout(cts => fn(), timeout, cancellationToken, onTimeoutAction);
         }
 
         /// <summary>

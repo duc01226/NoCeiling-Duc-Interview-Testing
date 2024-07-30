@@ -76,7 +76,7 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
                 {
                     request.SetAuditInfo<TQuery>(BuildRequestAuditInfo(request));
 
-                    await ValidateRequestAsync(request.Validate().Of<TQuery>(), cancellationToken).EnsureValidAsync();
+                    await ValidateRequestAsync(request, cancellationToken).EnsureValidAsync();
 
                     var result = await Util.TaskRunner.CatchExceptionContinueThrowAsync(
                         () => HandleAsync(request, cancellationToken),
