@@ -323,10 +323,10 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent, IPlatfo
     /// <br />
     /// This method is a part of the Domain-Driven Design (DDD) approach, where domain events are used to capture side effects resulting from changes to the domain.
     /// </remarks>
-    public List<TEvent> FindEvents<TEvent>() where TEvent : ISupportDomainEventsEntity.DomainEvent
+    public List<TEvent> FindEvents<TEvent>(string? customDomainEventName = null) where TEvent : ISupportDomainEventsEntity.DomainEvent
     {
         return DomainEvents
-            .Where(p => p.Key == ISupportDomainEventsEntity.DomainEvent.GetDefaultEventName<TEvent>())
+            .Where(p => p.Key == (customDomainEventName ?? ISupportDomainEventsEntity.DomainEvent.GetDefaultEventName<TEvent>()))
             .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<TEvent>(p.Value))
             .ToList();
     }

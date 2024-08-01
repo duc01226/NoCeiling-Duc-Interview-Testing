@@ -190,10 +190,10 @@ public interface ISupportDomainEventsEntity<out TEntity> : ISupportDomainEventsE
     /// Adds a domain event to the entity.
     /// </summary>
     /// <typeparam name="TEvent">Type of the domain event.</typeparam>
-    /// <param name="eventActionPayload">Domain event instance.</param>
+    /// <param name="domainEvent">Domain event instance.</param>
     /// <param name="customDomainEventName">Custom domain event name.</param>
     /// <returns>Current instance of <typeparamref name="TEntity" />.</returns>
-    public new TEntity AddDomainEvent<TEvent>(TEvent eventActionPayload, string customDomainEventName = null) where TEvent : DomainEvent;
+    public new TEntity AddDomainEvent<TEvent>(TEvent domainEvent, string customDomainEventName = null) where TEvent : DomainEvent;
 }
 
 /// <summary>
@@ -268,16 +268,16 @@ public abstract class Entity<TEntity, TPrimaryKey>
     /// Adds a domain event to the entity.
     /// </summary>
     /// <typeparam name="TEvent">Type of the domain event.</typeparam>
-    /// <param name="eventActionPayload">Domain event instance.</param>
+    /// <param name="domainEvent">Domain event instance.</param>
     /// <param name="customDomainEventName">Custom domain event name.</param>
     /// <returns>Current instance of <typeparamref name="TEntity" />.</returns>
-    public virtual TEntity AddDomainEvent<TEvent>(TEvent eventActionPayload, string customDomainEventName = null)
+    public virtual TEntity AddDomainEvent<TEvent>(TEvent domainEvent, string customDomainEventName = null)
         where TEvent : ISupportDomainEventsEntity.DomainEvent
     {
         DomainEvents.Add(
             new KeyValuePair<string, ISupportDomainEventsEntity.DomainEvent>(
                 customDomainEventName ?? ISupportDomainEventsEntity.DomainEvent.GetDefaultEventName<TEvent>(),
-                eventActionPayload));
+                domainEvent));
         return this.As<TEntity>();
     }
 
