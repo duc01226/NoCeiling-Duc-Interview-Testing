@@ -31,6 +31,40 @@ public static class PipeExtension
     }
 
     /// <summary>
+    /// Executes a specified function on the target object if a condition is met, and returns the target object.
+    /// </summary>
+    /// <typeparam name="TTarget">The type of the target object.</typeparam>
+    /// <param name="target">The target object on which the function is executed.</param>
+    /// <param name="condition">A function that determines whether the specified function should be executed.</param>
+    /// <param name="fn">The function to be executed on the target object if the condition is true.</param>
+    /// <returns>The target object after the function has been executed, if the condition was met.</returns>
+    /// <remarks>
+    /// This method is useful for applying a function to an object conditionally, allowing for more flexible and readable code.
+    /// </remarks>
+    public static TTarget PipeActionIf<TTarget>(this TTarget target, Func<TTarget, bool> condition, Action<TTarget> fn)
+    {
+        if (condition(target)) fn(target);
+        return target;
+    }
+
+    /// <summary>
+    /// Executes a specified function on the target object if a boolean condition is true, and returns the target object.
+    /// </summary>
+    /// <typeparam name="TTarget">The type of the target object.</typeparam>
+    /// <param name="target">The target object on which the function is executed.</param>
+    /// <param name="condition">A boolean value determining whether the specified function should be executed.</param>
+    /// <param name="fn">The function to be executed on the target object if the condition is true.</param>
+    /// <returns>The target object after the function has been executed, if the condition was true.</returns>
+    /// <remarks>
+    /// This method is useful for applying a function to an object conditionally based on a simple boolean value.
+    /// </remarks>
+    public static TTarget PipeActionIf<TTarget>(this TTarget target, bool condition, Action<TTarget> fn)
+    {
+        if (condition) fn(target);
+        return target;
+    }
+
+    /// <summary>
     /// Executes a specified action on the target object and returns the same object.
     /// </summary>
     /// <typeparam name="TTarget">The type of the target object.</typeparam>
