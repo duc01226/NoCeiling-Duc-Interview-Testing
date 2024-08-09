@@ -14,9 +14,14 @@ public static class PlatformRequestContextHelper
 
         if (originalValue != null)
         {
-            if (originalValue is string originalValueStr && typeof(T) != typeof(string))
+            if (typeof(T) != typeof(string) &&
+                (originalValue is string || !originalValue.GetType().IsAssignableTo(typeof(T))))
             {
-                var isParsedSuccess = TryGetParsedValuesFromStringValues(out item, [originalValueStr]);
+                var originalValueStr = originalValue.As<string>();
+
+                var isParsedSuccess = TryGetParsedValuesFromStringValues(
+                    out item,
+                    originalValueStr != null ? [originalValueStr] : [originalValue.ToJson()]);
 
                 return isParsedSuccess;
             }
@@ -35,13 +40,15 @@ public static class PlatformRequestContextHelper
     /// </summary>
     public static bool TryGetParsedValuesFromStringValues<T>(out T foundValue, List<string> stringValues)
     {
-        if (FindFirstValueListInterfaceType<T>() == null && !stringValues.Any())
+        if (FindFirstValueListInterfaceType<T>() == null &&
+            !stringValues.Any())
         {
             foundValue = default;
             return false;
         }
 
-        if (typeof(T) == typeof(string) || typeof(T) == typeof(object))
+        if (typeof(T) == typeof(string) ||
+            typeof(T) == typeof(object))
         {
             if (!stringValues.Any())
             {
