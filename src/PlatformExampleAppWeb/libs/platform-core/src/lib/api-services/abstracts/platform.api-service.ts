@@ -90,7 +90,7 @@ export abstract class PlatformApiService extends PlatformHttpService {
         return this.cacheService.cacheImplicitReloadRequest(
             requestCacheKey,
             () => this.getFromServer<T>(path, params, configureOptions),
-            { ttl: this.moduleConfig.apiGetCacheTimeToLeaveSeconds },
+            { ttl: this.moduleConfig.apiGetCacheTimeToLiveSeconds },
             (requestCacheKey, data) => {
                 this.setCachedRequestData(requestCacheKey, data);
             }
@@ -117,6 +117,26 @@ export abstract class PlatformApiService extends PlatformHttpService {
     }
 
     protected post<T>(
+        path: string,
+        body: unknown,
+        configureOptions?: (option: HttpClientOptions) => HttpClientOptions | void | undefined,
+        enableCache: boolean = false
+    ): Observable<T> {
+        if (enableCache) {
+            const requestCacheKey = this.buildRequestCacheKey(path, body);
+            return this.cacheService.cacheImplicitReloadRequest(
+                requestCacheKey,
+                () => this.postFromServer<T>(path, body, configureOptions),
+                { ttl: this.moduleConfig.apiGetCacheTimeToLiveSeconds },
+                (requestCacheKey, data) => {
+                    this.setCachedRequestData(requestCacheKey, data);
+                }
+            );
+        }
+        return this.postFromServer(path, body, configureOptions);
+    }
+
+    private postFromServer<T>(
         path: string,
         body: unknown,
         configureOptions?: (option: HttpClientOptions) => HttpClientOptions | void | undefined
