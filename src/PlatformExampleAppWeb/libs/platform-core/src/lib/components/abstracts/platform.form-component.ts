@@ -106,6 +106,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     public get form(): FormGroup<PlatformFormGroupControls<TViewModel>> {
         return this._form;
     }
+
     @Input()
     public set form(v: FormGroup<PlatformFormGroupControls<TViewModel>>) {
         this._form = v;
@@ -152,6 +153,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
             if (markFormDirty && this.form != undefined) this.form.markAsDirty();
         });
     }
+
     /**
      * Returns an Signal that emits the form loading state (true or false) associated with the specified request key.
      * @param [requestKey=requestStateDefaultKey] (optional): A key to identify the request. Default is requestStateDefaultKey.
@@ -362,18 +364,18 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 
         /***
          ThrottleTime explain: Delay to enhance performance when user typing fast do not need to emit
-        { leading: true, trailing: true } <=> emit the first item to ensure ui is not delay, but also ignore the sub-sequence,
-        and still emit the latest item to ensure data is latest
+         { leading: true, trailing: true } <=> emit the first item to ensure ui is not delay, but also ignore the sub-sequence,
+         and still emit the latest item to ensure data is latest
 
-        source_1:          --0--1-----2--3----4--5-6---7------------8-------9---------
-        throttle interval: --[~~~~~~~~~~~I~~~~~~~~~~~I~~~~~~~~~~~I~~~~~~~~~~~I~~~~~~~~
-        output:            --0-----------3-----------6-----------7-----------9--------
+         source_1:          --0--1-----2--3----4--5-6---7------------8-------9---------
+         throttle interval: --[~~~~~~~~~~~I~~~~~~~~~~~I~~~~~~~~~~~I~~~~~~~~~~~I~~~~~~~~
+         output:            --0-----------3-----------6-----------7-----------9--------
 
-        source_2:          --0--------1------------------2--------------3---4---------
-        throttle interval: --[~~~~~~~~~~~I~~~~~~~~~~~]---[~~~~~~~~~~~]--[~~~~~~~~~~~I~
-        output_2:          --0-----------1---------------2--------------3-----------4-
+         source_2:          --0--------1------------------2--------------3---4---------
+         throttle interval: --[~~~~~~~~~~~I~~~~~~~~~~~]---[~~~~~~~~~~~]--[~~~~~~~~~~~I~
+         output_2:          --0-----------1---------------2--------------3-----------4-
 
-        */
+         */
         keys(this.form.controls).forEach(formControlKey => {
             this.storeSubscription(
                 buildControlValueChangesSubscriptionKey(formControlKey),
@@ -419,7 +421,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
             this._vm = v;
             this.vm.set(v);
 
-            if (v != undefined && this.initiated$.value) this.patchVmValuesToForm(v);
+            if (v != undefined && this.initiated$.value && this.formConfig != undefined) this.patchVmValuesToForm(v);
             if (this.initiated$.value || prevVm == undefined) this.vmChangeEvent.emit(v);
 
             if (onVmChanged != undefined) onVmChanged(this._vm);

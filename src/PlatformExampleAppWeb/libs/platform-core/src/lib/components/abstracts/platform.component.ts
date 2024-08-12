@@ -58,7 +58,7 @@ const defaultThrottleDurationMs = 300;
 export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges {
     public static readonly defaultDetectChangesDelay: number = 0;
     public static readonly defaultDetectChangesThrottleTime: number = defaultThrottleDurationMs;
-    public static readonly checkLoadingDelayTimeMs = 100;
+    public static readonly checkLoadingDelayTimeMs = 200;
 
     private devModeCheckLoadingStateElementTimeoutId?: number;
 
@@ -94,7 +94,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                             alert(msg);
                             console.error(new Error(msg));
                         }
-                    }, PlatformComponent.checkLoadingDelayTimeMs + 100);
+                    }, PlatformComponent.checkLoadingDelayTimeMs);
                 }
             });
         }

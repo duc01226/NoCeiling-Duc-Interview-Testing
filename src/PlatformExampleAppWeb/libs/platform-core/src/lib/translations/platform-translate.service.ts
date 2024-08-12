@@ -11,16 +11,30 @@ export class PlatformTranslateService {
         private ngxTranslate: TranslateService,
         private config: PlatformTranslateConfig
     ) {
-        this.setup(config.defaultLanguage);
+        this.setDefaultLang(config.defaultLanguage);
     }
 
     public get defaultLanguage(): string {
         return this.config.defaultLanguage;
     }
+    public set defaultLanguage(v: string) {
+        this.config.defaultLanguage = v;
+    }
 
-    public setup(useLanguage: string) {
+    public setDefaultLang(useLanguage: string) {
+        this.defaultLanguage = useLanguage;
         this.ngxTranslate.setDefaultLang(this.defaultLanguage);
-        this.ngxTranslate.use(useLanguage);
+        this.ngxTranslate.use(this.getCurrentLang() ?? this.defaultLanguage);
+    }
+
+    public setRestrictSupportLangs(value: string[] | null | undefined) {
+        this.config.restrictSupportLangs = value;
+
+        if (value != null && value.length > 0) {
+            if (!value.includes(this.defaultLanguage)) this.setDefaultLang(value[0]!);
+            if (this.getCurrentOrDefaultLang() && !value.includes(this.getCurrentOrDefaultLang()))
+                this.setCurrentLang(value[0]!);
+        }
     }
 
     public get(key: string, interpolateParams?: Dictionary<string>): Observable<string> {
@@ -58,8 +72,20 @@ export class PlatformTranslateService {
         return this.config.availableLangs;
     }
 
-    public getCurrentLang(): string {
+    public setAvailableLangs(v: PlatformLanguageItem[]) {
+        this.config.availableLangs = v;
+    }
+
+    public getRestrictSupportLangs(): string[] | undefined | null {
+        return this.config.restrictSupportLangs;
+    }
+
+    public getCurrentOrDefaultLang(): string {
         return localStorage.getItem(PlatformTranslationCurrentLangLocalStorageKey) ?? this.defaultLanguage;
+    }
+
+    public getCurrentLang(): string | null {
+        return localStorage.getItem(PlatformTranslationCurrentLangLocalStorageKey);
     }
 
     public setCurrentLang(lang: string): void {
@@ -103,6 +129,7 @@ export class PlatformTranslateConfig {
     public defaultLanguage: string = 'en';
     public slowRequestBreakpoint: number = 500;
     public availableLangs: PlatformLanguageItem[] = [new PlatformLanguageItem('English', 'en', 'ENG')];
+    public restrictSupportLangs?: string[] | null;
 
     constructor(data?: Partial<PlatformTranslateConfig>) {
         if (data == null) return;

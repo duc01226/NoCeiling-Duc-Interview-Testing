@@ -17,6 +17,7 @@ import {
 
 import { any as privateAny } from './_common-functions';
 import * as ObjectUtil from './utils.object';
+import { isDifferent } from './utils.object';
 
 export function list_find<T>(
     collection: T[] | undefined,
@@ -208,7 +209,7 @@ export function list_distinct<T>(collection: ArrayLike<T>): T[] {
     return lodashUniq(collection);
 }
 
-export function list_distinctBy<T>(collection: ArrayLike<T>, iteratee: (value: T) => object | undefined): T[] {
+export function list_distinctBy<T>(collection: ArrayLike<T>, iteratee: (value: T) => unknown): T[] {
     return lodashUniqBy(collection, iteratee);
 }
 
@@ -311,4 +312,32 @@ export function list_findDistinctItems<T>(list1: T[], list2: T[], keySelector: (
 export function list_first<T>(collection: ArrayLike<T> | undefined): T | undefined {
     if (collection == undefined) return undefined;
     return lodashFirst(collection);
+}
+
+export function list_addOrRemoveIfExist<T>(
+    array: T[] | undefined,
+    item: T | undefined,
+    condition?: (item: T) => boolean
+): T[] {
+    if (array == undefined) {
+        return [];
+    }
+
+    list_distinctByObjectValue(array);
+
+    if (item == undefined) {
+        return array;
+    }
+
+    if (list_any(array, x => (condition != undefined && condition(x)) || !isDifferent(x, item))) {
+        list_remove(array, x => (condition != undefined && condition(x)) || !isDifferent(x, item));
+    } else {
+        list_add(array, item);
+    }
+
+    return array;
+}
+
+export function list_distinctByObjectValue<T>(collection: ArrayLike<T>): T[] {
+    return list_distinctBy(collection, p => JSON.stringify(p));
 }
