@@ -79,9 +79,9 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
         return this._vm;
     }
 
-    public override get isStateInitVmLoading(): Signal<boolean> {
-        this._isStateInitVmLoading ??= computed(() => this.isStateLoading() == true && this.vm() == undefined);
-        return this._isStateInitVmLoading;
+    public override get isLoadingToInitVm(): Signal<boolean> {
+        this._isLoadingToInitVm ??= computed(() => this.isStateLoading() == true && this.vm() == undefined);
+        return this._isLoadingToInitVm;
     }
 
     /**

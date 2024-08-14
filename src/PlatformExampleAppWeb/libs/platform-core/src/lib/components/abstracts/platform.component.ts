@@ -31,6 +31,7 @@ import {
 } from 'rxjs';
 import { delay, filter, finalize, share, switchMap, takeUntil, tap, throttleTime } from 'rxjs/operators';
 
+import { toSignal } from '@angular/core/rxjs-interop';
 import { PlatformApiServiceErrorResponse } from '../../api-services';
 import { LifeCycleHelper } from '../../helpers';
 import { PLATFORM_CORE_GLOBAL_ENV } from '../../platform-core-global-environment';
@@ -139,8 +140,10 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     public elementRef: ElementRef<HTMLElement> = inject(ElementRef);
 
     public initiated$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+    public initiated = toSignal(this.initiated$);
     public ngOnInitCalled$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
     public viewInitiated$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+    public viewInitiated = toSignal(this.viewInitiated$);
     public destroyed$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
     public status$: WritableSignal<ComponentStateStatus> = signal(ComponentStateStatus.Pending);
     public errorMsgMap$: WritableSignal<Dictionary<string | undefined>> = signal({});
@@ -228,10 +231,10 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         return keys(this.reloadingMap$()).find(requestKey => this.reloadingMap$()[requestKey]) != undefined;
     });
 
-    protected _isStateInitVmLoading?: Signal<boolean>;
-    public get isStateInitVmLoading(): Signal<boolean> {
-        this._isStateInitVmLoading ??= computed(() => false);
-        return this._isStateInitVmLoading;
+    protected _isLoadingToInitVm?: Signal<boolean>;
+    public get isLoadingToInitVm(): Signal<boolean> {
+        this._isLoadingToInitVm ??= computed(() => false);
+        return this._isLoadingToInitVm;
     }
 
     protected _isStateSuccess?: Signal<boolean>;
