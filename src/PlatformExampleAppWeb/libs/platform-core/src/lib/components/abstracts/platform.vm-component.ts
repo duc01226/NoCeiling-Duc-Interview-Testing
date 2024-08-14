@@ -121,27 +121,32 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
             if (initialVm$ instanceof Observable) {
                 this.storeSubscription(
                     'initVm',
-                    initialVm$.pipe(this.observerLoadingErrorState(undefined, { isReloading: isReload })).subscribe({
-                        next: initialVm => {
-                            if (initialVm) {
-                                autoInitVmStatus.bind(this)(initialVm);
+                    initialVm$
+                        .pipe(
+                            distinctUntilObjectValuesChanged(),
+                            this.observerLoadingErrorState(undefined, { isReloading: isReload })
+                        )
+                        .subscribe({
+                            next: initialVm => {
+                                if (initialVm) {
+                                    autoInitVmStatus.bind(this)(initialVm);
 
-                                this.internalSetVm(initialVm);
-                                this.originalInitVm = cloneDeep(initialVm);
-                                super.ngOnInit();
+                                    this.internalSetVm(initialVm);
+                                    this.originalInitVm = cloneDeep(initialVm);
+                                    super.ngOnInit();
 
-                                executeOnSuccessDelay.bind(this)();
-                            } else {
-                                super.ngOnInit();
+                                    executeOnSuccessDelay.bind(this)();
+                                } else {
+                                    super.ngOnInit();
 
-                                executeOnSuccessDelay.bind(this)();
+                                    executeOnSuccessDelay.bind(this)();
+                                }
+                            },
+                            error: (error: PlatformApiServiceErrorResponse | Error) => {
+                                this.status$.set(ComponentStateStatus.Error);
+                                this.setErrorMsg(error);
                             }
-                        },
-                        error: (error: PlatformApiServiceErrorResponse | Error) => {
-                            this.status$.set(ComponentStateStatus.Error);
-                            this.setErrorMsg(error);
-                        }
-                    })
+                        })
                 );
             } else {
                 autoInitVmStatus.bind(this)(initialVm$);

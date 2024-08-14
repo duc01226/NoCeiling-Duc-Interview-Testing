@@ -1,4 +1,4 @@
-import moment from 'moment';
+import moment, { Moment } from 'moment';
 
 import { Time } from '../../lib';
 import { MONTH, MONTH_DISPLAY, WEEKDAY, WORKING_TIME_DAY_DISPLAY } from '../common-values/weekdays.const';
@@ -402,6 +402,15 @@ export function date_setTime(date: Date, time: Time): Date {
     return new Date(new Date(date).setHours(time.hour, time.minute));
 }
 
-export function local_TimezoneOffset(): number {
+/**
+ * Return timezone offset of local in hours
+ */
+export function date_localTimeZoneOffset(): number {
     return -(new Date().getTimezoneOffset() / 60);
+}
+
+export function date_convertToTimeZone(date: Date, timeZone: string): Moment {
+    // Convert the date to the target timezone using moment-timezone
+    const convertedDate = moment(date).tz(timeZone);
+    return convertedDate;
 }
