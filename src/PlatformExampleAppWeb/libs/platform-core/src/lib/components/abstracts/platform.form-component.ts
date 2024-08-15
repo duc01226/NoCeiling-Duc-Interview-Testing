@@ -205,10 +205,14 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
      */
     protected abstract initialFormConfig: () => PlatformFormConfig<TViewModel> | undefined;
 
+    private isFormGivenViaInput?: boolean;
+
     public override ngOnInit(): void {
+        this.isFormGivenViaInput = this.formConfig != null && this.form != null;
+
         this.initVm(undefined, () => {
             // If form and formConfig has NOT been given via input
-            if (this.formConfig == null && this.form == null) {
+            if (!this.isFormGivenViaInput) {
                 if (this.initiated$.value && this.vm() != null) {
                     this.initForm();
                 } else {
