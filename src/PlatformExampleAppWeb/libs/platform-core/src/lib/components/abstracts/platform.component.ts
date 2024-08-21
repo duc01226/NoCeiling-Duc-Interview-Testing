@@ -35,7 +35,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { PlatformApiServiceErrorResponse } from '../../api-services';
 import { LifeCycleHelper } from '../../helpers';
 import { PLATFORM_CORE_GLOBAL_ENV } from '../../platform-core-global-environment';
-import { onCancel, skipDuplicates, skipTime, subscribeUntil, tapLimit, tapOnce } from '../../rxjs';
+import { applyIf, onCancel, skipDuplicates, skipTime, subscribeUntil, tapLimit, tapOnce } from '../../rxjs';
 import { PlatformTranslateService } from '../../translations';
 import { clone, guid_generate, immutableUpdate, keys, list_distinct, list_remove, task_delay } from '../../utils';
 import { requestStateDefaultKey } from '../../view-models';
@@ -696,7 +696,10 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     >(
         generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
         requestKey?: string | null,
-        options?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
+        options?: {
+            effectSubscriptionHandleFn?: (sub: Subscription) => unknown;
+            notAutoObserveErrorLoadingState?: boolean;
+        }
     ): ReturnType {
         const returnFunc = (
             observableOrValue?: ObservableType | Observable<ObservableType> | null,
@@ -722,7 +725,10 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                 switchMap(request =>
                     generator(<OriginType>of(request), isReloading).pipe(
                         delay(1, asyncScheduler), // (III)
-                        this.observerLoadingErrorState(requestKey, { isReloading: isReloading })
+                        applyIf(
+                            !options?.notAutoObserveErrorLoadingState,
+                            this.observerLoadingErrorState(requestKey, { isReloading: isReloading })
+                        )
                     )
                 ),
                 this.untilDestroyed(),
@@ -754,7 +760,10 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     >(
         generator: (origin: ProvidedType, isReloading?: boolean) => Observable<ReturnObservableType> | void,
         requestKey?: string | null,
-        options?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
+        options?: {
+            effectSubscriptionHandleFn?: (sub: Subscription) => unknown;
+            notAutoObserveErrorLoadingState?: boolean;
+        }
     ): ReturnType {
         return this.effect(
             (origin$: Observable<ProvidedType>, isReloading?: boolean) => {

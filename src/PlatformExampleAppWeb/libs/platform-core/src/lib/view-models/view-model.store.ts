@@ -43,6 +43,7 @@ import { PlatformApiServiceErrorResponse } from '../api-services';
 import { PlatformCachingService } from '../caching';
 import { PLATFORM_CORE_GLOBAL_ENV } from '../platform-core-global-environment';
 import {
+    applyIf,
     distinctUntilObjectValuesChanged,
     onCancel,
     skipDuplicates,
@@ -923,7 +924,10 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
     >(
         generator: (origin$: OriginType, isReloading?: boolean) => Observable<ReturnObservableType>,
         requestKey?: string | null,
-        options?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
+        options?: {
+            effectSubscriptionHandleFn?: (sub: Subscription) => unknown;
+            notAutoObserveErrorLoadingState?: boolean;
+        }
     ): ReturnType {
         if (requestKey == undefined) requestKey = PlatformVm.requestStateDefaultKey;
 
@@ -951,7 +955,10 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
                 switchMap(request =>
                     generator(<OriginType>of(request), isReloading).pipe(
                         delay(1, asyncScheduler), // (III)
-                        this.observerLoadingErrorState(requestKey, { isReloading: isReloading })
+                        applyIf(
+                            !options?.notAutoObserveErrorLoadingState,
+                            this.observerLoadingErrorState(requestKey, { isReloading: isReloading })
+                        )
                     )
                 ),
                 this.untilDestroyed(),
@@ -983,7 +990,10 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
     >(
         generator: (origin: ProvidedType, isReloading?: boolean) => Observable<ReturnObservableType> | void,
         requestKey?: string | null,
-        options?: { effectSubscriptionHandleFn?: (sub: Subscription) => unknown }
+        options?: {
+            effectSubscriptionHandleFn?: (sub: Subscription) => unknown;
+            notAutoObserveErrorLoadingState?: boolean;
+        }
     ): ReturnType {
         return this.effect(
             (origin$: Observable<ProvidedType>, isReloading?: boolean) => {

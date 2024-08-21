@@ -1,3 +1,4 @@
+export * from './rxjs-apply-if';
 export * from './rxjs-distinct-until-object-values-changed';
 export * from './rxjs-on-cancel';
 export * from './rxjs-skip-duplicates';
