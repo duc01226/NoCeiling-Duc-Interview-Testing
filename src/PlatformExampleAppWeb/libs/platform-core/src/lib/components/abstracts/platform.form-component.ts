@@ -21,7 +21,7 @@ import { ArrayElement } from 'type-fest/source/internal';
 import { IPlatformFormValidationError } from '../../form-validators';
 import { FormHelpers } from '../../helpers';
 import { distinctUntilObjectValuesChanged } from '../../rxjs';
-import { immutableUpdate, isDifferent, keys, task_delay, toPlainObj } from '../../utils';
+import { immutableUpdate, ImmutableUpdateOptions, isDifferent, keys, task_delay, toPlainObj } from '../../utils';
 import { IPlatformVm, PlatformFormMode, requestStateDefaultKey } from '../../view-models';
 import { ComponentStateStatus, PlatformComponent } from './platform.component';
 import { PlatformVmComponent } from './platform.vm-component';
@@ -146,12 +146,17 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
             | Partial<TViewModel>
             | ((state: TViewModel) => void | PartialDeep<TViewModel>),
         onVmChanged?: (vm: TViewModel) => unknown,
+        immutableUpdateOptions?: ImmutableUpdateOptions,
         markFormDirty: boolean = true
     ): TViewModel {
-        return super.updateVm(partialStateOrUpdaterFn, vm => {
-            if (onVmChanged != undefined) onVmChanged(vm);
-            if (markFormDirty && this.form != undefined) this.form.markAsDirty();
-        });
+        return super.updateVm(
+            partialStateOrUpdaterFn,
+            vm => {
+                if (onVmChanged != undefined) onVmChanged(vm);
+                if (markFormDirty && this.form != undefined) this.form.markAsDirty();
+            },
+            immutableUpdateOptions
+        );
     }
 
     /**

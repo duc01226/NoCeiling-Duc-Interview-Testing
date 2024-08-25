@@ -1,3 +1,5 @@
+import { isDifferent } from '../utils';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface SimpleChange<T> {
     previousValue: T;
@@ -95,4 +97,21 @@ export function Watch<TTargetObj extends object = object, TProp = object>(
                 'Could not use watch decorator on a existing get/set property. Should only use one solution, either get/set property or @Watch decorator'
             );
     }
+}
+
+export function WatchWhenValuesDiff<TTargetObj extends object = object, TProp = object>(
+    callbackFnOrName: WatchCallBackFunction<TProp, TTargetObj> | keyof TTargetObj,
+    onlyWhen?: (obj: TTargetObj, change: SimpleChange<TProp>) => boolean,
+    afterCallback?: (target: TTargetObj) => void
+) {
+    return Watch(
+        callbackFnOrName,
+        (obj, change) => {
+            return (
+                isDifferent(change.previousValue, change.currentValue) &&
+                (onlyWhen == undefined || onlyWhen(obj, change))
+            );
+        },
+        afterCallback
+    );
 }

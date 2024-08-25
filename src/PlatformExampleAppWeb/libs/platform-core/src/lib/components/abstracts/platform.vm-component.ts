@@ -17,7 +17,7 @@ import { PartialDeep } from 'type-fest';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { PlatformApiServiceErrorResponse } from '../../api-services';
 import { distinctUntilObjectValuesChanged } from '../../rxjs';
-import { immutableUpdate, isDifferent } from '../../utils';
+import { immutableUpdate, ImmutableUpdateOptions, isDifferent } from '../../utils';
 import { IPlatformVm } from '../../view-models';
 import { ComponentStateStatus, PlatformComponent } from './platform.component';
 
@@ -208,11 +208,12 @@ export abstract class PlatformVmComponent<TViewModel extends IPlatformVm> extend
             | PartialDeep<TViewModel>
             | Partial<TViewModel>
             | ((state: TViewModel) => void | PartialDeep<TViewModel>),
-        onVmChanged?: (vm: TViewModel) => unknown
+        onVmChanged?: (vm: TViewModel) => unknown,
+        immutableUpdateOptions?: ImmutableUpdateOptions
     ): TViewModel {
         if (this._vm == undefined) return this._vm!;
 
-        const newUpdatedVm: TViewModel = immutableUpdate(this._vm, partialStateOrUpdaterFn);
+        const newUpdatedVm: TViewModel = immutableUpdate(this._vm, partialStateOrUpdaterFn, immutableUpdateOptions);
 
         if (newUpdatedVm != this._vm) {
             this.internalSetVm(newUpdatedVm, true, onVmChanged);

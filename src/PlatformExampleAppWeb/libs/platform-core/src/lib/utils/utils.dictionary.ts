@@ -16,7 +16,7 @@ export function dictionary_upsert<T>(
     onHasNewStateDifferent?: (newState: Dictionary<T>) => any,
     optionalProps: (keyof T)[] = []
 ): Dictionary<T> {
-    return modifyDic(currentData, newState => {
+    return modifyDict(currentData, newState => {
         const newDataDic = newData instanceof Array ? list_toDictionary(newData, x => getItemKey(x)) : newData;
         if (removeNotExistedItems) {
             removeNotExistedItemsInNewData(newState, newDataDic);
@@ -61,7 +61,7 @@ export function dictionary_upsert<T>(
         });
     }
 
-    function modifyDic(
+    function modifyDict(
         state: Dictionary<T>,
         modifyDicAction: (state: Dictionary<T>) => void | Dictionary<T>
     ): Dictionary<T> {

@@ -1,4 +1,5 @@
 import { HttpStatusCode } from '@angular/common/http';
+import { pipe, pipeAction } from '../../utils';
 
 export interface IPlatformApiServiceErrorResponse {
     error: IPlatformApiServiceErrorInfo;
@@ -20,7 +21,11 @@ export class PlatformApiServiceErrorResponse {
     public requestId: string;
 
     public static getDefaultFormattedMessage(errorResponse: PlatformApiServiceErrorResponse | Error): string {
-        return errorResponse instanceof Error ? errorResponse.message : errorResponse.getDefaultFormattedMessage();
+        return errorResponse instanceof Error
+            ? pipe(`[ERROR] Something went wrong, app has been crashed.\n\n${errorResponse.stack}`, [
+                  pipeAction<string>(errorMessage => alert(errorMessage))
+              ])
+            : errorResponse.getDefaultFormattedMessage();
     }
 
     public getDefaultFormattedMessage(): string {

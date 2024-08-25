@@ -335,7 +335,13 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
 
     public ngOnInit(): void {
         this.detectChangesThrottle$.pipe(this.subscribeUntilDestroyed());
-        this.initiated$.next(true);
+
+        // SetTimeout to delay action to queue => run after inherit component init logic has been executed
+        // so that all property has been initiated => run detectChanges may not show error if some prop has not been initiated
+        setTimeout(() => {
+            this.initiated$.next(true);
+            this.detectChanges();
+        });
         if (PLATFORM_CORE_GLOBAL_ENV.isLocalDev) this.ngOnInitCalled$.next(true);
     }
 
@@ -845,6 +851,8 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                     _[requestKey] = PlatformApiServiceErrorResponse.getDefaultFormattedMessage(error);
                 })
             );
+
+        if (error instanceof Error) console.error(error);
     };
 
     /**

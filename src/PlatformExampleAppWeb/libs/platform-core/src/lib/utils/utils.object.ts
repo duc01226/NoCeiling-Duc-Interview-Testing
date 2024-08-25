@@ -27,7 +27,7 @@ export function keys<T extends object>(
         if (
             typeof (<any>source)[key] != 'function' &&
             (ignorePrivate == false || !key.startsWith('_')) &&
-            (excludeKeys == null || !excludeKeys.includes(key))
+            !excludeKeys?.includes(key)
         ) {
             if (key.startsWith('_')) {
                 const publicKey = <keyof T & string>key.substring(1);
@@ -51,8 +51,7 @@ export function keys<T extends object>(
         if (sourceCurrentAncestorPrototype != Object.prototype) {
             result = result.concat(
                 Object.keys(Object.getOwnPropertyDescriptors(sourceCurrentAncestorPrototype)).filter(
-                    key =>
-                        (excludeKeys == null || !excludeKeys.includes(<keyof T>key)) && typeof source[key] != 'function'
+                    key => !excludeKeys?.includes(<keyof T>key) && typeof source[key] != 'function'
                 )
             );
 
@@ -153,17 +152,21 @@ export function immutableUpdate<TObject extends object>(
     if (typeof partialStateOrUpdaterFn == 'function') {
         const clonedDeepState = options?.updaterNotDeepMutate == true ? undefined : cloneDeep(targetObj);
 
+        const finalChooseCloneObjToUpdateData = clonedDeepState ?? clonedObj;
+
         // Explain: To check the function has deep mutated the state object or not, we need to clone the state object to allow mutation at only first level.
         // Clone deep object to compare with the cloned object to check the deep mutation
         const clonedLocalDevToCheckStateMutation =
-            options?.updaterNotDeepMutate == true && PLATFORM_CORE_GLOBAL_ENV.isLocalDev ? clone(clonedObj) : undefined;
+            options?.updaterNotDeepMutate == true && PLATFORM_CORE_GLOBAL_ENV.isLocalDev
+                ? clone(finalChooseCloneObjToUpdateData)
+                : undefined;
         const clonedLocalDevToCheckStateMutationJson =
             options?.updaterNotDeepMutate == true && PLATFORM_CORE_GLOBAL_ENV.isLocalDev
                 ? JSON.stringify(toPlainObj(clonedLocalDevToCheckStateMutation))
                 : undefined;
 
         const updatedStateResult = (<ImmutableUpdateUpdaterFn<TObject>>partialStateOrUpdaterFn)(
-            clonedDeepState ?? clonedObj
+            finalChooseCloneObjToUpdateData
         );
 
         // toPlainObj before check different to avoid case object has get property auto update value
@@ -278,8 +281,13 @@ export function isDifferent<T>(value1: T, value2: T, shallowCheckFirstLevel: boo
     if (value1 instanceof Date && value2 instanceof Date) {
         return value1.getTime() != value2.getTime();
     }
+    if (value1 instanceof Set && value2 instanceof Set) {
+        return JSON.stringify(Array.from(value1)) != JSON.stringify(Array.from(value2));
+    }
+
     const value1Keys = keys(<any>value1);
     const value2Keys = keys(<any>value2);
+
     if (value1Keys.length != value2Keys.length) return true;
     if (shallowCheckFirstLevel) {
         return any(value1Keys, value1Key => {
@@ -530,6 +538,7 @@ function assignOrSetDeep<T extends object>(
         for (let i = 0; i < sourceArray.length; i++) {
             if (targetArray.length <= i) {
                 targetArray.push(sourceArray[i]);
+                hasDataChanged = true;
                 continue;
             }
             if (checkDiff === true && targetArray[i] == sourceArray[i]) continue;
@@ -586,4 +595,223 @@ export class ValueWrapper<TValue> {
         }
         return new ValueWrapper(funcValue);
     }
+}
+
+export function pipe<T>(input: T): T;
+export function pipe<T, TResult1>(input: T, fns: [(arg: T) => TResult1]): TResult1;
+export function pipe<T, TResult1, TResult2>(
+    input: T,
+    fns: [(arg: T) => TResult1, (arg: TResult1) => TResult2]
+): TResult2;
+export function pipe<T, TResult1, TResult2, TResult3>(
+    input: T,
+    fns: [(arg: T) => TResult1, (arg: TResult1) => TResult2, (arg: TResult2) => TResult3]
+): TResult3;
+export function pipe<T, TResult1, TResult2, TResult3, TResult4>(
+    input: T,
+    fns: [(arg: T) => TResult1, (arg: TResult1) => TResult2, (arg: TResult2) => TResult3, (arg: TResult3) => TResult4]
+): TResult4;
+export function pipe<T, TResult1, TResult2, TResult3, TResult4, TResult5>(
+    input: T,
+    fns: [
+        (arg: T) => TResult1,
+        (arg: TResult1) => TResult2,
+        (arg: TResult2) => TResult3,
+        (arg: TResult3) => TResult4,
+        (arg: TResult4) => TResult5
+    ]
+): TResult5;
+export function pipe<T, TResult1, TResult2, TResult3, TResult4, TResult5, TResult6>(
+    input: T,
+    fns: [
+        (arg: T) => TResult1,
+        (arg: TResult1) => TResult2,
+        (arg: TResult2) => TResult3,
+        (arg: TResult3) => TResult4,
+        (arg: TResult4) => TResult5,
+        (arg: TResult5) => TResult6
+    ]
+): TResult6;
+export function pipe<T, TResult1, TResult2, TResult3, TResult4, TResult5, TResult6, TResult7>(
+    input: T,
+    fns: [
+        (arg: T) => TResult1,
+        (arg: TResult1) => TResult2,
+        (arg: TResult2) => TResult3,
+        (arg: TResult3) => TResult4,
+        (arg: TResult4) => TResult5,
+        (arg: TResult5) => TResult6,
+        (arg: TResult6) => TResult7
+    ]
+): TResult7;
+export function pipe<T, TResult1, TResult2, TResult3, TResult4, TResult5, TResult6, TResult7, TResult8>(
+    input: T,
+    fns: [
+        (arg: T) => TResult1,
+        (arg: TResult1) => TResult2,
+        (arg: TResult2) => TResult3,
+        (arg: TResult3) => TResult4,
+        (arg: TResult4) => TResult5,
+        (arg: TResult5) => TResult6,
+        (arg: TResult6) => TResult7,
+        (arg: TResult7) => TResult8
+    ]
+): TResult8;
+export function pipe<T, TResult1, TResult2, TResult3, TResult4, TResult5, TResult6, TResult7, TResult8, TResult9>(
+    input: T,
+    fns: [
+        (arg: T) => TResult1,
+        (arg: TResult1) => TResult2,
+        (arg: TResult2) => TResult3,
+        (arg: TResult3) => TResult4,
+        (arg: TResult4) => TResult5,
+        (arg: TResult5) => TResult6,
+        (arg: TResult6) => TResult7,
+        (arg: TResult7) => TResult8,
+        (arg: TResult8) => TResult9
+    ]
+): TResult9;
+export function pipe<
+    T,
+    TResult1,
+    TResult2,
+    TResult3,
+    TResult4,
+    TResult5,
+    TResult6,
+    TResult7,
+    TResult8,
+    TResult9,
+    TResult10
+>(
+    input: T,
+    fns: [
+        (arg: T) => TResult1,
+        (arg: TResult1) => TResult2,
+        (arg: TResult2) => TResult3,
+        (arg: TResult3) => TResult4,
+        (arg: TResult4) => TResult5,
+        (arg: TResult5) => TResult6,
+        (arg: TResult6) => TResult7,
+        (arg: TResult7) => TResult8,
+        (arg: TResult8) => TResult9,
+        (arg: TResult9) => TResult10
+    ]
+): TResult10;
+// General implementation
+export function pipe(input: any, fns?: Array<(arg: any) => any>): any {
+    if (fns == undefined) return input;
+    return fns.reduce((acc, fn) => fn(acc), input);
+}
+
+export function pipeAction<T>(action: (input: T) => void): (input: T) => T {
+    return (input: T): T => {
+        action(input); // Perform the side effect
+        return input; // Return the original object
+    };
+}
+
+export function pipeActionIf<T>(condition: boolean, action: (input: T) => void): (input: T) => T;
+export function pipeActionIf<T>(conditionCheckFn: (input: T) => boolean, action: (input: T) => void): (input: T) => T;
+export function pipeActionIf<T>(
+    conditionOrFn: boolean | ((input: T) => boolean),
+    action: (input: T) => void
+): (input: T) => T {
+    return (input: T): T => {
+        const condition = typeof conditionOrFn === 'boolean' ? conditionOrFn : conditionOrFn(input);
+        if (condition) action(input); // Perform the side effect
+        return input; // Return the original object
+    };
+}
+
+export function combine<TResult1>(fn1: () => TResult1): [TResult1];
+export function combine<TResult1, TResult2>(fn1: () => TResult1, fn2: () => TResult2): [TResult1, TResult2];
+export function combine<TResult1, TResult2, TResult3>(
+    fn1: () => TResult1,
+    fn2: () => TResult2,
+    fn3: () => TResult3
+): [TResult1, TResult2, TResult3];
+export function combine<TResult1, TResult2, TResult3, TResult4>(
+    fn1: () => TResult1,
+    fn2: () => TResult2,
+    fn3: () => TResult3,
+    fn4: () => TResult4
+): [TResult1, TResult2, TResult3, TResult4];
+export function combine<TResult1, TResult2, TResult3, TResult4, TResult5>(
+    fn1: () => TResult1,
+    fn2: () => TResult2,
+    fn3: () => TResult3,
+    fn4: () => TResult4,
+    fn5: () => TResult5
+): [TResult1, TResult2, TResult3, TResult4, TResult5];
+export function combine<TResult1, TResult2, TResult3, TResult4, TResult5, TResult6>(
+    fn1: () => TResult1,
+    fn2: () => TResult2,
+    fn3: () => TResult3,
+    fn4: () => TResult4,
+    fn5: () => TResult5,
+    fn6: () => TResult6
+): [TResult1, TResult2, TResult3, TResult4, TResult5, TResult6];
+export function combine<TResult1, TResult2, TResult3, TResult4, TResult5, TResult6, TResult7>(
+    fn1: () => TResult1,
+    fn2: () => TResult2,
+    fn3: () => TResult3,
+    fn4: () => TResult4,
+    fn5: () => TResult5,
+    fn6: () => TResult6,
+    fn7: () => TResult7
+): [TResult1, TResult2, TResult3, TResult4, TResult5, TResult6, TResult7];
+export function combine<TResult1, TResult2, TResult3, TResult4, TResult5, TResult6, TResult7, TResult8>(
+    fn1: () => TResult1,
+    fn2: () => TResult2,
+    fn3: () => TResult3,
+    fn4: () => TResult4,
+    fn5: () => TResult5,
+    fn6: () => TResult6,
+    fn7: () => TResult7,
+    fn8: () => TResult8
+): [TResult1, TResult2, TResult3, TResult4, TResult5, TResult6, TResult7, TResult8];
+export function combine<TResult1, TResult2, TResult3, TResult4, TResult5, TResult6, TResult7, TResult8, TResult9>(
+    fn1: () => TResult1,
+    fn2: () => TResult2,
+    fn3: () => TResult3,
+    fn4: () => TResult4,
+    fn5: () => TResult5,
+    fn6: () => TResult6,
+    fn7: () => TResult7,
+    fn8: () => TResult8,
+    fn9: () => TResult9
+): [TResult1, TResult2, TResult3, TResult4, TResult5, TResult6, TResult7, TResult8, TResult9];
+export function combine<
+    TResult1,
+    TResult2,
+    TResult3,
+    TResult4,
+    TResult5,
+    TResult6,
+    TResult7,
+    TResult8,
+    TResult9,
+    TResult10
+>(
+    fn1: () => TResult1,
+    fn2: () => TResult2,
+    fn3: () => TResult3,
+    fn4: () => TResult4,
+    fn5: () => TResult5,
+    fn6: () => TResult6,
+    fn7: () => TResult7,
+    fn8: () => TResult8,
+    fn9: () => TResult9,
+    fn10: () => TResult10
+): [TResult1, TResult2, TResult3, TResult4, TResult5, TResult6, TResult7, TResult8, TResult9, TResult10];
+// General implementation
+export function combine(...fns: Array<() => any>): any[] {
+    return fns.map(fn => fn());
+}
+
+export function objectItems<TKey extends string | number | symbol, TValue>(
+    source: Record<TKey, TValue>
+): DictionaryItem<TKey, TValue>[] {
+    return Object.keys(source).map(key => <DictionaryItem<TKey, TValue>>{ key: key, value: source[<TKey>key]! });
 }

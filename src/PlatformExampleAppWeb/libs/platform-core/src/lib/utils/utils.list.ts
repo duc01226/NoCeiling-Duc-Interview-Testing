@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
+    groupBy,
     max as loadshMax,
     difference as lodashDifference,
     filter as lodashFilter,
@@ -16,8 +17,7 @@ import {
 } from 'lodash-es';
 
 import { any as privateAny } from './_common-functions';
-import * as ObjectUtil from './utils.object';
-import { isDifferent } from './utils.object';
+import { clone, cloneDeep, isDifferent } from './utils.object';
 
 export function list_find<T>(
     collection: T[] | undefined,
@@ -140,7 +140,7 @@ export function list_add<T>(
 }
 
 export function list_replaceOne<T>(collection: T[], replaceItem: T, condition: (item: T) => boolean): T[] {
-    const clonedCollection = ObjectUtil.clone(collection);
+    const clonedCollection = clone(collection);
     for (let i = 0; i < clonedCollection.length; i++) {
         if (condition(clonedCollection[i]!)) {
             clonedCollection[i] = replaceItem;
@@ -156,7 +156,7 @@ export function list_replaceMany<T>(
     condition: (item: T, replaceItem: T) => boolean
 ): T[] {
     const replacedItems: T[] = [];
-    replaceItems = ObjectUtil.clone(replaceItems);
+    replaceItems = clone(replaceItems);
     for (let i = 0; i < collection.length; i++) {
         for (let j = 0; j < replaceItems.length; j++) {
             if (condition(collection[i]!, replaceItems[j]!)) {
@@ -174,7 +174,7 @@ export function list_addOrReplace<T>(
     collection: T[] | undefined,
     item: T,
     replaceCondition: (item: T) => boolean,
-    onlyReplace: boolean = false
+    isUpsert: boolean = true
 ): T[] | undefined {
     if (collection == undefined) return collection;
     for (let i = 0; i < collection.length; i++) {
@@ -184,7 +184,24 @@ export function list_addOrReplace<T>(
         }
     }
 
-    if (!onlyReplace) collection.push(item);
+    if (isUpsert) collection.push(item);
+    return collection;
+}
+
+export function list_addOrUpdate<T>(
+    collection: T[],
+    item: T,
+    updateCondition: (item: T) => boolean,
+    updateAction: (item: T) => T
+): T[] {
+    for (let i = 0; i < collection.length; i++) {
+        if (updateCondition(collection[i]!)) {
+            collection[i] = updateAction(cloneDeep(collection[i]!));
+            return collection;
+        }
+    }
+
+    collection.push(item);
     return collection;
 }
 
@@ -255,8 +272,8 @@ export function list_merge<T>(
         (item, index) => index
     );
 
-    for (let i = 0; i < newCollection.length; i++) {
-        const newItem = newCollection[i]!;
+    for (const element of newCollection) {
+        const newItem = element;
 
         const newItemCompareValue = compareSelector(newItem).toString();
 
@@ -340,4 +357,20 @@ export function list_addOrRemoveIfExist<T>(
 
 export function list_distinctByObjectValue<T>(collection: ArrayLike<T>): T[] {
     return list_distinctBy(collection, p => JSON.stringify(p));
+}
+
+export function list_groupBy<T, TKey extends string | number | symbol, TSelect>(
+    collection: ArrayLike<T>,
+    keySelector: (item: T) => TKey,
+    valueSelector: (item: T, index: number) => TSelect
+): Record<TKey, TSelect[]> {
+    const collectionGroupDict = groupBy(collection, keySelector);
+
+    const result: Record<TKey, TSelect[]> = <Record<TKey, TSelect[]>>{};
+
+    Object.keys(collectionGroupDict).forEach(key => {
+        result[<TKey>key] = collectionGroupDict[key]!.map(valueSelector);
+    });
+
+    return result;
 }
