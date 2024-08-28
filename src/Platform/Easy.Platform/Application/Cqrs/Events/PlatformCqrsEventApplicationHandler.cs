@@ -206,7 +206,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()) &&
                !(IsInjectingApplicationBusMessageProducer && HasOutboxMessageSupport()) &&
                !IsInjectingRequestContextAccessor &&
-               !ForceInSameEventTriggerUow;
+               !ForceInSameEventTriggerUow &&
+               !MustWaitHandlerExecutionFinishedImmediately;
     }
 
     protected bool HasOutboxMessageSupport()
@@ -296,12 +297,12 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             if (AllowHandleInBackgroundThread(@event) && @event.RequestContext?.Any() == true)
                 requestContextAccessor.Current.SetValues(@event.RequestContext);
 
-
             if (CanExecuteHandlingEventUsingInboxConsumer(
                     hasInboxMessageSupport: HasInboxMessageSupport(),
                     @event) &&
                 !IsCurrentInstanceCalledFromInboxBusMessageConsumer &&
                 !IsInjectingRequestContextAccessor &&
+                !MustWaitHandlerExecutionFinishedImmediately &&
                 !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()))
             {
                 var eventSourceUow = TryGetCurrentOrCreatedActiveUow(@event);
