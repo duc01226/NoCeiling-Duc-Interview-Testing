@@ -883,7 +883,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
         );
     };
 
-    protected clearAllErrorMsgs = () => {
+    public clearAllErrorMsgs = () => {
         this.errorMsgMap$.set({});
     };
 
