@@ -203,10 +203,6 @@ export function date_now(): Date {
     return new Date();
 }
 
-export function date_UTCNow(): Date {
-    return date_toUTCTime(date_now());
-}
-
 export function date_startOfToday(): Date {
     const now = date_now();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
