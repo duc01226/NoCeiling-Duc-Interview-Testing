@@ -240,7 +240,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     /// <summary>
     /// Handles the specified event asynchronously.
     /// </summary>
-    /// <param name="@event">The event to handle.</param>
+    /// <param name="event">The event to handle.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the work.</param>
     /// <param name="couldRunInBackgroundThread">A boolean value indicating whether the handling could run in a background thread.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>

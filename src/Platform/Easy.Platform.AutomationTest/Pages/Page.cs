@@ -145,8 +145,8 @@ public interface IPage : IUiComponent
     {
         return Util.CreateInstance(pageType, webDriver, settings)
             .Cast<IPage<TSettings>>()
-            .With(_ => _.QueryParams = queryParams)
-            .WithIf(generatedWithRouteParamsPath != null, _ => _.PathRouteParams = BuildPathRouteParams(generatedWithRouteParamsPath!, _.PathRoute));
+            .With(p => p.QueryParams = queryParams)
+            .WithIf(generatedWithRouteParamsPath != null, p => p.PathRouteParams = BuildPathRouteParams(generatedWithRouteParamsPath!, p.PathRoute));
     }
 
     public static Dictionary<string, string> BuildPathRouteParams(string generatedWithRouteParamsPath, string pathRoute)
@@ -190,7 +190,7 @@ public interface IPage : IUiComponent
         where TSettings : AutomationTestSettings
     {
         return Util.CreateInstance<TPage>(webDriver, settings)
-            .With(_ => _.QueryParams = queryParams);
+            .With(p => p.QueryParams = queryParams);
     }
 
     public static IPage<TSettings>? CreateInstanceByMatchingUrl<TSettings>(
@@ -213,7 +213,7 @@ public interface IPage : IUiComponent
                     queryParams: url.ToUri().QueryParams(),
                     generatedWithRouteParamsPath: url.ToUri().Path()))
             .OrderByDescending(p => p?.PathRoute.Length)
-            .FirstOrDefault(predicate: parsedPage => parsedPage?.Pipe(fn: _ => ValidateUrlMatchedForPage(_, url)).IsValid == true);
+            .FirstOrDefault(predicate: parsedPage => parsedPage?.Pipe(fn: p => ValidateUrlMatchedForPage(p, url)).IsValid == true);
     }
 
     public static PlatformValidationResult<TPage> ValidateUrlMatchedForPage<TPage>(TPage page, string url, string? generalErrorMsg = null)
@@ -631,7 +631,8 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
             .WaitUntilGetSuccessAsync(
                 waitForSuccess,
                 waitForMsg: waitForMsg,
-                maxWaitSeconds: maxWaitSeconds ?? DefaultMaxWaitSeconds).GetResult();
+                maxWaitSeconds: maxWaitSeconds ?? DefaultMaxWaitSeconds)
+            .GetResult();
     }
 
     public virtual TResult WaitUntilAssertSuccess<TResult>(
@@ -643,13 +644,14 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         return this.As<TPage>()
             .WaitUntilGetSuccessAsync(
                 waitForSuccess,
-                continueWaitOnlyWhen: _ =>
+                continueWaitOnlyWhen: p =>
                 {
-                    continueWaitOnlyWhen(_);
+                    continueWaitOnlyWhen(p);
                     return default(TResult);
                 },
                 maxWaitSeconds: maxWaitSeconds ?? DefaultMaxWaitSeconds,
-                waitForMsg).GetResult();
+                waitForMsg)
+            .GetResult();
     }
 
     public TCurrentActivePage? TryGetCurrentActiveDefinedPage<TCurrentActivePage>() where TCurrentActivePage : class, IPage<TCurrentActivePage, TSettings>
@@ -673,7 +675,8 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
                 waitForSuccess,
                 continueWaitOnlyWhen,
                 maxWaitSeconds: maxWaitSeconds ?? DefaultMaxWaitSeconds,
-                waitForMsg).GetResult();
+                waitForMsg)
+            .GetResult();
     }
 
     public TPage RetryReloadPageUntilSuccess(Action action, int retryCount = DefaultWaitRetryRefreshPageRetryCount)
@@ -737,7 +740,7 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         string waitForMsg = "Page Content is loaded and displayed successfully")
     {
         return WaitUntil(
-                until: _ => _.ValidateIsCurrentActivePage() && WebDriver.TryFindElement(PageContentLoadedElementIndicatorSelector)?.Displayed == true,
+                until: p => p.ValidateIsCurrentActivePage() && WebDriver.TryFindElement(PageContentLoadedElementIndicatorSelector)?.Displayed == true,
                 maxWaitSeconds: maxWaitForLoadingDataSeconds ?? DefaultMaxWaitSeconds,
                 waitForMsg: waitForMsg)
             .WaitGlobalSpinnerStopped(maxWaitForLoadingDataSeconds);

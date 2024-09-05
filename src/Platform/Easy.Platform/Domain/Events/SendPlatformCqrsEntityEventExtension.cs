@@ -19,7 +19,7 @@ public static class SendPlatformCqrsEntityEventExtension
     {
         if (rootServiceProvider.IsAnyImplementationAssignableToServiceTypeRegistered(typeof(IPlatformCqrsEventHandler<PlatformCqrsEntityEvent<TEntity>>)))
             await cqrs.SendEvent(
-                new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(_ => eventCustomConfig?.Invoke(_)),
+                new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(x => eventCustomConfig?.Invoke(x)),
                 cancellationToken);
     }
 
@@ -34,7 +34,7 @@ public static class SendPlatformCqrsEntityEventExtension
     {
         if (rootServiceProvider.IsAnyImplementationAssignableToServiceTypeRegistered(typeof(IPlatformCqrsEventHandler<PlatformCqrsEntityEvent<TEntity>>)))
             await cqrs.SendEvents(
-                entities.SelectList(entity => new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(_ => eventCustomConfig?.Invoke(_))),
+                entities.SelectList(entity => new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(x => eventCustomConfig?.Invoke(x))),
                 cancellationToken);
     }
 }

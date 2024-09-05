@@ -361,7 +361,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
         Func<TValue, Task<bool>> must,
         params PlatformValidationError[] errors)
     {
-        return AndAsync(_ => _.ValidateAsync(must, errors));
+        return AndAsync(v => v.ValidateAsync(must, errors));
     }
 
     public PlatformValidationResult<TValue> And(
@@ -441,7 +441,7 @@ public class PlatformValidationResult<TValue> : ValidationResult
         Func<TValue, Task<bool>> mustNot,
         params PlatformValidationError[] errors)
     {
-        return AndAsync(_ => _.ValidateNotAsync(mustNot, errors));
+        return AndAsync(v => v.ValidateNotAsync(mustNot, errors));
     }
 
     public PlatformValidationResult<TValue> Or(Func<PlatformValidationResult<TValue>> nextValidation)

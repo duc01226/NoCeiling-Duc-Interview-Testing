@@ -210,7 +210,7 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
 
     public TComponent WaitUntilClickable(double maxWaitSeconds, string? waitForMsg = null)
     {
-        return (TComponent)this.WaitUntil(condition: _ => _.IsClickable(), maxWaitSeconds, waitForMsg: waitForMsg);
+        return (TComponent)this.WaitUntil(condition: c => c.IsClickable(), maxWaitSeconds, waitForMsg: waitForMsg);
     }
 
     IUiComponent IUiComponent.WaitUntilClickable(double maxWaitSeconds, string? waitForMsg)
@@ -389,7 +389,7 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
 
     public TComponent WithIdentifierSelector(string appSearchInput)
     {
-        return (TComponent)this.With(_ => _.IdentifierSelector = appSearchInput);
+        return (TComponent)this.With(c => c.IdentifierSelector = appSearchInput);
     }
 
     public TComponent HumanDelay(double waitSeconds = DefaultMinimumDelayWaitSeconds)

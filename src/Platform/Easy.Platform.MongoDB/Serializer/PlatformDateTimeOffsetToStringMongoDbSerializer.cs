@@ -6,7 +6,7 @@ using MongoDB.Bson.Serialization.Serializers;
 namespace Easy.Platform.MongoDB.Serializer;
 
 public class PlatformDateTimeOffsetToStringMongoDbSerializer
-    : SerializerBase<DateTimeOffset>, IPlatformMongoBaseSerializer<DateTimeOffset>, IPlatformMongoAutoRegisterBaseSerializer<DateTimeOffset>
+    : SerializerBase<DateTimeOffset>, IPlatformMongoAutoRegisterBaseSerializer<DateTimeOffset>
 {
     public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, DateTimeOffset value)
     {
@@ -26,7 +26,7 @@ public class PlatformDateTimeOffsetToStringMongoDbSerializer
 }
 
 public class PlatformNullableDateTimeOffsetToStringMongoDbSerializer
-    : SerializerBase<DateTimeOffset?>, IPlatformMongoBaseSerializer<DateTimeOffset?>, IPlatformMongoAutoRegisterBaseSerializer<DateTimeOffset?>
+    : SerializerBase<DateTimeOffset?>, IPlatformMongoAutoRegisterBaseSerializer<DateTimeOffset?>
 {
     public override void Serialize(BsonSerializationContext context, BsonSerializationArgs args, DateTimeOffset? value)
     {

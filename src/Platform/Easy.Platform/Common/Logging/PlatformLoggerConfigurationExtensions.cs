@@ -20,6 +20,6 @@ public static class PlatformLoggerConfigurationExtensions
         return loggerConfiguration.Enrich.WithExceptionDetails(
             new DestructuringOptionsBuilder()
                 .WithDefaultDestructurers()
-                .WithIf(configDestructurers != null, _ => configDestructurers?.Invoke(_)));
+                .WithIf(configDestructurers != null, b => configDestructurers?.Invoke(b)));
     }
 }

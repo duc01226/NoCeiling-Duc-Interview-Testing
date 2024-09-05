@@ -22,8 +22,8 @@ public static class WebDriverExtension
     {
         var page = IPage
             .CreateInstance<TPage, TSettings>(webDriver, settings)
-            .With(_ => _.QueryParams = queryParams)
-            .With(_ => _.PathRouteParams = routeParams);
+            .With(p => p.QueryParams = queryParams)
+            .With(p => p.PathRouteParams = routeParams);
 
         webDriver.Navigate().GoToUrl(page.FullUrl);
 
@@ -302,7 +302,7 @@ public static class WebDriverExtension
     }
 
     /// <summary>
-    /// SendKeys. Key Is value from <see cref="Keys"/>
+    /// SendKeys. Key Is value from <see cref="Keys" />
     /// </summary>
     public static void SendKeys(this IWebDriver webDriver, string key)
     {
@@ -326,14 +326,12 @@ public static class WebDriverExtension
         else
         {
             foreach (var file in files)
-            {
                 if (file.Name.Contains(fileName))
                 {
                     Console.WriteLine(fileName + " is present");
                     flag = true;
                     break;
                 }
-            }
         }
 
         return flag;

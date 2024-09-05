@@ -26,7 +26,7 @@ public interface IPlatformDbContext : IDisposable
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery { get; }
 
-    public IPlatformUnitOfWork MappedUnitOfWork { get; set; }
+    public IPlatformUnitOfWork? MappedUnitOfWork { get; set; }
 
     public ILogger Logger { get; }
 
@@ -209,7 +209,7 @@ public interface IPlatformDbContext : IDisposable
 
                                 await Task.Delay(PlatformDataMigrationHistory.ProcessingPingIntervalSeconds.Seconds(), CancellationToken.None);
                             }
-                            catch (TaskCanceledException taskCanceledException)
+                            catch (TaskCanceledException)
                             {
                                 // Empty and skip taskCanceledException
                             }

@@ -16,8 +16,8 @@ internal sealed class PlatformPseudoApplicationUnitOfWorkManager : PlatformUnitO
     public override IPlatformUnitOfWork CreateNewUow(bool isUsingOnceTransientUow)
     {
         return new PlatformPseudoApplicationUnitOfWork(RootServiceProvider)
-            .With(_ => _.CreatedByUnitOfWorkManager = this)
-            .With(_ => _.IsUsingOnceTransientUow = isUsingOnceTransientUow);
+            .With(uow => uow.CreatedByUnitOfWorkManager = this)
+            .With(uow => uow.IsUsingOnceTransientUow = isUsingOnceTransientUow);
     }
 }
 

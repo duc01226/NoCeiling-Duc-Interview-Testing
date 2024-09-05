@@ -43,7 +43,7 @@ public static class UrlExtension
     /// <returns>The origin of the Uri.</returns>
     public static string Origin(this Uri url)
     {
-        return $"{url.Scheme}://{url.Host}".PipeIf(url.Port is not DefaultHttpPort and not DefaultHttpsPort, _ => $"{_}:{url.Port}");
+        return $"{url.Scheme}://{url.Host}".PipeIf(url.Port is not DefaultHttpPort and not DefaultHttpsPort, s => $"{s}:{url.Port}");
     }
 
     /// <summary>
@@ -55,7 +55,7 @@ public static class UrlExtension
     public static Uri ConcatRelativePath(this Uri uri, string relativePath)
     {
         return new UriBuilder(uri)
-            .With(_ => _.Path = _.Path.TrimEnd('/') + "/" + relativePath.TrimStart('/'))
+            .With(builder => builder.Path = builder.Path.TrimEnd('/') + "/" + relativePath.TrimStart('/'))
             .Uri;
     }
 

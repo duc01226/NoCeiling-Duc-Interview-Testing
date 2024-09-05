@@ -262,14 +262,13 @@ public static class DateTimeExtension
     /// <returns>The DateTime with the specified DateTimeKind.</returns>
     public static DateTime? SpecifyKind(this DateTime? dateTime, DateTimeKind kind)
     {
-        return dateTime != null ? DateTime.SpecifyKind(dateTime.Value, kind) : dateTime;
+        return dateTime != null ? DateTime.SpecifyKind(dateTime.Value, kind) : null;
     }
 
     /// <summary>
     /// Sets the DateTimeKind for the specified nullable DateTime.
     /// </summary>
     /// <param name="dateTime">The nullable DateTime to set the DateTimeKind for.</param>
-    /// <param name="kind">The DateTimeKind to set.</param>
     /// <returns>The nullable DateTime with the specified DateTimeKind, or null if the input is null.</returns>
     public static TimeOnly TimeOnly(this DateTime dateTime)
     {
@@ -280,6 +279,7 @@ public static class DateTimeExtension
     /// Extracts the time from the specified DateTime as a TimeOnly instance.
     /// </summary>
     /// <param name="dateTime">The DateTime to extract the time from.</param>
+    /// <param name="time">Time</param>
     /// <returns>The time as a TimeOnly instance.</returns>
     public static DateTime SetTime(this DateTime dateTime, TimeOnly time)
     {

@@ -69,7 +69,7 @@ public static class ObjectToWhenCaseExtension
         Func<TSource, bool> @case,
         Func<TSource, Task> then)
     {
-        return new WhenCase<TSource>(source, @case, _ => then.ToAsyncFunc()(_));
+        return new WhenCase<TSource>(source, @case, s => then.ToAsyncFunc()(s));
     }
 
     public static WhenCase<TSource> When<TSource>(

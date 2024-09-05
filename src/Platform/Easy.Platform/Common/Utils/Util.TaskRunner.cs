@@ -446,12 +446,12 @@ public static partial class Util
 
         public static Task<List<T>> WhenAll<T>(IEnumerable<Task<T>> tasks)
         {
-            return Task.WhenAll(tasks).Then(_ => _.ToList());
+            return Task.WhenAll(tasks).Then(i => i.ToList());
         }
 
         public static Task<List<T>> WhenAll<T>(params Task<T>[] tasks)
         {
-            return Task.WhenAll(tasks).Then(_ => _.ToList());
+            return Task.WhenAll(tasks).Then(i => i.ToList());
         }
 
         public static async Task<ValueTuple<T1, T2>> WhenAll<T1, T2>(Task<T1> task1, Task<T2> task2)
@@ -1186,11 +1186,13 @@ public static partial class Util
                     // Retry check condition again to continueWaitOnlyWhen throw error only when condition not matched
                     // Sometime when continueWaitOnlyWhen execute the condition is matched
                     await WaitRetryThrowFinalExceptionAsync(
-                        async () =>
+                        () =>
                         {
                             result = getResult(target);
 
                             if (!condition(result)) continueWaitOnlyWhen?.Invoke(target);
+
+                            return Task.CompletedTask;
                         },
                         cancellationToken: cancellationToken);
 

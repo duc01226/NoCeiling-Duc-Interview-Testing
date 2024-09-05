@@ -38,19 +38,19 @@ public class TextSnippetHangfireBackgroundJobModule : PlatformHangfireBackground
     protected override PlatformHangfireUseMongoStorageOptions UseMongoStorageOptions()
     {
         return base.UseMongoStorageOptions()
-            .With(_ => _.DatabaseName = Configuration.GetSection("MongoDB:Database").Get<string>());
+            .With(o => o.DatabaseName = Configuration.GetSection("MongoDB:Database").Get<string>());
     }
 
     protected override BackgroundJobServerOptions BackgroundJobServerOptionsConfigure(IServiceProvider provider, BackgroundJobServerOptions options)
     {
         return base.BackgroundJobServerOptionsConfigure(provider, options)
-            .With(_ => _.WorkerCount = Configuration.GetValue<int?>("PostgreSql:WorkerCount") ?? TextSnippetApplicationConstants.DefaultBackgroundJobWorkerCount);
+            .With(s => s.WorkerCount = Configuration.GetValue<int?>("PostgreSql:WorkerCount") ?? TextSnippetApplicationConstants.DefaultBackgroundJobWorkerCount);
     }
 
     protected override PlatformBackgroundJobUseDashboardUiOptions BackgroundJobUseDashboardUiOptions()
     {
-        return base.BackgroundJobUseDashboardUiOptions().With(_ => _.UseAuthentication = true).With(
-            _ => _.BasicAuthentication = new PlatformBackgroundJobUseDashboardUiOptions.BasicAuthentications
+        return base.BackgroundJobUseDashboardUiOptions().With(o => o.UseAuthentication = true).With(
+            o => o.BasicAuthentication = new PlatformBackgroundJobUseDashboardUiOptions.BasicAuthentications
             {
                 UserName = Configuration.GetValue<string>("BackgroundJob:DashboardUiOptions:BasicAuthentication:UserName"),
                 Password = Configuration.GetValue<string>("BackgroundJob:DashboardUiOptions:BasicAuthentication:Password")

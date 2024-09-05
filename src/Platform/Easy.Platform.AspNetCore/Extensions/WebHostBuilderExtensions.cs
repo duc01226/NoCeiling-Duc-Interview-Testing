@@ -67,7 +67,7 @@ public static class WebHostBuilderExtensions
 
         static void ConfigUseHttps(ListenOptions listenOptions, string listenUrl, string certFilePath, string certPassword)
         {
-            listenOptions.PipeIf(listenUrl.StartsWith("https"), _ => _.UseHttps(fileName: certFilePath!, certPassword));
+            listenOptions.PipeIf(listenUrl.StartsWith("https"), options => options.UseHttps(fileName: certFilePath!, certPassword));
         }
     }
 }

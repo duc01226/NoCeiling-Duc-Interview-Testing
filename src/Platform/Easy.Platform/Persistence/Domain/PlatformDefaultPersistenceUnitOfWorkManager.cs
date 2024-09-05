@@ -32,8 +32,8 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
                 newScope.ServiceProvider.GetServices<IPlatformUnitOfWork>()
                     .Select(
                         p => p
-                            .With(_ => _.CreatedByUnitOfWorkManager = this)
-                            .With(_ => _.IsUsingOnceTransientUow = isUsingOnceTransientUow))
+                            .With(w => w.CreatedByUnitOfWorkManager = this)
+                            .With(w => w.IsUsingOnceTransientUow = isUsingOnceTransientUow))
                     .ToList(),
                 associatedServiceScope: newScope)
             .With(uow => uow.CreatedByUnitOfWorkManager = this);

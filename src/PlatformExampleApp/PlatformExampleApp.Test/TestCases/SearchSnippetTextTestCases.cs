@@ -33,8 +33,8 @@ public class SearchSnippetTextTestCases : TestCase
 
         // THEN: At least one item matched with the search test displayed
         loadedHomePage.WaitUntilAssertSuccess(
-            waitForSuccess: _ => _.AssertHasMatchingItemsForSearchText(firstItemSnippetText),
-            continueWaitOnlyWhen: _ => _.AssertPageHasNoErrors());
+            waitForSuccess: p => p.AssertHasMatchingItemsForSearchText(firstItemSnippetText),
+            continueWaitOnlyWhen: p => p.AssertPageHasNoErrors());
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class SearchSnippetTextTestCases : TestCase
 
         // THEN: No item is displayed
         loadedHomePage.WaitUntilAssertSuccess(
-            waitForSuccess: _ => _.AssertNotHasMatchingItemsForSearchText(searchText),
-            continueWaitOnlyWhen: _ => _.AssertPageHasNoErrors());
+            waitForSuccess: p => p.AssertNotHasMatchingItemsForSearchText(searchText),
+            continueWaitOnlyWhen: p => p.AssertPageHasNoErrors());
     }
 }

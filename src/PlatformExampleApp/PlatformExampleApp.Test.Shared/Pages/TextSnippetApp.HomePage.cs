@@ -99,11 +99,11 @@ public static partial class TextSnippetApp
 
             // Wait for data is loaded into SaveSnippetText form
             WaitUntilAssertSuccess(
-                waitForSuccess: _ => _.AssertMust(
-                    must: _ => _.SaveSnippetFormSnippetTextTxt.Value == selectedItemSnippetText,
+                waitForSuccess: p => p.AssertMust(
+                    must: x => x.SaveSnippetFormSnippetTextTxt.Value == selectedItemSnippetText,
                     expected: $"SaveSnippetFormSnippetTextTxt.Value must be '{selectedItemSnippetText}'",
-                    actual: $"{_.SaveSnippetFormSnippetTextTxt.Value}"),
-                continueWaitOnlyWhen: _ => _.AssertPageHasNoErrors());
+                    actual: $"{p.SaveSnippetFormSnippetTextTxt.Value}"),
+                continueWaitOnlyWhen: p => p.AssertPageHasNoErrors());
 
             return selectedItemSnippetText;
         }
@@ -163,7 +163,7 @@ public static partial class TextSnippetApp
                         SaveSnippetFormSnippetTextTxt.ReplaceTextAndEnter(textSnippetEntityData.SnippetText);
                         SaveSnippetFormFullTextTxt.ReplaceTextAndEnter(textSnippetEntityData.FullText);
                     },
-                    until: _ => _.IsClickable(),
+                    until: c => c.IsClickable(),
                     maxWaitSeconds: 3,
                     waitForMsg: "SaveSnippetFormSubmitBtn is clickable")
                 .Click();

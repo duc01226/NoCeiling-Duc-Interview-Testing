@@ -27,7 +27,7 @@ public static class WebElementExtension
     {
         try
         {
-            return element?.Pipe(fn: _ => _ is { Displayed: true, Enabled: true }) ?? false;
+            return element?.Pipe(fn: webElement => webElement is { Displayed: true, Enabled: true }) ?? false;
         }
         catch (StaleElementReferenceException)
         {
@@ -39,7 +39,7 @@ public static class WebElementExtension
     {
         try
         {
-            return element?.Pipe(fn: _ => _ is { Selected: true }) ?? false;
+            return element?.Pipe(fn: w => w is { Selected: true }) ?? false;
         }
         catch (StaleElementReferenceException)
         {
@@ -59,7 +59,7 @@ public static class WebElementExtension
                         element,
                         webDriver,
                         additionalFocusToOtherElements,
-                        otherElement => new Actions(webDriver).SendKeys(Keys.Escape).Perform()
+                        _ => new Actions(webDriver).SendKeys(Keys.Escape).Perform()
                     );
             },
             until: _ => !element.IsFocused(webDriver),

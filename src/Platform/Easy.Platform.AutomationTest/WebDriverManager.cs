@@ -78,18 +78,18 @@ public class WebDriverManager : IWebDriverManager
             .WhenValue(
                 AutomationTestSettings.WebDriverTypes.Chrome,
                 then: _ => BuildChromeDriverOptions(settings)
-                    .With(_ => _.AddArgument("no-sandbox"))
+                    .With(o => o.AddArgument("no-sandbox"))
                     .As<DriverOptions>())
             .WhenValue(
                 AutomationTestSettings.WebDriverTypes.Firefox,
                 then: _ => new FirefoxOptions()
-                    .With(_ => _.AddArguments(settings.GetWebDriverConfigArgumentsList()))
+                    .With(o => o.AddArguments(settings.GetWebDriverConfigArgumentsList()))
                     .As<DriverOptions>())
             .WhenValue(
                 AutomationTestSettings.WebDriverTypes.Edge,
                 then: _ => new EdgeOptions()
-                    .With(_ => _.AddArgument("no-sandbox"))
-                    .With(_ => _.AddArguments(settings.GetWebDriverConfigArgumentsList()))
+                    .With(o => o.AddArgument("no-sandbox"))
+                    .With(o => o.AddArguments(settings.GetWebDriverConfigArgumentsList()))
                     .As<DriverOptions>())
             .Execute();
     }
@@ -97,7 +97,7 @@ public class WebDriverManager : IWebDriverManager
     private static ChromeOptions BuildChromeDriverOptions(AutomationTestSettings settings)
     {
         return new ChromeOptions()
-            .With(_ => _.AddArguments(settings.GetWebDriverConfigArgumentsList()));
+            .With(o => o.AddArguments(settings.GetWebDriverConfigArgumentsList()));
     }
 
     public static IDriverConfig BuildDefaultDriverConfig(AutomationTestSettings settings)

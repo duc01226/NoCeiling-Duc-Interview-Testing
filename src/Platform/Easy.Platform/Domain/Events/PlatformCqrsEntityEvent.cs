@@ -45,7 +45,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
 
     private static async Task SendEvent<TEvent>(
         IPlatformRootServiceProvider rootServiceProvider,
-        [AllowNull] IPlatformUnitOfWork mappedToDbContextUow,
+        IPlatformUnitOfWork? mappedToDbContextUow,
         Func<TEvent> eventBuilder,
         Action<TEvent> eventCustomConfig,
         Func<IDictionary<string, object>> requestContext,
@@ -99,7 +99,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
 
     public static async Task SendEvent<TEntity>(
         IPlatformRootServiceProvider rootServiceProvider,
-        [AllowNull] IPlatformUnitOfWork mappedToDbContextUow,
+        IPlatformUnitOfWork? mappedToDbContextUow,
         TEntity entity,
         TEntity? existingEntity,
         PlatformCqrsEntityEventCrudAction crudAction,
@@ -143,7 +143,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
 
     public static async Task<TResult> ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TResult>(
         IPlatformRootServiceProvider rootServiceProvider,
-        IPlatformUnitOfWork mappedToDbContextUow,
+        IPlatformUnitOfWork? mappedToDbContextUow,
         TEntity entity,
         Func<TEntity, Task<TResult>> deleteEntityAction,
         bool dismissSendEvent,

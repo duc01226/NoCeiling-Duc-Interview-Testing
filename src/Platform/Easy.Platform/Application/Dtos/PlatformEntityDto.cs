@@ -113,7 +113,7 @@ public abstract class PlatformEntityDto<TEntity, TId> : PlatformDto<TEntity>
     {
         var submittedId = GetSubmittedId();
 
-        if (submittedId is null or default(object?)) return false;
+        if (submittedId == null) return false;
         if (submittedId is string strId) return !string.IsNullOrEmpty(strId);
         if (submittedId is Guid guidId) return guidId != Guid.Empty;
         if (submittedId is Ulid ulidId) return ulidId != Ulid.Empty;

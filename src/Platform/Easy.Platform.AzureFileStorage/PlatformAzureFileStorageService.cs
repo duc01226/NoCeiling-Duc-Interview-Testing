@@ -217,10 +217,10 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
         var destBlobClient = GetBlobClient(destinationFullFilePath.RemoveSpecialCharactersUri());
 
         // Start copy operation
-        await destBlobClient.StartCopyFromUriAsync(srcBlobClient.Uri).Then(_ => _.WaitForCompletionAsync());
-        await destBlobClient.SetMetadataAsync(await srcBlobClient.GetPropertiesAsync().Then(_ => _.Value.Metadata));
+        await destBlobClient.StartCopyFromUriAsync(srcBlobClient.Uri).Then(o => o.WaitForCompletionAsync());
+        await destBlobClient.SetMetadataAsync(await srcBlobClient.GetPropertiesAsync().Then(r => r.Value.Metadata));
 
-        var sourceProperties = await srcBlobClient.GetPropertiesAsync().Then(_ => _.Value);
+        var sourceProperties = await srcBlobClient.GetPropertiesAsync().Then(r => r.Value);
 
         if (sourceProperties.LeaseState == LeaseState.Leased)
             // Break the lease on the source blob.
@@ -275,7 +275,7 @@ public class PlatformAzureFileStorageService : IPlatformFileStorageService
     {
         var blobClient = GetBlobClient(rootDirectory, filePath);
 
-        var currentMetadata = await blobClient.GetPropertiesAsync().Then(_ => _.Value.Metadata);
+        var currentMetadata = await blobClient.GetPropertiesAsync().Then(r => r.Value.Metadata);
 
         if (!string.IsNullOrWhiteSpace(fileDescription))
             PlatformAzureFileStorageFileItem.SetMetadata(currentMetadata, PlatformAzureFileStorageFileItem.BlobDescriptionKey, fileDescription);

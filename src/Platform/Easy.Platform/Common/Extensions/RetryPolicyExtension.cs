@@ -167,7 +167,7 @@ public static class RetryPolicyExtension
         try
         {
             await retryPolicy.ExecuteAsync(
-                async ct =>
+                async _ =>
                 {
                     try
                     {
@@ -207,7 +207,7 @@ public static class RetryPolicyExtension
         try
         {
             return await retryPolicy.ExecuteAsync(
-                async ct =>
+                async _ =>
                 {
                     try
                     {

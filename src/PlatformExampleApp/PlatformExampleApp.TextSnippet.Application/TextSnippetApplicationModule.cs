@@ -59,12 +59,12 @@ public class TextSnippetApplicationModule : PlatformApplicationModule
     // Demo override to config inbox/outbox config
     protected override PlatformInboxConfig InboxConfigProvider(IServiceProvider serviceProvider)
     {
-        return base.InboxConfigProvider(serviceProvider).With(_ => _.MaxStoreProcessedMessageCount = 100);
+        return base.InboxConfigProvider(serviceProvider).With(c => c.MaxStoreProcessedMessageCount = 100);
     }
 
     // Demo override to config inbox/outbox config
     protected override PlatformOutboxConfig OutboxConfigProvider(IServiceProvider serviceProvider)
     {
-        return base.OutboxConfigProvider(serviceProvider).With(_ => _.MaxStoreProcessedMessageCount = 100);
+        return base.OutboxConfigProvider(serviceProvider).With(c => c.MaxStoreProcessedMessageCount = 100);
     }
 }

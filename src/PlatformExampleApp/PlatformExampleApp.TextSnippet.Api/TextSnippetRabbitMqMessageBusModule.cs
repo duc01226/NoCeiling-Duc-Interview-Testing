@@ -17,7 +17,7 @@ public class TextSnippetRabbitMqMessageBusModule : PlatformRabbitMqMessageBusMod
     {
         var options = Configuration.GetSection("RabbitMqOptions")
             .Get<PlatformRabbitMqOptions>()
-            .With(_ => _.ClientProvidedName = serviceProvider.GetService<IPlatformApplicationSettingContext>()!.ApplicationName);
+            .With(m => m.ClientProvidedName = serviceProvider.GetService<IPlatformApplicationSettingContext>()!.ApplicationName);
 
         return options;
     }

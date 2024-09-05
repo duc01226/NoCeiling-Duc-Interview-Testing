@@ -28,8 +28,10 @@ internal sealed class PlatformAutoClearMemoryHostingBackgroundService : Platform
         return ProcessTriggerIntervalTimeSeconds.Seconds();
     }
 
-    protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
+    protected override Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
         Util.GarbageCollector.Collect(0, true);
+
+        return Task.CompletedTask;
     }
 }

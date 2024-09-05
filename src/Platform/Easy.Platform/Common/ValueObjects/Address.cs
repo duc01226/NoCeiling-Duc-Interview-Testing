@@ -45,7 +45,7 @@ public class Address : PlatformValueObject<Address>
                                 $"{(State.IsNullOrEmpty() ? "" : State + (ZipCode.IsNullOrEmpty() ? "" : " " + ZipCode) + ", ")}" +
                                 $"{(Country.IsNullOrEmpty() ? "" : Country + ", ")}";
 
-        return joinedPartsString.Trim().PipeIf(_ => _.EndsWith(','), _ => _.Substring(0, _.Length - 1));
+        return joinedPartsString.Trim().PipeIf(s => s.EndsWith(','), s => s.Substring(0, s.Length - 1));
     }
 
     public static implicit operator string(Address address)

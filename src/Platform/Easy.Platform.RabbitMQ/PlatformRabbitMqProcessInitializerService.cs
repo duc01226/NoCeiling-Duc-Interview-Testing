@@ -186,7 +186,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                             {
                                 // Config RabbitMQ Basic Consumer
                                 var applicationRabbitConsumer = new AsyncEventingBasicConsumer(currentChannel)
-                                    .With(_ => _.Received += OnMessageReceived);
+                                    .With(consumer => consumer.Received += OnMessageReceived);
 
                                 // autoAck: false -> the Consumer will ack manually.
                                 currentChannel.BasicConsume(queueName, autoAck: false, applicationRabbitConsumer);

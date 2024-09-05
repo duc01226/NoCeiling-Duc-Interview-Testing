@@ -137,7 +137,7 @@ public static class OptionExt
 
     public static Task<Validation<T>> ToValidationAsync<T>(this Task<Option<T>> optTask, Error error)
     {
-        return optTask.Then(_ => _.ToValidation(error));
+        return optTask.Then(option => option.ToValidation(error));
     }
 
     public static Task<TR> MatchAsync<T, TR>(this Task<Option<T>> optTask, Func<TR> none, Func<T, TR> some)
@@ -155,7 +155,7 @@ public static class OptionExt
 
     public static Task<TR> MatchAsync<T, TR>(this Task<Option<T>> optTask, Func<Task<TR>> none, Func<T, TR> some)
     {
-        return optTask.Then(opt => opt.Match(none, _ => some(_).BoxedInTask()));
+        return optTask.Then(opt => opt.Match(none, arg => some(arg).BoxedInTask()));
     }
 
     public static Task<Validation<ValueTuple>> ValidateIfSomeAsync<T>(

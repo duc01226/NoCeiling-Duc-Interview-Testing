@@ -59,7 +59,7 @@ public class PlatformAzureFileStorageDirectory : IPlatformFileStorageDirectory
     public IEnumerable<IPlatformFileStorageFileItem> GetFileItems()
     {
         var result = BlobContainer.GetBlobs(BlobTraits.Metadata, BlobStates.None, DirectoryRelativePathPrefix)
-            .Where(p => !ReservedFileNames.Any(_ => p.Name.EndsWith(_)))
+            .Where(p => !ReservedFileNames.Any(s => p.Name.EndsWith(s)))
             .Select(p => PlatformAzureFileStorageFileItem.Create(p, BlobContainer));
 
         return result;

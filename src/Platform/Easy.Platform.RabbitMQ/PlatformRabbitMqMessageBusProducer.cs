@@ -53,11 +53,13 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
         }
     }
 
-    private async Task PublishMessageToQueueAsync(
+    private Task PublishMessageToQueueAsync(
         string message,
         string routingKey)
     {
         PublishMessageToQueue(message, routingKey);
+
+        return Task.CompletedTask;
     }
 
     private void PublishMessageToQueue(string message, string routingKey)

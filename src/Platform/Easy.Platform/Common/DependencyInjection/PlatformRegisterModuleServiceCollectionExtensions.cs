@@ -28,7 +28,7 @@ public static class PlatformRegisterModuleServiceCollectionExtensions
 
         services.Register(
             typeof(IServiceCollection),
-            sp => services,
+            _ => services,
             ServiceLifeTime.Singleton,
             replaceIfExist: true,
             DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
@@ -37,7 +37,7 @@ public static class PlatformRegisterModuleServiceCollectionExtensions
 
         var serviceProvider = services.BuildServiceProvider();
 
-        var newRegisterModule = serviceProvider.GetRequiredService(moduleType).As<PlatformModule>().With(_ => _.IsChildModule = isChildModule);
+        var newRegisterModule = serviceProvider.GetRequiredService(moduleType).As<PlatformModule>().With(module => module.IsChildModule = isChildModule);
 
         newRegisterModule.RegisterServices(services);
 

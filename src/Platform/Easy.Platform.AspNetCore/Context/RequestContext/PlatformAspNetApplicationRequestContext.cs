@@ -1,3 +1,4 @@
+#nullable enable
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Reflection;
@@ -28,14 +29,14 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
         this.claimTypeMapper = claimTypeMapper;
     }
 
-    public ConcurrentDictionary<string, object> CachedRequestContextData { get; } = new();
+    public ConcurrentDictionary<string, object?> CachedRequestContextData { get; } = new();
 
-    public T GetValue<T>(string contextKey)
+    public T? GetValue<T>(string contextKey)
     {
         return GetValue<T>(contextKey, CurrentHttpContext(), CachedRequestContextData, out _, claimTypeMapper);
     }
 
-    public void SetValue(object value, string contextKey)
+    public void SetValue(object? value, string contextKey)
     {
         CachedRequestContextData.Upsert(contextKey, value);
     }
@@ -45,7 +46,7 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
         return GetAllKeys(CurrentHttpContext());
     }
 
-    public Dictionary<string, object> GetAllKeyValues(HashSet<string>? ignoreKeys = null)
+    public Dictionary<string, object?> GetAllKeyValues(HashSet<string>? ignoreKeys = null)
     {
         InitAllKeyValuesForCachedRequestContextData();
 
@@ -63,13 +64,14 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
         CachedRequestContextData.Clear();
     }
 
-    public bool Contains(KeyValuePair<string, object> item)
+    public bool Contains(KeyValuePair<string, object?> item)
     {
         InitAllKeyValuesForCachedRequestContextData();
+        // ReSharper disable once UsageOfDefaultStructEquality
         return CachedRequestContextData.Contains(item);
     }
 
-    public void CopyTo(KeyValuePair<string, object>[] array, int arrayIndex)
+    public void CopyTo(KeyValuePair<string, object?>[] array, int arrayIndex)
     {
         InitAllKeyValuesForCachedRequestContextData();
         CachedRequestContextData.ToList().CopyTo(array, arrayIndex);
@@ -83,14 +85,14 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
     public int Count => CachedRequestContextData.Count;
     public bool IsReadOnly => false;
 
-    public object GetValue(Type valueType, string contextKey)
+    public object? GetValue(Type valueType, string contextKey)
     {
         return GetValueByGenericTypeMethodInfo
             .MakeGenericMethod(valueType)
             .Invoke(this, parameters: [contextKey]);
     }
 
-    public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
+    public IEnumerator<KeyValuePair<string, object?>> GetEnumerator()
     {
         InitAllKeyValuesForCachedRequestContextData();
         return CachedRequestContextData.GetEnumerator();
@@ -119,13 +121,13 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
         return CachedRequestContextData.Remove(key, out _);
     }
 
-    public bool TryGetValue(string key, out object value)
+    public bool TryGetValue(string key, out object? value)
     {
-        value = GetValue<object>(key, CurrentHttpContext(), CachedRequestContextData, out var hasFoundValue, claimTypeMapper);
+        value = GetValue<object?>(key, CurrentHttpContext(), CachedRequestContextData, out var hasFoundValue, claimTypeMapper);
         return hasFoundValue;
     }
 
-    public object this[string key]
+    public object? this[string key]
     {
         get => GetValue<object>(key);
         set => SetValue(value, key);
@@ -140,7 +142,7 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
         }
     }
 
-    public ICollection<object> Values
+    public ICollection<object?> Values
     {
         get
         {
@@ -155,6 +157,7 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
     /// <param name="contextKey">The key of the value to get.</param>
     /// <param name="useHttpContext">The HttpContext instance to use.</param>
     /// <param name="cachedRequestContextData">The ConcurrentDictionary instance that contains cached user context data.</param>
+    /// <param name="hasFoundValue">hasFoundValue</param>
     /// <param name="claimTypeMapper">The IPlatformApplicationRequestContextKeyToClaimTypeMapper instance that maps user context keys to claim types.</param>
     /// <returns>The value associated with the specified context key. If the specified key is not found, a default value is returned.</returns>
     /// <typeparam name="T">The type of the value to get.</typeparam>
@@ -168,19 +171,19 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
     /// <br />
     /// The IPlatformApplicationRequestContextKeyToClaimTypeMapper instance is used to map user context keys to claim types, which can be useful when working with claims-based identity.
     /// </remarks>
-    public static T GetValue<T>(
+    public static T? GetValue<T>(
         string contextKey,
-        HttpContext useHttpContext,
-        ConcurrentDictionary<string, object> cachedRequestContextData,
+        HttpContext? useHttpContext,
+        ConcurrentDictionary<string, object?> cachedRequestContextData,
         out bool hasFoundValue,
-        IPlatformApplicationRequestContextKeyToClaimTypeMapper claimTypeMapper = null)
+        IPlatformApplicationRequestContextKeyToClaimTypeMapper? claimTypeMapper = null)
     {
         ArgumentNullException.ThrowIfNull(contextKey);
 
         hasFoundValue = PlatformRequestContextHelper.TryGetValue(cachedRequestContextData, contextKey, out T item);
         if (hasFoundValue) return item;
 
-        hasFoundValue = TryGetValueFromHttpContext(useHttpContext, contextKey, claimTypeMapper, out T foundValue);
+        hasFoundValue = TryGetValueFromHttpContext(useHttpContext, contextKey, claimTypeMapper, out T? foundValue);
         if (hasFoundValue)
         {
             cachedRequestContextData.TryAdd(contextKey, foundValue);
@@ -192,7 +195,7 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
         return default;
     }
 
-    protected List<string> GetAllKeys(HttpContext useHttpContext)
+    protected List<string> GetAllKeys(HttpContext? useHttpContext)
     {
         var manuallySetValueItemsDicKeys = CachedRequestContextData.Select(p => p.Key);
         var userClaimsTypeKeys = useHttpContext?.User.Claims.Select(p => p.Type) ?? [];
@@ -206,11 +209,11 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
             .ToList();
     }
 
-    protected Dictionary<string, object> GetAllKeyValues(HttpContext useHttpContext, HashSet<string>? ignoreKeys = null)
+    protected Dictionary<string, object?> GetAllKeyValues(HttpContext? useHttpContext, HashSet<string>? ignoreKeys = null)
     {
         return GetAllKeys(useHttpContext)
-            .WhereIf(ignoreKeys?.Any() == true, key => !ignoreKeys.Contains(key))
-            .Select(key => new KeyValuePair<string, object>(key, GetValue<object>(key, useHttpContext, CachedRequestContextData, out var _, claimTypeMapper)))
+            .WhereIf(ignoreKeys?.Any() == true, key => !ignoreKeys!.Contains(key))
+            .Select(key => new KeyValuePair<string, object?>(key, GetValue<object>(key, useHttpContext, CachedRequestContextData, out var _, claimTypeMapper)))
             .ToDictionary(p => p.Key, p => p.Value);
     }
 
@@ -240,16 +243,16 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
     /// More details at: https://github.com/aspnet/AspNetCore/blob/master/src/Http/Http/src/HttpContextAccessor.cs#L16.
     /// </summary>
     /// <returns>The current HttpContext with thread safe.</returns>
-    public HttpContext CurrentHttpContext()
+    public HttpContext? CurrentHttpContext()
     {
         return httpContextAccessor.HttpContext;
     }
 
     private static bool TryGetValueFromHttpContext<T>(
-        HttpContext useHttpContext,
+        HttpContext? useHttpContext,
         string contextKey,
-        IPlatformApplicationRequestContextKeyToClaimTypeMapper claimTypeMapper,
-        out T foundValue)
+        IPlatformApplicationRequestContextKeyToClaimTypeMapper? claimTypeMapper,
+        out T? foundValue)
     {
         if (useHttpContext == null)
         {
@@ -272,10 +275,10 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
     private static bool TryGetValueFromRequestHeaders<T>(
         IHeaderDictionary requestHeaders,
         string contextKey,
-        IPlatformApplicationRequestContextKeyToClaimTypeMapper claimTypeMapper,
+        IPlatformApplicationRequestContextKeyToClaimTypeMapper? claimTypeMapper,
         out T foundValue)
     {
-        var contextKeyMappedToOneOfClaimTypes = GetContextKeyMappedToOneOfClaimTypes<T>(contextKey, claimTypeMapper);
+        var contextKeyMappedToOneOfClaimTypes = GetContextKeyMappedToOneOfClaimTypes(contextKey, claimTypeMapper);
 
         var stringRequestHeaderValues =
             contextKeyMappedToOneOfClaimTypes
@@ -290,12 +293,12 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
         return PlatformRequestContextHelper.TryGetParsedValuesFromStringValues(out foundValue, stringRequestHeaderValues);
     }
 
-    private static HashSet<string> GetContextKeyMappedToOneOfClaimTypes<T>(string contextKey, IPlatformApplicationRequestContextKeyToClaimTypeMapper claimTypeMapper)
+    private static HashSet<string> GetContextKeyMappedToOneOfClaimTypes(string contextKey, IPlatformApplicationRequestContextKeyToClaimTypeMapper? claimTypeMapper)
     {
         return claimTypeMapper?.ToOneOfClaimTypes(contextKey) ?? [contextKey];
     }
 
-    private static bool TryGetRequestId<T>(HttpContext httpContext, out T foundValue)
+    private static bool TryGetRequestId<T>(HttpContext httpContext, out T? foundValue)
     {
         if (httpContext.TraceIdentifier.IsNotNullOrEmpty() && typeof(T) == typeof(string))
         {
@@ -314,10 +317,10 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
     private static bool TryGetValueFromUserClaims<T>(
         ClaimsPrincipal userClaims,
         string contextKey,
-        IPlatformApplicationRequestContextKeyToClaimTypeMapper claimTypeMapper,
+        IPlatformApplicationRequestContextKeyToClaimTypeMapper? claimTypeMapper,
         out T foundValue)
     {
-        var contextKeyMappedToOneOfClaimTypes = GetContextKeyMappedToOneOfClaimTypes<T>(contextKey, claimTypeMapper);
+        var contextKeyMappedToOneOfClaimTypes = GetContextKeyMappedToOneOfClaimTypes(contextKey, claimTypeMapper);
 
         var matchedClaimStringValues = contextKeyMappedToOneOfClaimTypes
             .Select(contextKeyMappedToJwtClaimType => userClaims.FindAll(contextKeyMappedToJwtClaimType).Select(p => p.Value))

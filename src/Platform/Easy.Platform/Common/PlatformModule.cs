@@ -88,11 +88,11 @@ public interface IPlatformModule
         useLogger.LogInformation("[PlatformModule] Start WaitAllModulesInitiated of type {ModuleType} {LogSuffix} STARTED", moduleType.Name, logSuffix);
 
         await Util.TaskRunner.WaitUntilAsync(
-            async () =>
+            () =>
             {
                 var modules = serviceProvider.GetServices(moduleType).Select(p => p.As<IPlatformModule>());
 
-                return modules.All(p => p.Initiated);
+                return Task.FromResult(modules.All(p => p.Initiated));
             },
             serviceProvider.GetServices(moduleType).Count() * DefaultMaxWaitModuleInitiatedSeconds,
             waitForMsg: $"Wait for all modules of type {moduleType.Name} get initiated",
@@ -351,9 +351,9 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
     /// <summary>
     /// Initializes the performance profiling settings for the platform module.
     /// </summary>
-    protected async Task InitPerformanceProfiling()
+    protected Task InitPerformanceProfiling()
     {
-        if (!IsRootModule) return;
+        if (!IsRootModule) return Task.CompletedTask;
 
         var config = ConfigPerformanceProfiling();
 
@@ -363,6 +363,8 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
         Profiler.Instance.SetAllocationTrackingEnabled(config.Enabled == true && (config.AllocationTrackingEnabled ?? true));
         Profiler.Instance.SetContentionTrackingEnabled(config.Enabled == true && (config.ContentionTrackingEnabled ?? false));
         Profiler.Instance.SetExceptionTrackingEnabled(config.Enabled == true && (config.ExceptionTrackingEnabled ?? false));
+
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -425,7 +427,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
             serviceCollection.Register(
                 typeof(DistributedTracingConfig),
-                sp => distributedTracingConfig,
+                _ => distributedTracingConfig,
                 ServiceLifeTime.Singleton,
                 true,
                 DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
@@ -444,13 +446,13 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
                             .AddSource(TracingSources().Concat(CommonTracingSources()).Concat(allDependencyModulesTracingSources).Distinct().ToArray())
                             .WithIf(AdditionalTracingConfigure != null, AdditionalTracingConfigure)
                             .WithIf(distributedTracingConfig.AdditionalTraceConfig != null, distributedTracingConfig.AdditionalTraceConfig)
-                            .WithIf(distributedTracingConfig.AddOtlpExporterConfig != null, _ => _.AddOtlpExporter(distributedTracingConfig.AddOtlpExporterConfig))
+                            .WithIf(distributedTracingConfig.AddOtlpExporterConfig != null, p => p.AddOtlpExporter(distributedTracingConfig.AddOtlpExporterConfig))
                             .WithIf(
                                 allDependencyModules.Any(),
-                                _ => allDependencyModules
+                                p => allDependencyModules
                                     .Where(dependencyModule => dependencyModule.AdditionalTracingConfigure != null)
                                     .Select(dependencyModule => dependencyModule.AdditionalTracingConfigure)
-                                    .ForEach(dependencyModuleAdditionalTracingConfigure => dependencyModuleAdditionalTracingConfigure(_))));
+                                    .ForEach(dependencyModuleAdditionalTracingConfigure => dependencyModuleAdditionalTracingConfigure(p))));
             }
         }
     }

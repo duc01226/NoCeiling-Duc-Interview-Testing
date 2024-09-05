@@ -48,7 +48,7 @@ public class RabbitMqConnectionPool : IDisposable
     {
         return Util.TaskRunner.WaitUntilGetValidResultAsync(
                 this,
-                p =>
+                _ =>
                 {
                     lock (currentUsingObjectCounterLock)
                     {

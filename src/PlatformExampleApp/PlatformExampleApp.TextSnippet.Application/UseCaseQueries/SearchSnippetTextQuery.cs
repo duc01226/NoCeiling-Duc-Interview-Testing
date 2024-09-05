@@ -107,13 +107,13 @@ internal sealed class SearchSnippetTextQueryHandler : PlatformCqrsQueryApplicati
                         ]))
                 .PipeIf(
                     request.SearchAddress.IsNotNullOrEmpty(),
-                    _ => _.Where(p => p.Addresses.Any(add => add.Street == request.SearchAddress)))
+                    e => e.Where(p => p.Addresses.Any(add => add.Street == request.SearchAddress)))
                 .PipeIf(
                     request.SearchSingleAddress.IsNotNullOrEmpty(),
-                    _ => _.Where(p => p.Address.Street == request.SearchSingleAddress))
+                    e => e.Where(p => p.Address.Street == request.SearchSingleAddress))
                 .PipeIf(
                     request.SearchAddressString.IsNotNullOrEmpty(),
-                    _ => _.Where(p => p.AddressStrings.Any() && p.AddressStrings.Contains(request.SearchAddressString)))
+                    e => e.Where(p => p.AddressStrings.Any() && p.AddressStrings.Contains(request.SearchAddressString)))
                 .WhereIf(request.SearchId != null, p => p.Id == request.SearchId));
 
         // STEP 2: Get Data

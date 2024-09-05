@@ -31,11 +31,11 @@ public class UpdateSnippetTextTestCases : TestCase
         loadedHomePage.AssertPageHasNoErrors();
         loadedHomePage.DoSearchTextSnippet(beforeUpdateFirstItemSnippetText)
             .WaitUntilAssertSuccess(
-                waitForSuccess: _ => _.AssertNotHasExactMatchItemForSearchText(beforeUpdateFirstItemSnippetText),
-                continueWaitOnlyWhen: _ => _.AssertPageHasNoErrors());
+                waitForSuccess: p => p.AssertNotHasExactMatchItemForSearchText(beforeUpdateFirstItemSnippetText),
+                continueWaitOnlyWhen: p => p.AssertPageHasNoErrors());
         loadedHomePage.DoSearchTextSnippet(toUpdateSnippetText)
             .WaitUntilAssertSuccess(
-                waitForSuccess: _ => _.AssertHasExactMatchItemForSearchText(toUpdateSnippetText),
-                continueWaitOnlyWhen: _ => _.AssertPageHasNoErrors());
+                waitForSuccess: p => p.AssertHasExactMatchItemForSearchText(toUpdateSnippetText),
+                continueWaitOnlyWhen: p => p.AssertPageHasNoErrors());
     }
 }

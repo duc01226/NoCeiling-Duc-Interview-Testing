@@ -62,6 +62,7 @@ public class PlatformDefaultApplicationRequestContext : IPlatformApplicationRequ
 
     public bool Contains(KeyValuePair<string, object> item)
     {
+        // ReSharper disable once UsageOfDefaultStructEquality
         return RequestContextData.Contains(item);
     }
 

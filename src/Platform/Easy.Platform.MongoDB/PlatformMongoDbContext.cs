@@ -226,9 +226,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         return queryBuilder(GetQuery<TEntity>()).ToListAsync(cancellationToken);
     }
 
-    public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+    public Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         // Not support real transaction tracking. No need to do anything
+        return Task.CompletedTask;
     }
 
     public IQueryable<TEntity> GetQuery<TEntity>() where TEntity : class, IEntity
@@ -386,13 +387,13 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             ? customCheckExistingPredicate ?? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!
             : p => p.Id.Equals(entity.Id);
 
-        var existingEntity = MappedUnitOfWork.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
+        var existingEntity = MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
                              await GetQuery<TEntity>()
                                  .Where(existingEntityPredicate)
                                  .FirstOrDefaultAsync(cancellationToken)
                                  .ThenActionIf(
-                                     p => p != null && MappedUnitOfWork.CreatedByUnitOfWorkManager.HasCurrentActiveUow(),
-                                     p => MappedUnitOfWork.SetCachedExistingOriginalEntity(p));
+                                     p => p != null && MappedUnitOfWork?.CreatedByUnitOfWorkManager.HasCurrentActiveUow() == true,
+                                     p => MappedUnitOfWork?.SetCachedExistingOriginalEntity(p));
 
         if (existingEntity != null)
             return await UpdateAsync<TEntity, TPrimaryKey>(
@@ -524,7 +525,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = existingEntity.As<IRowVersionEntity>().ConcurrencyUpdateToken;
 
         var toBeUpdatedEntity = entity
-            .PipeIf(entity is IDateAuditedEntity, p => p.As<IDateAuditedEntity>().With(_ => _.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
+            .PipeIf(entity is IDateAuditedEntity, p => p.As<IDateAuditedEntity>().With(auditedEntity => auditedEntity.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
             .PipeIf(
                 entity.IsAuditedUserEntity(),
                 p => p.As<IUserAuditedEntity>()
@@ -573,7 +574,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 MappedUnitOfWork,
                 toBeUpdatedEntity,
                 existingEntity,
-                entity => GetTable<TEntity>()
+                _ => GetTable<TEntity>()
                     .ReplaceOneAsync(
                         p => p.Id.Equals(toBeUpdatedEntity.Id),
                         toBeUpdatedEntity,

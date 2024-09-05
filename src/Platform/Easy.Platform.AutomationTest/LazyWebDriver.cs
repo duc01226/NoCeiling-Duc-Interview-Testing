@@ -8,7 +8,7 @@ public interface ILazyWebDriver : IDisposable
     bool Disposed { get; set; }
 }
 
-public class LazyWebDriver : ILazyWebDriver, IScopedLazyWebDriver, ISingletonLazyWebDriver
+public class LazyWebDriver : IScopedLazyWebDriver, ISingletonLazyWebDriver
 {
     public LazyWebDriver(AutomationTestSettings settings)
     {

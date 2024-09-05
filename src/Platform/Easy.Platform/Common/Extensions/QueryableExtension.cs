@@ -15,8 +15,8 @@ public static class QueryableExtension
     public static IQueryable<T> PageBy<T>(this IQueryable<T> query, int? skipCount, int? maxResultCount)
     {
         return query
-            .PipeIf(skipCount >= 0, _ => _.Skip(skipCount!.Value))
-            .PipeIf(maxResultCount >= 0, _ => _.Take(maxResultCount!.Value));
+            .PipeIf(skipCount >= 0, q => q.Skip(skipCount!.Value))
+            .PipeIf(maxResultCount >= 0, q => q.Take(maxResultCount!.Value));
     }
 
     /// <summary>

@@ -15,7 +15,7 @@ public class PlatformCqrsCommandEvent<TCommand, TCommandResult> : PlatformCqrsCo
 
     public PlatformCqrsCommandEvent(TCommand commandData, TCommandResult commandResult, PlatformCqrsCommandEventAction? action = null)
     {
-        AuditTrackId = commandData.AuditInfo?.AuditTrackId.ToString() ?? Ulid.NewUlid().ToString();
+        AuditTrackId = commandData.AuditInfo?.AuditTrackId ?? Ulid.NewUlid().ToString();
         CommandData = commandData;
         CommandResult = commandResult;
         Action = action;

@@ -237,9 +237,9 @@ public static class PlatformInboxMessageBusConsumerHelper
                 {
                     var consumer = serviceProvider.GetService(consumerType)
                         .Cast<IPlatformApplicationMessageBusConsumer<TMessage>>()
-                        .With(_ => _.HandleExistingInboxMessage = newInboxMessage)
-                        .With(_ => _.NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage = false)
-                        .With(_ => _.AutoDeleteProcessedInboxEventMessageImmediately = autoDeleteProcessedMessage);
+                        .With(uow => uow.HandleExistingInboxMessage = newInboxMessage)
+                        .With(uow => uow.NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage = false)
+                        .With(uow => uow.AutoDeleteProcessedInboxEventMessageImmediately = autoDeleteProcessedMessage);
 
                     await consumer
                         .HandleAsync(message, routingKey)
@@ -284,8 +284,8 @@ public static class PlatformInboxMessageBusConsumerHelper
                 await RevertExistingInboxToNewMessageAsync(existingInboxMessage, inboxBusMessageRepository, cancellationToken);
             else
                 await consumer
-                    .With(_ => _.IsHandlingLogicForInboxMessage = true)
-                    .With(_ => _.AutoDeleteProcessedInboxEventMessageImmediately = autoDeleteProcessedMessage)
+                    .With(uow => uow.IsHandlingLogicForInboxMessage = true)
+                    .With(b => b.AutoDeleteProcessedInboxEventMessageImmediately = autoDeleteProcessedMessage)
                     .HandleAsync(message, routingKey)
                     .Timeout(inboxConfig.MessageProcessingMaxSecondsTimeout.Seconds());
 

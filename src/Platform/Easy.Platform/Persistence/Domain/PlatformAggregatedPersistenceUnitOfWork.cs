@@ -29,7 +29,7 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
         IServiceScope associatedServiceScope) : base(rootServiceProvider)
     {
         InnerUnitOfWorks = innerUnitOfWorks?
-                               .Select(innerUow => innerUow.With(_ => _.ParentUnitOfWork = this))
+                               .Select(innerUow => innerUow.With(w => w.ParentUnitOfWork = this))
                                .ToList() ??
                            [];
         this.associatedServiceScope = associatedServiceScope;

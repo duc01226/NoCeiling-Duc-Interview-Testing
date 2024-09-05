@@ -268,7 +268,7 @@ public static class ListExtension
     /// </remarks>
     public static List<T> AddDistinct<T>(this IList<T> items, IList<T> addItems, Func<T, object?>? distinctByKeySelector = null)
     {
-        var distinctByItemKeys = distinctByKeySelector != null ? items.Select(p => distinctByKeySelector!(p)).ToHashSet() : null;
+        var distinctByItemKeys = distinctByKeySelector != null ? items.Select(p => distinctByKeySelector(p)).ToHashSet() : null;
 
         addItems.ForEach(
             addItem =>
@@ -393,7 +393,7 @@ public static class ListExtension
     /// <example>
     /// This sample shows how to call the <see cref="ForEachAsync{T}" /> method.
     /// <code>
-    /// await list.ForEachAsync((item, itemIndex) => do some thing async)
+    /// await list.ForEachAsync((item, itemIndex) => do something async)
     /// </code>
     /// </example>
     public static async Task ForEachAsync<T>(this IEnumerable<T> items, Func<T, int, Task> action)
@@ -579,8 +579,7 @@ public static class ListExtension
     }
 
     /// <summary>
-    /// Executes a provided asynchronous action in parallel for each item in the given IEnumerable
-    /// <T>
+    /// Executes a provided asynchronous action in parallel for each item in the given IEnumerable{T}
     /// collection,
     /// and returns a list of results of type TResult. The number of concurrent tasks is limited by the maxConcurrent parameter.
     /// </summary>
@@ -609,9 +608,9 @@ public static class ListExtension
     /// </summary>
     /// <typeparam name="T">The type of the elements of the input sequence.</typeparam>
     /// <typeparam name="TActionResult">The type of the value returned by the transform function.</typeparam>
-    /// <param name="items">An IEnumerable<T> to invoke a transform function on.</param>
+    /// <param name="items">An IEnumerable{T} to invoke a transform function on.</param>
     /// <param name="actionAsync">An asynchronous transform function to apply to each element.</param>
-    /// <returns>A Task[List[TActionResult]] that represents the asynchronous operation. The task result contains a List<TActionResult> with each element transformed to a new form.</returns>
+    /// <returns>A Task[List[TActionResult]] that represents the asynchronous operation. The task result contains a List{TActionResult} with each element transformed to a new form.</returns>
     /// <example>
     ///     <code>
     /// var listB = await list.SelectAsync((item, itemIndex) => get B async)
@@ -957,8 +956,8 @@ public static class ListExtension
     public static IEnumerable<T> PageBy<T>(this IEnumerable<T> query, int? skipCount, int? maxResultCount)
     {
         return query
-            .PipeIf(skipCount >= 0, _ => _.Skip(skipCount!.Value))
-            .PipeIf(maxResultCount >= 0, _ => _.Take(maxResultCount!.Value));
+            .PipeIf(skipCount >= 0, e => e.Skip(skipCount!.Value))
+            .PipeIf(maxResultCount >= 0, e => e.Take(maxResultCount!.Value));
     }
 
     /// <summary>

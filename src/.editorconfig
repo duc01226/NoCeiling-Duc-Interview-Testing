@@ -48,6 +48,7 @@ indent_size = 2
 
 # Markdown Files
 [*.md]
+max_line_length = off
 trim_trailing_whitespace = false
 
 # Web Files
@@ -436,6 +437,8 @@ dotnet_diagnostic.IDE0270.severity = suggestion
 dotnet_diagnostic.IDE0251.severity = none
 dotnet_diagnostic.IDE0290.severity = suggestion
 dotnet_diagnostic.IDE0100.severity = suggestion
+dotnet_diagnostic.IDE0240.severity = suggestion
+dotnet_diagnostic.IDE0066.severity = suggestion
 
 dotnet_diagnostic.SA1101.severity = error
 dotnet_diagnostic.SA1413.severity = error
@@ -504,7 +507,7 @@ dotnet_diagnostic.CS8604.severity = error
 dotnet_diagnostic.CS8601.severity = error
 dotnet_diagnostic.CS8603.severity = error
 
-dotnet_diagnostic.CS1998.severity = suggestion
+dotnet_diagnostic.CS1998.severity = none
 
 dotnet_diagnostic.EF1001.severity = suggestion
 
@@ -583,7 +586,7 @@ dotnet_diagnostic.S1168.severity = none
 dotnet_diagnostic.S3060.severity = none
 
 # S2326: Unused type parameters should be removed
-dotnet_diagnostic.S2326.severity = suggestion
+dotnet_diagnostic.S2326.severity = none
 
 # S125: Sections of code should not be commented out
 dotnet_diagnostic.S125.severity = none
@@ -601,7 +604,7 @@ dotnet_diagnostic.S2743.severity = error
 dotnet_diagnostic.S3963.severity = suggestion
 
 # S3218: Inner class members should not shadow outer class "static" or type members
-dotnet_diagnostic.S3218.severity = suggestion
+dotnet_diagnostic.S3218.severity = none
 
 # S4035: Classes implementing "IEquatable<T>" should be sealed
 dotnet_diagnostic.S4035.severity = none
@@ -735,7 +738,13 @@ dotnet_diagnostic.S2583.severity = suggestion
 dotnet_diagnostic.S3878.severity = suggestion
 
 # CS8618: Non-nullable variable must contain a non-null value when exiting constructor. Consider declaring it as nullable.
-dotnet_diagnostic.CS8618.severity = suggestion
+dotnet_diagnostic.CS8618.severity = none
+
+# CS8974: Converting method group to non-delegate type
+dotnet_diagnostic.CS8974.severity = none
+
+# CS8632: The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+dotnet_diagnostic.CS8632.severity = none
 
 # CLASS0001: Seal classes that do not have any virtual or abstract methods, properties, events, or indexers
 dotnet_diagnostic.CLASS0001.severity = none

@@ -121,28 +121,28 @@ public static class AsyncWhenCaseExtension
         this Task<WhenCase<TSource, TTarget>> sourceWhenCaseTask,
         Func<TSource, TTarget> then)
     {
-        return sourceWhenCaseTask.Then(_ => _.Else(then));
+        return sourceWhenCaseTask.Then(@case => @case.Else(then));
     }
 
     public static Task<WhenCase<TSource>> Else<TSource>(this Task<WhenCase<TSource>> sourceWhenCaseTask, Action then)
     {
-        return sourceWhenCaseTask.Then(_ => _.Else(then));
+        return sourceWhenCaseTask.Then(@case => @case.Else(then));
     }
 
     public static Task<WhenCase<TSource, TTarget>> Else<TSource, TTarget>(
         this Task<WhenCase<TSource, TTarget>> sourceWhenCaseTask,
         Func<TSource, Task<TTarget>> then)
     {
-        return sourceWhenCaseTask.Then(_ => _.Else(then));
+        return sourceWhenCaseTask.Then(@case => @case.Else(then));
     }
 
     public static Task<WhenCase<TSource>> Else<TSource>(this Task<WhenCase<TSource>> sourceWhenCaseTask, Func<Task> then)
     {
-        return sourceWhenCaseTask.Then(_ => _.Else(then));
+        return sourceWhenCaseTask.Then(@case => @case.Else(then));
     }
 
     public static Task<TTarget> Execute<TSource, TTarget>(this Task<WhenCase<TSource, TTarget>> sourceWhenCaseTask)
     {
-        return sourceWhenCaseTask.Then(_ => _.ExecuteAsync());
+        return sourceWhenCaseTask.Then(@case => @case.ExecuteAsync());
     }
 }

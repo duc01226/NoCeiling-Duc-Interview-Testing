@@ -29,6 +29,6 @@ public abstract class PlatformDomainService : IPlatformDomainService
     protected Task SendEvent<TEvent>(TEvent domainEvent, CancellationToken token = default)
         where TEvent : PlatformCqrsDomainEvent
     {
-        return Cqrs.SendEvent(domainEvent.With(_ => _.SourceUowId = UnitOfWorkManager.TryGetCurrentActiveUow()?.Id), token);
+        return Cqrs.SendEvent(domainEvent.With(x => x.SourceUowId = UnitOfWorkManager.TryGetCurrentActiveUow()?.Id), token);
     }
 }

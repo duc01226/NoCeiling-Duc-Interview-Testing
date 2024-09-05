@@ -68,7 +68,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     protected SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(ContextMaxConcurrentThreadLock, ContextMaxConcurrentThreadLock);
 
-    public IPlatformUnitOfWork MappedUnitOfWork { get; set; }
+    public IPlatformUnitOfWork? MappedUnitOfWork { get; set; }
 
     public ILogger Logger => lazyLogger.Value;
 
@@ -279,13 +279,13 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 RootServiceProvider,
                 MappedUnitOfWork,
                 entity,
-                async entity =>
+                entity =>
                 {
                     GetTable<TEntity>().Remove(entity);
 
                     NotThreadSafeDbContextQueryLock.Release();
 
-                    return entity;
+                    return Task.FromResult(entity);
                 },
                 dismissSendEvent,
                 eventCustomConfig,
@@ -354,9 +354,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 RootServiceProvider,
                 MappedUnitOfWork,
                 toBeCreatedEntity,
-                entity =>
+                _ =>
                 {
-                    var result = GetTable<TEntity>().AddAsync(toBeCreatedEntity, cancellationToken).AsTask().Then(p => toBeCreatedEntity);
+                    var result = GetTable<TEntity>().AddAsync(toBeCreatedEntity, cancellationToken).AsTask().Then(_ => toBeCreatedEntity);
 
                     NotThreadSafeDbContextQueryLock.Release();
 
@@ -390,14 +390,14 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             ? customCheckExistingPredicate ?? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!
             : p => p.Id.Equals(entity.Id);
 
-        var existingEntity = MappedUnitOfWork.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
+        var existingEntity = MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
                              await GetQuery<TEntity>()
                                  .AsNoTracking()
                                  .Where(existingEntityPredicate)
                                  .FirstOrDefaultAsync(cancellationToken)
                                  .ThenActionIf(
-                                     p => p != null && MappedUnitOfWork.CreatedByUnitOfWorkManager.HasCurrentActiveUow(),
-                                     p => MappedUnitOfWork.SetCachedExistingOriginalEntity(p));
+                                     p => p != null && MappedUnitOfWork?.CreatedByUnitOfWorkManager.HasCurrentActiveUow() == true,
+                                     p => MappedUnitOfWork?.SetCachedExistingOriginalEntity(p));
 
         if (existingEntity != null)
             return await UpdateAsync<TEntity, TPrimaryKey>(
@@ -470,7 +470,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
                 await Util.TaskRunner.WhenAll(
                     CreateManyAsync<TEntity, TPrimaryKey>(
-                        toUpsertEntityToExistingEntityPairs.Where(p => p.matchedExistingEntity == null).Select(p => p.toUpsertEntity).ToList(),
+                        toUpsertEntityToExistingEntityPairs.Where(p => p.matchedExistingEntity == null).Select(p => p!.toUpsertEntity).ToList(),
                         dismissSendEvent,
                         eventCustomConfig,
                         cancellationToken),
@@ -516,15 +516,15 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                     ? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!
                     : p => p.Id.Equals(entity.Id);
 
-                existingEntity = MappedUnitOfWork.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
+                existingEntity = MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
                                  await GetQuery<TEntity>()
                                      .AsNoTracking()
                                      .Where(existingEntityPredicate)
                                      .FirstOrDefaultAsync(cancellationToken)
                                      .EnsureFound($"Entity {typeof(TEntity).Name} with [Id:{entity.Id}] not found to update")
                                      .ThenActionIf(
-                                         MappedUnitOfWork.CreatedByUnitOfWorkManager.HasCurrentActiveUow(),
-                                         p => MappedUnitOfWork.SetCachedExistingOriginalEntity(p));
+                                         MappedUnitOfWork?.CreatedByUnitOfWorkManager.HasCurrentActiveUow() == true,
+                                         p => MappedUnitOfWork?.SetCachedExistingOriginalEntity(p));
 
                 if (!existingEntity.Id.Equals(entity.Id)) entity.Id = existingEntity.Id;
             }
@@ -536,7 +536,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
             var toBeUpdatedEntity = entity
                 .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
-                .PipeIf(entity is IDateAuditedEntity, p => p.As<IDateAuditedEntity>().With(_ => _.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
+                .PipeIf(
+                    entity is IDateAuditedEntity,
+                    p => p.As<IDateAuditedEntity>().With(auditedEntity => auditedEntity.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
                 .PipeIf(
                     entity.IsAuditedUserEntity(),
                     p => p.As<IUserAuditedEntity>()
@@ -548,18 +550,18 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 MappedUnitOfWork,
                 toBeUpdatedEntity,
                 existingEntity,
-                async entity =>
+                entity =>
                 {
                     var result = GetTable<TEntity>()
                         .Update(entity)
                         .Entity
                         .PipeIf(
                             entity is IRowVersionEntity,
-                            p => p.As<IRowVersionEntity>().With(_ => _.ConcurrencyUpdateToken = Ulid.NewUlid().ToString()).As<TEntity>());
+                            p => p.As<IRowVersionEntity>().With(rowVersionEntity => rowVersionEntity.ConcurrencyUpdateToken = Ulid.NewUlid().ToString()).As<TEntity>());
 
                     NotThreadSafeDbContextQueryLock.Release();
 
-                    return result;
+                    return Task.FromResult(result);
                 },
                 dismissSendEvent,
                 eventCustomConfig,

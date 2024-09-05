@@ -49,7 +49,7 @@ public static partial class F
 
     public static Validation<ValueTuple> Combine<TValidation>(this IEnumerable<Func<Validation<TValidation>>> validations)
     {
-        return validations.Aggregate(Valid(Unit()), (acc, validator) => acc.And(p => validator().For(Unit())));
+        return validations.Aggregate(Valid(Unit()), (acc, validator) => acc.And(_ => validator().For(Unit())));
     }
 
     // create a Validation in the Invalid state
@@ -142,7 +142,7 @@ public static class Validation
     {
         return val.Match(
             p => F.Invalid(p),
-            r => valNext);
+            _ => valNext);
     }
 
     public static async Task<Validation<TR>> Then<T, TR>(

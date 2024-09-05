@@ -76,17 +76,18 @@ public interface IPlatformBackgroundJobScheduler
         where TJobExecutorParam : class;
 
     /// <summary>
-    /// Add or update a recurring job. Use <see cref="Util.CronBuilder"/> for common cron.// </summary>
+    /// Add or update a recurring job. Use <see cref="Util.CronBuilder" /> for common cron.//
+    /// </summary>
     /// <param name="cronExpression">
-    /// Set the cronExpression to be used if TJobExecutor don't have <see cref="PlatformRecurringJobAttribute"/>
+    /// Set the cronExpression to be used if TJobExecutor don't have <see cref="PlatformRecurringJobAttribute" />
     /// https://en.wikipedia.org/wiki/Cron
-    /// <br/>
+    /// <br />
     /// Format: [minute(0-59)] [hour(0-23)] [day of month (1-31)] [month (1-12)] [dat of week (0-6 = Sunday to Saturday)]
-    /// <br/>
+    /// <br />
     /// Example:
-    /// <br/>
+    /// <br />
     /// Run once a year at midnight of 1 January: 0 0 1 1 *
-    /// <br/>
+    /// <br />
     /// Run daily at midnight 0h: 0 0 * * *
     /// </param>
     /// <param name="timeZone">Timezone for the job to run based on</param>
@@ -95,19 +96,19 @@ public interface IPlatformBackgroundJobScheduler
         TimeZoneInfo timeZone = null) where TJobExecutor : IPlatformBackgroundJobExecutor;
 
     /// <summary>
-    /// Add or update a recurring job. Use <see cref="Util.CronBuilder"/> for common cron.
+    /// Add or update a recurring job. Use <see cref="Util.CronBuilder" /> for common cron.
     /// </summary>
     /// <param name="jobExecutorParam"></param>
     /// <param name="cronExpression">
-    /// Set the cronExpression to be used if TJobExecutor don't have <see cref="PlatformRecurringJobAttribute"/>
+    /// Set the cronExpression to be used if TJobExecutor don't have <see cref="PlatformRecurringJobAttribute" />
     /// https://en.wikipedia.org/wiki/Cron
-    /// <br/>
+    /// <br />
     /// Format: [minute(0-59)] [hour(0-23)] [day of month (1-31)] [month (1-12)] [dat of week (0-6 = Sunday to Saturday)]
-    /// <br/>
+    /// <br />
     /// Example:
-    /// <br/>
+    /// <br />
     /// Run once a year at midnight of 1 January: 0 0 1 1 *
-    /// <br/>
+    /// <br />
     /// Run daily at midnight 0h: 0 0 * * *
     /// </param>
     /// <param name="timeZone">Timezone for the job to run based on</param>
@@ -119,7 +120,7 @@ public interface IPlatformBackgroundJobScheduler
         where TJobExecutorParam : class;
 
     /// <summary>
-    /// <inheritdoc cref="UpsertRecurringJob{TJobExecutor}(Func{string},TimeZoneInfo)"/>
+    ///     <inheritdoc cref="UpsertRecurringJob{TJobExecutor}(Func{string},TimeZoneInfo)" />
     /// </summary>
     public void UpsertRecurringJob(
         Type jobExecutorType,
@@ -127,7 +128,7 @@ public interface IPlatformBackgroundJobScheduler
         TimeZoneInfo timeZone = null);
 
     /// <summary>
-    /// <inheritdoc cref="UpsertRecurringJob{TJobExecutor, TJobExecutorParam}(Func{string},TimeZoneInfo)"/>
+    ///     <inheritdoc cref="UpsertRecurringJob{TJobExecutor, TJobExecutorParam}(Func{string},TimeZoneInfo)" />
     /// </summary>
     public void UpsertRecurringJob(
         Type jobExecutorType,
@@ -136,7 +137,7 @@ public interface IPlatformBackgroundJobScheduler
         TimeZoneInfo timeZone = null);
 
     /// <summary>
-    /// <inheritdoc cref="UpsertRecurringJob{TJobExecutor}(Func{string},TimeZoneInfo)"/>
+    ///     <inheritdoc cref="UpsertRecurringJob{TJobExecutor}(Func{string},TimeZoneInfo)" />
     /// </summary>
     public void UpsertRecurringJob(
         string recurringJobId,
@@ -145,7 +146,7 @@ public interface IPlatformBackgroundJobScheduler
         TimeZoneInfo timeZone = null);
 
     /// <summary>
-    /// <inheritdoc cref="UpsertRecurringJob{TJobExecutor,TJobExecutorParam}(Func{string},TimeZoneInfo)"/>
+    ///     <inheritdoc cref="UpsertRecurringJob{TJobExecutor,TJobExecutorParam}(Func{string},TimeZoneInfo)" />
     /// </summary>
     public void UpsertRecurringJob(
         string recurringJobId,
@@ -161,7 +162,7 @@ public interface IPlatformBackgroundJobScheduler
     public void RemoveRecurringJobIfExist(string recurringJobId);
 
     /// <summary>
-    /// Remove recurring job by <see cref="TJobExecutor"/>
+    /// Remove recurring job by <see cref="TJobExecutor" />
     /// </summary>
     /// <typeparam name="TJobExecutor">The job executor type will be invoked during the job processing.</typeparam>
     public void TriggerRecurringJob<TJobExecutor>() where TJobExecutor : IPlatformBackgroundJobExecutor;
@@ -172,7 +173,7 @@ public interface IPlatformBackgroundJobScheduler
     public void RemoveAllRecurringJobs();
 
     /// <summary>
-    /// Get all existed recurring jobs. Return all existed recurring job ids, list of id from <see cref="BuildAutoRecurringJobIdByType{TJobExecutor}"/>
+    /// Get all existed recurring jobs. Return all existed recurring job ids, list of id from <see cref="BuildAutoRecurringJobIdByType{TJobExecutor}" />
     /// </summary>
     public HashSet<string> AllExistingRecurringJobIds();
 
@@ -203,5 +204,5 @@ public interface IPlatformBackgroundJobScheduler
 
     public void ExecuteBackgroundJob<TJobExecutor, TParam>(TJobExecutor jobExecutor, TParam jobExecutorParam) where TJobExecutor : IPlatformBackgroundJobExecutor<TParam>;
 
-    public void ExecuteBackgroundJobByType(Type jobExecutorType, string jobExecutorParamJson);
+    public void ExecuteBackgroundJobByType(Type jobExecutorType, string jobExecutorParamJson, string? requestContextJson);
 }

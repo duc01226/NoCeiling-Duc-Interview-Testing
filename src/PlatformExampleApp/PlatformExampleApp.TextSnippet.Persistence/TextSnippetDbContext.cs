@@ -1,10 +1,6 @@
-using Easy.Platform.Application.RequestContext;
-using Easy.Platform.Common.Cqrs;
 using Easy.Platform.EfCore;
-using Easy.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Microsoft.Extensions.Logging;
 using PlatformExampleApp.TextSnippet.Application.Persistence;
 
 namespace PlatformExampleApp.TextSnippet.Persistence;

@@ -94,7 +94,7 @@ public class WhenCase<TSource, TTarget> : WhenCase
 
     public WhenCase<TSource, TTarget> WhenValue(TSource @case, Func<TSource, TTarget> then)
     {
-        return WhenValue(@case, _ => Task.FromResult(then(_)));
+        return WhenValue(@case, s => Task.FromResult(then(s)));
     }
 
     public WhenCase<TSource, TTarget> WhenValue(TSource @case, Func<TSource, Task<TTarget>> then)
@@ -109,7 +109,7 @@ public class WhenCase<TSource, TTarget> : WhenCase
     public WhenCase<TSource, TTarget> WhenIs<TSourceIs>(Func<TSourceIs, TTarget> then)
         where TSourceIs : class
     {
-        return WhenIs<TSourceIs>(_ => Task.FromResult(then(_)));
+        return WhenIs<TSourceIs>(x => Task.FromResult(then(x)));
     }
 
     /// <summary>
@@ -118,7 +118,7 @@ public class WhenCase<TSource, TTarget> : WhenCase
     public WhenCase<TSource, TTarget> WhenIs<TSourceIs>(Func<TSourceIs, Task<TTarget>> then)
         where TSourceIs : class
     {
-        Cases.Add(new CaseItem(source => source is TSourceIs, _ => then(_ as TSourceIs)));
+        Cases.Add(new CaseItem(source => source is TSourceIs, s => then(s as TSourceIs)));
         return this;
     }
 
@@ -181,11 +181,11 @@ public class WhenCase<TSource, TTarget> : WhenCase
             CaseAction = then;
         }
 
-        public CaseItem(Func<TSource, bool> @case, Func<TSource, TTarget> then) : this(@case, _ => Task.FromResult(then(_)))
+        public CaseItem(Func<TSource, bool> @case, Func<TSource, TTarget> then) : this(@case, s => Task.FromResult(then(s)))
         {
         }
 
-        public CaseItem(bool @case, Func<TSource, TTarget> then) : this(@case, _ => Task.FromResult(then(_)))
+        public CaseItem(bool @case, Func<TSource, TTarget> then) : this(@case, s => Task.FromResult(then(s)))
         {
         }
 
@@ -201,11 +201,11 @@ public class WhenCase<TSource, TTarget> : WhenCase
             CaseAction = then;
         }
 
-        public CaseItem(Func<TSource, Task<bool>> @case, Func<TSource, TTarget> then) : this(@case, _ => Task.FromResult(then(_)))
+        public CaseItem(Func<TSource, Task<bool>> @case, Func<TSource, TTarget> then) : this(@case, s => Task.FromResult(then(s)))
         {
         }
 
-        public CaseItem(Task<bool> @case, Func<TSource, TTarget> then) : this(@case, _ => Task.FromResult(then(_)))
+        public CaseItem(Task<bool> @case, Func<TSource, TTarget> then) : this(@case, s => Task.FromResult(then(s)))
         {
         }
 
@@ -225,12 +225,12 @@ public class WhenCase<TSource, TTarget> : WhenCase
 
         public static implicit operator CaseItem(ValueTuple<Func<TSource, bool>, Func<TSource, TTarget>> caseItemInfo)
         {
-            return new CaseItem(caseItemInfo.Item1, _ => Task.FromResult(caseItemInfo.Item2(_)));
+            return new CaseItem(caseItemInfo.Item1, s => Task.FromResult(caseItemInfo.Item2(s)));
         }
 
         public static implicit operator CaseItem(ValueTuple<bool, Func<TSource, TTarget>> caseItemInfo)
         {
-            return new CaseItem(caseItemInfo.Item1, _ => Task.FromResult(caseItemInfo.Item2(_)));
+            return new CaseItem(caseItemInfo.Item1, s => Task.FromResult(caseItemInfo.Item2(s)));
         }
 
         public async Task<bool> IsMatch(TSource source)
@@ -498,7 +498,7 @@ public class WhenCase<TSource> : WhenCase<TSource, object>
     public WhenCase<TSource> WhenIs<TSourceIs>(Func<TSourceIs, Task> then)
         where TSourceIs : class
     {
-        Cases.Add(new CaseItem(source => source is TSourceIs, _ => then(_ as TSourceIs).Then(ValueTuple.Create)));
+        Cases.Add(new CaseItem(source => source is TSourceIs, s => then(s as TSourceIs).Then(ValueTuple.Create)));
         return this;
     }
 

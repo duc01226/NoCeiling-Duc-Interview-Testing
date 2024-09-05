@@ -664,7 +664,7 @@ public static class TaskExtension
         double delayRetryTimeSeconds = Util.TaskRunner.DefaultWaitIntervalSeconds,
         string waitForMsg = null)
     {
-        return WaitUntilGetValidResultAsync(target, getResult, _ => _ != null, maxWaitSeconds, delayRetryTimeSeconds, waitForMsg);
+        return WaitUntilGetValidResultAsync(target, getResult, result => result != null, maxWaitSeconds, delayRetryTimeSeconds, waitForMsg);
     }
 
     public static Task<TResult> WaitUntilGetSuccessAsync<T, TResult>(

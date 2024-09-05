@@ -58,7 +58,7 @@ public static class PlatformValidateObjectExtension
         return PlatformValidationResult<TValue>.Validate(
             value,
             () => must(value),
-            $"Expected: {expected}".PipeIf(_ => actual.IsNotNullOrEmpty(), _ => _ + $".{Environment.NewLine}Actual: {actual}"));
+            $"Expected: {expected}".PipeIf(_ => actual.IsNotNullOrEmpty(), s => s + $".{Environment.NewLine}Actual: {actual}"));
     }
 
     public static PlatformValidationResult<TValue> Validate<TValue>(
@@ -70,7 +70,7 @@ public static class PlatformValidateObjectExtension
         return PlatformValidationResult<TValue>.Validate(
             value,
             () => must(value),
-            $"Expected: {expected}".PipeIf(_ => actual.IsNotNullOrEmpty(), _ => _ + $".{Environment.NewLine}Actual: {actual}"));
+            $"Expected: {expected}".PipeIf(_ => actual.IsNotNullOrEmpty(), s => s + $".{Environment.NewLine}Actual: {actual}"));
     }
 
     public static PlatformValidationResult<TValue> Validate<TValue>(
@@ -82,7 +82,7 @@ public static class PlatformValidateObjectExtension
         return PlatformValidationResult<TValue>.Validate(
             value,
             must,
-            $"Expected: {expected}".PipeIf(_ => actual.IsNotNullOrEmpty(), _ => _ + $".{Environment.NewLine}Actual: {actual}"));
+            $"Expected: {expected}".PipeIf(_ => actual.IsNotNullOrEmpty(), s => s + $".{Environment.NewLine}Actual: {actual}"));
     }
 
     public static PlatformValidationResult<TValue> Validate<TValue>(
@@ -94,7 +94,7 @@ public static class PlatformValidateObjectExtension
         return Validate(
             value,
             () => must,
-            $"Expected: {expected}".PipeIf(_ => actual.IsNotNullOrEmpty(), _ => _ + $".{Environment.NewLine}Actual: {actual}"));
+            $"Expected: {expected}".PipeIf(_ => actual.IsNotNullOrEmpty(), s => s + $".{Environment.NewLine}Actual: {actual}"));
     }
 
     #endregion
@@ -143,7 +143,7 @@ public static class PlatformValidateObjectExtension
         return PlatformValidationResult<TValue>.ValidateNot(
             value,
             () => mustNot(value),
-            $"Expected: {expected}".PipeIf(_ => actual.IsNotNullOrEmpty(), _ => _ + $".{Environment.NewLine}Actual: {actual}"));
+            $"Expected: {expected}".PipeIf(_ => actual.IsNotNullOrEmpty(), s => s + $".{Environment.NewLine}Actual: {actual}"));
     }
 
     public static PlatformValidationResult<TValue> ValidateNot<TValue>(
@@ -155,7 +155,7 @@ public static class PlatformValidateObjectExtension
         return PlatformValidationResult<TValue>.ValidateNot(
             value,
             () => mustNot(value),
-            $"Expected: {expected}".PipeIf(_ => actual.IsNotNullOrEmpty(), _ => _ + $".{Environment.NewLine}Actual: {actual}"));
+            $"Expected: {expected}".PipeIf(_ => actual.IsNotNullOrEmpty(), s => s + $".{Environment.NewLine}Actual: {actual}"));
     }
 
     public static PlatformValidationResult<TValue> ValidateNot<TValue>(
@@ -167,7 +167,7 @@ public static class PlatformValidateObjectExtension
         return PlatformValidationResult<TValue>.ValidateNot(
             value,
             mustNot,
-            $"Expected: {expected}".PipeIf(_ => actual.IsNotNullOrEmpty(), _ => _ + $".{Environment.NewLine}Actual: {actual}"));
+            $"Expected: {expected}".PipeIf(_ => actual.IsNotNullOrEmpty(), s => s + $".{Environment.NewLine}Actual: {actual}"));
     }
 
     public static PlatformValidationResult<TValue> ValidateNot<TValue>(
@@ -179,7 +179,7 @@ public static class PlatformValidateObjectExtension
         return ValidateNot(
             value,
             () => mustNot,
-            $"Expected: {expected}".PipeIf(_ => actual.IsNotNullOrEmpty(), _ => _ + $".{Environment.NewLine}Actual: {actual}"));
+            $"Expected: {expected}".PipeIf(_ => actual.IsNotNullOrEmpty(), s => s + $".{Environment.NewLine}Actual: {actual}"));
     }
 
     #endregion

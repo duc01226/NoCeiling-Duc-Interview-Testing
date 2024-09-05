@@ -116,43 +116,6 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                     retry);
             });
 
-        // Need to execute in background with service instance new scope
-        // if not, the scope will be disposed, which lead to the seed data will be failed
-        async Task ExecuteSeedingWithNewScopeInBackground(Type seederType, ILogger logger)
-        {
-            try
-            {
-                await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                    async () =>
-                    {
-                        using (var newScope = ServiceProvider.CreateScope())
-                        {
-                            var dataSeeder = newScope.ServiceProvider
-                                .GetServices<IPlatformApplicationDataSeeder>()
-                                .First(_ => _.GetType() == seederType);
-
-                            await ExecuteDataSeederWithLog(dataSeeder, logger);
-                        }
-                    },
-                    retryAttempt => 15.Seconds(),
-                    20,
-                    onRetry: (ex, timeSpan, currentRetry, context) =>
-                    {
-                        logger.LogError(
-                            ex.BeautifyStackTrace(),
-                            "[SeedData] Retry seed data in background {SeederTypeName}.",
-                            seederType.Name);
-                    });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(
-                    ex.BeautifyStackTrace(),
-                    "[SeedData] Seed data in background {SeederTypeName} failed.",
-                    seederType.Name);
-            }
-        }
-
         static async Task ExecuteDataSeederWithLog(IPlatformApplicationDataSeeder dataSeeder, ILogger logger)
         {
             logger.LogInformation("[SeedData] {DataSeeder} STARTED.", dataSeeder.GetType().Name);
@@ -343,6 +306,9 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         if (AutoClearMemoryEnabled)
             serviceCollection.RegisterHostedService(
                 sp => new PlatformAutoClearMemoryHostingBackgroundService(sp, sp.GetRequiredService<ILoggerFactory>(), AutoClearMemoryIntervalTimeSeconds));
+
+        serviceCollection.Register<IPlatformApplicationBackgroundJobScheduler, PlatformApplicationBackgroundJobScheduler>();
+        serviceCollection.Register<IPlatformBackgroundJobSchedulerCarryRequestContextService, PlatformApplicationBackgroundJobSchedulerCarryRequestContextService>();
     }
 
     protected override async Task InternalInit(IServiceScope serviceScope)

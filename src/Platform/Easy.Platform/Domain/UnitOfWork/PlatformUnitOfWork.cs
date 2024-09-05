@@ -335,9 +335,9 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
         }
     }
 
-    protected virtual async Task InvokeOnSaveChangesCompletedActions()
+    protected virtual Task InvokeOnSaveChangesCompletedActions()
     {
-        if (OnSaveChangesCompletedActions.IsEmpty()) return;
+        if (OnSaveChangesCompletedActions.IsEmpty()) return Task.CompletedTask;
 
         Util.TaskRunner.QueueActionInBackground(
             async () =>
@@ -350,6 +350,8 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
                 OnSaveChangesCompletedActions.Clear();
             },
             () => LoggerFactory.CreateLogger(GetType()));
+
+        return Task.CompletedTask;
     }
 
     protected async Task InvokeOnSaveChangesFailedActions(PlatformUnitOfWorkFailedArgs e)

@@ -20,7 +20,7 @@ internal sealed class DemoBulkEntitiesEventHandler : PlatformCqrsBulkEntitiesEve
     {
     }
 
-    protected override async Task HandleAsync(PlatformCqrsBulkEntitiesEvent<TextSnippetEntity, string> @event, CancellationToken cancellationToken)
+    protected override Task HandleAsync(PlatformCqrsBulkEntitiesEvent<TextSnippetEntity, string> @event, CancellationToken cancellationToken)
     {
         @event.Entities.ForEach(
             entity =>
@@ -28,5 +28,7 @@ internal sealed class DemoBulkEntitiesEventHandler : PlatformCqrsBulkEntitiesEve
                 Console.WriteLine(
                     $"EntityId {entity.Id} is {@event.CrudAction}. DomainEvents: {@event.DomainEvents.GetValueOrDefault(entity.Id)?.ToFormattedJson() ?? "null"}");
             });
+
+        return Task.CompletedTask;
     }
 }

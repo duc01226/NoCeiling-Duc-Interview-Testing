@@ -70,6 +70,6 @@ public class PlatformAzureFileStorageFileItem : IPlatformFileStorageFileItem
         // From base 64 string because if value has space, request save metadata will
         // throw exception BlobNotFound. So when save metadata we has encode data to base64
         return currentMetadata.TryGetValueOrDefault(key)
-            .PipeIfNotNull(_ => _.TryFromBase64ToString());
+            .PipeIfNotNull(s => s.TryFromBase64ToString());
     }
 }

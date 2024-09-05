@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Easy.Platform.Application.Persistence;
@@ -37,6 +38,7 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         return GetTable(uow).AsQueryable();
     }
 
+    [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
     public override async Task<List<TSource>> ToListAsync<TSource>(
         IEnumerable<TSource> source,
         CancellationToken cancellationToken = default)

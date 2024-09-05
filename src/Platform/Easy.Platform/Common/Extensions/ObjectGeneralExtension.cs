@@ -120,7 +120,7 @@ public static class ObjectGeneralExtension
     {
         return PlatformJsonSerializer.Serialize(
             obj,
-            PlatformJsonSerializer.CurrentOptions.Value.Clone().With(_ => _.WriteIndented = true),
+            PlatformJsonSerializer.CurrentOptions.Value.Clone().With(options => options.WriteIndented = true),
             forceUseRuntimeType);
     }
 

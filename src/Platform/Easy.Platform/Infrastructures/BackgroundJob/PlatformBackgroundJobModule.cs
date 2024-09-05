@@ -111,7 +111,7 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
     public async Task ReplaceAllLatestRecurringBackgroundJobs(IServiceScope serviceScope)
     {
         await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-            async () =>
+            () =>
             {
                 var scheduler = serviceScope.ServiceProvider.GetRequiredService<IPlatformBackgroundJobScheduler>();
 
@@ -121,6 +121,8 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
                     .ToList();
 
                 scheduler.ReplaceAllRecurringBackgroundJobs(allCurrentRecurringJobExecutors);
+
+                return Task.CompletedTask;
             },
             sleepDurationProvider: retryAttempt => 10.Seconds(),
             retryCount: DefaultStartBackgroundJobProcessingRetryCount,

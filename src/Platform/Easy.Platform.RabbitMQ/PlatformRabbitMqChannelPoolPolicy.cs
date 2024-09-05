@@ -21,7 +21,7 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>, ID
         rabbitMqConnectionPool = new RabbitMqConnectionPool(options, poolSize >= ReuseChannelPerConnectionCount ? poolSize / ReuseChannelPerConnectionCount : 1);
     }
 
-    public int ReuseChannelPerConnectionCount { get; set; } = 2;
+    public int ReuseChannelPerConnectionCount { get; set; }
 
     public void Dispose()
     {

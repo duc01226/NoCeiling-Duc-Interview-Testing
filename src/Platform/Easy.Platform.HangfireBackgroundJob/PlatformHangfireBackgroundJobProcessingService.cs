@@ -32,16 +32,18 @@ public class PlatformHangfireBackgroundJobProcessingService : IPlatformBackgroun
         return currentBackgroundJobServer != null;
     }
 
-    public async Task Start(CancellationToken cancellationToken = default)
+    public Task Start(CancellationToken cancellationToken = default)
     {
         Logger.LogInformation("{TargetName} STARTED", GetType().Name);
 
         currentBackgroundJobServer ??= new BackgroundJobServer(options);
 
         Logger.LogInformation("{TargetName} FINISHED", GetType().Name);
+
+        return Task.CompletedTask;
     }
 
-    public async Task Stop(CancellationToken cancellationToken = default)
+    public Task Stop(CancellationToken cancellationToken = default)
     {
         if (currentBackgroundJobServer != null)
         {
@@ -50,6 +52,8 @@ public class PlatformHangfireBackgroundJobProcessingService : IPlatformBackgroun
             currentBackgroundJobServer.Dispose();
             currentBackgroundJobServer = null;
         }
+
+        return Task.CompletedTask;
     }
 
     protected virtual void Dispose(bool disposing)

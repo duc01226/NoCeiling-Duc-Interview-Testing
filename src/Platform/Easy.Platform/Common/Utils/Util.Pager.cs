@@ -94,7 +94,7 @@ public static partial class Util
             TimeSpan? pageDelayTime = null,
             CancellationToken cancellationToken = default)
         {
-            return ExecuteScrollingPagingAsync(executeFn: () => executeFn().Then(_ => _.ToList()), maxExecutionCount, pageDelayTime, cancellationToken);
+            return ExecuteScrollingPagingAsync(executeFn: () => executeFn().Then(i => i.ToList()), maxExecutionCount, pageDelayTime, cancellationToken);
         }
 
         /// <summary>

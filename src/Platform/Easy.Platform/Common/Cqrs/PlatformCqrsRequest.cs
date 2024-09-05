@@ -21,7 +21,7 @@ public interface IPlatformCqrsRequest : IPlatformDto<IPlatformCqrsRequest>, IClo
     /// </summary>
     public static string[] BuildCacheRequestKeyParts<TRequest>(TRequest request, params string[] otherRequestKeyParts) where TRequest : class, IPlatformCqrsRequest
     {
-        var requestJsonStr = request?.Clone().Cast<TRequest>().With(_ => _.AuditInfo = null).ToJson();
+        var requestJsonStr = request?.Clone().Cast<TRequest>().With(cqrsRequest => cqrsRequest.AuditInfo = null).ToJson();
         return new[] { requestJsonStr }.Concat(otherRequestKeyParts).ConcatSingle(typeof(TRequest).Name).ToArray();
     }
 }

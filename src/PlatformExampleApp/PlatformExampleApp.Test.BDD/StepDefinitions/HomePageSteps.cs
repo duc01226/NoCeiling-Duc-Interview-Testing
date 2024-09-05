@@ -77,7 +77,7 @@ public class HomePageSteps : BddStepDefinitions<TextSnippetAutomationTestSetting
 
         Context.LoadedSuccessHomePage!.DoSearchTextSnippet(newSnippetTextData.SnippetText)
             .WaitUntilAssertSuccess(
-                waitForSuccess: _ => _.AssertHasExactMatchItemForSearchText(newSnippetTextData.SnippetText),
-                continueWaitOnlyWhen: _ => _.AssertPageHasNoErrors());
+                waitForSuccess: p => p.AssertHasExactMatchItemForSearchText(newSnippetTextData.SnippetText),
+                continueWaitOnlyWhen: p => p.AssertPageHasNoErrors());
     }
 }

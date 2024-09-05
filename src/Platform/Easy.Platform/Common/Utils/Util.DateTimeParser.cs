@@ -51,7 +51,7 @@ public static partial class Util
             if (value.IsNullOrEmpty()) return null;
 
             if (DateTime.TryParse(value, out var tryParsedValue))
-                return tryParsedValue.PipeIf(tryParsedValue.Kind == DateTimeKind.Unspecified, _ => _.SpecifyKind(DateTimeKind.Utc));
+                return tryParsedValue.PipeIf(tryParsedValue.Kind == DateTimeKind.Unspecified, t => t.SpecifyKind(DateTimeKind.Utc));
 
             if (DateTime.TryParseExact(
                 value,
@@ -59,7 +59,7 @@ public static partial class Util
                 null,
                 DateTimeStyles.None,
                 out var tryParseExactValue))
-                return tryParseExactValue.PipeIf(tryParseExactValue.Kind == DateTimeKind.Unspecified, _ => _.SpecifyKind(DateTimeKind.Utc));
+                return tryParseExactValue.PipeIf(tryParseExactValue.Kind == DateTimeKind.Unspecified, t => t.SpecifyKind(DateTimeKind.Utc));
 
             return null;
         }
@@ -84,7 +84,7 @@ public static partial class Util
                 provider: null,
                 style: DateTimeStyles.None,
                 out var result)
-                ? result.PipeIf(result.Kind == DateTimeKind.Unspecified, _ => _.SpecifyKind(DateTimeKind.Utc))
+                ? result.PipeIf(result.Kind == DateTimeKind.Unspecified, t => t.SpecifyKind(DateTimeKind.Utc))
                 : null;
         }
     }

@@ -200,7 +200,6 @@ public static class DependencyInjectionExtension
     /// Registers all concrete types in the specified assembly that are assignable to the given conventional type as themselves.
     /// </summary>
     /// <param name="services">The IServiceCollection to add the services to.</param>
-    /// <param name="conventionalType">The type to which the concrete types should be assignable.</param>
     /// <param name="assembly">The assembly to scan for matching types.</param>
     /// <param name="lifeTime">The lifetime of the services. Default is Transient.</param>
     /// <param name="replaceIfExist">Whether to replace the service if it already exists. Default is true.</param>
@@ -1403,7 +1402,7 @@ public static class DependencyInjectionExtension
     {
         method.Method
             .Validate(
-                must: p => p.GetParameters().Length >= 2 && p.GetParameters().Take(2).All(_ => _.ParameterType == typeof(int)),
+                must: p => p.GetParameters().Length >= 2 && p.GetParameters().Take(2).All(info => info.ParameterType == typeof(int)),
                 "Method parameters must start with (int skipCount, int pageSize)")
             .EnsureValid();
 

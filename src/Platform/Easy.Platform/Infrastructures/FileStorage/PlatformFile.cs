@@ -22,7 +22,7 @@ public class PlatformHttpFormFile : IPlatformFile
 
     public Stream OpenReadStream()
     {
-        return FormFile.OpenReadStream().With(_ => _.Position = 0);
+        return FormFile.OpenReadStream().With(s => s.Position = 0);
     }
 
     public Task<byte[]> GetFileBinaries()
@@ -51,7 +51,7 @@ public class PlatformStreamFile : IPlatformFile
 
     public Stream OpenReadStream()
     {
-        return Stream.With(_ => _.Position = 0);
+        return Stream.With(s => s.Position = 0);
     }
 
     public Task<byte[]> GetFileBinaries()

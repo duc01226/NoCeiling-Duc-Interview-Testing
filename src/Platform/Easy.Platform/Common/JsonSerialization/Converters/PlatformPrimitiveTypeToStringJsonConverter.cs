@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -54,7 +55,7 @@ public class PlatformPrimitiveTypeToStringJsonConverter : JsonConverter<string>
             JsonTokenType.String => reader.GetString(),
             JsonTokenType.Number when reader.TryGetInt32(out var intVal) => intVal.ToString(),
             JsonTokenType.Number when reader.TryGetInt64(out var longVal) => longVal.ToString(),
-            JsonTokenType.Number when reader.TryGetDouble(out var doubleVal) => doubleVal.ToString(),
+            JsonTokenType.Number when reader.TryGetDouble(out var doubleVal) => doubleVal.ToString(CultureInfo.InvariantCulture),
             JsonTokenType.True => "True",
             JsonTokenType.False => "False",
             _ => throw new JsonException() // StartObject, StartArray, Null    

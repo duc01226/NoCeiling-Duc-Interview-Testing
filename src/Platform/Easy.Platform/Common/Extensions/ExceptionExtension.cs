@@ -12,7 +12,7 @@ public static class ExceptionExtension
             new
             {
                 exception.Message,
-                InnerException = includeInnerException ? exception.InnerException?.Pipe(_ => Serialize(_, includeInnerException)) : null,
+                InnerException = includeInnerException ? exception.InnerException?.Pipe(ex => Serialize(ex, includeInnerException)) : null,
                 exception.StackTrace
             });
     }
