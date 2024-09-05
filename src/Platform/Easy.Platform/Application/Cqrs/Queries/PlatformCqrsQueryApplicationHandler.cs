@@ -85,13 +85,13 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
                             LoggerFactory.CreateLogger(typeof(PlatformCqrsQueryApplicationHandler<,>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}")
                                 .Log(
                                     ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
-                                    ex,
+                                    ex.BeautifyStackTrace(),
                                     "[{Tag1}] Query:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. RequestContext:{RequestContext}",
                                     ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
                                     request.GetType().Name,
                                     request.AuditInfo?.AuditTrackId,
-                                    request.ToFormattedJson(),
-                                    RequestContext.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()).ToFormattedJson());
+                                    request.ToJson(),
+                                    RequestContext.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()).ToJson());
                         });
 
                     return result;

@@ -151,9 +151,11 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                                                         handlePreviousMessageFailed = true;
                                                         Logger.LogError(
                                                             e.BeautifyStackTrace(),
-                                                            "[PlatformConsumeInboxEventBusMessageHostedService] Try to consume inbox message with Id:{MessageId} failed. Message Content:{InboxMessage}",
+                                                            "[PlatformConsumeInboxEventBusMessageHostedService] Try to consume inbox message with Id:{MessageId} failed. [[MessageType: {MessageType}]]; [[ConsumerType: {ConsumerType}]]; [[MessageJson: {JsonMessage}]];",
                                                             toHandleInboxMessage.Id,
-                                                            toHandleInboxMessage.ToFormattedJson());
+                                                            toHandleInboxMessage.MessageTypeFullName,
+                                                            toHandleInboxMessage.ConsumerBy,
+                                                            toHandleInboxMessage.JsonMessage);
                                                     }
 
                                                 if (handlePreviousMessageFailed) break;
@@ -234,9 +236,10 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                     consumer.CustomJsonSerializerOptions()),
                 ex => Logger.LogError(
                     ex.BeautifyStackTrace(),
-                    "RabbitMQ parsing message to {ConsumerMessageType}. [[Error:{Error}]]. Body: {InboxMessage}",
+                    "RabbitMQ parsing message to {ConsumerMessageType}. [[Error:{Error}]];[[Id: {MessageId}]];[[MessageJson: {JsonMessage}]];",
                     consumerMessageType.Name,
                     ex.Message,
+                    toHandleInboxMessage.Id,
                     toHandleInboxMessage.JsonMessage));
 
             if (busMessage != null)

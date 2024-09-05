@@ -50,17 +50,15 @@ public interface IPlatformMessageBusConsumer
         ILogger logger,
         Type consumerType,
         TMessage message,
-        string routingKey,
         Exception e)
         where TMessage : class, new()
     {
         logger.LogError(
             e.BeautifyStackTrace(),
-            "Error Consume message bus. [ConsumerType:{ConsumerType}]; [MessageType:{MessageType}]; [RoutingKey:{RoutingKey}]; [MessageContent:{MessageContent}]; ",
+            "Error Consume message bus. [ConsumerType:{ConsumerType}]; [MessageType:{MessageType}]; [MessageContent:{MessageContent}];",
             consumerType.FullName,
             message.GetType().GetNameOrGenericTypeName(),
-            routingKey,
-            message.ToFormattedJson());
+            message.ToJson());
     }
 }
 
@@ -159,7 +157,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
                             toCheckSlowProcessWarningTimeMilliseconds,
                             elapsedMilliseconds,
                             logMessage,
-                            busMessage.ToFormattedJson());
+                            busMessage.ToJson());
                 });
         else
             await DoInvokeConsumer(
@@ -235,7 +233,7 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
         }
         catch (Exception e)
         {
-            IPlatformMessageBusConsumer.LogError(Logger, GetType(), message, routingKey, e.BeautifyStackTrace());
+            IPlatformMessageBusConsumer.LogError(Logger, GetType(), message, e.BeautifyStackTrace());
             throw;
         }
     }

@@ -152,7 +152,7 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
         var result = new PlatformInboxBusMessage
         {
             Id = BuildId(consumerType, trackId, extendedMessageIdPrefix),
-            JsonMessage = message.ToFormattedJson(),
+            JsonMessage = message.ToJson(),
             MessageTypeFullName = message.GetType().FullName?.TakeTop(MessageTypeFullNameMaxLength),
             ProduceFrom = produceFrom,
             RoutingKey = routingKey.TakeTop(RoutingKeyMaxLength),

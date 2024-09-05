@@ -81,7 +81,6 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
     /// </summary>
     public virtual bool AllowUseInboxMessage => true;
 
-    public TimeSpan? InboxProcessingMaxTimeout { get; set; }
     public bool NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage { get; set; } = true;
     public PlatformInboxBusMessage HandleExistingInboxMessage { get; set; }
     public bool AutoDeleteProcessedInboxEventMessageImmediately { get; set; }

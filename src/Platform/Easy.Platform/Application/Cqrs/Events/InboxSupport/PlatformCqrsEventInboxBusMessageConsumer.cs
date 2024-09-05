@@ -71,7 +71,7 @@ public class PlatformCqrsEventBusMessagePayload : IPlatformSubMessageQueuePrefix
     {
         return new PlatformCqrsEventBusMessagePayload
         {
-            EventJson = @event.ToFormattedJson(),
+            EventJson = @event.ToJson(),
             EventTypeFullName = @event.GetType().FullName,
             EventTypeName = @event.GetType().Name,
             EventHandlerTypeFullName = eventHandlerTypeFullName,

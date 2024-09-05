@@ -145,10 +145,10 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                                                             e.BeautifyStackTrace(),
                                                             "[PlatformSendOutboxEventBusMessageHostedService] Failed to produce outbox message. [[Error:{Error}]]" +
                                                             "Id:{OutboxMessageId} failed. " +
-                                                            "Message Content:{OutboxMessage}",
+                                                            "JsonMessage:{OutboxJsonMessage}",
                                                             e.Message,
                                                             toHandleOutboxMessage.Id,
-                                                            toHandleOutboxMessage.ToFormattedJson());
+                                                            toHandleOutboxMessage.JsonMessage);
                                                     }
 
                                                 if (handlePreviousMessageFailed) break;

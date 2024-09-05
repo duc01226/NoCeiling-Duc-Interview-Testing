@@ -108,7 +108,7 @@ public static class ObjectGeneralExtension
 
     public static string ToJson<T>(this T obj, bool forceUseRuntimeType = false)
     {
-        return PlatformJsonSerializer.Serialize(obj, forceUseRuntimeType: forceUseRuntimeType);
+        return PlatformJsonSerializer.Serialize(obj, forceUseRuntimeType);
     }
 
     public static T JsonDeserialize<T>(this string jsonStr)

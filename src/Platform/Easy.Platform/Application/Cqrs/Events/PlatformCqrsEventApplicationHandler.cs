@@ -423,10 +423,10 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             sleepDurationProvider: retryAttempt => RetryEventInboxBusMessageConsumerOnFailedDelaySeconds.Seconds(),
             cancellationToken: cancellationToken,
             onRetry: (exception, retryTime, retryAttempt, context) => Logger.Value.LogError(
-                exception,
+                exception.BeautifyStackTrace(),
                 "Execute inbox consumer for EventType:{EventType}; EventContent:{EventContent}.",
                 @event.GetType().FullName,
-                @event.ToFormattedJson()));
+                @event.ToJson()));
     }
 
     protected virtual PlatformBusMessage<PlatformCqrsEventBusMessagePayload> CqrsEventInboxBusMessage(

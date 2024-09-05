@@ -110,7 +110,7 @@ public static class PlatformJsonSerializer
     /// <returns>The JSON string representation of the serialized value.</returns>
     public static string Serialize<TValue>(TValue value, bool forceUseRuntimeType)
     {
-        return Serialize(value, customSerializerOptions: null, forceUseRuntimeType: forceUseRuntimeType);
+        return Serialize(value, customSerializerOptions: null, forceUseRuntimeType);
     }
 
     /// <summary>

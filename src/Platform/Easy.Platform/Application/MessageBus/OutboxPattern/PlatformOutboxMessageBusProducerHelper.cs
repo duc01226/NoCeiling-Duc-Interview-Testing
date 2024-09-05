@@ -257,10 +257,10 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         {
             logger.LogError(
                 exception.BeautifyStackTrace(),
-                "UpdateExistingOutboxMessageFailedAsync. [[Error:{Error}]]. [[Type:{MessageTypeFullName}]]; [[OutboxMessage: {OutboxMessage}]].",
+                "UpdateExistingOutboxMessageFailedAsync. [[Error:{Error}]]. [[Type:{MessageTypeFullName}]]; [[OutboxJsonMessage: {OutboxJsonMessage}]].",
                 exception.Message,
                 existingOutboxMessage.MessageTypeFullName,
-                existingOutboxMessage.ToFormattedJson());
+                existingOutboxMessage.JsonMessage);
 
             await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                 async () =>

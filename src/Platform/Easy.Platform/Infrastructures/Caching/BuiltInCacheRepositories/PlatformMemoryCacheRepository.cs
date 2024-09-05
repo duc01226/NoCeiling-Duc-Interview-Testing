@@ -70,8 +70,8 @@ public class PlatformMemoryCacheRepository : PlatformCacheRepository, IPlatformM
                 {
                     Logger.LogError(
                         ex.BeautifyStackTrace(),
-                        "RemoveAsync failed. [[Exception:{Exception}]]. [CacheKey: {CacheKey}]",
-                        ex.ToString(),
+                        "RemoveAsync failed. [[Error:{Error}]]. [CacheKey: {CacheKey}]",
+                        ex.Message,
                         cacheKey);
 
                     throw new Exception($"{GetType().Name} RemoveAsync failed. {ex.Message}", ex);
@@ -160,8 +160,8 @@ public class PlatformMemoryCacheRepository : PlatformCacheRepository, IPlatformM
         {
             Logger.LogError(
                 ex.BeautifyStackTrace(),
-                "SetToMemoryDistributedCacheAsync failed. [[Exception:{Exception}]]. [CacheKey: {CacheKey}]",
-                ex.ToString(),
+                "SetToMemoryDistributedCacheAsync failed. [[Error:{Error}]]. [CacheKey: {CacheKey}]",
+                ex.Message,
                 cacheKey);
 
             throw new Exception($"{GetType().Name} SetToMemoryDistributedCacheAsync failed. {ex.Message}", ex);

@@ -193,7 +193,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                 exception.Message,
                 notification.GetType().Name,
                 GetType().Name,
-                notification.ToFormattedJson());
+                notification.ToJson());
     }
 
     protected abstract Task HandleAsync(TEvent @event, CancellationToken cancellationToken);

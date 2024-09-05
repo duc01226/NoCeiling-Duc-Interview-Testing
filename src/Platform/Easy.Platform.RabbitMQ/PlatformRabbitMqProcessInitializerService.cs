@@ -390,7 +390,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                             message: "RabbitMQ retry queue message for the routing key: {RoutingKey}. " +
                                      "Message: {BusMessage}",
                             rabbitMqMessage.RoutingKey,
-                            busMessage.ToFormattedJson());
+                            busMessage.ToJson());
                     },
                     retryAttempt => TimeSpan.FromSeconds(options.ProcessRequeueMessageRetryDelaySeconds),
                     retryCount: options.ProcessRequeueMessageRetryCount,
@@ -399,7 +399,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                         message: "RabbitMQ retry queue failed message for the routing key: {RoutingKey}. " +
                                  "Message: {BusMessage}",
                         rabbitMqMessage.RoutingKey,
-                        busMessage.ToFormattedJson()));
+                        busMessage.ToJson()));
             },
             () => Logger,
             cancellationToken: currentStartProcessCancellationToken);

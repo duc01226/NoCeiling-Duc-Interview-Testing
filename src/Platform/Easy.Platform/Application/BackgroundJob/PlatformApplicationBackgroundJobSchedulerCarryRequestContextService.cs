@@ -8,14 +8,19 @@ public class PlatformApplicationBackgroundJobSchedulerCarryRequestContextService
 {
     private readonly IPlatformApplicationRequestContextAccessor requestContextAccessor;
 
-    public PlatformApplicationBackgroundJobSchedulerCarryRequestContextService(IPlatformApplicationRequestContextAccessor requestContextAccessor)
+    public PlatformApplicationBackgroundJobSchedulerCarryRequestContextService(
+        IPlatformApplicationRequestContextAccessor requestContextAccessor,
+        IPlatformApplicationSettingContext applicationSettingContext)
     {
         this.requestContextAccessor = requestContextAccessor;
+        ApplicationSettingContext = applicationSettingContext;
     }
+
+    protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
 
     public IDictionary<string, object> CurrentRequestContext()
     {
-        return requestContextAccessor.Current;
+        return requestContextAccessor.Current.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys());
     }
 
     public void SetCurrentRequestContextValues(IServiceScope serviceScope, IDictionary<string, object> requestContextValues)

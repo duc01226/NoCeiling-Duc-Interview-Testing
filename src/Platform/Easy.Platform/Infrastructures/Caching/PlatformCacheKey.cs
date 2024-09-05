@@ -7,6 +7,7 @@ namespace Easy.Platform.Infrastructures.Caching;
 /// Represent the structured cache key. The string formatted value is "{Context}.{Collection}.{RequestKey}";
 /// </summary>
 public readonly struct PlatformCacheKey
+    : IEquatable<PlatformCacheKey>
 {
     public const string DefaultContext = "UnknowContext";
     public const string DefaultCollection = "All";
@@ -143,5 +144,25 @@ public readonly struct PlatformCacheKey
     public string[] RequestKeyParts()
     {
         return SplitRequestKeyParts(RequestKey);
+    }
+
+    public override bool Equals(object obj)
+    {
+        return obj is PlatformCacheKey other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(Context, Collection, RequestKey);
+    }
+
+    public static bool operator ==(PlatformCacheKey left, PlatformCacheKey right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(PlatformCacheKey left, PlatformCacheKey right)
+    {
+        return !(left == right);
     }
 }

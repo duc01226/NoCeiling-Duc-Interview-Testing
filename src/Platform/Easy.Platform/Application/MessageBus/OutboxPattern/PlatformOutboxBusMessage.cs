@@ -74,7 +74,7 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
         var result = new PlatformOutboxBusMessage
         {
             Id = BuildId(message.GetType(), trackId, extendedMessageIdPrefix),
-            JsonMessage = message.ToFormattedJson(forceUseRuntimeType: true),
+            JsonMessage = message.ToJson(forceUseRuntimeType: true),
             MessageTypeFullName = GetMessageTypeFullName(message.GetType()),
             RoutingKey = routingKey.TakeTop(RoutingKeyMaxLength),
             LastSendDate = nowDate,

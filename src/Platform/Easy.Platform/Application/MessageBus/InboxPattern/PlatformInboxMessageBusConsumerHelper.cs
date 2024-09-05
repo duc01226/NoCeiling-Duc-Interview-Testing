@@ -505,12 +505,11 @@ public static class PlatformInboxMessageBusConsumerHelper
             loggerFactory()
                 .LogError(
                     exception.BeautifyStackTrace(),
-                    "UpdateExistingInboxFailedMessageAsync. [[Error:{Error}]]; [[MessageType: {MessageType}]]; [[ConsumerType: {ConsumerType}]]; [[RoutingKey: {RoutingKey}]]; [[InboxMessage: {InboxMessage}]];",
+                    "UpdateExistingInboxFailedMessageAsync. [[Error:{Error}]]; [[MessageType: {MessageType}]]; [[ConsumerType: {ConsumerType}]]; [[InboxJsonMessage: {InboxJsonMessage}]];",
                     exception.Message,
                     message.GetType().GetNameOrGenericTypeName(),
                     consumerType?.GetNameOrGenericTypeName() ?? "n/a",
-                    routingKey,
-                    existingInboxMessage.ToFormattedJson());
+                    existingInboxMessage.JsonMessage);
 
             await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                 async () =>
@@ -543,9 +542,11 @@ public static class PlatformInboxMessageBusConsumerHelper
             loggerFactory()
                 .LogError(
                     ex.BeautifyStackTrace(),
-                    "UpdateExistingInboxFailedMessageAsync failed. [[Error:{Error}]]. [InboxMessage:{Message}].",
+                    "UpdateExistingInboxFailedMessageAsync failed. [[Error:{Error}]]; [[MessageType: {MessageType}]]; [[ConsumerType: {ConsumerType}]]; [[InboxJsonMessage: {InboxJsonMessage}]];",
                     ex.Message,
-                    existingInboxMessage.ToFormattedJson());
+                    existingInboxMessage.MessageTypeFullName,
+                    existingInboxMessage.ConsumerBy,
+                    existingInboxMessage.JsonMessage);
         }
     }
 

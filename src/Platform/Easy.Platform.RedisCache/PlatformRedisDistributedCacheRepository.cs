@@ -112,8 +112,8 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
                 {
                     Logger.LogError(
                         ex.BeautifyStackTrace(),
-                        "RemoveAsync failed. [[Exception:{Exception}]]. [CacheKey: {CacheKey}]",
-                        ex.ToString(),
+                        "RemoveAsync failed. [[Error:{Error}]]. [CacheKey: {CacheKey}]",
+                        ex.Message,
                         cacheKey);
 
                     throw new Exception($"{GetType().Name} RemoveAsync failed. {ex.Message}", ex);

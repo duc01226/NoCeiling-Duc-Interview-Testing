@@ -127,7 +127,7 @@ public interface IPlatformDbContext : IDisposable
                             SaveMigrationHistoryFailedRetryCount,
                             onRetry: (ex, delayRetryTime, retryAttempt, context) =>
                             {
-                                if (retryAttempt > 3) Logger.LogError(ex, "Upsert DataMigrationHistory Status=Processed failed");
+                                if (retryAttempt > 3) Logger.LogError(ex.BeautifyStackTrace(), "Upsert DataMigrationHistory Status=Processed failed");
                             },
                             cancellationToken: CancellationToken.None);
 
@@ -135,7 +135,7 @@ public interface IPlatformDbContext : IDisposable
                     }
                     catch (Exception e)
                     {
-                        Logger.LogError(e, "DataMigrationHistory execution failed");
+                        Logger.LogError(e.BeautifyStackTrace(), "DataMigrationHistory execution failed");
 
                         // Retry in case interval ping make it failed for concurrency token
                         await Util.TaskRunner.WaitRetryAsync(
@@ -156,7 +156,7 @@ public interface IPlatformDbContext : IDisposable
                             SaveMigrationHistoryFailedRetryCount,
                             (ex, delayRetryTime, retryAttempt, context) =>
                             {
-                                if (retryAttempt > 3) Logger.LogError(ex, "Upsert DataMigrationHistory Status=Failed failed");
+                                if (retryAttempt > 3) Logger.LogError(ex.BeautifyStackTrace(), "Upsert DataMigrationHistory Status=Failed failed");
                             },
                             CancellationToken.None);
                         throw;
@@ -222,7 +222,7 @@ public interface IPlatformDbContext : IDisposable
                         retryCount: SaveMigrationHistoryFailedRetryCount,
                         onRetry: (ex, delayRetryTime, retryAttempt, context) =>
                         {
-                            if (retryAttempt > 3) Logger.LogError(ex, "Upsert DataMigrationHistory LastProcessingPingTime failed");
+                            if (retryAttempt > 3) Logger.LogError(ex.BeautifyStackTrace(), "Upsert DataMigrationHistory LastProcessingPingTime failed");
                         });
             },
             () => Logger,
