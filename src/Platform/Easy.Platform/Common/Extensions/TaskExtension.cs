@@ -790,7 +790,7 @@ public static class TaskExtension
 
     public static async Task Timeout(this Task task, TimeSpan maxTimeout)
     {
-        await task.Then(() => ValueTuple.Create()).Timeout(maxTimeout);
+        await task.Then(ValueTuple.Create).Timeout(maxTimeout);
     }
 
     public static async Task<T> Timeout<T>(this Task<T> task, TimeSpan maxTimeout)
@@ -803,7 +803,7 @@ public static class TaskExtension
             task,
             timeoutTask);
 
-        if (finalTask == timeoutTask) throw new Exception($"Task timed out. MaxTimeout: {maxTimeout.Milliseconds} milliseconds");
+        if (finalTask == timeoutTask) throw new Exception($"Task timed out. MaxTimeout: {maxTimeout.TotalMilliseconds} milliseconds");
 
         await timeoutTaskCts.CancelAsync();
         timeoutTaskCts.Dispose();

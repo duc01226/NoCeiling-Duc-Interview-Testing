@@ -395,6 +395,14 @@ public static class DateTimeExtension
     }
 
     /// <summary>
+    /// To format: "yyyy-MM-dd HH:mm:ss zzz". Example: 2024-09-06 04:09:30 +00:00
+    /// </summary>
+    public static string ToIsoDateTimeWithOffsetString(this DateTime date)
+    {
+        return date.ToString("yyyy-MM-dd HH:mm:ss zzz");
+    }
+
+    /// <summary>
     /// Return the ISO8601 week number of the year for a specific date
     /// </summary>
     public static int GetIso8601WeekOfYear(DateTime date)
