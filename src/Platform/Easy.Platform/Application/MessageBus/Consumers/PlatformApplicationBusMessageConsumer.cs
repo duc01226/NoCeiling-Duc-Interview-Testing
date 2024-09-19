@@ -34,11 +34,6 @@ public interface IPlatformApplicationMessageBusConsumer : IPlatformMessageBusCon
     /// Gets or sets a value indicating whether the instance is called to execute handling logic for an inbox message.
     /// </summary>
     public bool IsHandlingLogicForInboxMessage { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether to allow processing the inbox message in a background thread.
-    /// </summary>
-    public bool AllowProcessInboxMessageInBackgroundThread { get; set; }
 }
 
 public interface IPlatformApplicationMessageBusConsumer<in TMessage> : IPlatformMessageBusConsumer<TMessage>, IPlatformApplicationMessageBusConsumer
@@ -85,7 +80,6 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
     public PlatformInboxBusMessage HandleExistingInboxMessage { get; set; }
     public bool AutoDeleteProcessedInboxEventMessageImmediately { get; set; }
     public bool IsHandlingLogicForInboxMessage { get; set; }
-    public bool AllowProcessInboxMessageInBackgroundThread { get; set; }
 
     public override async Task ExecuteHandleLogicAsync(TMessage message, string routingKey)
     {
@@ -101,7 +95,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                 routingKey: routingKey,
                 loggerFactory: CreateLogger,
                 retryProcessFailedMessageInSecondsUnit: InboxConfig.RetryProcessFailedMessageInSecondsUnit,
-                allowProcessInBackgroundThread: AllowProcessInboxMessageInBackgroundThread,
+                allowProcessInBackgroundThread: true,
                 handleExistingInboxMessage: HandleExistingInboxMessage,
                 handleExistingInboxMessageConsumerInstance: this,
                 extendedMessageIdPrefix: message.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix(),

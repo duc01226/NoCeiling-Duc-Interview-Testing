@@ -1095,4 +1095,9 @@ public static class ListExtension
     {
         for (var i = 0; number.CompareTo(i) > 0; i++) yield return i;
     }
+
+    public static bool ContainsIgnoreCase(this IEnumerable<string> list, string value)
+    {
+        return list.Any(p => p.EqualsIgnoreCase(value));
+    }
 }

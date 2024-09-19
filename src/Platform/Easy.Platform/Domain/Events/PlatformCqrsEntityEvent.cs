@@ -30,6 +30,103 @@ public interface IPlatformCqrsEntityEvent : IPlatformCqrsEvent
         where THandler : IPlatformCqrsEventHandler;
 }
 
+/// <summary>
+/// Interface to support domain events in an entity, allowing tracking of domain event actions.
+/// <br />
+/// It holds a list of domain events represented as key-value pairs where the key is the event name and the value is the serialized event data.
+/// </summary>
+public interface IPlatformCqrsDomainEventsSupportEntityEvent
+{
+    /// <summary>
+    /// Gets or sets a collection of domain events where each event is represented as a key-value pair.
+    /// The key represents the event name, and the value represents the event serialized as JSON.
+    /// <br />
+    /// This property helps to capture actions that have occurred within the entity, such as changes to its state.
+    /// </summary>
+    public List<KeyValuePair<string, string>> DomainEvents { get; set; }
+}
+
+/// <summary>
+/// Generic version of the <see cref="IPlatformCqrsDomainEventsSupportEntityEvent" /> interface,
+/// designed to support domain events in a specific entity type.
+/// <br />
+/// It allows for strongly-typed domain event handling for the specified entity type <typeparamref name="TEntity" />.
+/// </summary>
+/// <typeparam name="TEntity">The type of entity associated with the domain events.</typeparam>
+public interface IPlatformCqrsDomainEventsSupportEntityEvent<TEntity> : IPlatformCqrsDomainEventsSupportEntityEvent
+{
+}
+
+public static class PlatformCqrsDomainEventsSupportEntityEventExtensions
+{
+    /// <summary>
+    /// Finds and retrieves a list of specific domain events associated with an entity.
+    /// </summary>
+    /// <typeparam name="TEvent">The type of domain event to find. Must be a type of ISupportDomainEventsEntity.DomainEvent.</typeparam>
+    /// <returns>A list of domain events of type TEvent associated with the entity.</returns>
+    /// <remarks>
+    /// The FindEvents[TEvent]() method in the PlatformCqrsEntityEvent[TEntity] class is used to find and retrieve a list of specific domain events associated with an entity.
+    /// <br />
+    /// This method is generic and takes a type parameter TEvent which must be a type of ISupportDomainEventsEntity.DomainEvent. It filters the DomainEvents property, which is a list of key-value pairs where the key is the event name and the value is the serialized event data, to find events that match the default event name for the TEvent type.
+    /// <br />
+    /// The method then deserializes the event data into instances of TEvent using the PlatformJsonSerializer.TryDeserializeOrDefault[TEvent] method and returns a list of these instances.
+    /// <br />
+    /// This method is useful in scenarios where you need to process specific types of domain events associated with an entity. For example, in the provided code snippets, it is used to find and process events such as User.PropertyRelatedToCustomFieldChangedDomainEvent, User.SetNeedToUpdateConnectionEvent, CandidateEntity.UpsertApplicationsDomainEvent, CandidateEntity.ChangeRejectStatusApplicationDomainEvent, and TextSnippetEntity.EncryptSnippetTextDomainEvent.
+    /// <br />
+    /// This method is a part of the Domain-Driven Design (DDD) approach, where domain events are used to capture side effects resulting from changes to the domain.
+    /// </remarks>
+    public static List<TEvent> FindEvents<TEvent>(this IPlatformCqrsDomainEventsSupportEntityEvent @event, string? customDomainEventName = null)
+        where TEvent : ISupportDomainEventsEntity.DomainEvent
+    {
+        return @event.DomainEvents
+            .Where(p => p.Key == (customDomainEventName ?? ISupportDomainEventsEntity.DomainEvent.GetDefaultEventName<TEvent>()))
+            .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<TEvent>(p.Value))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Finds and returns a specific FieldUpdatedDomainEvent from the list of domain events associated with an entity.
+    /// </summary>
+    /// <typeparam name="TValue">The type of the field value.</typeparam>
+    /// <param name="field">A lambda expression that specifies the field of the entity.</param>
+    /// <returns>A FieldUpdatedDomainEvent that matches the specified field, or null if no such event is found.</returns>
+    /// <remarks>
+    /// The FindFieldUpdatedEvent[TValue] method in the PlatformCqrsEntityEvent[TEntity] class is used to find and return a specific FieldUpdatedDomainEvent from the list of domain events associated with an entity. This method is useful when you need to check if a specific field of an entity was updated during a CRUD operation.
+    /// <br />
+    /// The method takes an Expression[Func[TEntity, TValue]] as a parameter, which represents a lambda expression that specifies the field of the entity. It then checks the DomainEvents list for a FieldUpdatedDomainEvent that matches the specified field. If such an event is found, it is returned; otherwise, the method returns null.
+    /// <br />
+    /// This method is used in event handlers, such as CreateGoalActionHistoryOnUpdateGoalEntityEventHandler and SendEmailOnCreateOrUpdateAttendanceRequestEntityEventHandler, to check if specific fields were updated and to handle these updates accordingly. For example, if the Measurement field of a Goal entity was updated, an action history might be created; or if the Status field of an AttendanceRequest entity was updated, an email notification might be sent.
+    /// </remarks>
+    public static ISupportDomainEventsEntity.FieldUpdatedDomainEvent<TValue> FindFieldUpdatedEvent<TValue, TEntity>(
+        this IPlatformCqrsDomainEventsSupportEntityEvent<TEntity> @event,
+        Expression<Func<TEntity, TValue>> field)
+    {
+        return @event.DomainEvents
+            .Where(p => p.Key == ISupportDomainEventsEntity.DomainEvent.GetDefaultEventName<ISupportDomainEventsEntity.FieldUpdatedDomainEvent>())
+            .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<ISupportDomainEventsEntity.FieldUpdatedDomainEvent<TValue>>(p.Value))
+            .FirstOrDefault(p => p != null && p.FieldName == field.GetPropertyName());
+    }
+
+    /// <summary>
+    /// Checks if any of the specified fields have associated field update events.
+    /// </summary>
+    /// <param name="fields">An array of expressions specifying the fields to check for update events. If empty, just check any domain events</param>
+    /// <returns>True if any of the specified fields have an update event, false otherwise.</returns>
+    public static bool HasAnyFieldUpdatedEvents<TEntity>(
+        this IPlatformCqrsDomainEventsSupportEntityEvent<TEntity> @event,
+        params Expression<Func<TEntity, object>>[] fields)
+    {
+        if (fields == null || fields.Length == 0) return @event.DomainEvents.Any();
+
+        var fieldNames = fields.Select(p => p.GetPropertyName()).ToHashSet();
+
+        return @event.DomainEvents
+            .Where(p => p.Key == ISupportDomainEventsEntity.DomainEvent.GetDefaultEventName<ISupportDomainEventsEntity.FieldUpdatedDomainEvent>())
+            .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<ISupportDomainEventsEntity.FieldUpdatedDomainEvent<object>>(p.Value))
+            .Any(p => p != null && fieldNames.Contains(p.FieldName));
+    }
+}
+
 public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowEvent, IPlatformCqrsEntityEvent
 {
     public const string EventTypeValue = nameof(PlatformCqrsEntityEvent);
@@ -264,7 +361,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
 /// <br />
 /// In summary, PlatformCqrsEntityEvent[TEntity] is a key part of the event-driven architecture of the system, facilitating the handling and propagation of entity-related events.
 /// </remarks>
-public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent, IPlatformSubMessageQueuePrefixSupport
+public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent, IPlatformSubMessageQueuePrefixSupport, IPlatformCqrsDomainEventsSupportEntityEvent<TEntity>
     where TEntity : class, IEntity, new()
 {
     public PlatformCqrsEntityEvent() { }
@@ -296,77 +393,11 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent, IPlatfo
 
     public PlatformCqrsEntityEventCrudAction CrudAction { get; set; }
 
-    /// <summary>
-    /// DomainEvents is used to give more detail about the domain event action inside entity.<br />
-    /// It is a list of DomainEventName-DomainEventAsJson from entity domain events
-    /// </summary>
     public List<KeyValuePair<string, string>> DomainEvents { get; set; } = [];
 
     public string SubQueuePrefix()
     {
         return EntityData?.GetId()?.ToString();
-    }
-
-    /// <summary>
-    /// Finds and retrieves a list of specific domain events associated with an entity.
-    /// </summary>
-    /// <typeparam name="TEvent">The type of domain event to find. Must be a type of ISupportDomainEventsEntity.DomainEvent.</typeparam>
-    /// <returns>A list of domain events of type TEvent associated with the entity.</returns>
-    /// <remarks>
-    /// The FindEvents[TEvent]() method in the PlatformCqrsEntityEvent[TEntity] class is used to find and retrieve a list of specific domain events associated with an entity.
-    /// <br />
-    /// This method is generic and takes a type parameter TEvent which must be a type of ISupportDomainEventsEntity.DomainEvent. It filters the DomainEvents property, which is a list of key-value pairs where the key is the event name and the value is the serialized event data, to find events that match the default event name for the TEvent type.
-    /// <br />
-    /// The method then deserializes the event data into instances of TEvent using the PlatformJsonSerializer.TryDeserializeOrDefault[TEvent] method and returns a list of these instances.
-    /// <br />
-    /// This method is useful in scenarios where you need to process specific types of domain events associated with an entity. For example, in the provided code snippets, it is used to find and process events such as User.PropertyRelatedToCustomFieldChangedDomainEvent, User.SetNeedToUpdateConnectionEvent, CandidateEntity.UpsertApplicationsDomainEvent, CandidateEntity.ChangeRejectStatusApplicationDomainEvent, and TextSnippetEntity.EncryptSnippetTextDomainEvent.
-    /// <br />
-    /// This method is a part of the Domain-Driven Design (DDD) approach, where domain events are used to capture side effects resulting from changes to the domain.
-    /// </remarks>
-    public List<TEvent> FindEvents<TEvent>(string? customDomainEventName = null) where TEvent : ISupportDomainEventsEntity.DomainEvent
-    {
-        return DomainEvents
-            .Where(p => p.Key == (customDomainEventName ?? ISupportDomainEventsEntity.DomainEvent.GetDefaultEventName<TEvent>()))
-            .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<TEvent>(p.Value))
-            .ToList();
-    }
-
-    /// <summary>
-    /// Finds and returns a specific FieldUpdatedDomainEvent from the list of domain events associated with an entity.
-    /// </summary>
-    /// <typeparam name="TValue">The type of the field value.</typeparam>
-    /// <param name="field">A lambda expression that specifies the field of the entity.</param>
-    /// <returns>A FieldUpdatedDomainEvent that matches the specified field, or null if no such event is found.</returns>
-    /// <remarks>
-    /// The FindFieldUpdatedEvent[TValue] method in the PlatformCqrsEntityEvent[TEntity] class is used to find and return a specific FieldUpdatedDomainEvent from the list of domain events associated with an entity. This method is useful when you need to check if a specific field of an entity was updated during a CRUD operation.
-    /// <br />
-    /// The method takes an Expression[Func[TEntity, TValue]] as a parameter, which represents a lambda expression that specifies the field of the entity. It then checks the DomainEvents list for a FieldUpdatedDomainEvent that matches the specified field. If such an event is found, it is returned; otherwise, the method returns null.
-    /// <br />
-    /// This method is used in event handlers, such as CreateGoalActionHistoryOnUpdateGoalEntityEventHandler and SendEmailOnCreateOrUpdateAttendanceRequestEntityEventHandler, to check if specific fields were updated and to handle these updates accordingly. For example, if the Measurement field of a Goal entity was updated, an action history might be created; or if the Status field of an AttendanceRequest entity was updated, an email notification might be sent.
-    /// </remarks>
-    public ISupportDomainEventsEntity.FieldUpdatedDomainEvent<TValue> FindFieldUpdatedEvent<TValue>(
-        Expression<Func<TEntity, TValue>> field)
-    {
-        return DomainEvents
-            .Where(p => p.Key == ISupportDomainEventsEntity.DomainEvent.GetDefaultEventName<ISupportDomainEventsEntity.FieldUpdatedDomainEvent>())
-            .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<ISupportDomainEventsEntity.FieldUpdatedDomainEvent<TValue>>(p.Value))
-            .FirstOrDefault(p => p != null && p.FieldName == field.GetPropertyName());
-    }
-
-    /// <summary>
-    /// Checks if any of the specified fields have associated field update events.
-    /// </summary>
-    /// <param name="fields">An array of expressions specifying the fields to check for update events.</param>
-    /// <returns>True if any of the specified fields have an update event, false otherwise.</returns>
-    public bool HasAnyFieldUpdatedEvents(
-        params Expression<Func<TEntity, object>>[] fields)
-    {
-        var fieldNames = fields.Select(p => p.GetPropertyName()).ToHashSet();
-
-        return DomainEvents
-            .Where(p => p.Key == ISupportDomainEventsEntity.DomainEvent.GetDefaultEventName<ISupportDomainEventsEntity.FieldUpdatedDomainEvent>())
-            .Select(p => PlatformJsonSerializer.TryDeserializeOrDefault<ISupportDomainEventsEntity.FieldUpdatedDomainEvent<object>>(p.Value))
-            .Any(p => p != null && fieldNames.Contains(p.FieldName));
     }
 
     public PlatformCqrsEntityEvent<TEntity> Clone()
