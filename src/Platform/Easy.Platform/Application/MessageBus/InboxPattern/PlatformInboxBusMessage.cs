@@ -11,10 +11,10 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
     public const int MessageTypeFullNameMaxLength = 1000;
     public const int RoutingKeyMaxLength = 500;
     public const double DefaultRetryProcessFailedMessageInSecondsUnit = 30;
-    public const string BuildIdSeparator = "----";
-    public const string BuildIdGroupedByConsumerPrefixSeparator = "_";
-
-    private const double MarginRetryMessageProcessingMaximumTimeInSeconds = 60;
+    public const string BuildIdPrefixSeparator = "----";
+    public const string BuildIdSubQueuePrefixSeparator = "++++";
+    public const int CheckProcessingPingIntervalSeconds = 30;
+    public const int MaxAllowedProcessingPingMisses = 20;
 
     public string JsonMessage { get; set; }
 
@@ -39,6 +39,8 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
 
     public DateTime LastConsumeDate { get; set; }
 
+    public DateTime? LastProcessingPingDate { get; set; }
+
     public DateTime? NextRetryProcessAfter { get; set; }
 
     public string LastConsumeError { get; set; }
@@ -46,7 +48,6 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
     public string? ConcurrencyUpdateToken { get; set; }
 
     public static Expression<Func<PlatformInboxBusMessage, bool>> CanHandleMessagesExpr(
-        double messageProcessingMaximumTimeInSeconds,
         string? forApplicationName)
     {
         Expression<Func<PlatformInboxBusMessage, bool>> initialExpr =
@@ -54,7 +55,19 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
                  (p.ConsumeStatus == ConsumeStatuses.Failed &&
                   (p.NextRetryProcessAfter == null || p.NextRetryProcessAfter <= DateTime.UtcNow)) ||
                  (p.ConsumeStatus == ConsumeStatuses.Processing &&
-                  p.LastConsumeDate <= Clock.UtcNow.AddSeconds(-messageProcessingMaximumTimeInSeconds - MarginRetryMessageProcessingMaximumTimeInSeconds));
+                  (p.LastProcessingPingDate == null ||
+                   p.LastProcessingPingDate < Clock.UtcNow.AddSeconds(-CheckProcessingPingIntervalSeconds * MaxAllowedProcessingPingMisses)));
+
+        return initialExpr.AndAlsoIf(forApplicationName.IsNotNullOrEmpty(), () => p => p.ForApplicationName == null || p.ForApplicationName == forApplicationName);
+    }
+
+    public static Expression<Func<PlatformInboxBusMessage, bool>> IsProcessingExpr(
+        string? forApplicationName)
+    {
+        Expression<Func<PlatformInboxBusMessage, bool>> initialExpr =
+            p => p.ConsumeStatus == ConsumeStatuses.Processing &&
+                 p.LastProcessingPingDate != null &&
+                 p.LastProcessingPingDate > Clock.UtcNow.AddSeconds(-CheckProcessingPingIntervalSeconds * MaxAllowedProcessingPingMisses);
 
         return initialExpr.AndAlsoIf(forApplicationName.IsNotNullOrEmpty(), () => p => p.ForApplicationName == null || p.ForApplicationName == forApplicationName);
     }
@@ -76,25 +89,29 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
                     p.ConsumeStatus == ConsumeStatuses.Failed;
     }
 
-    public static Expression<Func<PlatformInboxBusMessage, bool>> CheckAnySameConsumerOtherPreviousNotProcessedMessageExpr(
+    public static Expression<Func<PlatformInboxBusMessage, bool>> CheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessageExpr(
         Type consumerType,
         string messageTrackId,
         DateTime messageCreatedDate,
-        string extendedMessageIdPrefix)
+        string subQueueMessageIdPrefix)
     {
-        return CheckAnySameConsumerOtherPreviousNotProcessedMessageExpr(
-            BuildIdGroupedByConsumerPrefix(consumerType, extendedMessageIdPrefix),
-            BuildId(consumerType, messageTrackId, extendedMessageIdPrefix),
+        if (subQueueMessageIdPrefix.IsNullOrEmpty()) return p => false;
+
+        return CheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessageExpr(
+            BuildIdPrefix(consumerType, subQueueMessageIdPrefix),
+            BuildId(consumerType, messageTrackId, subQueueMessageIdPrefix),
             messageCreatedDate);
     }
 
-    public static Expression<Func<PlatformInboxBusMessage, bool>> CheckAnySameConsumerOtherPreviousNotProcessedMessageExpr(
+    public static Expression<Func<PlatformInboxBusMessage, bool>> CheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessageExpr(
         PlatformInboxBusMessage message)
     {
-        return CheckAnySameConsumerOtherPreviousNotProcessedMessageExpr(message.GetIdPrefix(), message.Id, message.CreatedDate);
+        if (GetSubQueuePrefix(message.Id).IsNullOrEmpty()) return p => false;
+
+        return CheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessageExpr(message.GetIdPrefix(), message.Id, message.CreatedDate);
     }
 
-    public static Expression<Func<PlatformInboxBusMessage, bool>> CheckAnySameConsumerOtherPreviousNotProcessedMessageExpr(
+    public static Expression<Func<PlatformInboxBusMessage, bool>> CheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessageExpr(
         string messageIdPrefix,
         string messageId,
         DateTime messageCreatedDate)
@@ -105,9 +122,9 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
                     p.CreatedDate < messageCreatedDate;
     }
 
-    public static string BuildId(Type consumerType, string trackId, string extendedMessageIdPrefix)
+    public static string BuildId(Type consumerType, string trackId, string subQueueMessageIdPrefix)
     {
-        return $"{BuildIdGroupedByConsumerPrefix(consumerType, extendedMessageIdPrefix)}{BuildIdSeparator}{trackId ?? Ulid.NewUlid().ToString()}".TakeTop(IdMaxLength);
+        return $"{BuildIdPrefix(consumerType, subQueueMessageIdPrefix)}{BuildIdPrefixSeparator}{trackId ?? Ulid.NewUlid().ToString()}".TakeTop(IdMaxLength);
     }
 
     public string GetIdPrefix()
@@ -117,16 +134,27 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
 
     public static string GetIdPrefix(string messageId)
     {
-        var buildIdSeparatorIndex = messageId.IndexOf(BuildIdSeparator, StringComparison.Ordinal);
+        var buildIdSeparatorIndex = messageId.IndexOf(BuildIdPrefixSeparator, StringComparison.Ordinal);
 
         return messageId.Substring(0, buildIdSeparatorIndex > 0 ? buildIdSeparatorIndex : messageId.Length);
     }
 
-    public static string BuildIdGroupedByConsumerPrefix(Type consumerType, string extendedMessageIdPrefix)
+    public static string GetSubQueuePrefix(string messageId)
     {
-        return extendedMessageIdPrefix.IsNullOrEmpty()
-            ? consumerType.GetNameOrGenericTypeName()
-            : $"{consumerType.GetNameOrGenericTypeName()}{BuildIdGroupedByConsumerPrefixSeparator}{extendedMessageIdPrefix}";
+        var buildIdSubQueueSeparatorIndex = messageId.IndexOf(BuildIdSubQueuePrefixSeparator, StringComparison.Ordinal);
+        var buildIdSeparatorIndex = messageId.IndexOf(BuildIdPrefixSeparator, StringComparison.Ordinal);
+
+        var subQueuePrefixStartIndex = buildIdSubQueueSeparatorIndex + BuildIdSubQueuePrefixSeparator.Length;
+
+        return buildIdSubQueueSeparatorIndex >= 0 && buildIdSeparatorIndex > subQueuePrefixStartIndex
+            ? messageId.Substring(subQueuePrefixStartIndex, buildIdSeparatorIndex - subQueuePrefixStartIndex)
+            : null;
+    }
+
+    public static string BuildIdPrefix(Type consumerType, string subQueueMessageIdPrefix)
+    {
+        return
+            $"{consumerType.GetNameOrGenericTypeName()}{BuildIdSubQueuePrefixSeparator}{subQueueMessageIdPrefix}";
     }
 
     public static DateTime CalculateNextRetryProcessAfter(
@@ -145,13 +173,13 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
         Type consumerType,
         ConsumeStatuses consumeStatus,
         string forApplicationName,
-        string extendedMessageIdPrefix) where TMessage : class
+        string subQueueMessageIdPrefix) where TMessage : class
     {
         var nowDate = Clock.UtcNow;
 
         var result = new PlatformInboxBusMessage
         {
-            Id = BuildId(consumerType, trackId, extendedMessageIdPrefix),
+            Id = BuildId(consumerType, trackId, subQueueMessageIdPrefix),
             JsonMessage = message.ToJson(),
             MessageTypeFullName = message.GetType().FullName?.TakeTop(MessageTypeFullNameMaxLength),
             ProduceFrom = produceFrom,
@@ -161,7 +189,8 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
             ConsumerBy = GetConsumerByValue(consumerType),
             ConsumeStatus = consumeStatus,
             RetriedProcessCount = 0,
-            ForApplicationName = forApplicationName
+            ForApplicationName = forApplicationName,
+            LastProcessingPingDate = Clock.UtcNow
         };
 
         return result;

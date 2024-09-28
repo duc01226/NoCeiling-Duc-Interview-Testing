@@ -71,7 +71,9 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
     /// <summary>
     /// Gets the number of retry attempts after a failure.
     /// </summary>
-    public virtual int FailedRetryCount => 0;
+    public virtual int RetryOnFailedTimes { get; set; } = 2;
+
+    public virtual double RetryOnFailedDelaySeconds { get; set; } = 0.5;
 
     /// <summary>
     /// Gets a value indicating whether a unit of work should be automatically opened.
@@ -98,16 +100,26 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                         () => ExecuteHandleAsync(request, cancellationToken),
                         onException: ex =>
                         {
-                            LoggerFactory.CreateLogger(typeof(PlatformCqrsCommandApplicationHandler<>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}")
-                                .Log(
-                                    ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
-                                    ex.BeautifyStackTrace(),
-                                    "[{Tag1}] Command:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. RequestContext:{RequestContext}",
-                                    ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
-                                    request.GetType().Name,
-                                    request.AuditInfo?.AuditTrackId,
-                                    request.ToJson(),
-                                    RequestContext.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()).ToJson());
+                            if (!ex.IsPlatformLogicException())
+                                LoggerFactory.CreateLogger(typeof(PlatformCqrsCommandApplicationHandler<>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}")
+                                    .LogError(
+                                        ex.BeautifyStackTrace(),
+                                        "[{Tag1}] Command:{RequestName} has error {Error}. AuditTrackId:{AuditTrackId}. Request:{Request}. RequestContext:{RequestContext}",
+                                        "UnknownError",
+                                        request.GetType().Name,
+                                        ex.Message,
+                                        request.AuditInfo?.AuditTrackId,
+                                        request.ToJson(),
+                                        RequestContext.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()).ToJson());
+                            else
+                                LoggerFactory.CreateLogger(typeof(PlatformCqrsCommandApplicationHandler<>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}")
+                                    .LogWarning(
+                                        "[{Tag1}] Command:{RequestName} has error {Error}. AuditTrackId:{AuditTrackId}. Request:{Request}.",
+                                        "LogicErrorWarning",
+                                        request.GetType().Name,
+                                        ex.Message,
+                                        request.AuditInfo?.AuditTrackId,
+                                        request.ToJson());
                         });
 
                     if (RootServiceProvider.IsAnyImplementationAssignableToServiceTypeRegistered(
@@ -123,7 +135,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
         finally
         {
             if (ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
-                Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
+                await Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
         }
     }
 
@@ -164,10 +176,11 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
     /// <returns>The result of handling the CQRS command.</returns>
     protected virtual async Task<TResult> ExecuteHandleAsync(TCommand request, CancellationToken cancellationToken)
     {
-        if (FailedRetryCount > 0)
+        if (RetryOnFailedTimes > 0)
             return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                 () => DoExecuteHandleAsync(request, cancellationToken),
-                retryCount: FailedRetryCount,
+                retryCount: RetryOnFailedTimes,
+                sleepDurationProvider: i => RetryOnFailedDelaySeconds.Seconds(),
                 cancellationToken: cancellationToken);
         return await DoExecuteHandleAsync(request, cancellationToken);
     }

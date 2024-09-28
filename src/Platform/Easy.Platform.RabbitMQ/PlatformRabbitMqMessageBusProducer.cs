@@ -78,6 +78,7 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
                 channel = ChannelPool.Get();
 
                 var publishRequestProps = channel.CreateBasicProperties();
+                publishRequestProps.Persistent = true;
 
                 InjectDistributedTracingInfoIntoRequestProps(activity, publishRequestProps);
 

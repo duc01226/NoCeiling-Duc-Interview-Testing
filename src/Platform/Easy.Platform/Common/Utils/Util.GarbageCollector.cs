@@ -7,29 +7,24 @@ public static partial class Util
 {
     public static class GarbageCollector
     {
-        public const int DefaultCollectGarbageMemoryThrottleSeconds = 1;
+        public const int DefaultCollectGarbageMemoryThrottleSeconds = 3;
         private static readonly ConcurrentDictionary<double, TaskRunner.Throttler> CollectGarbageMemoryThrottlerDict = new();
 
-        public static void Collect(double throttleSeconds = DefaultCollectGarbageMemoryThrottleSeconds, bool collectAggressively = false)
+        public static async Task Collect(double throttleSeconds = DefaultCollectGarbageMemoryThrottleSeconds, bool collectAggressively = false)
         {
             if (throttleSeconds <= 0)
             {
-                Task.Run(() => DoCollect(collectAggressively));
+                await DoCollect(collectAggressively);
             }
             else
             {
                 var throttleTime = SetupCollectGarbageMemoryThrottlerDict(throttleSeconds);
 
-                CollectGarbageMemoryThrottlerDict[throttleTime]
-                    .ThrottleExecute(
-                        () =>
-                        {
-                            Task.Run(() => DoCollect(collectAggressively));
-                        });
+                await CollectGarbageMemoryThrottlerDict[throttleTime].ThrottleExecute(() => DoCollect(collectAggressively));
             }
         }
 
-        private static void DoCollect(bool collectAggressively)
+        private static async Task DoCollect(bool collectAggressively)
         {
             // Force garbage collection
             /*
@@ -39,7 +34,7 @@ public static partial class Util
              * It can be called with no arguments, which triggers a full blocking garbage collection of all generations,
              * or with a specific generation parameter to target a specific generation.
              */
-            ExecuteGcCollect();
+            GC.Collect();
 
             // Wait for finalizers to complete
             /*
@@ -50,6 +45,11 @@ public static partial class Util
              */
             GC.WaitForPendingFinalizers();
 
+            // Run again after WaitForPendingFinalizers to ensure clean memory
+            GC.Collect();
+
+            if (collectAggressively) GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
+
             // Wait for full garbage collection to complete
             /*
              * This method blocks the calling thread until a full garbage collection (including all generations) has completed.
@@ -57,17 +57,6 @@ public static partial class Util
              * This is useful when you want to ensure that all garbage collection activity has ceased before proceeding.
              */
             GC.WaitForFullGCComplete();
-
-            // Run again after WaitForPendingFinalizers to ensure clean memory
-            ExecuteGcCollect();
-
-            void ExecuteGcCollect()
-            {
-                if (collectAggressively)
-                    GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
-                else
-                    GC.Collect();
-            }
         }
 
         private static double SetupCollectGarbageMemoryThrottlerDict(double throttleSeconds)

@@ -75,7 +75,7 @@ public class PlatformCqrsEventBusMessagePayload : IPlatformSubMessageQueuePrefix
             EventTypeFullName = @event.GetType().FullName,
             EventTypeName = @event.GetType().Name,
             EventHandlerTypeFullName = eventHandlerTypeFullName,
-            SubQueueByIdExtendedPrefixValue = @event.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix() ?? @event.Id
+            SubQueueByIdExtendedPrefixValue = @event.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix()
         };
     }
 }

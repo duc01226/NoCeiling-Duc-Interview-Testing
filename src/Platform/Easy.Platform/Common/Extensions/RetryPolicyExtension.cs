@@ -22,14 +22,7 @@ public static class RetryPolicyExtension
             retryPolicy.Execute(
                 () =>
                 {
-                    try
-                    {
-                        action();
-                    }
-                    finally
-                    {
-                        Util.GarbageCollector.Collect();
-                    }
+                    action();
                 });
         }
         catch (Exception e)
@@ -59,14 +52,7 @@ public static class RetryPolicyExtension
             return retryPolicy.Execute(
                 () =>
                 {
-                    try
-                    {
-                        return action();
-                    }
-                    finally
-                    {
-                        Util.GarbageCollector.Collect();
-                    }
+                    return action();
                 });
         }
         catch (Exception e)
@@ -94,14 +80,7 @@ public static class RetryPolicyExtension
             retryPolicy.Execute(
                 () =>
                 {
-                    try
-                    {
-                        action();
-                    }
-                    finally
-                    {
-                        Util.GarbageCollector.Collect();
-                    }
+                    action();
                 });
         }
         catch (Exception e)
@@ -131,14 +110,7 @@ public static class RetryPolicyExtension
             return retryPolicy.Execute(
                 () =>
                 {
-                    try
-                    {
-                        return action();
-                    }
-                    finally
-                    {
-                        Util.GarbageCollector.Collect();
-                    }
+                    return action();
                 });
         }
         catch (Exception e)
@@ -175,13 +147,15 @@ public static class RetryPolicyExtension
                     }
                     finally
                     {
-                        Util.GarbageCollector.Collect();
+                        await Util.GarbageCollector.Collect();
                     }
                 },
                 cancellationToken);
         }
         catch (Exception e)
         {
+            if (e is TaskCanceledException) return;
+
             onBeforeThrowFinalExceptionFn?.Invoke(e);
 
             throw;
@@ -215,7 +189,7 @@ public static class RetryPolicyExtension
                     }
                     finally
                     {
-                        Util.GarbageCollector.Collect();
+                        await Util.GarbageCollector.Collect();
                     }
                 },
                 cancellationToken);

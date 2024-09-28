@@ -326,7 +326,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
             Disposed = true;
 
             OnDisposedActions
-                .ForEachAsync(
+                .ParallelAsync(
                     p => Util.TaskRunner.CatchException(
                         p.Invoke,
                         ex => LoggerFactory.CreateLogger(GetType()).LogError(ex.BeautifyStackTrace(), "Invoke DisposedActions error.")))
@@ -337,26 +337,26 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 
     protected virtual Task InvokeOnSaveChangesCompletedActions()
     {
-        if (OnSaveChangesCompletedActions.IsEmpty()) return Task.CompletedTask;
+        if (!OnSaveChangesCompletedActions.IsEmpty())
+            Util.TaskRunner.QueueActionInBackground(
+                async () =>
+                {
+                    await OnSaveChangesCompletedActions.ParallelAsync(
+                        p => Util.TaskRunner.CatchException(
+                            p.Invoke,
+                            ex => LoggerFactory.CreateLogger(GetType()).LogError(ex.BeautifyStackTrace(), "Invoke CompletedActions error.")));
 
-        Util.TaskRunner.QueueActionInBackground(
-            async () =>
-            {
-                await OnSaveChangesCompletedActions.ForEachAsync(
-                    p => Util.TaskRunner.CatchException(
-                        p.Invoke,
-                        ex => LoggerFactory.CreateLogger(GetType()).LogError(ex.BeautifyStackTrace(), "Invoke CompletedActions error.")));
-
-                OnSaveChangesCompletedActions.Clear();
-            },
-            () => LoggerFactory.CreateLogger(GetType()));
+                    OnSaveChangesCompletedActions.Clear();
+                },
+                () => LoggerFactory.CreateLogger(GetType()),
+                logFullStackTraceBeforeBackgroundTask: false);
 
         return Task.CompletedTask;
     }
 
     protected async Task InvokeOnSaveChangesFailedActions(PlatformUnitOfWorkFailedArgs e)
     {
-        await OnSaveChangesFailedActions.ForEachAsync(
+        await OnSaveChangesFailedActions.ParallelAsync(
             p => Util.TaskRunner.CatchException(
                 () => p.Invoke(e),
                 ex => LoggerFactory.CreateLogger(GetType()).LogError(ex.BeautifyStackTrace(), "Invoke FailedActions error.")));

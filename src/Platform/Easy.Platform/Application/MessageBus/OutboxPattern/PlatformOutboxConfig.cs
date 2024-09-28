@@ -1,9 +1,10 @@
+using Easy.Platform.Common.Utils;
+
 namespace Easy.Platform.Application.MessageBus.OutboxPattern;
 
 public class PlatformOutboxConfig
 {
     public const int DefaultProcessSendMessageRetryCount = 100;
-    private double? messageProcessingMaxSecondsTimeout;
 
     /// <summary>
     /// This is used to calculate the next retry process message time.
@@ -45,34 +46,11 @@ public class PlatformOutboxConfig
 
     public int ProcessClearMessageRetryCount { get; set; } = 5;
 
-    public int NumberOfProcessSendOutboxParallelMessages { get; set; } = Environment.ProcessorCount * 4;
-
-    public int NumberOfProcessSendOutboxMessagesSubQueuePrefetch { get; set; } = 5;
-
     public int GetCanHandleMessageGroupedByTypeIdPrefixesPageSize { get; set; } = 10000;
 
     public int ProcessSendMessageRetryCount { get; set; } = DefaultProcessSendMessageRetryCount;
 
     public int ProcessSendMessageRetryDelaySeconds { get; set; } = 5;
-
-    /// <summary>
-    /// To config how long a message can live in the database as Processing status in seconds. Default is 300 seconds;
-    /// This to handle that if message for some reason has been set as Processing but failed to process and has not been set
-    /// back to failed.
-    /// </summary>
-    public int MessageProcessingMaxSeconds { get; set; } = 300;
-
-    public double MessageProcessingMaxSecondsTimeoutRatio { get; set; } = 0.9;
-
-    public double MessageProcessingMaxSecondsTimeout
-    {
-        get
-        {
-            messageProcessingMaxSecondsTimeout ??= CalcMessageProcessingMaxSecondsTimeout();
-            return messageProcessingMaxSecondsTimeout!.Value;
-        }
-        set => messageProcessingMaxSecondsTimeout = value;
-    }
 
     public bool LogIntervalProcessInformation { get; set; }
 
@@ -80,8 +58,5 @@ public class PlatformOutboxConfig
 
     public int MinimumRetrySendOutboxMessageTimesToLogError { get; set; } = DefaultProcessSendMessageRetryCount * 8 / 10;
 
-    public double? CalcMessageProcessingMaxSecondsTimeout()
-    {
-        return MessageProcessingMaxSeconds * MessageProcessingMaxSecondsTimeoutRatio;
-    }
+    public int MaxParallelProcessingMessagesCount { get; set; } = Environment.ProcessorCount * Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio;
 }

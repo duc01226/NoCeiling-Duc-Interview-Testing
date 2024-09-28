@@ -61,12 +61,33 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
     protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
 
     /// <summary>
+    /// Gets the number of retry attempts after a failure.
+    /// </summary>
+    public virtual int RetryOnFailedTimes { get; set; } = 2;
+
+    public virtual double RetryOnFailedDelaySeconds { get; set; } = 0.5;
+
+    /// <summary>
     /// Handles the specified CQRS query asynchronously.
     /// </summary>
     /// <param name="request">The CQRS query to handle.</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken" /> that can be used to cancel the operation.</param>
     /// <returns>The result of handling the CQRS query.</returns>
     public async Task<TResult> Handle(TQuery request, CancellationToken cancellationToken)
+    {
+        if (RetryOnFailedTimes > 0)
+            return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                () => DoExecuteHandleAsync(request, cancellationToken),
+                retryCount: RetryOnFailedTimes,
+                sleepDurationProvider: i => RetryOnFailedDelaySeconds.Seconds(),
+                cancellationToken: cancellationToken);
+        return await DoExecuteHandleAsync(request, cancellationToken);
+    }
+
+    /// <summary>
+    /// Executes the handling logic for the CQRS query
+    /// </summary>
+    protected virtual async Task<TResult> DoExecuteHandleAsync(TQuery request, CancellationToken cancellationToken)
     {
         try
         {
@@ -82,16 +103,26 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
                         () => HandleAsync(request, cancellationToken),
                         onException: ex =>
                         {
-                            LoggerFactory.CreateLogger(typeof(PlatformCqrsQueryApplicationHandler<,>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}")
-                                .Log(
-                                    ex.IsPlatformLogicException() ? LogLevel.Warning : LogLevel.Error,
-                                    ex.BeautifyStackTrace(),
-                                    "[{Tag1}] Query:{RequestName} has logic error. AuditTrackId:{AuditTrackId}. Request:{Request}. RequestContext:{RequestContext}",
-                                    ex.IsPlatformLogicException() ? "LogicErrorWarning" : "UnknownError",
-                                    request.GetType().Name,
-                                    request.AuditInfo?.AuditTrackId,
-                                    request.ToJson(),
-                                    RequestContext.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()).ToJson());
+                            if (!ex.IsPlatformLogicException())
+                                LoggerFactory.CreateLogger(typeof(PlatformCqrsQueryApplicationHandler<,>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}")
+                                    .LogError(
+                                        ex.BeautifyStackTrace(),
+                                        "[{Tag1}] Query:{RequestName} has error {Error}. AuditTrackId:{AuditTrackId}. Request:{Request}. RequestContext:{RequestContext}",
+                                        "UnknownError",
+                                        request.GetType().Name,
+                                        ex.Message,
+                                        request.AuditInfo?.AuditTrackId,
+                                        request.ToJson(),
+                                        RequestContext.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()).ToJson());
+                            else
+                                LoggerFactory.CreateLogger(typeof(PlatformCqrsQueryApplicationHandler<,>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}")
+                                    .LogWarning(
+                                        "[{Tag1}] Query:{RequestName} has error {Error}. AuditTrackId:{AuditTrackId}. Request:{Request}.",
+                                        "LogicErrorWarning",
+                                        request.GetType().Name,
+                                        ex.Message,
+                                        request.AuditInfo?.AuditTrackId,
+                                        request.ToJson());
                         });
 
                     return result;
@@ -100,7 +131,7 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
         finally
         {
             if (ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
-                Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
+                await Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
         }
     }
 

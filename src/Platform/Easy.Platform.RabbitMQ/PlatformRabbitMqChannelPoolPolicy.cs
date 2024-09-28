@@ -1,3 +1,4 @@
+using Easy.Platform.RabbitMQ.Extensions;
 using Microsoft.Extensions.ObjectPool;
 using RabbitMQ.Client;
 
@@ -13,15 +14,14 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>, ID
 
     public PlatformRabbitMqChannelPoolPolicy(
         int poolSize,
-        int reuseChannelPerConnectionCount,
         PlatformRabbitMqOptions options)
     {
+        PoolSize = poolSize;
         this.options = options;
-        ReuseChannelPerConnectionCount = reuseChannelPerConnectionCount;
-        rabbitMqConnectionPool = new RabbitMqConnectionPool(options, poolSize >= ReuseChannelPerConnectionCount ? poolSize / ReuseChannelPerConnectionCount : 1);
+        rabbitMqConnectionPool = new RabbitMqConnectionPool(options, poolSize);
     }
 
-    public int ReuseChannelPerConnectionCount { get; set; }
+    public int PoolSize { get; }
 
     public void Dispose()
     {
@@ -51,8 +51,7 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>, ID
 
     public bool Return(IModel obj)
     {
-        // Only if the close reason is shutdown, the server might just shutdown temporarily, so we still try to keep the channel for retry connect later
-        if (obj.CloseReason != null && obj.CloseReason.ReplyCode != RabbitMqCloseReasonCodes.ServerShutdown)
+        if (obj.IsClosedPermanently())
         {
             obj.Dispose();
             return false;

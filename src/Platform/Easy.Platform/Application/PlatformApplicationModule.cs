@@ -66,8 +66,11 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
     /// Set min thread pool then default to increase and fix some performance issues. Article:
     /// https://medium.com/@jaiadityarathore/dotnet-core-threadpool-bef2f5a37888
     /// https://github.com/StackExchange/StackExchange.Redis/issues/2332
+    /// Default equal DefaultParallelIoTaskMaxConcurrent + extra available one DefaultNumberOfParallelIoTasksPerCpuRatio
     /// </summary>
-    protected virtual int MinThreadPool => 100;
+    protected virtual int MinWorkerThreadPool => Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent + Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio;
+
+    protected virtual int MinIoThreadPool => Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent + Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio;
 
     public virtual bool AutoClearMemoryEnabled => true;
     public virtual int AutoClearMemoryIntervalTimeSeconds => PlatformAutoClearMemoryHostingBackgroundService.DefaultProcessTriggerIntervalTimeSeconds;
@@ -313,7 +316,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
 
     protected override async Task InternalInit(IServiceScope serviceScope)
     {
-        ThreadPool.SetMinThreads(MinThreadPool, MinThreadPool);
+        ThreadPool.SetMinThreads(MinWorkerThreadPool, MinIoThreadPool);
 
         await IPlatformPersistenceModule.ExecuteDependencyPersistenceModuleMigrateApplicationData(
             ModuleTypeDependencies().Select(moduleTypeProvider => moduleTypeProvider(Configuration)).ToList(),

@@ -1,4 +1,5 @@
 using Easy.Platform.Common;
+using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -65,7 +66,7 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
 
     public static int DefaultActiveDelaySeedingInBackgroundBySeconds => 5;
     public static int DefaultDelayRetryCheckSeedDataBySeconds => 5;
-    public static int DefaultMaxWaitSeedDataBySyncMessagesBySeconds => 600;
+    public static int DefaultMaxWaitSeedDataBySyncMessagesBySeconds => 3600;
     protected ILogger Logger => loggerLazy.Value;
 
     /// <summary>
@@ -76,14 +77,18 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
 
     public virtual async Task SeedData(bool isReplaceNewSeedData = false)
     {
-        if (AutoBeginUow)
-            using (var uow = UnitOfWorkManager.Begin())
+        await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+            async () =>
             {
-                await InternalSeedData(isReplaceNewSeedData);
-                await uow.CompleteAsync();
-            }
-        else
-            await InternalSeedData(isReplaceNewSeedData);
+                if (AutoBeginUow)
+                    using (var uow = UnitOfWorkManager.Begin())
+                    {
+                        await InternalSeedData(isReplaceNewSeedData);
+                        await uow.CompleteAsync();
+                    }
+                else
+                    await InternalSeedData(isReplaceNewSeedData);
+            });
     }
 
     public virtual int SeedOrder => 0;

@@ -244,7 +244,8 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
                         token);
                 },
                 () => Logger,
-                cancellationToken: token);
+                cancellationToken: token,
+                logFullStackTraceBeforeBackgroundTask: false);
 
             return requestedData;
         }
@@ -313,16 +314,21 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
     {
         try
         {
-            return await GetAsync<List<PlatformCacheKey>>(cacheKey: GetGlobalAllRequestCachedKeysCacheKey())
-                .Then(keys => keys ?? [])
-                .Then(
-                    globalRequestCacheKeys => globalRequestCacheKeys
-                        .Select(p => new KeyValuePair<PlatformCacheKey, object>(p, null))
-                        .Pipe(items => new ConcurrentDictionary<PlatformCacheKey, object>(items)));
+            return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                async () =>
+                {
+                    return await GetAsync<List<PlatformCacheKey>>(cacheKey: GetGlobalAllRequestCachedKeysCacheKey())
+                        .Then(keys => keys ?? [])
+                        .Then(
+                            globalRequestCacheKeys => globalRequestCacheKeys
+                                .Select(p => new KeyValuePair<PlatformCacheKey, object>(p, null))
+                                .Pipe(items => new ConcurrentDictionary<PlatformCacheKey, object>(items)));
+                });
         }
         catch (Exception e)
         {
             Logger.LogError(e.BeautifyStackTrace(), "LoadGlobalCachedKeys failed. Fallback to empty default value.");
+
             return new ConcurrentDictionary<PlatformCacheKey, object>();
         }
     }

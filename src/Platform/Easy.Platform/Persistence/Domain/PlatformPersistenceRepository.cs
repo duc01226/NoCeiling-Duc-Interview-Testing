@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Common.Exceptions.Extensions;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.Exceptions;
@@ -308,20 +309,25 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (IsDistributedTracingEnabled)
-            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateAsync)}"))
+        return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+            async () =>
             {
-                activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entity.ToFormattedJson());
+                if (IsDistributedTracingEnabled)
+                    using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateAsync)}"))
+                    {
+                        activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                        activity?.AddTag("Entity", entity.ToFormattedJson());
+
+                        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+                            uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken),
+                            uow);
+                    }
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken),
                     uow);
-            }
-
-        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken),
-            uow);
+            },
+            cancellationToken: cancellationToken);
     }
 
     public override async Task<TEntity> CreateOrUpdateAsync(
@@ -331,20 +337,25 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (IsDistributedTracingEnabled)
-            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateAsync)}"))
+        return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+            async () =>
             {
-                activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entity.ToFormattedJson());
+                if (IsDistributedTracingEnabled)
+                    using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateAsync)}"))
+                    {
+                        activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                        activity?.AddTag("Entity", entity.ToFormattedJson());
+
+                        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+                            uow => GetUowDbContext(uow)
+                                .CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, customCheckExistingPredicate, dismissSendEvent, eventCustomConfig, cancellationToken));
+                    }
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow)
                         .CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, customCheckExistingPredicate, dismissSendEvent, eventCustomConfig, cancellationToken));
-            }
-
-        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow)
-                .CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, customCheckExistingPredicate, dismissSendEvent, eventCustomConfig, cancellationToken));
+            },
+            cancellationToken: cancellationToken);
     }
 
     public override async Task<List<TEntity>> CreateOrUpdateManyAsync(
@@ -365,15 +376,29 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entities.IsEmpty()) return entities;
-
-        EnsureNoDuplicatedUniqueCompositeIdEntities(entities);
-
-        if (IsDistributedTracingEnabled)
-            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateManyAsync)}"))
+        return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+            async () =>
             {
-                activity?.AddTag("EntityType", typeof(TEntity).FullName);
-                activity?.AddTag("Entity", entities.ToFormattedJson());
+                if (entities.IsEmpty()) return entities;
+
+                EnsureNoDuplicatedUniqueCompositeIdEntities(entities);
+
+                if (IsDistributedTracingEnabled)
+                    using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateManyAsync)}"))
+                    {
+                        activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                        activity?.AddTag("Entity", entities.ToFormattedJson());
+
+                        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+                            uow => GetUowDbContext(uow)
+                                .CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
+                                    entities,
+                                    customCheckExistingPredicateBuilder,
+                                    dismissSendEvent,
+                                    eventCustomConfig,
+                                    cancellationToken),
+                            uow);
+                    }
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow)
@@ -384,17 +409,8 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                             eventCustomConfig,
                             cancellationToken),
                     uow);
-            }
-
-        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow)
-                .CreateOrUpdateManyAsync<TEntity, TPrimaryKey>(
-                    entities,
-                    customCheckExistingPredicateBuilder,
-                    dismissSendEvent,
-                    eventCustomConfig,
-                    cancellationToken),
-            uow);
+            },
+            cancellationToken: cancellationToken);
     }
 
     public override Task<TEntity> UpdateAsync(
@@ -404,6 +420,34 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         CancellationToken cancellationToken = default)
     {
         return UpdateAsync(null, entity, dismissSendEvent, eventCustomConfig, cancellationToken);
+    }
+
+    public override async Task<TEntity> SetAsync(
+        TEntity entity,
+        CancellationToken cancellationToken = default)
+    {
+        return await SetAsync(null, entity, cancellationToken);
+    }
+
+    public override async Task<TEntity> SetAsync(
+        IPlatformUnitOfWork uow,
+        TEntity entity,
+        CancellationToken cancellationToken = default)
+    {
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(UpdateAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                activity?.AddTag("Entity", entity.ToFormattedJson());
+
+                return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+                    async uow => await GetUowDbContext(uow).SetAsync<TEntity, TPrimaryKey>(entity, cancellationToken),
+                    uow);
+            }
+
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+            async uow => await GetUowDbContext(uow).SetAsync<TEntity, TPrimaryKey>(entity, cancellationToken),
+            uow);
     }
 
     public override async Task<TEntity> UpdateAsync(

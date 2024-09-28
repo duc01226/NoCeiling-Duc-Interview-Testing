@@ -237,6 +237,33 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         return await UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken);
     }
 
+    public async Task<TEntity> SetAsync<TEntity, TPrimaryKey>(TEntity entity, CancellationToken cancellationToken = default)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        try
+        {
+            await NotThreadSafeDbContextQueryLock.WaitAsync(cancellationToken);
+
+            // Run DetachLocalIfAny to prevent
+            // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
+            var toBeUpdatedEntity = entity.Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>);
+
+            var result = GetTable<TEntity>()
+                .Update(toBeUpdatedEntity)
+                .Entity;
+
+            NotThreadSafeDbContextQueryLock.Release();
+
+            return result;
+        }
+        catch
+        {
+            if (NotThreadSafeDbContextQueryLock.CurrentCount < ContextMaxConcurrentThreadLock)
+                NotThreadSafeDbContextQueryLock.Release();
+            throw;
+        }
+    }
+
     public async Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,

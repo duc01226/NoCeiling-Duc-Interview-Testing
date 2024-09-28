@@ -11,8 +11,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Easy.Platform.EfCore.Domain.Repositories;
 
+public interface IPlatformEfCoreRepository
+{
+    public static readonly Type[] DefaultCheckNoNeedKeepUowPrimitiveTypes =
+    [
+        typeof(string),
+        typeof(Guid),
+        typeof(DateTime),
+        typeof(int),
+        typeof(long),
+        typeof(double),
+        typeof(float),
+        typeof(DateOnly)
+    ];
+}
+
 public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
-    : PlatformPersistenceRepository<TEntity, TPrimaryKey, IPlatformEfCorePersistenceUnitOfWork<TDbContext>, TDbContext>
+    : PlatformPersistenceRepository<TEntity, TPrimaryKey, IPlatformEfCorePersistenceUnitOfWork<TDbContext>, TDbContext>, IPlatformEfCoreRepository
     where TEntity : class, IEntity<TPrimaryKey>, new()
     where TDbContext : PlatformEfCoreDbContext<TDbContext>
 {
@@ -26,25 +41,14 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         DbContextOptions = dbContextOptions;
         AllAvailableEntityTypes = new Lazy<HashSet<Type>>(
             () => typeof(TEntity).Assembly.GetTypes().Where(p => p.IsClass && !p.IsAbstract && p.IsAssignableTo(typeof(IEntity))).ToHashSet());
-        ToCheckNoNeedKeepUowPrimitiveTypes = new Lazy<Type[]>(
-            () =>
-            [
-                typeof(string),
-                typeof(Guid),
-                typeof(DateTime),
-                typeof(int),
-                typeof(long),
-                typeof(double),
-                typeof(float),
-                typeof(DateOnly)
-            ]);
+        ToCheckNoNeedKeepUowPrimitiveTypes = IPlatformEfCoreRepository.DefaultCheckNoNeedKeepUowPrimitiveTypes;
     }
 
     protected DbContextOptions<TDbContext> DbContextOptions { get; }
 
     protected Lazy<HashSet<Type>> AllAvailableEntityTypes { get; }
 
-    protected Lazy<Type[]> ToCheckNoNeedKeepUowPrimitiveTypes { get; }
+    protected Type[] ToCheckNoNeedKeepUowPrimitiveTypes { get; }
 
     public virtual DbSet<TEntity> Table => DbContext.Set<TEntity>();
 
@@ -230,12 +234,12 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
             return result;
         }
 
-        static bool IsDictionaryOfValueOfEntityOrListEntity(TResult data, Lazy<Type[]> allAvailableEntityDictionaryKeyTypes, Lazy<HashSet<Type>> allAvailableEntityTypes)
+        static bool IsDictionaryOfValueOfEntityOrListEntity(TResult data, Type[] allAvailableEntityDictionaryKeyTypes, Lazy<HashSet<Type>> allAvailableEntityTypes)
         {
             if (!data.GetType().IsAssignableToGenericType(typeof(IDictionary<,>)))
                 return false;
 
-            var result = allAvailableEntityDictionaryKeyTypes.Value.Any(
+            var result = allAvailableEntityDictionaryKeyTypes.Any(
                 keyType => allAvailableEntityTypes.Value.Any(
                     entityType => IsDictionaryOfValueOfEntityOrListEntity(data, keyType, typeof(TEntity)) ||
                                   IsDictionaryOfValueOfEntityOrListEntity(data, keyType, entityType)));
@@ -256,7 +260,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
     private bool IsCollectionOfPrimitiveOrValueObjectType<TResult>(TResult result)
     {
         return result.GetType().IsAssignableToGenericType(typeof(IEnumerable<>)) &&
-               ToCheckNoNeedKeepUowPrimitiveTypes.Value.Any(primitiveType => result.GetType().IsAssignableTo(typeof(IEnumerable<>).MakeGenericType(primitiveType)));
+               ToCheckNoNeedKeepUowPrimitiveTypes.Any(primitiveType => result.GetType().IsAssignableTo(typeof(IEnumerable<>).MakeGenericType(primitiveType)));
     }
 }
 

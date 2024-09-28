@@ -25,8 +25,6 @@ public interface IPlatformMessageBusConsumer
 
     bool DisableSlowProcessWarning();
 
-    JsonSerializerOptions? CustomJsonSerializerOptions();
-
     /// <summary>
     /// Default is 0. Return bigger number order to execute it later by order ascending
     /// </summary>
@@ -34,14 +32,14 @@ public interface IPlatformMessageBusConsumer
 
     public bool HandleWhen(object message, string routingKey);
 
-    public static PlatformBusMessageRoutingKey BuildForConsumerDefaultBindingRoutingKey(Type consumerType)
+    public static PlatformBusMessageRoutingKey BuildForConsumerDefaultBindingRoutingKey(Type consumerGenericType)
     {
-        var messageType = GetConsumerMessageType(consumerType);
+        var messageType = GetMessageTypeOfConsumerGenericType(consumerGenericType);
 
         return PlatformBusMessageRoutingKey.BuildDefaultRoutingKey(messageType);
     }
 
-    public static Type GetConsumerMessageType(Type consumerGenericType)
+    public static Type GetMessageTypeOfConsumerGenericType(Type consumerGenericType)
     {
         return consumerGenericType.GetGenericArguments()[0];
     }
@@ -99,11 +97,6 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
         return false;
     }
 
-    public virtual JsonSerializerOptions? CustomJsonSerializerOptions()
-    {
-        return null;
-    }
-
     public virtual int ExecuteOrder()
     {
         return 0;
@@ -111,21 +104,25 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
 
     public abstract bool HandleWhen(object message, string routingKey);
 
+    public virtual JsonSerializerOptions? CustomJsonSerializerOptions()
+    {
+        return null;
+    }
+
     /// <summary>
-    /// Get <see cref="PlatformBusMessage{TPayload}" /> concrete message type from a <see cref="IPlatformMessageBusConsumer" /> consumer
+    /// Get <see cref="PlatformBusMessage{TPayload}" /> concrete message type from a consumer type. Type must be assignable to <see cref="IPlatformMessageBusConsumer" />
     /// <br />
     /// Get a generic type: PlatformEventBusMessage{TMessage} where TMessage = TMessagePayload
     /// of IPlatformEventBusConsumer{TMessagePayload}
     /// </summary>
-    public static Type GetConsumerMessageType(IPlatformMessageBusConsumer consumer)
+    public static Type GetConsumerMessageType(Type consumerType)
     {
-        var consumerGenericType = consumer
-                                      .GetType()
+        var consumerGenericType = consumerType
                                       .GetInterfaces()
                                       .FirstOrDefault(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IPlatformMessageBusConsumer<>)) ??
                                   throw new Exception("Must be implementation of IPlatformMessageBusConsumer<>");
 
-        return IPlatformMessageBusConsumer.GetConsumerMessageType(consumerGenericType);
+        return IPlatformMessageBusConsumer.GetMessageTypeOfConsumerGenericType(consumerGenericType);
     }
 
     public static async Task InvokeConsumerAsync(
@@ -202,9 +199,9 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
 
     protected ILogger Logger => loggerLazy.Value;
 
-    public virtual int RetryOnFailedTimes => 2;
+    public virtual int RetryOnFailedTimes { get; set; } = 2;
 
-    public virtual double RetryOnFailedDelaySeconds => 1;
+    public virtual double RetryOnFailedDelaySeconds { get; set; } = 0.5;
 
     public override Task HandleAsync(object message, string routingKey)
     {

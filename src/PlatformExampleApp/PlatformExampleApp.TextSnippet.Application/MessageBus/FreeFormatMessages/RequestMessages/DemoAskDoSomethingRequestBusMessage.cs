@@ -14,6 +14,6 @@ public sealed class DemoAskDoSomethingRequestBusMessage : PlatformTrackableBusMe
 {
     public override string SubQueuePrefix()
     {
-        return TrackingId;
+        return null;
     }
 }

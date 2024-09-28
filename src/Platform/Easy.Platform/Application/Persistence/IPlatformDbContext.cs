@@ -179,7 +179,7 @@ public interface IPlatformDbContext : IDisposable
         finally
         {
             migrationExecution.Dispose();
-            Util.GarbageCollector.Collect();
+            await Util.GarbageCollector.Collect(0);
         }
     }
 
@@ -212,10 +212,6 @@ public interface IPlatformDbContext : IDisposable
                             catch (TaskCanceledException)
                             {
                                 // Empty and skip taskCanceledException
-                            }
-                            finally
-                            {
-                                Util.GarbageCollector.Collect();
                             }
                         },
                         cancellationToken: CancellationToken.None,
@@ -392,6 +388,10 @@ public interface IPlatformDbContext : IDisposable
         TEntity entity,
         bool dismissSendEvent,
         Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
+
+    public Task<TEntity> SetAsync<TEntity, TPrimaryKey>(
+        TEntity entity,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(

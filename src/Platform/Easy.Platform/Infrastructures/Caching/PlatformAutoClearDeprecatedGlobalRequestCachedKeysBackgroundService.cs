@@ -1,5 +1,6 @@
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.HostingBackgroundServices;
+using Easy.Platform.Common.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Infrastructures.Caching;
@@ -25,7 +26,12 @@ public class PlatformAutoClearDeprecatedGlobalRequestCachedKeysBackgroundService
 
     protected override async Task IntervalProcessAsync(CancellationToken cancellationToken)
     {
-        await (cacheRepositoryProvider.TryGet(PlatformCacheRepositoryType.Distributed)?.ProcessClearDeprecatedGlobalRequestCachedKeys() ?? Task.CompletedTask);
-        await (cacheRepositoryProvider.TryGet(PlatformCacheRepositoryType.Memory)?.ProcessClearDeprecatedGlobalRequestCachedKeys() ?? Task.CompletedTask);
+        await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+            async () =>
+            {
+                await (cacheRepositoryProvider.TryGet(PlatformCacheRepositoryType.Distributed)?.ProcessClearDeprecatedGlobalRequestCachedKeys() ?? Task.CompletedTask);
+                await (cacheRepositoryProvider.TryGet(PlatformCacheRepositoryType.Memory)?.ProcessClearDeprecatedGlobalRequestCachedKeys() ?? Task.CompletedTask);
+            },
+            cancellationToken: cancellationToken);
     }
 }

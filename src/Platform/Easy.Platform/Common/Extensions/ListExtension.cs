@@ -1,20 +1,14 @@
 #nullable enable
-using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using Easy.Platform.Common.Utils;
 
 namespace Easy.Platform.Common.Extensions;
 
 public static class ListExtension
 {
-    public const int DefaultParallelAsyncMaxConcurrentProcessorCountDivideRatio = 2;
-
-    public static readonly int DefaultParallelAsyncMaxConcurrent = Environment.ProcessorCount >= DefaultParallelAsyncMaxConcurrentProcessorCountDivideRatio
-        ? Environment.ProcessorCount / DefaultParallelAsyncMaxConcurrentProcessorCountDivideRatio
-        : Environment.ProcessorCount;
-
     /// <summary>
     /// Removes all elements from the list that satisfy the provided predicate.
     /// </summary>
@@ -388,10 +382,10 @@ public static class ListExtension
     /// </summary>
     /// <typeparam name="T">The type of the elements of source.</typeparam>
     /// <param name="items">The <see cref="IEnumerable{T}" /> on which to perform the action.</param>
-    /// <param name="action">The <see cref="Func{T, int, Task}" /> delegate to perform on each element of the <see cref="IEnumerable{T}" />.</param>
+    /// <param name="action">The delegate to perform on each element of the <see cref="IEnumerable{T}" />.</param>
     /// <returns>A <see cref="Task" /> that represents the asynchronous operation.</returns>
     /// <example>
-    /// This sample shows how to call the <see cref="ForEachAsync{T}" /> method.
+    /// This sample shows how to call the ForEachAsync method.
     /// <code>
     /// await list.ForEachAsync((item, itemIndex) => do something async)
     /// </code>
@@ -415,7 +409,7 @@ public static class ListExtension
     /// </summary>
     /// <param name="items">The collection of items to perform the action on.</param>
     /// <param name="action">The asynchronous action to perform on each item. The action takes two parameters: the item and its index in the collection.</param>
-    /// <param name="maxConcurrent">The maximum number of concurrent operations. Defaults to <see cref="DefaultParallelAsyncMaxConcurrent" />.</param>
+    /// <param name="maxConcurrent">The maximum number of concurrent operations. Defaults to <see cref="Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent" />.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <remarks>
     /// This method uses the <see cref="Parallel" /> class to execute the action in parallel.
@@ -439,61 +433,13 @@ public static class ListExtension
             maxConcurrent);
     }
 
-    /// <summary>
-    /// Executes a provided asynchronous function in parallel for each item in the given enumerable.
-    /// </summary>
-    /// <typeparam name="T">The type of the items in the enumerable.</typeparam>
-    /// <typeparam name="TResult">The type of the result returned by the provided function.</typeparam>
-    /// <param name="items">The enumerable of items to process.</param>
-    /// <param name="action">The asynchronous function to execute for each item. This function takes an item and its index as parameters and returns a task that represents the operation.</param>
-    /// <param name="maxConcurrent">The maximum number of concurrent operations. Default value is <see cref="DefaultParallelAsyncMaxConcurrent" />.</param>
-    /// <returns>A task that represents the operation. The result of the task is a list of results returned by the provided function.</returns>
+    /// <inheritdoc cref="Util.TaskRunner.ParallelAsync{TResult,T}" />
     public static async Task<List<TResult>> ParallelAsync<T, TResult>(
         this IEnumerable<T> items,
         Func<T, int, Task<TResult>> action,
         int? maxConcurrent = null)
     {
-        maxConcurrent ??= DefaultParallelAsyncMaxConcurrent;
-
-        var itemsList = items.As<IList<T>>() ?? items.ToList();
-
-        var actionQueueList = itemsList.Reverse()
-            .Select<T, ValueTuple<int, Func<Task<ValueTuple<int, TResult, Exception?>>>>>(
-                (item, i) => (i,
-                    () => action(item, i)
-                        .Then<TResult, ValueTuple<TResult, Exception?>>(p => (p, null))
-                        .Recover(ex => (default!, ex))
-                        .Then<ValueTuple<TResult, Exception?>, ValueTuple<int, TResult, Exception?>>(
-                            itemActionResult => (i, itemActionResult.Item1, itemActionResult.Item2))))
-            .ToList();
-
-        var processingActionTasks = new ConcurrentDictionary<int, Task<ValueTuple<int, TResult, Exception?>>>();
-        var processedActionTaskResults = new ConcurrentDictionary<int, ValueTuple<TResult, Exception?>>();
-
-        while (processedActionTaskResults.Count < itemsList.Count)
-        {
-            while (processingActionTasks.Count < maxConcurrent.Value && actionQueueList.Any())
-            {
-                var nextProcessItem = actionQueueList.Pop();
-
-                var (nextProcessItemIndex, nextProcessAction) = nextProcessItem;
-
-                processingActionTasks.TryAdd(nextProcessItemIndex, nextProcessAction());
-            }
-
-            var nextProcessedActionTask = await Task.WhenAny(processingActionTasks.Values);
-
-            var (nextProcessedItemIndex, nextProcessedActionResult, nextProcessedActionException) = nextProcessedActionTask.Result;
-
-            processedActionTaskResults.TryAdd(nextProcessedItemIndex, (nextProcessedActionResult, nextProcessedActionException));
-            processingActionTasks.TryRemove(nextProcessedItemIndex, out _);
-        }
-
-        var processedFailedActionExceptions = processedActionTaskResults.Where(p => p.Value.Item2 != null).Select(p => p.Value.Item2!).ToList();
-
-        return processedFailedActionExceptions.IsEmpty()
-            ? processedActionTaskResults.OrderBy(p => p.Key).Select(p => p.Value.Item1).ToList()
-            : throw new AggregateException(processedFailedActionExceptions);
+        return await Util.TaskRunner.ParallelAsync(items, action, maxConcurrent);
     }
 
     /// <inheritdoc cref="ForEachAsync{T}(IEnumerable{T},Func{T,int,Task})" />
@@ -565,7 +511,7 @@ public static class ListExtension
     /// <typeparam name="T">The type of the items in the collection.</typeparam>
     /// <param name="items">The collection of items to perform the action on.</param>
     /// <param name="action">The asynchronous action to perform on each item.</param>
-    /// <param name="maxConcurrent">The maximum number of concurrent operations. Defaults to <see cref="DefaultParallelAsyncMaxConcurrent" />.</param>
+    /// <param name="maxConcurrent">The maximum number of concurrent operations. Defaults to <see cref="Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent" />.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <remarks>
     /// This method uses the <see cref="Parallel" /> class to execute the action in parallel.

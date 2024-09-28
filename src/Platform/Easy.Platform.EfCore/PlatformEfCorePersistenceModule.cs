@@ -24,6 +24,8 @@ namespace Easy.Platform.EfCore;
 public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPersistenceModule<TDbContext>
     where TDbContext : PlatformEfCoreDbContext<TDbContext>
 {
+    public const string EntityFrameworkCoreLogFilterCategoryPrefix = "Microsoft.EntityFrameworkCore";
+
     public PlatformEfCorePersistenceModule(
         IServiceProvider serviceProvider,
         IConfiguration configuration) : base(serviceProvider, configuration)
@@ -50,6 +52,16 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
 
         if (!ForCrossDbMigrationOnly || serviceCollection.All(p => p.ServiceType != typeof(IPlatformFullTextSearchPersistenceService)))
             serviceCollection.Register<IPlatformFullTextSearchPersistenceService>(FullTextSearchPersistenceServiceProvider);
+
+        serviceCollection.AddLogging(
+            builder => DefaultEntityFrameworkCoreLogFilters()
+                .ForEach(
+                    p => builder.AddFilter(
+                        p.Key.Ensure(
+                            p => p.StartsWith(
+                                EntityFrameworkCoreLogFilterCategoryPrefix),
+                            $"FilterCategory must start with {EntityFrameworkCoreLogFilterCategoryPrefix}"),
+                        p.Value)));
     }
 
     protected override void RegisterDbContextPool(IServiceCollection serviceCollection)
@@ -109,6 +121,23 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
             serviceCollection.RegisterAllForImplementation<PlatformDefaultEfCoreOutboxBusMessageRepository<TDbContext>>();
             serviceCollection.Register<IPlatformOutboxBusMessageRepository, PlatformDefaultEfCoreOutboxBusMessageRepository<TDbContext>>();
         }
+    }
+
+    /// <summary>
+    /// Provides the default log filters for Entity Framework Core logging categories.
+    /// This method can be overridden to customize log filtering for specific EF Core categories, such as disabling logs for
+    /// database commands, updates, queries, and migrations.
+    /// Example: [new KeyValuePair{string, LogLevel}("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Error)]
+    /// </summary>
+    protected virtual List<KeyValuePair<string, LogLevel>> DefaultEntityFrameworkCoreLogFilters()
+    {
+        return
+        [
+            new KeyValuePair<string, LogLevel>("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Error),
+            new KeyValuePair<string, LogLevel>("Microsoft.EntityFrameworkCore.Update", LogLevel.None),
+            new KeyValuePair<string, LogLevel>("Microsoft.EntityFrameworkCore.Query", LogLevel.None),
+            new KeyValuePair<string, LogLevel>("Microsoft.EntityFrameworkCore.Migrations", LogLevel.Error)
+        ];
     }
 
     private void RegisterDbContextOptions(IServiceCollection serviceCollection)

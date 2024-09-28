@@ -22,6 +22,7 @@ public static partial class Util
         /// <typeparam name="TTarget">Type of the target.</typeparam>
         /// <param name="source">Source to copy properties from.</param>
         /// <param name="target">Target to copy properties to.</param>
+        /// <param name="ignoreProperties">ignoreProperties</param>
         public static void CopyValues<TSource, TTarget>(TSource source, TTarget target, params Expression<Func<TSource, object>>[] ignoreProperties)
             where TSource : class
             where TTarget : class

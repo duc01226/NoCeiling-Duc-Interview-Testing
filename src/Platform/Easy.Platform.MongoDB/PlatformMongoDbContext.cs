@@ -283,6 +283,24 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         return UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken);
     }
 
+    public async Task<TEntity> SetAsync<TEntity, TPrimaryKey>(TEntity entity, CancellationToken cancellationToken = default)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        var toBeUpdatedEntity = entity;
+
+        var result = await GetTable<TEntity>()
+            .ReplaceOneAsync(
+                p => p.Id.Equals(toBeUpdatedEntity.Id),
+                toBeUpdatedEntity,
+                new ReplaceOptions { IsUpsert = false },
+                cancellationToken);
+
+        if (result.MatchedCount <= 0)
+            throw new PlatformDomainEntityNotFoundException<TEntity>(toBeUpdatedEntity.Id.ToString());
+
+        return entity;
+    }
+
     public Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
@@ -715,7 +733,6 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                     Builders<PlatformInboxBusMessage>.IndexKeys
                         .Ascending(p => p.ForApplicationName)
                         .Ascending(p => p.ConsumeStatus)
-                        .Ascending(p => p.LastConsumeDate)
                         .Ascending(p => p.CreatedDate)),
                 new CreateIndexModel<PlatformInboxBusMessage>(
                     Builders<PlatformInboxBusMessage>.IndexKeys
@@ -736,11 +753,6 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         if (recreate || !IsEnsureIndexesMigrationExecuted())
             await OutboxBusMessageCollection.Indexes.CreateManyAsync(
             [
-                new CreateIndexModel<PlatformOutboxBusMessage>(
-                    Builders<PlatformOutboxBusMessage>.IndexKeys
-                        .Ascending(p => p.SendStatus)
-                        .Ascending(p => p.LastSendDate)
-                        .Ascending(p => p.CreatedDate)),
                 new CreateIndexModel<PlatformOutboxBusMessage>(
                     Builders<PlatformOutboxBusMessage>.IndexKeys
                         .Ascending(p => p.SendStatus)

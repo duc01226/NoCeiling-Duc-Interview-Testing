@@ -504,4 +504,35 @@ public static class DateTimeExtension
         Saturday,
         Sunday
     }
+
+    /// Retrieves the UTC offset for the specified
+    /// <paramref name="timezoneString" />
+    /// based on the provided
+    /// <see cref="DateTime" />
+    /// object.
+    /// <param name="dateTime">The date and time for which the UTC offset is calculated.</param>
+    /// <param name="timezoneString">
+    /// The time zone string, which can be either a Windows time zone ID or an IANA time zone ID.
+    /// Example of a Windows time zone ID: "Pacific Standard Time".
+    /// Example of an IANA time zone ID: "America/Los_Angeles".
+    /// </param>
+    /// <returns>
+    /// The UTC offset as a string formatted in the "UTC±HH:mm" format.
+    /// For example, "Asia/Bangkok" => "UTC+07:00".
+    /// </returns>
+    /// <exception cref="TimeZoneNotFoundException">
+    /// Thrown when the specified time zone cannot be found.
+    /// </exception>
+    /// <example>
+    /// var dateTime = DateTime.UtcNow;
+    /// var offsetWindows = dateTime.GetUtcOffsetByTimeZoneId("Pacific Standard Time"); // Output: "UTC-08:00"
+    /// var offsetIana = dateTime.GetUtcOffsetByTimeZoneId("America/Los_Angeles"); // Output: "UTC-08:00"
+    /// </example>
+    public static string GetTimeZoneOffsetByTimeZoneId(this DateTime dateTime, string timezoneString)
+    {
+        var timeZone = Util.TimeZoneParser.TryGetTimeZoneById(timezoneString);
+        var offset = timeZone.GetUtcOffset(dateTime);
+
+        return $"UTC{(offset.Hours >= 0 ? "+" : "-")}{Math.Abs(offset.Hours):D2}:{Math.Abs(offset.Minutes):D2}";
+    }
 }

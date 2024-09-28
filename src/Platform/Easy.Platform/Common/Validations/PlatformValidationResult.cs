@@ -592,6 +592,7 @@ public class PlatformValidationResult : PlatformValidationResult<object>
     /// <summary>
     /// Return a valid validation result if the condition is true, otherwise return a invalid validation with errors.
     /// </summary>
+    /// <param name="value">value</param>
     /// <param name="must">The valid condition.</param>
     /// <param name="errors">The errors if the valid condition is false.</param>
     /// <returns>A validation result.</returns>
@@ -603,7 +604,7 @@ public class PlatformValidationResult : PlatformValidationResult<object>
         return must ? Valid(value: value) : Invalid(value: value, errors);
     }
 
-    /// <inheritdoc cref="Validate(bool,Easy.Platform.Common.Validations.PlatformValidationError[])" />
+    /// <inheritdoc cref="Validate{TValue}(TValue,bool,Easy.Platform.Common.Validations.PlatformValidationError[])" />
     public static PlatformValidationResult<TValue> Validate<TValue>(
         TValue value,
         Func<bool> validConditionFunc,

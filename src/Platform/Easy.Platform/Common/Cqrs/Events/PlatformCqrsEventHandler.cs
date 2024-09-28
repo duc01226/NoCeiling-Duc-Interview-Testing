@@ -59,7 +59,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     protected bool IsDistributedTracingEnabled => isDistributedTracingEnabledLazy.Value;
 
-    public virtual double RetryOnFailedDelaySeconds => 1;
+    public virtual double RetryOnFailedDelaySeconds { get; set; } = 0.5;
 
     public virtual int RetryOnFailedTimes { get; set; } = 2;
 
@@ -102,7 +102,8 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
             Util.TaskRunner.QueueActionInBackground(
                 async () => await ExecuteHandleInNewScopeAsync(@event, cancellationToken),
                 () => LoggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}"),
-                cancellationToken: default);
+                cancellationToken: default,
+                logFullStackTraceBeforeBackgroundTask: false);
         else
             await ExecuteRetryHandleAsync(this, @event);
     }

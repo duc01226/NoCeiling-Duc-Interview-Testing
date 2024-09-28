@@ -49,19 +49,26 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
                 {
                     try
                     {
-                        var result = await redisCache.Value.GetAsync(cacheKey, token);
+                        return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                            async () =>
+                            {
+                                var result = await redisCache.Value.GetAsync(cacheKey, token);
 
-                        try
-                        {
-                            return result == null ? default : PlatformJsonSerializer.Deserialize<T>(result);
-                        }
-                        catch (Exception e)
-                        {
-                            Logger.LogError(e.BeautifyStackTrace(), "GetAsync failed. CacheKey:{CacheKey}", cacheKey);
-                            // WHY: If parse failed, the cached data could be obsolete. Then just clear the cache
-                            await RemoveAsync(cacheKey, token);
-                            return default;
-                        }
+                                try
+                                {
+                                    return result == null ? default : PlatformJsonSerializer.Deserialize<T>(result);
+                                }
+                                catch (Exception e)
+                                {
+                                    Logger.LogError(e.BeautifyStackTrace(), "GetAsync Deserialize failed. CacheKey:{CacheKey}", cacheKey);
+
+                                    // WHY: If parse failed, the cached data could be obsolete. Then just clear the cache
+                                    await RemoveAsync(cacheKey, token);
+
+                                    return default;
+                                }
+                            },
+                            cancellationToken: token);
                     }
                     catch (Exception e)
                     {
@@ -110,13 +117,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(
-                        ex.BeautifyStackTrace(),
-                        "RemoveAsync failed. [[Error:{Error}]]. [CacheKey: {CacheKey}]",
-                        ex.Message,
-                        cacheKey);
-
-                    throw new Exception($"{GetType().Name} RemoveAsync failed. {ex.Message}", ex);
+                    throw new Exception($"{GetType().Name} RemoveAsync failed.[CacheKey: {cacheKey}]. {ex.Message}", ex);
                 }
 
                 await UpdateGlobalCachedKeys(p => p.TryRemove(cacheKey, out var _));
@@ -212,13 +213,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
         }
         catch (Exception ex)
         {
-            Logger.LogError(
-                ex.BeautifyStackTrace(),
-                "SetToRedisCacheAsync failed. [[Exception:{Exception}]]. [CacheKey: {CacheKey}]",
-                ex.ToString(),
-                cacheKey);
-
-            throw new Exception($"{GetType().Name} SetToRedisCacheAsync failed. {ex.Message}", ex);
+            throw new Exception($"{GetType().Name} SetToRedisCacheAsync failed.[CacheKey: {cacheKey}]. {ex.Message}", ex);
         }
     }
 

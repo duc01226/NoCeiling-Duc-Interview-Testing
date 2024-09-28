@@ -202,6 +202,6 @@ public static class StringExtension
 
     public static bool EqualsIgnoreCase(this string? str, string? value)
     {
-        return (str == null && value == null) || (str != null && value != null && str.Equals(value, StringComparison.InvariantCultureIgnoreCase));
+        return (str == null && value == null) || (str != null && value != null && str.Equals(value, StringComparison.OrdinalIgnoreCase));
     }
 }

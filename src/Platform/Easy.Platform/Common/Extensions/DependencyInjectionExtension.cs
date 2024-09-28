@@ -26,6 +26,7 @@ public static class DependencyInjectionExtension
     /// <param name="replaceStrategy">The strategy to use when checking if a service is already registered.</param>
     /// <param name="skipIfExist">A flag indicating whether to skip registration if the service already exists.</param>
     /// <param name="skipIfExistStrategy">The strategy to use when checking if a service should be skipped.</param>
+    /// <param name="supportLazyInject">Support inject Lazy{ServiceType}</param>
     /// <returns>The same service collection so that multiple calls can be chained.</returns>
     public static IServiceCollection RegisterAllFromType(
         this IServiceCollection services,
@@ -35,7 +36,8 @@ public static class DependencyInjectionExtension
         bool replaceIfExist = true,
         CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
         bool skipIfExist = false,
-        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
+        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth,
+        bool supportLazyInject = false)
     {
         assembly.GetTypes()
             .Where(
@@ -55,7 +57,8 @@ public static class DependencyInjectionExtension
                         replaceIfExist,
                         replaceStrategy: replaceStrategy,
                         skipIfExist: skipIfExist,
-                        skipIfExistStrategy: skipIfExistStrategy);
+                        skipIfExistStrategy: skipIfExistStrategy,
+                        supportLazyInject: supportLazyInject);
 
                     services.RegisterInterfacesForImplementation(
                         implementationType,
@@ -63,7 +66,8 @@ public static class DependencyInjectionExtension
                         replaceIfExist,
                         replaceStrategy,
                         skipIfExist: skipIfExist,
-                        skipIfExistStrategy: skipIfExistStrategy);
+                        skipIfExistStrategy: skipIfExistStrategy,
+                        supportLazyInject: supportLazyInject);
                 });
 
         return services;
@@ -151,6 +155,7 @@ public static class DependencyInjectionExtension
     /// <param name="replaceStrategy">The strategy to use when replacing existing services.</param>
     /// <param name="skipIfExist">Whether to skip the service if it already exists.</param>
     /// <param name="skipIfExistStrategy">The strategy to use when skipping existing services.</param>
+    /// <param name="supportLazyInject">Support inject Lazy{ServiceType}</param>
     /// <returns>The same service collection so that multiple calls can be chained.</returns>
     public static IServiceCollection RegisterAllFromType<TConventional>(
         this IServiceCollection services,
@@ -159,7 +164,8 @@ public static class DependencyInjectionExtension
         bool replaceIfExist = true,
         CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
         bool skipIfExist = false,
-        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
+        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth,
+        bool supportLazyInject = false)
     {
         return RegisterAllFromType(
             services,
@@ -169,7 +175,8 @@ public static class DependencyInjectionExtension
             replaceIfExist,
             replaceStrategy,
             skipIfExist: skipIfExist,
-            skipIfExistStrategy: skipIfExistStrategy);
+            skipIfExistStrategy: skipIfExistStrategy,
+            supportLazyInject: supportLazyInject);
     }
 
     /// <inheritdoc cref="RegisterAllFromType" />
@@ -180,7 +187,8 @@ public static class DependencyInjectionExtension
         bool replaceIfExist = true,
         CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
         bool skipIfExist = false,
-        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
+        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth,
+        bool supportLazyInject = false)
     {
         assemblies.ForEach(
             assembly => RegisterAllFromType(
@@ -191,7 +199,8 @@ public static class DependencyInjectionExtension
                 replaceIfExist,
                 replaceStrategy,
                 skipIfExist: skipIfExist,
-                skipIfExistStrategy: skipIfExistStrategy));
+                skipIfExistStrategy: skipIfExistStrategy,
+                supportLazyInject: supportLazyInject));
 
         return services;
     }
@@ -377,6 +386,7 @@ public static class DependencyInjectionExtension
     /// <param name="replaceStrategy">The strategy to use when replacing an existing service. Default is <see cref="CheckRegisteredStrategy.ByBoth" />.</param>
     /// <param name="skipIfExist">Indicates whether to skip registration if the service already exists. Default is false.</param>
     /// <param name="skipIfExistStrategy">The strategy to use when skipping an existing service. Default is <see cref="CheckRegisteredStrategy.ByBoth" />.</param>
+    /// <param name="supportLazyInject">Support inject Lazy{ServiceType}</param>
     /// <returns>The same service collection so that multiple calls can be chained.</returns>
     public static IServiceCollection Register(
         this IServiceCollection services,
@@ -386,7 +396,8 @@ public static class DependencyInjectionExtension
         bool replaceIfExist = true,
         CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
         bool skipIfExist = false,
-        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
+        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth,
+        bool supportLazyInject = false)
     {
         if (skipIfExist)
         {
@@ -421,6 +432,8 @@ public static class DependencyInjectionExtension
                 break;
         }
 
+        CheckToRegisterLazyForService(services, serviceType, replaceIfExist, replaceStrategy, supportLazyInject);
+
         return services;
     }
 
@@ -433,12 +446,14 @@ public static class DependencyInjectionExtension
     /// <param name="lifeTime">The lifetime of the service. Default is Transient.</param>
     /// <param name="replaceIfExist">If set to true, replaces the existing service registration if it exists. Default is true.</param>
     /// <param name="replaceStrategy">The strategy to use when checking if a service registration should be replaced. Default is ByBoth.</param>
+    /// <param name="supportLazyInject">Support inject Lazy{ServiceType}</param>
     /// <returns>The same service collection so that multiple calls can be chained.</returns>
     public static IServiceCollection Register<TService, TImplementation>(
         this IServiceCollection services,
         ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
         bool replaceIfExist = true,
-        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool supportLazyInject = false)
     {
         return Register(
             services,
@@ -446,7 +461,8 @@ public static class DependencyInjectionExtension
             typeof(TImplementation),
             lifeTime,
             replaceIfExist,
-            replaceStrategy);
+            replaceStrategy,
+            supportLazyInject: supportLazyInject);
     }
 
     /// <summary>
@@ -457,18 +473,21 @@ public static class DependencyInjectionExtension
     /// <param name="services">The IServiceCollection to add the service to.</param>
     /// <param name="lifeTime">The lifetime of the service.</param>
     /// <param name="checkExistingStrategy">The strategy to use when checking if the service already exists.</param>
+    /// <param name="supportLazyInject">Support inject Lazy{ServiceType}</param>
     /// <returns>The same service collection so that multiple calls can be chained.</returns>
     public static IServiceCollection RegisterIfNotExist<TService, TImplementation>(
         this IServiceCollection services,
         ServiceLifeTime lifeTime,
-        CheckRegisteredStrategy checkExistingStrategy)
+        CheckRegisteredStrategy checkExistingStrategy,
+        bool supportLazyInject = false)
     {
         return RegisterIfNotExist(
             services,
             typeof(TService),
             typeof(TImplementation),
             lifeTime,
-            checkExistingStrategy);
+            checkExistingStrategy,
+            supportLazyInject: supportLazyInject);
     }
 
     /// <summary>
@@ -479,13 +498,15 @@ public static class DependencyInjectionExtension
     /// <param name="implementationType">The type of the implementation to use.</param>
     /// <param name="lifeTime">The lifetime of the service.</param>
     /// <param name="checkExistingStrategy">The strategy to use when checking if the service already exists.</param>
+    /// <param name="supportLazyInject">Support inject Lazy{ServiceType}</param>
     /// <returns>The same service collection so that multiple calls can be chained.</returns>
     public static IServiceCollection RegisterIfNotExist(
         this IServiceCollection services,
         Type serviceType,
         Type implementationType,
         ServiceLifeTime lifeTime,
-        CheckRegisteredStrategy checkExistingStrategy)
+        CheckRegisteredStrategy checkExistingStrategy,
+        bool supportLazyInject = false)
     {
         if (checkExistingStrategy == CheckRegisteredStrategy.ByBoth &&
             services.Any(p => p.ServiceType == serviceType && p.ImplementationType == implementationType)) return services;
@@ -498,7 +519,8 @@ public static class DependencyInjectionExtension
             services,
             serviceType,
             implementationType,
-            lifeTime);
+            lifeTime,
+            supportLazyInject: supportLazyInject);
     }
 
     /// <summary>
@@ -508,16 +530,19 @@ public static class DependencyInjectionExtension
     /// <typeparam name="TImplementation">The type of the implementation to use.</typeparam>
     /// <param name="services">The IServiceCollection to add the service to.</param>
     /// <param name="lifeTime">The lifetime of the service. Default is Transient.</param>
+    /// <param name="supportLazyInject">Support inject Lazy{ServiceType}</param>
     /// <returns>The same service collection so that multiple calls can be chained.</returns>
     public static IServiceCollection RegisterIfServiceNotExist<TService, TImplementation>(
         this IServiceCollection services,
-        ServiceLifeTime lifeTime = ServiceLifeTime.Transient)
+        ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
+        bool supportLazyInject = false)
     {
         return RegisterIfServiceNotExist(
             services,
             typeof(TService),
             typeof(TImplementation),
-            lifeTime);
+            lifeTime,
+            supportLazyInject: supportLazyInject);
     }
 
     /// <summary>
@@ -527,12 +552,14 @@ public static class DependencyInjectionExtension
     /// <param name="serviceType">The type of the service to register.</param>
     /// <param name="implementationType">The implementation type of the service to register.</param>
     /// <param name="lifeTime">The <see cref="ServiceLifeTime" /> of the service (default is <see cref="ServiceLifeTime.Transient" />).</param>
+    /// <param name="supportLazyInject">Support inject Lazy{ServiceType}</param>
     /// <returns>The same service collection so that multiple calls can be chained.</returns>
     public static IServiceCollection RegisterIfServiceNotExist(
         this IServiceCollection services,
         Type serviceType,
         Type implementationType,
-        ServiceLifeTime lifeTime = ServiceLifeTime.Transient)
+        ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
+        bool supportLazyInject = false)
     {
         if (services.Any(p => p.ServiceType == serviceType)) return services;
 
@@ -540,7 +567,8 @@ public static class DependencyInjectionExtension
             services,
             serviceType,
             implementationType,
-            lifeTime);
+            lifeTime,
+            supportLazyInject: supportLazyInject);
     }
 
     /// <summary>
@@ -551,12 +579,14 @@ public static class DependencyInjectionExtension
     /// <param name="serviceType">The type of the service to register.</param>
     /// <param name="implementationProvider">A factory that creates the service.</param>
     /// <param name="lifeTime">The lifetime of the service in the IServiceCollection.</param>
+    /// <param name="supportLazyInject">Support inject Lazy{ServiceType}</param>
     /// <returns>The same service collection so that multiple calls can be chained.</returns>
     public static IServiceCollection RegisterIfServiceNotExist<TImplementation>(
         this IServiceCollection services,
         Type serviceType,
         Func<IServiceProvider, TImplementation> implementationProvider,
-        ServiceLifeTime lifeTime = ServiceLifeTime.Transient)
+        ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
+        bool supportLazyInject = false)
     {
         if (services.Any(p => p.ServiceType == serviceType)) return services;
 
@@ -564,7 +594,8 @@ public static class DependencyInjectionExtension
             services,
             serviceType,
             implementationProvider,
-            lifeTime);
+            lifeTime,
+            supportLazyInject: supportLazyInject);
     }
 
     /// <summary>
@@ -577,6 +608,7 @@ public static class DependencyInjectionExtension
     /// <param name="replaceStrategy">The strategy to use when replacing a service (default is ByBoth).</param>
     /// <param name="skipIfExist">A boolean value indicating whether to skip the registration if the service already exists (default is false).</param>
     /// <param name="skipIfExistStrategy">The strategy to use when skipping a service (default is ByBoth).</param>
+    /// <param name="supportLazyInject">Support inject Lazy{ServiceType}</param>
     /// <returns>The same service collection so that multiple calls can be chained.</returns>
     public static IServiceCollection Register(
         this IServiceCollection services,
@@ -585,7 +617,8 @@ public static class DependencyInjectionExtension
         bool replaceIfExist = true,
         CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
         bool skipIfExist = false,
-        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
+        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth,
+        bool supportLazyInject = false)
     {
         return Register(
             services,
@@ -595,7 +628,8 @@ public static class DependencyInjectionExtension
             replaceIfExist,
             replaceStrategy,
             skipIfExist: skipIfExist,
-            skipIfExistStrategy: skipIfExistStrategy);
+            skipIfExistStrategy: skipIfExistStrategy,
+            supportLazyInject: supportLazyInject);
     }
 
     /// <summary>
@@ -606,19 +640,22 @@ public static class DependencyInjectionExtension
     /// <param name="lifeTime">The lifetime of the service. Default is Transient.</param>
     /// <param name="replaceIfExist">A flag indicating whether to replace the service if it already exists. Default is true.</param>
     /// <param name="replaceStrategy">The strategy to use when checking if a service is already registered. Default is ByBoth.</param>
+    /// <param name="supportLazyInject">Support inject Lazy{ServiceType}</param>
     /// <returns>The same service collection so that multiple calls can be chained.</returns>
     public static IServiceCollection Register<TService>(
         this IServiceCollection services,
         ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
         bool replaceIfExist = true,
-        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool supportLazyInject = false)
     {
         return Register(
             services,
             typeof(TService),
             lifeTime,
             replaceIfExist,
-            replaceStrategy);
+            replaceStrategy,
+            supportLazyInject: supportLazyInject);
     }
 
     /// <summary>
@@ -630,13 +667,15 @@ public static class DependencyInjectionExtension
     /// <param name="lifeTime">The lifetime of the service (Transient, Scoped, Singleton).</param>
     /// <param name="replaceIfExist">A flag indicating whether to replace the service if it already exists in the IServiceCollection.</param>
     /// <param name="replaceStrategy">The strategy to use when checking if a service is already registered (ByService, ByImplementation, ByBoth).</param>
+    /// <param name="supportLazyInject">Support inject Lazy{ServiceType}</param>
     /// <returns>The same service collection so that multiple calls can be chained.</returns>
     public static IServiceCollection Register<TService>(
         this IServiceCollection services,
         Func<IServiceProvider, TService> implementationFunc,
         ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
         bool replaceIfExist = true,
-        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool supportLazyInject = false)
     {
         return Register(
             services,
@@ -644,7 +683,8 @@ public static class DependencyInjectionExtension
             implementationFunc,
             lifeTime,
             replaceIfExist,
-            replaceStrategy);
+            replaceStrategy,
+            supportLazyInject: supportLazyInject);
     }
 
     /// <summary>
@@ -655,12 +695,14 @@ public static class DependencyInjectionExtension
     /// <param name="instance">The specific instance to register.</param>
     /// <param name="replaceIfExist">Optional parameter. If set to true, the existing registration for the service will be replaced if it exists. Default is true.</param>
     /// <param name="replaceStrategy">Optional parameter. Determines the strategy to use when replacing existing registrations. Default is CheckRegisteredStrategy.ByBoth.</param>
+    /// <param name="supportLazyInject">Support inject Lazy{ServiceType}</param>
     /// <returns>The IServiceCollection so that additional calls can be chained.</returns>
     public static IServiceCollection RegisterInstance<TService>(
         this IServiceCollection services,
         TService instance,
         bool replaceIfExist = true,
-        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool supportLazyInject = false)
     {
         return Register(
             services,
@@ -668,7 +710,8 @@ public static class DependencyInjectionExtension
             _ => instance,
             ServiceLifeTime.Singleton,
             replaceIfExist,
-            replaceStrategy);
+            replaceStrategy,
+            supportLazyInject: supportLazyInject);
     }
 
     /// <summary>
@@ -681,6 +724,7 @@ public static class DependencyInjectionExtension
     /// <param name="lifeTime">The <see cref="ServiceLifeTime" /> of the service (Transient, Scoped, or Singleton).</param>
     /// <param name="replaceIfExist">A boolean value indicating whether to replace the service if it already exists.</param>
     /// <param name="replaceStrategy">The strategy to use when replacing the service (<see cref="CheckRegisteredStrategy" />).</param>
+    /// <param name="supportLazyInject">Support inject Lazy{ServiceType}</param>
     /// <returns>The <see cref="IServiceCollection" /> so that additional calls can be chained.</returns>
     public static IServiceCollection Register<TImplementation>(
         this IServiceCollection services,
@@ -688,7 +732,8 @@ public static class DependencyInjectionExtension
         Func<IServiceProvider, TImplementation> implementationFactory,
         ServiceLifeTime lifeTime = ServiceLifeTime.Transient,
         bool replaceIfExist = true,
-        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool supportLazyInject = false)
     {
         switch (lifeTime)
         {
@@ -712,7 +757,25 @@ public static class DependencyInjectionExtension
                 break;
         }
 
+        CheckToRegisterLazyForService(services, serviceType, replaceIfExist, replaceStrategy, supportLazyInject);
+
         return services;
+    }
+
+    private static void CheckToRegisterLazyForService(
+        IServiceCollection services,
+        Type serviceType,
+        bool replaceIfExist,
+        CheckRegisteredStrategy replaceStrategy,
+        bool supportLazyInject)
+    {
+        if (supportLazyInject)
+        {
+            if (replaceIfExist)
+                services.ReplaceTransient(typeof(Lazy<>).MakeGenericType(serviceType), sp => sp.GetService(serviceType), replaceStrategy);
+            else
+                services.AddTransient(typeof(Lazy<>).MakeGenericType(serviceType), sp => sp.GetService(serviceType));
+        }
     }
 
     /// <summary>
@@ -1047,6 +1110,7 @@ public static class DependencyInjectionExtension
     /// <param name="replaceStrategy">The strategy to use when checking if the service is already registered.</param>
     /// <param name="skipIfExist">Whether to skip the service if it already exists.</param>
     /// <param name="skipIfExistStrategy">The strategy to use when checking if the service should be skipped.</param>
+    /// <param name="supportLazyInject">Support inject Lazy{ServiceType}</param>
     public static void RegisterInterfacesForImplementation(
         this IServiceCollection services,
         Type implementationType,
@@ -1054,7 +1118,8 @@ public static class DependencyInjectionExtension
         bool replaceIfExist,
         CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
         bool skipIfExist = false,
-        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
+        CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth,
+        bool supportLazyInject = false)
     {
         if (!implementationType.IsGenericType)
             implementationType
@@ -1069,7 +1134,8 @@ public static class DependencyInjectionExtension
                         replaceIfExist,
                         replaceStrategy,
                         skipIfExist: skipIfExist,
-                        skipIfExistStrategy: skipIfExistStrategy));
+                        skipIfExistStrategy: skipIfExistStrategy,
+                        supportLazyInject: supportLazyInject));
 
         else
             implementationType
@@ -1084,7 +1150,8 @@ public static class DependencyInjectionExtension
                         replaceIfExist,
                         replaceStrategy,
                         skipIfExist: skipIfExist,
-                        skipIfExistStrategy: skipIfExistStrategy));
+                        skipIfExistStrategy: skipIfExistStrategy,
+                        supportLazyInject: supportLazyInject));
     }
 
     public static Func<Type, bool> DefaultIgnoreRegisterLibraryInterfacesForImplementationExpr()
@@ -1102,12 +1169,14 @@ public static class DependencyInjectionExtension
     /// <param name="lifeTime">The <see cref="ServiceLifeTime" /> of the service.</param>
     /// <param name="replaceIfExist">A boolean value indicating whether to replace the service if it already exists.</param>
     /// <param name="replaceStrategy">The strategy to use when replacing the service.</param>
+    /// <param name="supportLazyInject">Support inject Lazy{ServiceType}</param>
     public static void RegisterInterfacesForImplementation<TImplementation>(
         this IServiceCollection services,
         Func<IServiceProvider, TImplementation> implementationFactory,
         ServiceLifeTime lifeTime,
         bool replaceIfExist,
-        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool supportLazyInject = false)
     {
         RegisterInterfacesForImplementation(
             services,
@@ -1115,7 +1184,8 @@ public static class DependencyInjectionExtension
             provider => implementationFactory(provider),
             lifeTime,
             replaceIfExist,
-            replaceStrategy);
+            replaceStrategy,
+            supportLazyInject: supportLazyInject);
     }
 
     /// <summary>
@@ -1127,13 +1197,15 @@ public static class DependencyInjectionExtension
     /// <param name="lifeTime">The lifetime of the service.</param>
     /// <param name="replaceIfExist">A flag indicating whether to replace the service if it already exists.</param>
     /// <param name="replaceStrategy">The strategy to use when replacing the service.</param>
+    /// <param name="supportLazyInject">Support inject Lazy{ServiceType}</param>
     public static void RegisterInterfacesForImplementation(
         this IServiceCollection services,
         Type implementationType,
         Func<IServiceProvider, object> implementationFactory,
         ServiceLifeTime lifeTime,
         bool replaceIfExist,
-        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
+        CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth,
+        bool supportLazyInject = false)
     {
         if (implementationType.IsGenericType)
             implementationType
@@ -1146,7 +1218,8 @@ public static class DependencyInjectionExtension
                         implementationFactory,
                         lifeTime,
                         replaceIfExist,
-                        replaceStrategy));
+                        replaceStrategy,
+                        supportLazyInject: supportLazyInject));
         else
             implementationType
                 .GetInterfaces()
@@ -1158,7 +1231,8 @@ public static class DependencyInjectionExtension
                         implementationFactory,
                         lifeTime,
                         replaceIfExist,
-                        replaceStrategy));
+                        replaceStrategy,
+                        supportLazyInject: supportLazyInject));
     }
 
     /// <summary>

@@ -87,7 +87,9 @@ public class TextSnippetSqlEfCorePersistenceModule : PlatformEfCorePersistenceMo
                     .With(conn => conn.Enlist = false)
                     .With(conn => conn.Pooling = true)
                     .With(conn => conn.MinPoolSize = 1) // Always available connection to serve request, reduce latency
-                    .With(conn => conn.MaxPoolSize = 80) // Setup max pool size depend on the database maximum connections available
+                    .With(
+                        conn => conn.MaxPoolSize =
+                            Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent) // Setup max pool size depend on the database maximum connections available
                     .ToString(),
                 options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
             .EnableThreadSafetyChecks(false) // improve performance. Only disable after testing ensure no such concurrency bugs.

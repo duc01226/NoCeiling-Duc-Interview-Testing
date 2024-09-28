@@ -21,7 +21,8 @@ public class TextSnippetMongoPersistenceModule : PlatformMongoDbPersistenceModul
             Configuration.GetValue<int?>("MongoDB:MinConnectionPoolSize") ??
             TextSnippetApplicationConstants.DefaultBackgroundJobWorkerCount + 1; // Always available connection to serve request, reduce latency
         options.MaxConnectionPoolSize =
-            Configuration.GetValue<int?>("MongoDB:MaxConnectionPoolSize") ?? 80; // Setup max pool size depend on the database maximum connections available
+            Configuration.GetValue<int?>("MongoDB:MaxConnectionPoolSize") ??
+            Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent; // Setup max pool size depend on the database maximum connections available
     }
 
     protected override bool EnableInboxBusMessage()

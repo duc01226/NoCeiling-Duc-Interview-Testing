@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Easy.Platform.RabbitMQ.Extensions;
 using Microsoft.Extensions.ObjectPool;
 using RabbitMQ.Client;
 
@@ -23,7 +24,7 @@ public class PlatformRabbitMqChannelPool : IDisposable
         ChannelPoolPolicy = channelPoolPolicy;
     }
 
-    public int PoolSize { get; set; } = Environment.ProcessorCount * 2;
+    public int PoolSize => ChannelPoolPolicy.PoolSize;
 
     public void Dispose()
     {
@@ -36,6 +37,15 @@ public class PlatformRabbitMqChannelPool : IDisposable
         InitInternalObjectPool();
 
         var channel = InternalObjectPool!.Get();
+
+        // If channel IsClosedPermanently mean that this is an existing created channel in the pool which is used and being closed for some reason
+        while (channel.IsClosedPermanently())
+        {
+            CreatedChannelDict.TryRemove(channel.ChannelNumber, out _);
+            channel.Dispose();
+
+            channel = InternalObjectPool!.Get();
+        }
 
         CreatedChannelDict.TryAdd(channel.ChannelNumber, channel);
 

@@ -13,7 +13,7 @@ public abstract class BaseStartup
 {
     public const string DefaultAutomationTestSettingsConfigurationSection = "AutomationTestSettings";
 
-    public static readonly Lazy<IServiceProvider> GlobalLazyDiServiceProvider = new(valueFactory: () => GlobalDiServices.BuildServiceProvider());
+    public static readonly Lazy<IServiceProvider> GlobalLazyDiServiceProvider = new(valueFactory: () => GlobalDiServices!.BuildServiceProvider());
     public static IServiceProvider GlobalDiServiceProvider => GlobalLazyDiServiceProvider.Value;
     public static IServiceCollection GlobalDiServices { get; private set; } = new ServiceCollection();
 

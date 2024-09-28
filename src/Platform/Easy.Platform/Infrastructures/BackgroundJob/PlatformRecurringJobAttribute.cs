@@ -3,76 +3,81 @@ using Easy.Platform.Common.Utils;
 namespace Easy.Platform.Infrastructures.BackgroundJob;
 
 /// <summary>
-/// Specify cronExpression for recurring job interval <br/>
+/// Specify cronExpression for recurring job interval <br />
 /// Cron expression references: https://en.wikipedia.org/wiki/Cron
-/// <br/>
+/// <br />
 /// Format: [minute(0-59)] [hour(0-23)] [day of month (1-31)] [month (1-12)] [dat of week (0-6 = Sunday to Saturday)]
-/// <br/>
+/// <br />
 /// Example:
-/// <br/>
+/// <br />
 /// Minutely: * * * * *
-/// <br/>
+/// <br />
 /// Hourly: 0 * * * *
-/// <br/>
+/// <br />
 /// Run once a year at midnight of 1 January: 0 0 1 1 *
-/// <br/>
+/// <br />
 /// Run daily at midnight 0h: 0 0 * * *
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface)]
 public class PlatformRecurringJobAttribute : Attribute
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="PlatformRecurringJobAttribute"/> class.
-    /// Specify cronExpression for recurring job interval <br/>
-    /// timeZoneOffset: Timezone offset hours from UTC. Example: +7 mean +7 hours from utc (Bangkok) <br/>
+    /// Initializes a new instance of the <see cref="PlatformRecurringJobAttribute" /> class.
+    /// Specify cronExpression for recurring job interval <br />
+    /// timeZoneOffset: Timezone offset hours from UTC. Example: +7 mean +7 hours from utc (Bangkok) <br />
     /// Cron expression references: https://en.wikipedia.org/wiki/Cron
-    /// <br/>
+    /// <br />
     /// Format: [minute(0-59)] [hour(0-23)] [day of month (1-31)] [month (1-12)] [dat of week (0-6 = Sunday to Saturday)]
-    /// <br/>
+    /// <br />
     /// Example:
-    /// <br/>
+    /// <br />
     /// Minutely: * * * * *
-    /// <br/>
+    /// <br />
     /// Hourly: 0 * * * *
-    /// <br/>
+    /// <br />
     /// Run once a year at midnight of 1 January: 0 0 1 1 *
-    /// <br/>
+    /// <br />
     /// Run daily at midnight 0h: 0 0 * * *
     /// </summary>
-    /// <param name="cronExpression"><see cref="CronExpression"/></param>
+    /// <param name="cronExpression">
+    ///     <see cref="CronExpression" />
+    /// </param>
+    /// <param name="executeOnStartUp">executeOnStartUp = true to auto run the job once on app startup</param>
     public PlatformRecurringJobAttribute(string cronExpression, bool executeOnStartUp = false)
     {
         CronExpression = cronExpression;
         ExecuteOnStartUp = executeOnStartUp;
     }
 
-    /// <inheritdoc cref="PlatformRecurringJobAttribute"/>
+    /// <inheritdoc cref="PlatformRecurringJobAttribute" />
     public PlatformRecurringJobAttribute(string cronExpression, double timeZoneOffset, bool executeOnStartUp = false) : this(cronExpression, executeOnStartUp)
     {
         TimeZoneOffset = timeZoneOffset;
     }
 
-    /// <inheritdoc cref="PlatformRecurringJobAttribute"/>
+    /// <inheritdoc cref="PlatformRecurringJobAttribute" />
     public PlatformRecurringJobAttribute(string cronExpression, string timeZoneId, bool executeOnStartUp = false) : this(cronExpression, executeOnStartUp)
     {
         TimeZoneOffset = Util.TimeZoneParser.TryGetTimeZoneById(timeZoneId)?.BaseUtcOffset.TotalHours;
     }
 
     /// <summary>
-    /// Add or update a recurring job. Use <see cref="Util.CronBuilder"/> for common cron// </summary>
-    /// Set the cronExpression to be used if TJobExecutor don't have <see cref="PlatformRecurringJobAttribute"/>
+    /// Add or update a recurring job.
+    /// </summary>
+    /// Set the cronExpression to be used if TJobExecutor don't have
+    /// <see cref="PlatformRecurringJobAttribute" />
     /// https://en.wikipedia.org/wiki/Cron
-    /// <br/>
+    /// <br />
     /// Format: [minute(0-59)] [hour(0-23)] [day of month (1-31)] [month (1-12)] [dat of week (0-6 = Sunday to Saturday)]
-    /// <br/>
+    /// <br />
     /// Example:
-    /// <br/>
+    /// <br />
     /// Minutely: * * * * *
-    /// <br/>
+    /// <br />
     /// Hourly: 0 * * * *
-    /// <br/>
+    /// <br />
     /// Run once a year at midnight of 1 January: 0 0 1 1 *
-    /// <br/>
+    /// <br />
     /// Run daily at midnight 0h: 0 0 * * *
     public string CronExpression { get; }
 

@@ -9,6 +9,7 @@ public class PlatformDataMigrationHistory : IRowVersionEntity
 {
     public const string DbInitializedMigrationHistoryName = "DbInitialized";
     public const int ProcessingPingIntervalSeconds = 10;
+    public const int MaxAllowedProcessingPingMisses = 3;
 
     private DateTime? createdDate;
 
@@ -58,7 +59,7 @@ public class PlatformDataMigrationHistory : IRowVersionEntity
                     p.Status == Statuses.Processed ||
                     (p.Status == Statuses.Processing &&
                      p.LastProcessingPingTime != null &&
-                     p.LastProcessingPingTime >= Clock.Now.AddSeconds(-ProcessingPingIntervalSeconds * 3));
+                     p.LastProcessingPingTime >= Clock.Now.AddSeconds(-ProcessingPingIntervalSeconds * MaxAllowedProcessingPingMisses));
     }
 
     public enum Statuses

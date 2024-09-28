@@ -316,6 +316,15 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
+    public abstract Task<TEntity> SetAsync(
+        TEntity entity,
+        CancellationToken cancellationToken = default);
+
+    public abstract Task<TEntity> SetAsync(
+        IPlatformUnitOfWork uow,
+        TEntity entity,
+        CancellationToken cancellationToken = default);
+
     public abstract Task<TEntity> UpdateAsync(
         IPlatformUnitOfWork uow,
         TEntity entity,

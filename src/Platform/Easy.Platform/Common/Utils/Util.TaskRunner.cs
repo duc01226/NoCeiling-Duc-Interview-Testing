@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Extensions.WhenCases;
@@ -13,6 +14,23 @@ public static partial class Util
     {
         public const int DefaultWaitUntilMaxSeconds = 60;
         public const double DefaultWaitIntervalSeconds = 1;
+        public const int DefaultResilientRetryCount = 3;
+
+        /// <summary>
+        /// A typical recommendation is to use a factor of 10-50 times the number of processor cores for I/O-bound tasks.
+        /// Example: Assume: 50 ms average latency for PostgreSQL queries; 70 ms average latency for MongoDB queries; 10 ms CPU processing time per query;
+        /// Total time per I/O task (I/O + CPU): 50 ms (I/O) + 10 ms (CPU) = 60 ms
+        /// Max parallel tasks per core: PostgreSQL: 60ms/10ms(CPU processing time) = 6 tasks/core; MongoDB: 80ms/10ms = 8 tasks/core
+        /// </summary>
+        public static int DefaultNumberOfParallelIoTasksPerCpuRatio { get; set; } = 10;
+
+        public static int DefaultNumberOfParallelComputeTasksPerCpuRatio { get; set; } = 2;
+
+        public static int DefaultParallelIoTaskMaxConcurrent { get; set; } =
+            (Environment.ProcessorCount * DefaultNumberOfParallelIoTasksPerCpuRatio)
+            .PipeIf(PlatformEnvironment.IsDevelopment, p => Math.Min(p, DefaultNumberOfParallelIoTasksPerCpuRatio * 2));
+
+        public static int DefaultParallelComputeTaskMaxConcurrent { get; set; } = Environment.ProcessorCount * DefaultNumberOfParallelComputeTasksPerCpuRatio;
 
         /// <summary>
         /// Execute an action after a given of time.
@@ -70,10 +88,11 @@ public static partial class Util
             Func<Task> action,
             Func<ILogger> loggerFactory,
             int delayTimeSeconds = 0,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            bool logFullStackTraceBeforeBackgroundTask = true)
         {
             // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
-            var fullStackTrace = PlatformEnvironment.StackTrace();
+            var fullStackTrace = logFullStackTraceBeforeBackgroundTask ? PlatformEnvironment.StackTrace() : null;
 
             Task.Run(
                 async () =>
@@ -86,6 +105,8 @@ public static partial class Util
                     }
                     catch (Exception ex)
                     {
+                        if (ex is TaskCanceledException) return;
+
                         loggerFactory().LogError(ex.BeautifyStackTrace(), "Run in background thread failed.");
                     }
                 },
@@ -107,10 +128,11 @@ public static partial class Util
             Func<Task<TResult>> action,
             Func<ILogger> loggerFactory,
             int delayTimeSeconds = 0,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            bool logFullStackTraceBeforeBackgroundTask = true)
         {
             // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
-            var fullStackTrace = PlatformEnvironment.StackTrace();
+            var fullStackTrace = logFullStackTraceBeforeBackgroundTask ? PlatformEnvironment.StackTrace() : null;
 
             Task.Run(
                 async () =>
@@ -123,6 +145,8 @@ public static partial class Util
                     }
                     catch (Exception ex)
                     {
+                        if (ex is TaskCanceledException) return;
+
                         loggerFactory().LogError(ex.BeautifyStackTrace(), "Run in background thread failed.");
                     }
                 },
@@ -144,10 +168,11 @@ public static partial class Util
             Action action,
             Func<ILogger> loggerFactory,
             int delayTimeSeconds = 0,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            bool logFullStackTraceBeforeBackgroundTask = true)
         {
             // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
-            var fullStackTrace = PlatformEnvironment.StackTrace();
+            var fullStackTrace = logFullStackTraceBeforeBackgroundTask ? PlatformEnvironment.StackTrace() : null;
 
             Task.Run(
                 async () =>
@@ -160,6 +185,8 @@ public static partial class Util
                     }
                     catch (Exception ex)
                     {
+                        if (ex is TaskCanceledException) return;
+
                         loggerFactory().LogError(ex.BeautifyStackTrace(), "Run in background thread failed.");
                     }
                 },
@@ -218,10 +245,11 @@ public static partial class Util
             Func<ILogger> loggerFactory,
             int? maximumIntervalExecutionCount = null,
             bool executeOnceImmediately = true,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            bool logFullStackTraceBeforeBackgroundTask = true)
         {
             // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
-            var fullStackTrace = PlatformEnvironment.StackTrace();
+            var fullStackTrace = logFullStackTraceBeforeBackgroundTask ? PlatformEnvironment.StackTrace() : null;
 
             Task.Run(
                 async () =>
@@ -234,6 +262,8 @@ public static partial class Util
                     }
                     catch (Exception ex)
                     {
+                        if (ex is TaskCanceledException) return;
+
                         loggerFactory().LogError(ex.BeautifyStackTrace(), "Run in background thread failed.");
                     }
                 },
@@ -347,6 +377,20 @@ public static partial class Util
             {
                 onException(e);
                 throw;
+            }
+        }
+
+        public static T CatchExceptionFallBackValue<TException, T>(Func<T> func, Action<TException> onException, T fallbackValue)
+            where TException : Exception
+        {
+            try
+            {
+                return func();
+            }
+            catch (TException e)
+            {
+                onException(e);
+                return fallbackValue;
             }
         }
 
@@ -516,7 +560,7 @@ public static partial class Util
         public static Task WaitRetryThrowFinalExceptionAsync<TException>(
             Func<Task> executeFunc,
             Func<int, TimeSpan> sleepDurationProvider = null,
-            int retryCount = 1,
+            int retryCount = DefaultResilientRetryCount,
             Action<Exception> onBeforeThrowFinalExceptionFn = null,
             Action<Exception, TimeSpan, int, Context> onRetry = null,
             CancellationToken cancellationToken = default) where TException : Exception
@@ -537,7 +581,7 @@ public static partial class Util
         public static Task<T> WaitRetryThrowFinalExceptionAsync<T, TException>(
             Func<Task<T>> executeFunc,
             Func<int, TimeSpan> sleepDurationProvider = null,
-            int retryCount = 1,
+            int retryCount = DefaultResilientRetryCount,
             Action<Exception> onBeforeThrowFinalExceptionFn = null,
             Action<Exception, TimeSpan, int, Context> onRetry = null,
             CancellationToken cancellationToken = default) where TException : Exception
@@ -558,7 +602,7 @@ public static partial class Util
         public static Task WaitRetryThrowFinalExceptionAsync(
             Func<Task> executeFunc,
             Func<int, TimeSpan> sleepDurationProvider = null,
-            int retryCount = 1,
+            int retryCount = DefaultResilientRetryCount,
             Action<Exception> onBeforeThrowFinalExceptionFn = null,
             Action<Exception, TimeSpan, int, Context> onRetry = null,
             CancellationToken cancellationToken = default)
@@ -576,7 +620,7 @@ public static partial class Util
         public static Task<T> WaitRetryThrowFinalExceptionAsync<T>(
             Func<Task<T>> executeFunc,
             Func<int, TimeSpan> sleepDurationProvider = null,
-            int retryCount = 1,
+            int retryCount = DefaultResilientRetryCount,
             Action<Exception> onBeforeThrowFinalExceptionFn = null,
             Action<Exception, TimeSpan, int, Context> onRetry = null,
             CancellationToken cancellationToken = default)
@@ -602,7 +646,7 @@ public static partial class Util
         public static Task<PolicyResult> WaitRetryAsync(
             Func<CancellationToken, Task> executeFunc,
             Func<int, TimeSpan> sleepDurationProvider = null,
-            int retryCount = 1,
+            int retryCount = DefaultResilientRetryCount,
             Action<Exception, TimeSpan, int, Context> onRetry = null,
             CancellationToken cancellationToken = default)
         {
@@ -621,7 +665,7 @@ public static partial class Util
                         }
                         finally
                         {
-                            GarbageCollector.Collect();
+                            await GarbageCollector.Collect();
                         }
                     },
                     cancellationToken);
@@ -640,7 +684,7 @@ public static partial class Util
         public static Task<PolicyResult<T>> WaitRetryAsync<T>(
             Func<Task<T>> executeFunc,
             Func<int, TimeSpan> sleepDurationProvider = null,
-            int retryCount = 1,
+            int retryCount = DefaultResilientRetryCount,
             Action<Exception, TimeSpan, int, Context> onRetry = null,
             CancellationToken cancellationToken = default)
         {
@@ -659,7 +703,7 @@ public static partial class Util
                         }
                         finally
                         {
-                            GarbageCollector.Collect();
+                            await GarbageCollector.Collect();
                         }
                     },
                     cancellationToken);
@@ -678,7 +722,7 @@ public static partial class Util
         public static T WaitRetryThrowFinalException<T>(
             Func<T> executeFunc,
             Func<int, TimeSpan> sleepDurationProvider = null,
-            int retryCount = 1,
+            int retryCount = DefaultResilientRetryCount,
             Action<Exception> onBeforeThrowFinalExceptionFn = null,
             Action<Exception, TimeSpan, int, Context> onRetry = null)
         {
@@ -705,7 +749,7 @@ public static partial class Util
         public static PolicyResult<T> WaitRetry<T>(
             Func<T> executeFunc,
             Func<int, TimeSpan> sleepDurationProvider = null,
-            int retryCount = 1,
+            int retryCount = DefaultResilientRetryCount,
             Action<Exception, TimeSpan, int, Context> onRetry = null)
         {
             return Policy
@@ -717,14 +761,7 @@ public static partial class Util
                 .ExecuteAndCapture(
                     () =>
                     {
-                        try
-                        {
-                            return executeFunc();
-                        }
-                        finally
-                        {
-                            GarbageCollector.Collect();
-                        }
+                        return executeFunc();
                     });
         }
 
@@ -740,7 +777,7 @@ public static partial class Util
         public static void WaitRetryThrowFinalException(
             Action executeAction,
             Func<int, TimeSpan> sleepDurationProvider = null,
-            int retryCount = 1,
+            int retryCount = DefaultResilientRetryCount,
             Action<Exception> onBeforeThrowFinalExceptionFn = null,
             Action<Exception, TimeSpan, int, Context> onRetry = null)
         {
@@ -758,7 +795,7 @@ public static partial class Util
         public static PolicyResult WaitRetry(
             Action executeAction,
             Func<int, TimeSpan> sleepDurationProvider = null,
-            int retryCount = 1,
+            int retryCount = DefaultResilientRetryCount,
             Action<Exception, TimeSpan, int, Context> onRetry = null)
         {
             return Policy
@@ -770,14 +807,7 @@ public static partial class Util
                 .ExecuteAndCapture(
                     () =>
                     {
-                        try
-                        {
-                            executeAction();
-                        }
-                        finally
-                        {
-                            GarbageCollector.Collect();
-                        }
+                        executeAction();
                     });
         }
 
@@ -785,7 +815,7 @@ public static partial class Util
         public static T WaitRetryThrowFinalException<T, TException>(
             Func<T> executeFunc,
             Func<int, TimeSpan> sleepDurationProvider = null,
-            int retryCount = 1,
+            int retryCount = DefaultResilientRetryCount,
             Action<TException> onBeforeThrowFinalExceptionFn = null,
             Action<Exception, TimeSpan, int, Context> onRetry = null) where TException : Exception
         {
@@ -813,7 +843,7 @@ public static partial class Util
         public static PolicyResult<T> WaitRetry<T, TException>(
             Func<T> executeFunc,
             Func<int, TimeSpan> sleepDurationProvider = null,
-            int retryCount = 1,
+            int retryCount = DefaultResilientRetryCount,
             Action<Exception, TimeSpan, int, Context> onRetry = null) where TException : Exception
         {
             return Policy
@@ -825,14 +855,7 @@ public static partial class Util
                 .ExecuteAndCapture(
                     () =>
                     {
-                        try
-                        {
-                            return executeFunc();
-                        }
-                        finally
-                        {
-                            GarbageCollector.Collect();
-                        }
+                        return executeFunc();
                     });
         }
 
@@ -902,6 +925,33 @@ public static partial class Util
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
             while (!await condition())
+                if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
+                    await Task.Delay((int)(waitIntervalSeconds * 1000));
+                else
+                    throw new TimeoutException(
+                        $"WaitUntil is timed out (Max: {maxWaitSeconds} seconds)." +
+                        $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+        }
+
+        /// <summary>
+        /// Waits until the specified condition is met or a timeout occurs.
+        /// </summary>
+        /// <param name="condition">The condition to wait for. This is a function that returns a Task of bool.</param>
+        /// <param name="maxWaitSeconds">The maximum time to wait in seconds. If this time elapses before the condition is met, a TimeoutException is thrown. Default is 60 seconds.</param>
+        /// <param name="waitIntervalSeconds">The interval between condition checks in seconds. Default is 0.3 seconds.</param>
+        /// <param name="waitForMsg">An optional message to include in the TimeoutException if the condition is not met within the specified time.</param>
+        /// <returns>A Task that completes when the condition is met or the timeout occurs.</returns>
+        /// <exception cref="TimeoutException">Thrown if the condition is not met within the specified time.</exception>
+        public static async Task WaitUntilAsync(
+            Func<bool> condition,
+            double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
+            double waitIntervalSeconds = DefaultWaitIntervalSeconds,
+            string waitForMsg = null)
+        {
+            var startWaitTime = DateTime.UtcNow;
+            var maxWaitMilliseconds = maxWaitSeconds * 1000;
+
+            while (!condition())
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     await Task.Delay((int)(waitIntervalSeconds * 1000));
                 else
@@ -1720,7 +1770,7 @@ public static partial class Util
             }
         }
 
-        /// <inheritdoc cref="RunWithTimeout{TResult}(Func{CancellationToken,Task{TResult}},TimeSpan,CancellationToken)" />
+        /// <inheritdoc cref="RunWithTimeout(Func{CancellationToken,Task},TimeSpan,CancellationToken,Action?)" />
         public static Task<(bool, TResult)> RunWithTimeout<TResult>(
             Func<TResult> fn,
             TimeSpan timeout,
@@ -1736,6 +1786,85 @@ public static partial class Util
         }
 
         /// <summary>
+        /// Executes a provided asynchronous function in parallel for each item in the given enumerable.
+        /// </summary>
+        /// <typeparam name="T">The type of the items in the enumerable.</typeparam>
+        /// <typeparam name="TResult">The type of the result returned by the provided function.</typeparam>
+        /// <param name="items">The enumerable of items to process.</param>
+        /// <param name="action">The asynchronous function to execute for each item. This function takes an item and its index as parameters and returns a task that represents the operation.</param>
+        /// <param name="maxConcurrent">The maximum number of concurrent operations. Default value is <see cref="DefaultParallelIoTaskMaxConcurrent" />.</param>
+        /// <returns>A task that represents the operation. The result of the task is a list of results returned by the provided function.</returns>
+        public static async Task<List<TResult>> ParallelAsync<TResult, T>(IEnumerable<T> items, Func<T, int, Task<TResult>> action, int? maxConcurrent)
+        {
+            var maxDegreeOfParallelism = maxConcurrent ?? DefaultParallelIoTaskMaxConcurrent;
+            var itemsList = items.As<IList<T>>() ?? items.ToList();
+
+            try
+            {
+                if (itemsList.Count == 0)
+                    return [];
+                if (itemsList.Count == 1)
+                    return [await action(itemsList.First(), 0)];
+                if (itemsList.Count <= maxDegreeOfParallelism)
+                    return await Task.WhenAll(itemsList.Select((p, i) => action(p, i))).Then(results => results.ToList());
+
+                // Handle parallelism with limit maxDegreeOfParallelism
+                var actionQueue = new Queue<(int, Func<Task<(int, TResult, Exception?)>>)>(
+                    itemsList
+                        .Select<T, ValueTuple<int, Func<Task<ValueTuple<int, TResult, Exception?>>>>>(
+                            (item, i) => (i,
+                                () => action(item, i)
+                                    .Then<TResult, ValueTuple<TResult, Exception?>>(p => (p, null))
+                                    .Recover(ex => (default!, ex))
+                                    .Then<ValueTuple<TResult, Exception?>, ValueTuple<int, TResult, Exception?>>(
+                                        itemActionResult => (i, itemActionResult.Item1, itemActionResult.Item2)))));
+                var processingActionTasks = new Dictionary<int, Task<ValueTuple<int, TResult, Exception?>>>();
+                var processedActionTaskResults = new Dictionary<int, ValueTuple<TResult, Exception?>>();
+                var processedFailedActionExceptions = new List<Exception>();
+
+                while (processedActionTaskResults.Count < itemsList.Count)
+                {
+                    while (processingActionTasks.Count < maxDegreeOfParallelism && actionQueue.Count > 0)
+                    {
+                        var numberOfToAddItemsToMaxParallelism = maxDegreeOfParallelism - processingActionTasks.Count;
+
+                        for (var i = 0; i < numberOfToAddItemsToMaxParallelism; i++)
+                        {
+                            if (actionQueue.TryDequeue(out var queueItem))
+                            {
+                                var (nextProcessItemIndex, nextProcessAction) = queueItem;
+
+                                processingActionTasks.TryAdd(nextProcessItemIndex, nextProcessAction());
+                            }
+                        }
+                    }
+
+                    await Task.WhenAny(processingActionTasks.Values);
+
+                    processingActionTasks
+                        .Where(p => p.Value.IsCompleted)
+                        .ForEach(
+                            completedTaskItem =>
+                            {
+                                var (nextProcessedItemIndex, nextProcessedActionResult, nextProcessedActionException) = completedTaskItem.Value.Result;
+
+                                processedActionTaskResults.TryAdd(nextProcessedItemIndex, (nextProcessedActionResult, nextProcessedActionException));
+                                processingActionTasks.Remove(nextProcessedItemIndex, out _);
+                                if (nextProcessedActionException != null) processedFailedActionExceptions.Add(nextProcessedActionException);
+                            });
+                }
+
+                return processedFailedActionExceptions.Count == 0
+                    ? processedActionTaskResults.OrderBy(p => p.Key).Select(p => p.Value.Item1).ToList()
+                    : throw new AggregateException(processedFailedActionExceptions);
+            }
+            finally
+            {
+                if (itemsList.Count >= maxDegreeOfParallelism) await GarbageCollector.Collect();
+            }
+        }
+
+        /// <summary>
         /// Provides a mechanism to throttle the execution of tasks.
         /// </summary>
         /// <remarks>
@@ -1745,9 +1874,9 @@ public static partial class Util
         public class Throttler : IDisposable
         {
             private readonly CancellationTokenSource cts = new();
-            private readonly object lockObj = new();
+            private readonly SemaphoreSlim lockObj = new(1, 1);
             private bool disposed;
-            private bool isExecuting;
+            private volatile bool isExecuting;
             private DateTime? lastExecutionTime;
 
             public Throttler(TimeSpan throttleWindow)
@@ -1766,25 +1895,25 @@ public static partial class Util
             /// <summary>
             /// Executes the provided function in a throttled manner.
             /// </summary>
-            public void ThrottleExecute(Action action)
+            public async Task ThrottleExecute(Func<Task> action)
             {
-                if (isExecuting || (lastExecutionTime != null && lastExecutionTime.Value.Add(ThrottleWindow) < DateTime.UtcNow)) return;
+                if (isExecuting || (lastExecutionTime != null && lastExecutionTime.Value.Add(ThrottleWindow) < DateTime.UtcNow) || lockObj.CurrentCount == 0) return;
 
-                lock (lockObj)
+                try
                 {
-                    if (lastExecutionTime == null || lastExecutionTime.Value.Add(ThrottleWindow) < DateTime.UtcNow)
-                    {
-                        isExecuting = true;
-                        try
-                        {
-                            action();
-                            lastExecutionTime = DateTime.UtcNow;
-                        }
-                        finally
-                        {
-                            isExecuting = false;
-                        }
-                    }
+                    isExecuting = true;
+
+                    await lockObj.WaitAsync();
+
+                    await action();
+
+                    lastExecutionTime = DateTime.UtcNow;
+                }
+                finally
+                {
+                    isExecuting = false;
+
+                    lockObj.Release();
                 }
             }
 
@@ -1793,8 +1922,11 @@ public static partial class Util
                 if (!disposed)
                 {
                     if (disposing)
+                    {
                         // Release managed resources
                         cts?.Dispose();
+                        lockObj.Dispose();
+                    }
 
                     // Release unmanaged resources
 
@@ -1805,6 +1937,121 @@ public static partial class Util
             ~Throttler()
             {
                 Dispose(false);
+            }
+        }
+
+        /// <summary>
+        /// A queue that processes tasks in parallel with a specified maximum number of concurrent tasks.
+        /// Tasks are automatically dequeued and processed. The number of concurrent tasks is controlled by a SemaphoreSlim.
+        /// </summary>
+        /// <typeparam name="TQueueItem">The type of item being processed in the queue.</typeparam>
+        public class ParallelTasksQueue<TQueueItem> : IDisposable
+        {
+            protected readonly SemaphoreSlim MaxParallelLock; // Semaphore to throttle concurrent tasks
+            private readonly Func<TQueueItem, CancellationToken, Task> processQueueItemFn;
+            private volatile bool checkToDequeueAndProcessItemRunning; // Atomic flag to prevent concurrent dequeue attempts
+            private bool disposed; // Flag to indicate if the object has been disposed
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ParallelTasksQueue{TQueueItem}" /> class.
+            /// </summary>
+            /// <param name="processQueueItemFn">A function that processes each queue item asynchronously.</param>
+            /// <param name="maxParallelProcessCount">The maximum number of concurrent tasks allowed.</param>
+            /// <param name="cancellationToken">A cancellation token used to stop queue processing.</param>
+            public ParallelTasksQueue(
+                Func<TQueueItem, CancellationToken, Task> processQueueItemFn,
+                int maxParallelProcessCount,
+                CancellationToken cancellationToken)
+            {
+                this.processQueueItemFn = processQueueItemFn;
+                CancellationToken = cancellationToken;
+                MaxParallelLock = new SemaphoreSlim(maxParallelProcessCount, maxParallelProcessCount); // Initialize the semaphore with the maximum count
+            }
+
+            /// <summary>
+            /// Gets the queue that holds the items to be processed.
+            /// </summary>
+            public ConcurrentQueue<TQueueItem> TaskItemQueue { get; } = new();
+
+            /// <summary>
+            /// Gets or sets the CancellationToken used to stop processing.
+            /// </summary>
+            public CancellationToken CancellationToken { get; set; }
+
+            /// <summary>
+            /// Disposes the resources used by the queue, ensuring all tasks are canceled and semaphore is released.
+            /// </summary>
+            public void Dispose()
+            {
+                Dispose(true);
+                GC.SuppressFinalize(this); // Suppress finalization to avoid unnecessary cleanup
+            }
+
+            /// <summary>
+            /// Enqueues a new item to the queue and triggers the dequeue process if not already running.
+            /// </summary>
+            /// <param name="taskItem">The item to be processed.</param>
+            /// <returns>A task representing the asynchronous operation.</returns>
+            public async Task EnqueueAsync(TQueueItem taskItem)
+            {
+                TaskItemQueue.Enqueue(taskItem); // Add the task item to the queue
+                _ = CheckToDequeueAndProcessItemAsync(); // Ensure the queue is being processed. Process the queue item in a separate task to allow EnqueueAsync finished
+            }
+
+            /// <summary>
+            /// Asynchronously checks the queue and processes items while respecting the maximum number of concurrent tasks.
+            /// </summary>
+            /// <returns>A task representing the asynchronous operation.</returns>
+            private async Task CheckToDequeueAndProcessItemAsync()
+            {
+                if (checkToDequeueAndProcessItemRunning) return; // Avoid multiple concurrent calls to this method
+
+                checkToDequeueAndProcessItemRunning = true; // Set flag to indicate that dequeuing is in progress
+
+                try
+                {
+                    while (!CancellationToken.IsCancellationRequested &&
+                           !disposed &&
+                           MaxParallelLock.CurrentCount > 0 &&
+                           TaskItemQueue.TryDequeue(out var taskItem))
+                    {
+                        // Wait for an available slot in the semaphore to ensure we don't exceed the parallel task limit
+                        await MaxParallelLock.WaitAsync(CancellationToken);
+
+                        // Process the queue item in a separate task to allow further dequeueing
+                        _ = Task.Run(
+                            async () =>
+                            {
+                                try
+                                {
+                                    await processQueueItemFn(taskItem, CancellationToken); // Process the task item
+                                }
+                                finally
+                                {
+                                    MaxParallelLock.Release(); // Release the semaphore slot after processing
+                                    await CheckToDequeueAndProcessItemAsync(); // Continue processing the next item in the queue
+                                }
+                            },
+                            CancellationToken);
+                    }
+                }
+                finally
+                {
+                    checkToDequeueAndProcessItemRunning = false; // Reset flag once all items are processed
+                }
+            }
+
+            /// <summary>
+            /// Releases the unmanaged resources used by the class and optionally disposes of the managed resources.
+            /// </summary>
+            /// <param name="disposing">True to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
+            protected virtual void Dispose(bool disposing)
+            {
+                if (disposing && !disposed)
+                {
+                    MaxParallelLock.Dispose();
+                    disposed = true; // Mark as disposed
+                }
             }
         }
     }

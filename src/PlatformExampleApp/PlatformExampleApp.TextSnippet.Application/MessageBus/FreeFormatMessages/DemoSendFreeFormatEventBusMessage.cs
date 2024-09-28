@@ -9,6 +9,6 @@ public sealed class DemoSendFreeFormatEventBusMessage : PlatformTrackableBusMess
 
     public override string SubQueuePrefix()
     {
-        return TrackingId;
+        return null;
     }
 }

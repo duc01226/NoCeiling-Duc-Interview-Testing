@@ -162,19 +162,24 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        using (var immediatelyUow = UowManager().CreateNewUow(true))
-        {
-            var result = await CreateOrUpdateAsync(
-                immediatelyUow,
-                entity,
-                dismissSendEvent,
-                eventCustomConfig: eventCustomConfig,
-                cancellationToken: cancellationToken);
+        return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+            async () =>
+            {
+                using (var immediatelyUow = UowManager().CreateNewUow(true))
+                {
+                    var result = await CreateOrUpdateAsync(
+                        immediatelyUow,
+                        entity,
+                        dismissSendEvent,
+                        eventCustomConfig: eventCustomConfig,
+                        cancellationToken: cancellationToken);
 
-            await immediatelyUow.CompleteAsync(cancellationToken);
+                    await immediatelyUow.CompleteAsync(cancellationToken);
 
-            return result;
-        }
+                    return result;
+                }
+            },
+            cancellationToken: cancellationToken);
     }
 
     public async Task<List<TEntity>> CreateOrUpdateManyImmediatelyAsync(
@@ -183,19 +188,24 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        using (var immediatelyUow = UowManager().CreateNewUow(true))
-        {
-            var result = await CreateOrUpdateManyAsync(
-                immediatelyUow,
-                entities,
-                dismissSendEvent,
-                eventCustomConfig: eventCustomConfig,
-                cancellationToken: cancellationToken);
+        return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+            async () =>
+            {
+                using (var immediatelyUow = UowManager().CreateNewUow(true))
+                {
+                    var result = await CreateOrUpdateManyAsync(
+                        immediatelyUow,
+                        entities,
+                        dismissSendEvent,
+                        eventCustomConfig: eventCustomConfig,
+                        cancellationToken: cancellationToken);
 
-            await immediatelyUow.CompleteAsync(cancellationToken);
+                    await immediatelyUow.CompleteAsync(cancellationToken);
 
-            return result;
-        }
+                    return result;
+                }
+            },
+            cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -261,6 +271,23 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Asynchronously updates entity in the repository within the context of current active unit of work or single commit create immediately.
+    /// Do not emit event, change row version or any smart auto update info. Purely just set update data only
+    /// </summary>
+    public Task<TEntity> SetAsync(
+        TEntity entity,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Asynchronously updates entity in the repository within the context of given unit of work or single commit create immediately.
+    /// Do not emit event, change row version or any smart auto update info. Purely just set update data only
+    /// </summary>
+    public Task<TEntity> SetAsync(
+        IPlatformUnitOfWork uow,
+        TEntity entity,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Asynchronously updates entity in the repository within the context of a unit of work.
     /// </summary>
     public Task<TEntity> UpdateAsync(
@@ -286,6 +313,26 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
                 entity,
                 dismissSendEvent,
                 eventCustomConfig,
+                cancellationToken);
+
+            await immediatelyUow.CompleteAsync(cancellationToken);
+
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// Asynchronously set entity in the repository immediately, out of context of any current active uow.
+    /// </summary>
+    public async Task<TEntity> SetImmediatelyAsync(
+        TEntity entity,
+        CancellationToken cancellationToken = default)
+    {
+        using (var immediatelyUow = UowManager().CreateNewUow(true))
+        {
+            var result = await SetAsync(
+                immediatelyUow,
+                entity,
                 cancellationToken);
 
             await immediatelyUow.CompleteAsync(cancellationToken);

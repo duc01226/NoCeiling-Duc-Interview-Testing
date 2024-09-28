@@ -1,9 +1,10 @@
+using Easy.Platform.Common.Utils;
+
 namespace Easy.Platform.Application.MessageBus.InboxPattern;
 
 public class PlatformInboxConfig
 {
     public const int DefaultProcessConsumeMessageRetryCount = 100;
-    private double? messageProcessingMaxSecondsTimeout;
 
     /// <summary>
     /// This is used to calculate the next retry process message time.
@@ -40,43 +41,17 @@ public class PlatformInboxConfig
 
     public int ProcessClearMessageRetryCount { get; set; } = 5;
 
-    public int NumberOfProcessConsumeInboxParallelMessages { get; set; } = Environment.ProcessorCount * 2;
-
-    public int NumberOfProcessConsumeInboxMessagesSubQueuePrefetch { get; set; } = 5;
-
     public int GetCanHandleMessageGroupedByConsumerIdPrefixesPageSize { get; set; } = 10000;
 
     public int ProcessConsumeMessageRetryCount { get; set; } = DefaultProcessConsumeMessageRetryCount;
 
     public int ProcessConsumeMessageRetryDelaySeconds { get; set; } = 5;
 
-    /// <summary>
-    /// To config how long a message can live in the database as Processing status in seconds. Default is 3600 seconds;
-    /// This to handle that if message for some reason has been set as Processing but failed to process and has not been set
-    /// back to failed.
-    /// </summary>
-    public double MessageProcessingMaxSeconds { get; set; } = 3600;
-
-    public double MessageProcessingMaxSecondsTimeoutRatio { get; set; } = 0.9;
-
-    public double MessageProcessingMaxSecondsTimeout
-    {
-        get
-        {
-            messageProcessingMaxSecondsTimeout ??= CalcMessageProcessingMaxSecondsTimeout();
-            return messageProcessingMaxSecondsTimeout!.Value;
-        }
-        set => messageProcessingMaxSecondsTimeout = value;
-    }
-
     public int MinimumRetryConsumeInboxMessageTimesToLogError { get; set; } = DefaultProcessConsumeMessageRetryCount * 8 / 10;
 
     public bool LogIntervalProcessInformation { get; set; }
 
-    public int CheckToProcessTriggerIntervalTimeSeconds { get; set; } = 15;
+    public int CheckToProcessTriggerIntervalTimeSeconds { get; set; } = 5;
 
-    public double? CalcMessageProcessingMaxSecondsTimeout()
-    {
-        return MessageProcessingMaxSeconds * MessageProcessingMaxSecondsTimeoutRatio;
-    }
+    public int MaxParallelProcessingMessagesCount { get; set; } = Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
 }

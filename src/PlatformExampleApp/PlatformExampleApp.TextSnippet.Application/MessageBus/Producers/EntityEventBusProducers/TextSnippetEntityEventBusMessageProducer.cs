@@ -31,11 +31,11 @@ public class TextSnippetEntityEventBusMessageProducer
     //}
 
 
-    /// <summary>
-    /// Override this return true if you want to send by MessageSelfRoutingKey. If this true, the consumer need to use <see cref="PlatformConsumerRoutingKeyAttribute" />
-    /// The benefit is that RoutingKey MessageGroup is grouped like PlatformCqrsEntityEvent, PlatformCqrsDomainEvent, PlatformCqrsCommandEvent
-    /// </summary>
-    /// <returns></returns>
+    ///// <summary>
+    ///// Override this return true if you want to send by MessageSelfRoutingKey. If this true, the consumer need to use <see cref="PlatformConsumerRoutingKeyAttribute" />
+    ///// The benefit is that RoutingKey MessageGroup is grouped like PlatformCqrsEntityEvent, PlatformCqrsDomainEvent, PlatformCqrsCommandEvent
+    ///// </summary>
+    ///// <returns></returns>
     //protected override bool SendByMessageSelfRoutingKey()
     //{
     //    return true;
