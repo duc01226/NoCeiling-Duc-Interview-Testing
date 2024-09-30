@@ -821,18 +821,20 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
     /// </remarks>
     public async Task DeleteManyScrollingPagingAsync(
         Expression<Func<TEntity, bool>> predicate,
-        int pageSize = 10,
+        int? pageSize = null,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
+        pageSize ??= Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
+
         await Util.Pager.ExecuteScrollingPagingAsync(
             async () =>
             {
                 using (var uow = UowManager().CreateNewUow(true))
                 {
                     var pagingDeleteItems = await GetAllAsync(
-                        GetQuery(uow).Where(predicate).Take(pageSize),
+                        GetQuery(uow).Where(predicate).Take(pageSize.Value),
                         cancellationToken: cancellationToken);
 
                     await DeleteManyAsync(uow, pagingDeleteItems, dismissSendEvent, eventCustomConfig, cancellationToken);
@@ -842,7 +844,8 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                     return pagingDeleteItems;
                 }
             },
-            maxExecutionCount: await CountAsync(predicate, cancellationToken).Then(totalItemsCount => totalItemsCount / pageSize),
+            maxExecutionCount: await CountAsync(predicate, cancellationToken)
+                .Then(totalItemsCount => totalItemsCount / pageSize.Value),
             cancellationToken: cancellationToken);
     }
 
@@ -859,11 +862,13 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
     public async Task UpdateManyPagingAsync(
         Expression<Func<TEntity, bool>> predicate,
         Action<TEntity> updateAction,
-        int pageSize,
+        int? pageSize,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
+        pageSize ??= Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
+
         await Util.Pager.ExecutePagingAsync(
             async (skipCount, pageSize) =>
             {
@@ -882,7 +887,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                 }
             },
             maxItemCount: await CountAsync(predicate, cancellationToken),
-            pageSize: pageSize,
+            pageSize: pageSize.Value,
             cancellationToken: cancellationToken);
     }
 
@@ -899,18 +904,20 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
     public async Task UpdateManyScrollingPagingAsync(
         Expression<Func<TEntity, bool>> predicate,
         Action<TEntity> updateAction,
-        int pageSize,
+        int? pageSize,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
+        pageSize ??= Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
+
         await Util.Pager.ExecuteScrollingPagingAsync(
             async () =>
             {
                 using (var uow = UowManager().CreateNewUow(true))
                 {
                     var pagingUpdateItems = await GetAllAsync(
-                            GetQuery(uow).Where(predicate).Take(pageSize),
+                            GetQuery(uow).Where(predicate).Take(pageSize.Value),
                             cancellationToken: cancellationToken)
                         .ThenAction(items => items.ForEach(updateAction));
 
@@ -921,7 +928,8 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                     return updatedItems;
                 }
             },
-            maxExecutionCount: await CountAsync(predicate, cancellationToken).Then(totalItemsCount => totalItemsCount / pageSize),
+            maxExecutionCount: await CountAsync(predicate, cancellationToken)
+                .Then(totalItemsCount => totalItemsCount / pageSize.Value),
             cancellationToken: cancellationToken);
     }
 }
