@@ -58,5 +58,5 @@ public class PlatformOutboxConfig
 
     public int MinimumRetrySendOutboxMessageTimesToLogError { get; set; } = DefaultProcessSendMessageRetryCount * 8 / 10;
 
-    public int MaxParallelProcessingMessagesCount { get; set; } = Environment.ProcessorCount * Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio;
+    public int MaxParallelProcessingMessagesCount { get; set; } = Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
 }

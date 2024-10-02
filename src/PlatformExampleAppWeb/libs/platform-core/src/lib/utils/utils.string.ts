@@ -7,6 +7,10 @@ export function string_isNullOrEmpty(value: string | number | undefined | null) 
     return value == undefined || value.toString().trim() == '';
 }
 
+export function string_isNotNullOrEmpty(value: string | number | undefined | null) {
+    return !string_isNullOrEmpty(value);
+}
+
 export function string_isNumber(value: string | number | undefined): boolean {
     if (value == undefined) return false;
     return new RegExp('^-?[0-9]\\d*(\\.\\d+)?$').test(value.toString());

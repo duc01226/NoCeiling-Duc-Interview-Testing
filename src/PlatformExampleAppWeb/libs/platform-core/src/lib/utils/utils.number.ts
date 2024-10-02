@@ -18,7 +18,7 @@ export function number_formatLength(num: number, length: number) {
 }
 
 export function number_isInteger(value: unknown): value is number {
-    return typeof value === 'number' && isFinite(value) && Math.floor(value) === value;
+    return number_IsNumber(value) && Math.floor(value) === value;
 }
 
 export function number_range(start: number, end: number, step: number = 1): number[] {
@@ -26,4 +26,9 @@ export function number_range(start: number, end: number, step: number = 1): numb
     return Array(length)
         .fill(0)
         .map((_, idx) => start + idx * step);
+}
+
+export function number_IsNumber(value: unknown): value is number {
+    const parsedValue = typeof value === 'string' ? Number(value) : value;
+    return typeof parsedValue === 'number' && isFinite(parsedValue);
 }

@@ -63,14 +63,6 @@ public class PlatformRabbitMqOptions
     public ushort QueuePrefetchCount { get; set; } = (ushort)Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
 
     /// <summary>
-    /// Gets or sets the ratio of parallel consumers to be created per CPU core.
-    /// This setting allows you to fine-tune the level of parallelism for message consumption based on your hardware capabilities.
-    /// <br />
-    /// For instance, a value of 2 would create two parallel consumers for each CPU core available.
-    /// </summary>
-    public int NumberOfParallelConsumerInstancesPerCpu { get; set; } = Util.TaskRunner.DefaultNumberOfParallelComputeTasksPerCpuRatio;
-
-    /// <summary>
     /// Gets or sets the interval in seconds for network recovery attempts.
     /// This setting controls how often the RabbitMQ client attempts to reconnect if the connection to the server is lost.
     /// <br />
@@ -166,7 +158,7 @@ public class PlatformRabbitMqOptions
     /// Gets the size of the channel pool for consumers.
     /// This value is calculated based on the number of parallel consumers per CPU and ensures sufficient channels are available for message consumption.
     /// </summary>
-    public int ConsumerChannelPoolSize => Environment.ProcessorCount * NumberOfParallelConsumerInstancesPerCpu;
+    public int ConsumerChannelPoolSize { get; set; } = Util.TaskRunner.DefaultParallelComputeTaskMaxConcurrent;
 
     /// <summary>
     /// Gets or sets the number of times a consumer channel can be reused within a single connection.

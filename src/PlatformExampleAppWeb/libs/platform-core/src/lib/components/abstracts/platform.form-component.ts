@@ -12,9 +12,9 @@ import {
     signal,
     Signal
 } from '@angular/core';
-import { FormArray, FormControl, FormGroup } from '@angular/forms';
+import { FormArray, FormControl, FormGroup, ValidatorFn } from '@angular/forms';
 
-import { asyncScheduler, distinctUntilChanged, filter, map, merge, Observable, throttleTime } from 'rxjs';
+import { asyncScheduler, delay, distinctUntilChanged, filter, map, merge, Observable, throttleTime } from 'rxjs';
 
 import { PartialDeep } from 'type-fest';
 import { ArrayElement } from 'type-fest/source/internal';
@@ -1110,7 +1110,8 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
                     (<PlatformFormGroupControlsFormArray<TViewModel[keyof TViewModel]>>controls[key]) = new FormArray(
                         formArrayConfigItem.modelItems().map((modelItem, index) => {
                             return this.buildFromArrayControlItem(key, formArrayConfigItem, modelItem, index);
-                        })
+                        }),
+                        formArrayConfigItem.validators
                     );
                 }
 
@@ -1153,12 +1154,21 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
         ) {
             keys(result.controls).forEach(formControlKey => {
                 this.cancelStoredSubscription(
-                    buildFromArrayControlItemValueChangesSubscriptionKey(formArrayControlKey, formControlKey)
+                    buildFromArrayControlItemValueChangesSubscriptionKey(
+                        formArrayControlKey,
+                        formControlKey,
+                        modelItemIndex
+                    )
                 );
                 this.storeSubscription(
-                    buildFromArrayControlItemValueChangesSubscriptionKey(formArrayControlKey, formControlKey),
+                    buildFromArrayControlItemValueChangesSubscriptionKey(
+                        formArrayControlKey,
+                        formControlKey,
+                        modelItemIndex
+                    ),
                     (<FormControl>(<Dictionary<unknown>>result.controls)[formControlKey]).valueChanges
                         .pipe(
+                            delay(1, asyncScheduler), // Delay 1 to push item in async queue to ensure control value has been updated
                             throttleTime(PlatformComponent.defaultDetectChangesThrottleTime, asyncScheduler, {
                                 leading: true,
                                 trailing: true
@@ -1185,9 +1195,10 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 
         function buildFromArrayControlItemValueChangesSubscriptionKey(
             formArrayControlKey: keyof TFormModel,
-            formControlKey: string
+            formControlKey: string,
+            modelItemIndex: number
         ): string {
-            return `buildFromArrayControlItemValueChanges_${formArrayControlKey.toString()}_${formControlKey}`;
+            return `buildFromArrayControlItemValueChanges_${formArrayControlKey.toString()}_${formControlKey}_${modelItemIndex}`;
         }
 
         return result;
@@ -1337,6 +1348,7 @@ export type PlatformFormGroupControlConfigPropArray<TItemModel> = {
      * This mean that dependentProp will trigger validation when dependedOnProp1 or dependedOnProp2 changed
      */
     dependentValidations?: Partial<Record<keyof TItemModel, (keyof TItemModel)[] | undefined>>;
+    validators?: ValidatorFn | ValidatorFn[] | null;
 };
 
 export type PlatformFormGroupControlConfigPropArrayItemControlFn<TItemModel> = (

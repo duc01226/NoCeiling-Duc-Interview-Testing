@@ -30,7 +30,9 @@ public static partial class Util
             (Environment.ProcessorCount * DefaultNumberOfParallelIoTasksPerCpuRatio)
             .PipeIf(PlatformEnvironment.IsDevelopment, p => Math.Min(p, DefaultNumberOfParallelIoTasksPerCpuRatio * 2));
 
-        public static int DefaultParallelComputeTaskMaxConcurrent { get; set; } = Environment.ProcessorCount * DefaultNumberOfParallelComputeTasksPerCpuRatio;
+        public static int DefaultParallelComputeTaskMaxConcurrent { get; set; } =
+            (Environment.ProcessorCount * DefaultNumberOfParallelComputeTasksPerCpuRatio)
+            .PipeIf(PlatformEnvironment.IsDevelopment, p => Math.Min(p, DefaultNumberOfParallelComputeTasksPerCpuRatio * 2));
 
         /// <summary>
         /// Execute an action after a given of time.

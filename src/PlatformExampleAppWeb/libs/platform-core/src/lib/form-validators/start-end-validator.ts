@@ -1,6 +1,6 @@
 import { AbstractControl, FormControl, ValidatorFn } from '@angular/forms';
 
-import { date_compareOnlyDay, date_compareOnlyTime, date_format } from '../utils';
+import { date_compareOnlyDay, date_compareOnlyTime, date_format, number_IsNumber } from '../utils';
 import { IPlatformFormValidationError } from './models';
 import { validator } from './validator';
 
@@ -46,8 +46,9 @@ export function startEndValidator<T extends number | Date>(
         if (condition != null && !condition(<FormControl>control)) {
             return null;
         }
-        const start = new Date(startFn(<FormControl>control));
-        const end = new Date(endFn(<FormControl>control));
+
+        const start = convertToDateOrNumber(startFn(<FormControl>control));
+        const end = convertToDateOrNumber(endFn(<FormControl>control));
 
         if (typeof start === 'number' && typeof end === 'number') {
             if ((allowEqual && start > end) || (!allowEqual && start >= end)) {
@@ -87,6 +88,18 @@ export function startEndValidator<T extends number | Date>(
 }
 
 /**
+ * Parses a value to either a Date or a number.
+ *
+ * @param value - The value to be parsed.
+ * @returns The parsed Date or number.
+ *
+ * @internal
+ */
+function convertToDateOrNumber(value: Date | number | string) {
+    return number_IsNumber(value) ? Number(value) : new Date(value);
+}
+
+/**
  * Formats a date value as a string in the 'YYYY/MM/DD' format.
  *
  * @param value - The date value to be formatted.
@@ -108,8 +121,20 @@ function formatDate(value: Date | number): string {
  *
  * @internal
  */
-function buildValidatorError(start: Date, end: Date, errorMsg?: string): IPlatformFormValidationError {
-    errorMsg = errorMsg ?? `Date must be in range ${formatDate(start)} and ${formatDate(end)}`;
-
+function buildValidatorError(
+    start: Date | number,
+    end: Date | number,
+    errorMsg: string = `Value must be in range ${formatDateOrNumber(start)} and ${formatDateOrNumber(end)}`
+): IPlatformFormValidationError {
     return { errorMsg: errorMsg, params: { startDate: start, endDate: end } };
+}
+
+/**
+ * Formats a date or number value as a string.
+ *
+ * @param value - The value to be formatted.
+ * @returns A string representing the formatted value.
+ */
+function formatDateOrNumber(value: Date | number): string {
+    return typeof value === 'number' ? value.toString() : formatDate(value);
 }
