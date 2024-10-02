@@ -390,6 +390,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
                 buildControlValueChangesSubscriptionKey(formControlKey),
                 (<FormControl>(<Dictionary<unknown>>this.form.controls)[formControlKey]).valueChanges
                     .pipe(
+                        delay(1, asyncScheduler), // Delay 1 to push item in async queue to ensure control value has been updated
                         throttleTime(PlatformComponent.defaultDetectChangesThrottleTime, asyncScheduler, {
                             leading: true,
                             trailing: true
@@ -642,7 +643,11 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     }
 
     public formControlValueChanges<TKey extends keyof TViewModel>(key: TKey): Observable<TViewModel[TKey]> {
-        return this.formControls(key).valueChanges.pipe(distinctUntilObjectValuesChanged(), this.untilDestroyed());
+        return this.formControls(key).valueChanges.pipe(
+            delay(1, asyncScheduler), // Delay 1 to push item in async queue to ensure control value has been updated,
+            distinctUntilObjectValuesChanged(),
+            this.untilDestroyed()
+        );
     }
 
     /**
