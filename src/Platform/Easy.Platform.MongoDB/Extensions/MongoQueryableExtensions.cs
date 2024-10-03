@@ -16,6 +16,14 @@ public static class MongoQueryableExtensions
         return MongoQueryable.FirstOrDefaultAsync(source.As<IMongoQueryable<TSource>>(), cancellationToken);
     }
 
+    public static Task<TSource> FirstOrDefaultAsync<TSource>(
+        this IQueryable<TSource> source,
+        Expression<Func<TSource, bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        return MongoQueryable.FirstOrDefaultAsync(source.As<IMongoQueryable<TSource>>(), predicate, cancellationToken);
+    }
+
     public static Task<TSource> FirstAsync<TSource>(this IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
         return MongoQueryable.FirstAsync(source.As<IMongoQueryable<TSource>>(), cancellationToken);

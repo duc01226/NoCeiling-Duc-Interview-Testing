@@ -330,7 +330,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
                     p => Util.TaskRunner.CatchException(
                         p.Invoke,
                         ex => LoggerFactory.CreateLogger(GetType()).LogError(ex.BeautifyStackTrace(), "Invoke DisposedActions error.")))
-                .WaitResult();
+                .Wait();
             OnDisposedActions.Clear();
         }
     }

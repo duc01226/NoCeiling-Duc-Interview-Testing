@@ -301,46 +301,41 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                 !IsInjectingRequestContextAccessor &&
                 !MustWaitHandlerExecutionFinishedImmediately &&
                 !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()))
-                try
-                {
-                    // Try run directly with no inbox once. If failed then use inbox. This will help improve performance no need inbox for faster processing
-                    await RunHandleAsync(@event, cancellationToken);
-                }
-                catch (Exception)
-                {
-                    var eventSourceUow = TryGetCurrentOrCreatedActiveUow(@event);
-                    var currentBusMessageIdentity = BuildCurrentBusMessageIdentity(@event.RequestContext);
+            {
+                var eventSourceUow = TryGetCurrentOrCreatedActiveUow(@event);
+                var currentBusMessageIdentity = BuildCurrentBusMessageIdentity(@event.RequestContext);
 
-                    if (@event is IPlatformUowEvent && eventSourceUow != null && !eventSourceUow.IsPseudoTransactionUow())
-                        await HandleExecutingInboxConsumerAsync(
-                            @event,
-                            ServiceProvider,
-                            ServiceProvider.GetRequiredService<PlatformInboxConfig>(),
-                            ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>(),
-                            ServiceProvider.GetRequiredService<IPlatformApplicationSettingContext>(),
-                            currentBusMessageIdentity,
-                            eventSourceUow,
-                            cancellationToken);
-                    else
-                        await RootServiceProvider.ExecuteInjectScopedAsync(
-                            async (
-                                IServiceProvider serviceProvider,
-                                PlatformInboxConfig inboxConfig,
-                                IPlatformInboxBusMessageRepository inboxMessageRepository,
-                                IPlatformApplicationSettingContext applicationSettingContext) =>
-                            {
-                                await HandleExecutingInboxConsumerAsync(
-                                    @event,
-                                    serviceProvider,
-                                    inboxConfig,
-                                    inboxMessageRepository,
-                                    applicationSettingContext,
-                                    currentBusMessageIdentity,
-                                    null,
-                                    cancellationToken);
-                            });
-                }
+                if (@event is IPlatformUowEvent && eventSourceUow != null && !eventSourceUow.IsPseudoTransactionUow())
+                    await HandleExecutingInboxConsumerAsync(
+                        @event,
+                        ServiceProvider,
+                        ServiceProvider.GetRequiredService<PlatformInboxConfig>(),
+                        ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>(),
+                        ServiceProvider.GetRequiredService<IPlatformApplicationSettingContext>(),
+                        currentBusMessageIdentity,
+                        eventSourceUow,
+                        cancellationToken);
+                else
+                    await RootServiceProvider.ExecuteInjectScopedAsync(
+                        async (
+                            IServiceProvider serviceProvider,
+                            PlatformInboxConfig inboxConfig,
+                            IPlatformInboxBusMessageRepository inboxMessageRepository,
+                            IPlatformApplicationSettingContext applicationSettingContext) =>
+                        {
+                            await HandleExecutingInboxConsumerAsync(
+                                @event,
+                                serviceProvider,
+                                inboxConfig,
+                                inboxMessageRepository,
+                                applicationSettingContext,
+                                currentBusMessageIdentity,
+                                null,
+                                cancellationToken);
+                        });
+            }
             else
+            {
                 await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync<PlatformDomainRowVersionConflictException>(
                     async () =>
                     {
@@ -349,6 +344,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                     retryCount: Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio,
                     sleepDurationProvider: p => TimeSpan.Zero,
                     cancellationToken: cancellationToken);
+            }
         }
         finally
         {
@@ -428,6 +424,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                 $"{GetType().GetNameOrGenericTypeName()}-{@event.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix()}",
                 needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage:
                 @event.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix().IsNotNullOrEmpty() == true,
+                allowHandleNewInboxMessageInBackground: true,
                 cancellationToken: cancellationToken),
             retryCount: RetryEventInboxBusMessageConsumerMaxCount,
             sleepDurationProvider: retryAttempt => RetryEventInboxBusMessageConsumerOnFailedDelaySeconds.Seconds(),

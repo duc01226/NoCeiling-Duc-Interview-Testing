@@ -228,11 +228,11 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
                 _ => request.With(p => p.DemoWorkWithListOfValidations = Util.ListBuilder.New(new TextSnippetEntityDto())))
             .WhenIs<PlatformCqrsCommand>(then: _ => request) // Do nothing, just demo WhenIs for check value type is something
             .ExecuteAsync();
-        var demoWhenValueCasesMappedString = request.StatusToDemoWhenValueCases
+        var demoWhenValueCasesMappedString = await request.StatusToDemoWhenValueCases
             .WhenValue(PlatformCqrsEntityEventCrudAction.Created, _ => "Created")
             .WhenValue(PlatformCqrsEntityEventCrudAction.Updated, _ => "Updated")
             .When(status => status == PlatformCqrsEntityEventCrudAction.Deleted, _ => "Deleted")
-            .Execute(); // .When(status => status == XXX) <=> .WhenValue(XXX)
+            .ExecuteAsync(); // .When(status => status == XXX) <=> .WhenValue(XXX)
 
         // THIS IS NOT RELATED to SaveSnippetText logic. Demo some other common USE FULL EXTENSIONS
         var demoGetItemsByExecuteAsyncOnEachOtherItems = await Util.ListBuilder.New("UserId1", "UserId2")

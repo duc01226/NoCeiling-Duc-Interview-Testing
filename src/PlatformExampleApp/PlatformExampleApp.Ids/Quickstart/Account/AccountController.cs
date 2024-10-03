@@ -235,7 +235,7 @@ public class AccountController : Controller
     }
 
     [HttpGet]
-    public IActionResult AccessDenied()
+    public async Task<IActionResult> AccessDenied()
     {
         return View();
     }

@@ -44,7 +44,7 @@ public class ExternalController : Controller
     /// initiate roundtrip to external authentication provider
     /// </summary>
     [HttpGet]
-    public IActionResult Challenge(string scheme, string returnUrl)
+    public async Task<IActionResult> Challenge(string scheme, string returnUrl)
     {
         if (string.IsNullOrEmpty(returnUrl))
             returnUrl = "~/";

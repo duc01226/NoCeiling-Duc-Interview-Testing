@@ -69,6 +69,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         string subQueueMessageIdPrefix,
         bool autoDeleteProcessedMessageImmediately = false,
         bool needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage = true,
+        bool allowHandleNewInboxMessageInBackground = false,
         CancellationToken cancellationToken = default) where TMessage : class, new()
     {
         // If there's an existing inbox message that's not processed or ignored, handle it directly.
@@ -103,6 +104,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
                 subQueueMessageIdPrefix,
                 retryProcessFailedMessageInSecondsUnit,
+                allowHandleNewInboxMessageInBackground,
                 cancellationToken);
     }
 
@@ -139,6 +141,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         bool needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
         string subQueueMessageIdPrefix,
         double retryProcessFailedMessageInSecondsUnit,
+        bool allowHandleNewInboxMessageInBackground,
         CancellationToken cancellationToken) where TMessage : class, new()
     {
         // Get or create the inbox message to process.
@@ -177,17 +180,34 @@ public static class PlatformInboxMessageBusConsumerHelper
                 if (inboxBusMessageRepository.UowManager().TryGetCurrentActiveUow() != null)
                     await inboxBusMessageRepository.UowManager().CurrentActiveUow().SaveChangesAsync(cancellationToken);
 
-                // Try queue process message immediately in background
-                await ExecuteConsumerForNewInboxMessage(
-                    rootServiceProvider,
-                    consumerType,
-                    message,
-                    toProcessInboxMessage,
-                    routingKey,
-                    autoDeleteProcessedMessage,
-                    retryProcessFailedMessageInSecondsUnit,
-                    loggerFactory,
-                    cancellationToken);
+                if (allowHandleNewInboxMessageInBackground)
+                    Util.TaskRunner.QueueActionInBackground(
+                        async () =>
+                        {
+                            await ExecuteConsumerForNewInboxMessage(
+                                rootServiceProvider,
+                                consumerType,
+                                message,
+                                toProcessInboxMessage,
+                                routingKey,
+                                autoDeleteProcessedMessage,
+                                retryProcessFailedMessageInSecondsUnit,
+                                loggerFactory,
+                                cancellationToken);
+                        },
+                        loggerFactory,
+                        cancellationToken: CancellationToken.None);
+                else
+                    await ExecuteConsumerForNewInboxMessage(
+                        rootServiceProvider,
+                        consumerType,
+                        message,
+                        toProcessInboxMessage,
+                        routingKey,
+                        autoDeleteProcessedMessage,
+                        retryProcessFailedMessageInSecondsUnit,
+                        loggerFactory,
+                        cancellationToken);
             }
         }
     }

@@ -151,5 +151,5 @@ static void ConfigureRequestPipeline(WebApplication app)
 static void BeforeRunInit(WebApplication webApplication)
 {
     // Init module to start running init for all other modules and this module itself
-    webApplication.InitPlatformAspNetCoreModule<TextSnippetApiAspNetCoreModule>();
+    webApplication.InitPlatformAspNetCoreModule<TextSnippetApiAspNetCoreModule>().WaitResult();
 }

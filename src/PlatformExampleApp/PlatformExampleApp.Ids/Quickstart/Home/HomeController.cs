@@ -30,7 +30,7 @@ public class HomeController : Controller
         this.logger = logger;
     }
 
-    public IActionResult Index()
+    public async Task<IActionResult> Index()
     {
         if (environment.IsDevelopment())
             // only show in development

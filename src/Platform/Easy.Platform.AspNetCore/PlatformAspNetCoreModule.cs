@@ -204,12 +204,12 @@ public static class InitPlatformAspNetCoreModuleExtension
     /// <summary>
     /// Init module to start running init for all other modules and this module itself
     /// </summary>
-    public static void InitPlatformAspNetCoreModule<TModule>(this IApplicationBuilder app)
+    public static async Task InitPlatformAspNetCoreModule<TModule>(this IApplicationBuilder app)
         where TModule : PlatformAspNetCoreModule
     {
         using (var scope = app.ApplicationServices.CreateScope())
         {
-            scope.ServiceProvider.GetRequiredService<TModule>().Init(app).WaitResult();
+            await scope.ServiceProvider.GetRequiredService<TModule>().Init(app);
         }
     }
 }

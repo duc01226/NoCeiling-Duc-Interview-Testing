@@ -439,6 +439,7 @@ public static class TaskExtension
         return (value, value1, await getWith2(value, value1));
     }
 
+
     /// <summary>
     /// Use WaitResult to help if exception to see the stack trace. <br />
     /// Task.Wait() will lead to stack trace lost. <br />
