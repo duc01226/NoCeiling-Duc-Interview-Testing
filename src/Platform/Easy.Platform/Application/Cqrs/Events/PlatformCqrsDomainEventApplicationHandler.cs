@@ -23,7 +23,7 @@ public abstract class PlatformCqrsDomainEventApplicationHandler<TEvent> : Platfo
     /// <summary>
     /// Default return True
     /// </summary>
-    public override bool HandleWhen(TEvent @event)
+    public override async Task<bool> HandleWhen(TEvent @event)
     {
         return true;
     }

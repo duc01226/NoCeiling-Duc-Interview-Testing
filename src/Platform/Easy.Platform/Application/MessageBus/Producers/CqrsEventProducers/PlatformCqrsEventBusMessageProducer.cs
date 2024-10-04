@@ -64,12 +64,13 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
         await SendMessage(@event, cancellationToken);
     }
 
-    public override void LogError(TEvent notification, Exception exception, ILoggerFactory loggerFactory)
+    public override void LogError(TEvent notification, Exception exception, ILoggerFactory loggerFactory, string prefix = "")
     {
         CreateLogger(loggerFactory)
             .LogError(
                 exception.BeautifyStackTrace(),
-                "[PlatformCqrsEventBusMessageProducer] Failed to send {MessageName}. [[Error:{Error}]]. EventBusMessageOrEventNotification: {MessageContent}.",
+                "[PlatformCqrsEventBusMessageProducer] {Prefix} Failed to send {MessageName}. [[Error:{Error}]]. EventBusMessageOrEventNotification: {MessageContent}.",
+                prefix,
                 typeof(TMessage).FullName,
                 exception.Message,
                 exception.As<PlatformMessageBusException<TMessage>>()?.EventBusMessage.ToJson() ?? notification.ToJson());

@@ -31,13 +31,13 @@ public interface IPlatformCqrsEventHandler
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the work.</param>
     Task Handle(object @event, CancellationToken cancellationToken);
 
-    public bool HandleWhen(object @event);
+    public Task<bool> HandleWhen(object @event);
 }
 
 public interface IPlatformCqrsEventHandler<in TEvent> : INotificationHandler<TEvent>, IPlatformCqrsEventHandler
     where TEvent : IPlatformCqrsEvent
 {
-    public bool HandleWhen(TEvent @event);
+    public Task<bool> HandleWhen(TEvent @event);
 
     Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken);
 }
@@ -59,7 +59,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     protected bool IsDistributedTracingEnabled => isDistributedTracingEnabledLazy.Value;
 
-    public virtual double RetryOnFailedDelaySeconds { get; set; } = 0.5;
+    public virtual double RetryOnFailedDelaySeconds { get; set; } = 1;
 
     /// <summary>
     /// The MustWaitHandlerExecutionFinishedImmediately method is part of the IPlatformCqrsEvent interface and its implementation is in the PlatformCqrsEvent class. This method is used to determine whether the execution of a specific event handler should be waited for to finish immediately or not.
@@ -82,8 +82,6 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     public abstract Task Handle(object @event, CancellationToken cancellationToken);
 
-    public abstract bool HandleWhen(object @event);
-
     public virtual Task Handle(TEvent notification, CancellationToken cancellationToken)
     {
         return DoHandle(notification, cancellationToken);
@@ -94,11 +92,13 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         await ExecuteHandleWithTracingAsync(@event, () => HandleAsync(@event, cancellationToken));
     }
 
-    public abstract bool HandleWhen(TEvent @event);
+    public abstract Task<bool> HandleWhen(object @event);
+
+    public abstract Task<bool> HandleWhen(TEvent @event);
 
     protected virtual async Task DoHandle(TEvent @event, CancellationToken cancellationToken)
     {
-        if (!HandleWhen(@event)) return;
+        if (!await HandleWhen(@event)) return;
 
         if (RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTraceEnabled() == true &&
             @event.StackTrace == null)
@@ -107,7 +107,6 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
         // so that it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
         if (AllowHandleInBackgroundThread(@event) &&
-            !ForceCurrentInstanceHandleInCurrentThread &&
             NotNeedWaitHandlerExecutionFinishedImmediately(@event))
             Util.TaskRunner.QueueActionInBackground(
                 async () => await ExecuteHandleInNewScopeAsync(@event, cancellationToken),
@@ -167,7 +166,12 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                 await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                     async () => await handlerNewInstance.ExecuteHandleAsync(notification, default),
                     retryCount: RetryOnFailedTimes,
-                    sleepDurationProvider: retryAttempt => RetryOnFailedDelaySeconds.Seconds());
+                    sleepDurationProvider: retryAttempt => RetryOnFailedDelaySeconds.Seconds(),
+                    onRetry: (e, delayTime, retryAttempt, context) =>
+                    {
+                        if (retryAttempt > 2)
+                            handlerNewInstance.LogError(notification, e.BeautifyStackTrace(), LoggerFactory, "Retry");
+                    });
             else
                 await handlerNewInstance.ExecuteHandleAsync(notification, default);
         }
@@ -200,12 +204,13 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         else await handleAsync();
     }
 
-    public virtual void LogError(TEvent notification, Exception exception, ILoggerFactory loggerFactory)
+    public virtual void LogError(TEvent notification, Exception exception, ILoggerFactory loggerFactory, string prefix = "")
     {
         CreateLogger(loggerFactory)
             .LogError(
                 exception.BeautifyStackTrace(),
-                "[PlatformCqrsEventHandler] Handle event failed. [[Message:{Message}]] [[EventType:{EventType}]]; [[HandlerType:{HandlerType}]]. [[EventContent:{EventContent}]].",
+                "[PlatformCqrsEventHandler] {Prefix} Handle event failed. [[Message:{Message}]] [[EventType:{EventType}]]; [[HandlerType:{HandlerType}]]. [[EventContent:{EventContent}]].",
+                prefix,
                 exception.Message,
                 notification.GetType().Name,
                 GetType().Name,

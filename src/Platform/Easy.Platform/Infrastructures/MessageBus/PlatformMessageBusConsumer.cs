@@ -30,7 +30,7 @@ public interface IPlatformMessageBusConsumer
     /// </summary>
     int ExecuteOrder();
 
-    public bool HandleWhen(object message, string routingKey);
+    public Task<bool> HandleWhen(object message, string routingKey);
 
     public static PlatformBusMessageRoutingKey BuildForConsumerDefaultBindingRoutingKey(Type consumerGenericType)
     {
@@ -78,7 +78,7 @@ public interface IPlatformMessageBusConsumer<in TMessage> : IPlatformMessageBusC
     /// </summary>
     Task HandleLogicAsync(TMessage message, string routingKey);
 
-    public bool HandleWhen(TMessage message, string routingKey);
+    public Task<bool> HandleWhen(TMessage message, string routingKey);
 }
 
 public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
@@ -102,7 +102,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
         return 0;
     }
 
-    public abstract bool HandleWhen(object message, string routingKey);
+    public abstract Task<bool> HandleWhen(object message, string routingKey);
 
     public virtual JsonSerializerOptions? CustomJsonSerializerOptions()
     {
@@ -201,7 +201,7 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
 
     public virtual int RetryOnFailedTimes { get; set; } = 2;
 
-    public virtual double RetryOnFailedDelaySeconds { get; set; } = 0.5;
+    public virtual double RetryOnFailedDelaySeconds { get; set; } = 1;
 
     public override Task HandleAsync(object message, string routingKey)
     {
@@ -217,7 +217,7 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
     {
         try
         {
-            if (!HandleWhen(message, routingKey)) return;
+            if (!await HandleWhen(message, routingKey)) return;
 
             if (RetryOnFailedTimes > 0)
                 // Retry RetryOnFailedTimes to help resilient consumer. Sometime parallel, create/update concurrency could lead to error
@@ -242,14 +242,14 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
         return HandleLogicAsync(message, routingKey);
     }
 
-    public virtual bool HandleWhen(TMessage message, string routingKey)
+    public virtual Task<bool> HandleWhen(TMessage message, string routingKey)
     {
-        return true;
+        return Task.FromResult(true);
     }
 
-    public override bool HandleWhen(object message, string routingKey)
+    public override async Task<bool> HandleWhen(object message, string routingKey)
     {
-        return HandleWhen(message.Cast<TMessage>(), routingKey);
+        return await HandleWhen(message.Cast<TMessage>(), routingKey);
     }
 
     public static ILogger CreateLogger(ILoggerFactory loggerFactory, Type type)

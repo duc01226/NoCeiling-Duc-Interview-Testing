@@ -39,7 +39,7 @@ public abstract class PlatformCqrsCommandEventBusMessageProducer<TCommand>
     /// <summary>
     /// Default return True
     /// </summary>
-    public override bool HandleWhen(PlatformCqrsCommandEvent<TCommand> @event)
+    public override async Task<bool> HandleWhen(PlatformCqrsCommandEvent<TCommand> @event)
     {
         return true;
     }

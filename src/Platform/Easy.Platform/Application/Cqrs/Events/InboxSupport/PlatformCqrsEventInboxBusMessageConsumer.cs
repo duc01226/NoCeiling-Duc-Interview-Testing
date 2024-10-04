@@ -46,8 +46,8 @@ public class PlatformCqrsEventInboxBusMessageConsumer : PlatformApplicationMessa
                         $"[{nameof(PlatformCqrsEventInboxBusMessageConsumer)}] Not found [EventType:{message.Payload.EventTypeFullName}] in application to serialize the message.")
                     .Pipe(eventType => PlatformJsonSerializer.Deserialize(message.Payload.EventJson, eventType));
 
-                if (eventHandlerInstance.CanExecuteHandlingEventUsingInboxConsumer(hasInboxMessageSupport: true, eventInstance) &&
-                    eventHandlerInstance.HandleWhen(eventInstance))
+                if (eventHandlerInstance.CanExecuteHandlingEventUsingInboxConsumer(eventInstance) &&
+                    await eventHandlerInstance.HandleWhen(eventInstance))
                     await eventHandlerInstance.Handle(eventInstance, CancellationToken.None);
             });
     }

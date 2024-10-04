@@ -131,6 +131,15 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
 {
     public const string EventTypeValue = nameof(PlatformCqrsEntityEvent);
 
+    public PlatformCqrsEntityEventCrudAction CrudAction { get; set; }
+
+    public object EntityData { get; set; }
+
+    /// <summary>
+    /// Existing entity data before update/delete. Only available for entity implement <see cref="IRowVersionEntity" /> or entity with attribute <see cref="TrackFieldUpdatedDomainEventAttribute" />
+    /// </summary>
+    public object? ExistingEntityData { get; set; }
+
     /// <inheritdoc cref="PlatformCqrsEvent.SetWaitHandlerExecutionFinishedImmediately" />
     public virtual PlatformCqrsEntityEvent SetForceWaitEventHandlerFinished<THandler>()
         where THandler : IPlatformCqrsEventHandler
@@ -160,14 +169,19 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                     p => eventStackTrace != null,
                     p => p.StackTrace = eventStackTrace);
 
-            if (mappedToDbContextUow != null)
-                await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs.SendEvent(entityEvent, cancellationToken);
-            else
-                await rootServiceProvider.ExecuteInjectScopedAsync(
-                    async (IPlatformCqrs cqrs) =>
-                    {
-                        await cqrs.SendEvent(entityEvent, cancellationToken);
-                    });
+            if (entityEvent.CrudAction != PlatformCqrsEntityEventCrudAction.Updated ||
+                entityEvent.ExistingEntityData == null ||
+                entityEvent.ExistingEntityData.ToJson() != entityEvent.EntityData.ToJson())
+            {
+                if (mappedToDbContextUow != null)
+                    await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs.SendEvent(entityEvent, cancellationToken);
+                else
+                    await rootServiceProvider.ExecuteInjectScopedAsync(
+                        async (IPlatformCqrs cqrs) =>
+                        {
+                            await cqrs.SendEvent(entityEvent, cancellationToken);
+                        });
+            }
         }
     }
 
@@ -384,14 +398,9 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent, IPlatfo
     public override string EventName => typeof(TEntity).Name;
     public override string EventAction => CrudAction.ToString();
 
-    public TEntity EntityData { get; set; }
+    public new TEntity EntityData { get; set; }
 
-    /// <summary>
-    /// Existing entity data before update/delete. Only available for entity implement <see cref="IRowVersionEntity" /> or entity with attribute <see cref="TrackFieldUpdatedDomainEventAttribute" />
-    /// </summary>
-    public TEntity? ExistingEntityData { get; set; }
-
-    public PlatformCqrsEntityEventCrudAction CrudAction { get; set; }
+    public new TEntity? ExistingEntityData { get; set; }
 
     public List<KeyValuePair<string, string>> DomainEvents { get; set; } = [];
 
@@ -441,8 +450,6 @@ public class PlatformCqrsBulkEntitiesEvent<TEntity, TPrimaryKey> : PlatformCqrsE
     public override string EventAction => CrudAction.ToString();
 
     public IList<TEntity> Entities { get; set; }
-
-    public PlatformCqrsEntityEventCrudAction CrudAction { get; set; }
 
     /// <summary>
     /// DomainEvents is used to give more detail about the domain event action inside entity.<br />

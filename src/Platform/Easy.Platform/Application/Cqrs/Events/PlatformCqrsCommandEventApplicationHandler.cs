@@ -23,7 +23,7 @@ public abstract class PlatformCqrsCommandEventApplicationHandler<TCommand, TComm
     {
     }
 
-    public override bool HandleWhen(PlatformCqrsCommandEvent<TCommand, TCommandResult> @event)
+    public override async Task<bool> HandleWhen(PlatformCqrsCommandEvent<TCommand, TCommandResult> @event)
     {
         return @event.Action == PlatformCqrsCommandEventAction.Executed;
     }

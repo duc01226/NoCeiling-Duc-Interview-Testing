@@ -73,7 +73,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
     /// </summary>
     public virtual int RetryOnFailedTimes { get; set; } = 2;
 
-    public virtual double RetryOnFailedDelaySeconds { get; set; } = 0.5;
+    public virtual double RetryOnFailedDelaySeconds { get; set; } = 1;
 
     /// <summary>
     /// Gets a value indicating whether a unit of work should be automatically opened.

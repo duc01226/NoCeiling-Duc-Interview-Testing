@@ -26,5 +26,5 @@ public abstract class PlatformCqrsEntityEventBusMessageConsumer<TMessage, TEntit
     {
     }
 
-    public new abstract bool HandleWhen(TMessage message, string routingKey);
+    public new abstract Task<bool> HandleWhen(TMessage message, string routingKey);
 }

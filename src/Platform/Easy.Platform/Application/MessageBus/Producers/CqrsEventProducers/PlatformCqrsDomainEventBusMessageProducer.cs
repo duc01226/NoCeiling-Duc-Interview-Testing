@@ -39,7 +39,7 @@ public abstract class PlatformCqrsDomainEventBusMessageProducer<TDomainEvent>
     /// <summary>
     /// Default return True
     /// </summary>
-    public override bool HandleWhen(TDomainEvent @event)
+    public override async Task<bool> HandleWhen(TDomainEvent @event)
     {
         return true;
     }

@@ -31,8 +31,7 @@ internal sealed class ClearCacheOnSaveSnippetTextEntityEventHandler : PlatformCq
 
     // Can override to return False to TURN OFF support for store cqrs event handler as inbox
     // protected override bool EnableHandleEventFromInboxBusMessage => false;
-
-    public override bool HandleWhen(PlatformCqrsEntityEvent<TextSnippetEntity> @event)
+    public override async Task<bool> HandleWhen(PlatformCqrsEntityEvent<TextSnippetEntity> @event)
     {
         return true;
     }

@@ -65,7 +65,7 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
     /// </summary>
     public virtual int RetryOnFailedTimes { get; set; } = 2;
 
-    public virtual double RetryOnFailedDelaySeconds { get; set; } = 0.5;
+    public virtual double RetryOnFailedDelaySeconds { get; set; } = 1;
 
     /// <summary>
     /// Handles the specified CQRS query asynchronously.

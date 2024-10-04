@@ -14,7 +14,7 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
     public const string BuildIdPrefixSeparator = "----";
     public const string BuildIdSubQueuePrefixSeparator = "++++";
     public const int CheckProcessingPingIntervalSeconds = 30;
-    public const int MaxAllowedProcessingPingMisses = 20;
+    public const int MaxAllowedProcessingPingMisses = 100;
 
     public string JsonMessage { get; set; }
 

@@ -1,6 +1,5 @@
 #pragma warning disable IDE0055
 using Easy.Platform.Application.MessageBus.Consumers;
-using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.HostingBackgroundServices;
@@ -164,7 +163,10 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                             // Retrieve a page of message IDs that are eligible for processing.
                             var pagedCanHandleMessageGroupedByConsumerIdPrefixes = await inboxBusMessageRepository.GetAllAsync(
                                     queryBuilder: query => query
-                                        .Where(PlatformInboxBusMessage.CanHandleMessagesExpr(ApplicationSettingContext.ApplicationName))
+                                        .Where(
+                                            PlatformInboxBusMessage.CanHandleMessagesExpr(
+                                                ApplicationSettingContext.ApplicationName,
+                                                InboxConfig.MaxRetriedProcessCount))
                                         .OrderBy(p => p.CreatedDate)
                                         .Skip(skipCount)
                                         .Take(pageSize)
@@ -191,7 +193,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
 
                                         // Group the messages by sub-queue prefix.
                                         var toHandleMessagesGroupedBySubQueueGroups = toHandleMessages
-                                            .GroupBy(p => PlatformOutboxBusMessage.GetSubQueuePrefix(p.Id) ?? "");
+                                            .GroupBy(p => PlatformInboxBusMessage.GetSubQueuePrefix(p.Id) ?? "");
 
                                         // Process each sub-queue group in parallel.
                                         await toHandleMessagesGroupedBySubQueueGroups.ParallelAsync(
@@ -217,7 +219,10 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                         // Determine the maximum number of messages to process.
                         maxItemCount: await inboxBusMessageRepository.CountAsync(
                             queryBuilder: query => query
-                                .Where(PlatformInboxBusMessage.CanHandleMessagesExpr(ApplicationSettingContext.ApplicationName)),
+                                .Where(
+                                    PlatformInboxBusMessage.CanHandleMessagesExpr(
+                                        ApplicationSettingContext.ApplicationName,
+                                        InboxConfig.MaxRetriedProcessCount)),
                             cancellationToken: cancellationToken),
                         // Set the page size for retrieving message prefixes.
                         pageSize: InboxConfig.GetCanHandleMessageGroupedByConsumerIdPrefixesPageSize,
@@ -320,7 +325,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                 try
                 {
                     // Check if the consumer should handle the message based on its HandleWhen logic.
-                    if (consumer.HandleWhen(busMessage, toHandleInboxMessage.RoutingKey))
+                    if (await consumer.HandleWhen(busMessage, toHandleInboxMessage.RoutingKey))
                         // Invoke the consumer's HandleAsync method.
                         await PlatformMessageBusConsumer.InvokeConsumerAsync(
                             consumer,
@@ -438,7 +443,10 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
             // Filter by consumer ID prefix, if provided.
             .WhereIf(messageGroupedByConsumerIdPrefix.IsNotNullOrEmpty(), p => p.Id.StartsWith(messageGroupedByConsumerIdPrefix))
             // Filter by messages that can be handled based on their status and application name.
-            .Where(PlatformInboxBusMessage.CanHandleMessagesExpr(ApplicationSettingContext.ApplicationName))
+            .Where(
+                PlatformInboxBusMessage.CanHandleMessagesExpr(
+                    ApplicationSettingContext.ApplicationName,
+                    InboxConfig.MaxRetriedProcessCount))
             // Order messages by creation date.
             .OrderBy(p => p.CreatedDate);
     }

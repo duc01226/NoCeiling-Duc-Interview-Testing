@@ -25,7 +25,7 @@ public abstract class PlatformCqrsBulkEntitiesEventApplicationHandler<TEntity, T
     /// <summary>
     /// Default return True
     /// </summary>
-    public override bool HandleWhen(PlatformCqrsBulkEntitiesEvent<TEntity, TPrimaryKey> @event)
+    public override async Task<bool> HandleWhen(PlatformCqrsBulkEntitiesEvent<TEntity, TPrimaryKey> @event)
     {
         return true;
     }

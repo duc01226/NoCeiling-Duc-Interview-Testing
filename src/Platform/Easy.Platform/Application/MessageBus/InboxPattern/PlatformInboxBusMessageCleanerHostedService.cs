@@ -214,7 +214,8 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
                 p => p.ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>()
                     .CountAsync(
                         PlatformInboxBusMessage.ToIgnoreFailedExpiredMessagesExpr(
-                            InboxConfig.IgnoreExpiredFailedMessageInSeconds),
+                            InboxConfig.IgnoreExpiredFailedMessageInSeconds,
+                            InboxConfig.MaxRetriedProcessCount),
                         cancellationToken));
 
             if (toIgnoreMessageCount > 0)
@@ -228,7 +229,8 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
                                 queryBuilder: query => query
                                     .Where(
                                         PlatformInboxBusMessage.ToIgnoreFailedExpiredMessagesExpr(
-                                            InboxConfig.IgnoreExpiredFailedMessageInSeconds))
+                                            InboxConfig.IgnoreExpiredFailedMessageInSeconds,
+                                            InboxConfig.MaxRetriedProcessCount))
                                     .OrderBy(p => p.CreatedDate)
                                     .Take(NumberOfDeleteMessagesBatch()),
                                 cancellationToken);

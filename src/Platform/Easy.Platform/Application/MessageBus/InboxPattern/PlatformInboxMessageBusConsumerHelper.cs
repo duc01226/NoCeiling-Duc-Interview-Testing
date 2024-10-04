@@ -106,6 +106,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 subQueueMessageIdPrefix,
                 retryProcessFailedMessageInSecondsUnit,
                 allowHandleNewInboxMessageInBackground,
+                inboxConfig,
                 cancellationToken);
     }
 
@@ -144,6 +145,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         string subQueueMessageIdPrefix,
         double retryProcessFailedMessageInSecondsUnit,
         bool allowHandleNewInboxMessageInBackground,
+        PlatformInboxConfig inboxConfig,
         CancellationToken cancellationToken) where TMessage : class, new()
     {
         // Get or create the inbox message to process.
@@ -157,6 +159,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 subQueueMessageIdPrefix,
                 needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
                 applicationSettingContext,
+                inboxConfig,
                 cancellationToken);
 
         if (toProcessInboxMessage != null)
@@ -236,6 +239,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         string subQueueMessageIdPrefix,
         bool needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
         IPlatformApplicationSettingContext applicationSettingContext,
+        PlatformInboxConfig inboxConfig,
         CancellationToken cancellationToken) where TMessage : class, new()
     {
         return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
@@ -282,7 +286,10 @@ public static class PlatformInboxMessageBusConsumerHelper
                 // Then should not process message => return null
                 var toProcessInboxMessage =
                     isAnySameConsumerMessageIdPrefixOtherNotProcessedMessage ||
-                    existedInboxMessage?.Is(PlatformInboxBusMessage.CanHandleMessagesExpr(applicationSettingContext.ApplicationName)) == false
+                    existedInboxMessage?.Is(
+                        PlatformInboxBusMessage.CanHandleMessagesExpr(
+                            applicationSettingContext.ApplicationName,
+                            inboxConfig.MaxRetriedProcessCount)) == false
                         ? null
                         : existedInboxMessage ?? newInboxMessage;
 

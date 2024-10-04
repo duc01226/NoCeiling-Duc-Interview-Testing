@@ -41,7 +41,7 @@ internal sealed class SnippetTextEntityEventBusConsumer : PlatformCqrsEntityEven
         return Task.CompletedTask;
     }
 
-    public override bool HandleWhen(TextSnippetEntityEventBusMessage message, string routingKey)
+    public override async Task<bool> HandleWhen(TextSnippetEntityEventBusMessage message, string routingKey)
     {
         return true;
     }
