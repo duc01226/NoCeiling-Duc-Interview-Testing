@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
@@ -125,7 +124,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
     /// </summary>
     public virtual bool AllowUseInboxMessage => true;
 
-    public ConcurrentDictionary<string, bool> InMemoryTrackingProcessingInboxMessageIds { get; set; }
+    public bool AllowHandleNewInboxMessageInBackground { get; set; } = false;
 
     /// <inheritdoc />
     public bool NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage { get; set; } = true;
@@ -190,7 +189,8 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
             subQueueMessageIdPrefix: message.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix(),
             autoDeleteProcessedMessageImmediately: AutoDeleteProcessedInboxEventMessageImmediately,
             needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage: NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage,
-            handleInUow: null);
+            handleInUow: null,
+            allowHandleNewInboxMessageInBackground: AllowHandleNewInboxMessageInBackground);
     }
 
     private async Task HandleMessageDirectly(TMessage message, string routingKey, int? retryCount = null)

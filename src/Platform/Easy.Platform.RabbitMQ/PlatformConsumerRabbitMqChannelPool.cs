@@ -1,10 +1,12 @@
+using Easy.Platform.Infrastructures.MessageBus;
+
 namespace Easy.Platform.RabbitMQ;
 
 public class PlatformConsumerRabbitMqChannelPool : PlatformRabbitMqChannelPool
 {
-    public PlatformConsumerRabbitMqChannelPool(PlatformRabbitMqOptions options) : base(
+    public PlatformConsumerRabbitMqChannelPool(PlatformRabbitMqOptions options, IPlatformMessageBusScanner messageBusScanner) : base(
         new PlatformRabbitMqChannelPoolPolicy(
-            options.ConsumerChannelPoolSize,
+            messageBusScanner.ScanAllDefinedConsumerBindingRoutingKeys().Count,
             options))
     {
     }

@@ -112,7 +112,7 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
         double retryProcessFailedMessageInSecondsUnit = DefaultRetryProcessFailedMessageInSecondsUnit)
     {
         return DateTime.UtcNow.AddSeconds(
-            retryProcessFailedMessageInSecondsUnit * retriedProcessCount ?? 0);
+            retryProcessFailedMessageInSecondsUnit * retriedProcessCount ?? 1);
     }
 
     public static Expression<Func<PlatformOutboxBusMessage, bool>> CheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessageExpr(

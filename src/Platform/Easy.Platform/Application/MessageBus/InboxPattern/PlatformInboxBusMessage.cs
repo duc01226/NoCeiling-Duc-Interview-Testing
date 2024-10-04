@@ -162,7 +162,7 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
         double retryProcessFailedMessageInSecondsUnit = DefaultRetryProcessFailedMessageInSecondsUnit)
     {
         return DateTime.UtcNow.AddSeconds(
-            retryProcessFailedMessageInSecondsUnit * retriedProcessCount ?? 0);
+            retryProcessFailedMessageInSecondsUnit * Math.Pow(retriedProcessCount ?? 1, 2));
     }
 
     public static PlatformInboxBusMessage Create<TMessage>(

@@ -53,7 +53,6 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     protected readonly IPlatformUnitOfWorkManager UnitOfWorkManager;
 
     private readonly Lazy<bool> isInjectingApplicationBusMessageProducerLazy;
-    private readonly Lazy<bool> isInjectingRequestContextAccessorLazy;
     private readonly IPlatformApplicationRequestContextAccessor requestContextAccessor;
 
     public PlatformCqrsEventApplicationHandler(
@@ -64,33 +63,21 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     {
         UnitOfWorkManager = unitOfWorkManager;
         ServiceProvider = serviceProvider;
-        isInjectingRequestContextAccessorLazy = new Lazy<bool>(() => GetType().IsUsingGivenTypeViaConstructor<IPlatformApplicationRequestContextAccessor>());
         isInjectingApplicationBusMessageProducerLazy = new Lazy<bool>(() => GetType().IsUsingGivenTypeViaConstructor<IPlatformApplicationBusMessageProducer>());
         requestContextAccessor = ServiceProvider.GetRequiredService<IPlatformApplicationRequestContextAccessor>();
         ApplicationSettingContext = ServiceProvider.GetRequiredService<IPlatformApplicationSettingContext>();
         Logger = new Lazy<ILogger>(() => CreateLogger(LoggerFactory));
     }
 
-    protected virtual bool AllowUsingRequestContextAccessor => false;
-
     protected virtual bool AutoOpenUow => true;
-
-    protected virtual bool MustWaitHandlerExecutionFinishedImmediately => false;
 
     protected Lazy<ILogger> Logger { get; }
 
     protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
 
-    public bool IsInjectingRequestContextAccessor => isInjectingRequestContextAccessorLazy.Value;
-
     public bool IsInjectingApplicationBusMessageProducer => isInjectingApplicationBusMessageProducerLazy.Value;
 
     public virtual bool AutoDeleteProcessedInboxEventMessage => false;
-
-    /// <summary>
-    /// Default false. If true, the event handler will handle immediately using the same current active uow if existing active uow
-    /// </summary>
-    public virtual bool ForceInSameEventTriggerUow => false;
 
     public int RetryEventInboxBusMessageConsumerOnFailedDelaySeconds { get; set; } = 1;
 
@@ -118,7 +105,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     public override Task Handle(object @event, CancellationToken cancellationToken)
     {
-        return DoHandle(@event.As<TEvent>(), cancellationToken, () => !IsInjectingRequestContextAccessor);
+        return DoHandle(@event.As<TEvent>(), cancellationToken);
     }
 
     public override bool HandleWhen(object @event)
@@ -133,16 +120,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     public override async Task Handle(TEvent notification, CancellationToken cancellationToken)
     {
-        if (IsInjectingRequestContextAccessor && !AllowUsingRequestContextAccessor)
-            Logger.Value
-                .LogError(
-                    "{EventHandlerType} is injecting and using {IPlatformApplicationRequestContextAccessor}, which will make the event handler could not run in background thread. " +
-                    "The event sender must wait the handler to be finished. Should use the {RequestContext} info in the event instead.",
-                    GetType().Name,
-                    nameof(IPlatformApplicationRequestContextAccessor),
-                    nameof(PlatformCqrsEvent.RequestContext));
-
-        await DoHandle(notification, cancellationToken, () => !IsInjectingRequestContextAccessor);
+        await DoHandle(notification, cancellationToken);
     }
 
     public override Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
@@ -164,19 +142,9 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     /// </remarks>
     public virtual bool CanExecuteHandlingEventUsingInboxConsumer(bool hasInboxMessageSupport, TEvent @event)
     {
-        // EventHandler using IPlatformApplicationRequestContextAccessor cannot use inbox because user request context is not available when process inbox message
-        var usingApplicationRequestContextAccessor = IsInjectingRequestContextAccessor;
         var hasEnabledInboxFeature = EnableInboxEventBusMessage && hasInboxMessageSupport;
 
-        if (usingApplicationRequestContextAccessor && hasEnabledInboxFeature)
-            Logger.Value
-                .LogWarning(
-                    "[WARNING] Auto handing event directly, not support using InboxEvent in [EventHandlerType:{EventHandlerType}]. " +
-                    "EventHandler using IPlatformApplicationRequestContextAccessor cannot use inbox because user request context is not available when process inbox message. " +
-                    "Should refactor removing using IPlatformApplicationRequestContextAccessor to support inbox.",
-                    GetType().FullName);
-
-        return hasEnabledInboxFeature && !usingApplicationRequestContextAccessor && !@event.MustWaitHandlerExecutionFinishedImmediately(GetType());
+        return hasEnabledInboxFeature && NotNeedWaitHandlerExecutionFinishedImmediately(@event);
     }
 
     /// <summary>
@@ -200,10 +168,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     {
         return TryGetCurrentOrCreatedActiveUow(@event) == null &&
                !CanExecuteHandlingEventUsingInboxConsumer(HasInboxMessageSupport(), @event) &&
-               !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()) &&
                !(IsInjectingApplicationBusMessageProducer && HasOutboxMessageSupport()) &&
-               !IsInjectingRequestContextAccessor &&
-               !ForceInSameEventTriggerUow &&
+               NotNeedWaitHandlerExecutionFinishedImmediately(@event) &&
                !MustWaitHandlerExecutionFinishedImmediately;
     }
 
@@ -247,7 +213,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     /// If the conditions are met, it adds the DoExecuteInstanceInNewScope action to the OnSaveChangesCompletedActions of the unit of work.
     /// Otherwise, it calls the base DoHandle method.
     /// </remarks>
-    protected override async Task DoHandle(TEvent @event, CancellationToken cancellationToken, Func<bool> couldRunInBackgroundThread)
+    protected override async Task DoHandle(TEvent @event, CancellationToken cancellationToken)
     {
         if (@event.RequestContext == null || @event.RequestContext.IsEmpty())
             @event.SetRequestContextValues(requestContextAccessor.Current.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()));
@@ -260,19 +226,16 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
         var eventSourceUow = TryGetCurrentOrCreatedActiveUow(@event);
 
-        if (!ForceInSameEventTriggerUow &&
-            eventSourceUow != null &&
-            !eventSourceUow.IsPseudoTransactionUow() &&
+        if (eventSourceUow?.IsPseudoTransactionUow() == false &&
             !CanExecuteHandlingEventUsingInboxConsumer(RootServiceProvider.IsServiceTypeRegistered(typeof(IPlatformInboxBusMessageRepository)), @event) &&
-            !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()) &&
-            !MustWaitHandlerExecutionFinishedImmediately)
+            NotNeedWaitHandlerExecutionFinishedImmediately(@event))
             eventSourceUow.OnSaveChangesCompletedActions.Add(
                 async () =>
                 {
                     await ExecuteHandleInNewScopeAsync(@event, cancellationToken);
                 });
         else
-            await base.DoHandle(@event, cancellationToken, () => !IsInjectingRequestContextAccessor);
+            await base.DoHandle(@event, cancellationToken);
     }
 
     /// <summary>
@@ -294,13 +257,9 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             if (AllowHandleInBackgroundThread(@event) && @event.RequestContext?.Any() == true)
                 requestContextAccessor.Current.SetValues(@event.RequestContext);
 
-            if (CanExecuteHandlingEventUsingInboxConsumer(
-                    hasInboxMessageSupport: HasInboxMessageSupport(),
-                    @event) &&
+            if (CanExecuteHandlingEventUsingInboxConsumer(HasInboxMessageSupport(), @event) &&
                 !IsCurrentInstanceCalledFromInboxBusMessageConsumer &&
-                !IsInjectingRequestContextAccessor &&
-                !MustWaitHandlerExecutionFinishedImmediately &&
-                !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()))
+                NotNeedWaitHandlerExecutionFinishedImmediately(@event))
             {
                 var eventSourceUow = TryGetCurrentOrCreatedActiveUow(@event);
                 var currentBusMessageIdentity = BuildCurrentBusMessageIdentity(@event.RequestContext);
@@ -452,7 +411,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             requestContext: @event.RequestContext);
     }
 
-    protected IPlatformUnitOfWork TryGetCurrentOrCreatedActiveUow(TEvent notification)
+    protected IPlatformUnitOfWork? TryGetCurrentOrCreatedActiveUow(TEvent notification)
     {
         if (notification.As<IPlatformUowEvent>() == null) return null;
 

@@ -248,7 +248,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
             var allQueueNames = messageBusScanner.ScanAllDefinedConsumerBindingRoutingKeys()
                 .Select(GetConsumerQueueName)
                 .ToList();
-            var allParallelConsumerChannels = Enumerable.Range(0, options.ConsumerChannelPoolSize)
+            var allParallelConsumerChannels = Enumerable.Range(0, channelPool.PoolSize)
                 .Select(p => channelPool.Get())
                 .ToList();
 

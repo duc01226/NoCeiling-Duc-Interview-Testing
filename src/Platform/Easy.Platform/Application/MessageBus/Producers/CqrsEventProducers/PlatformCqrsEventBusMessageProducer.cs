@@ -48,8 +48,6 @@ public abstract class PlatformCqrsEventBusMessageProducer<TEvent, TMessage>
 
     protected override bool AutoOpenUow => false;
 
-    protected override bool AllowUsingRequestContextAccessor => true;
-
     protected override bool MustWaitHandlerExecutionFinishedImmediately => ApplicationBusMessageProducer.HasOutboxMessageSupport();
 
     protected abstract TMessage BuildMessage(TEvent @event);

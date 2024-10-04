@@ -155,12 +155,6 @@ public class PlatformRabbitMqOptions
     public int ProducerChannelPoolSize { get; set; } = Util.TaskRunner.DefaultParallelComputeTaskMaxConcurrent;
 
     /// <summary>
-    /// Gets the size of the channel pool for consumers.
-    /// This value is calculated based on the number of parallel consumers per CPU and ensures sufficient channels are available for message consumption.
-    /// </summary>
-    public int ConsumerChannelPoolSize { get; set; } = Util.TaskRunner.DefaultParallelComputeTaskMaxConcurrent;
-
-    /// <summary>
     /// Gets or sets the number of times a consumer channel can be reused within a single connection.
     /// Reusing channels reduces the overhead of creating new channels for each message consumption operation.
     /// </summary>

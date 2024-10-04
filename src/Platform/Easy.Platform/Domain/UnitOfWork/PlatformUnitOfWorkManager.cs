@@ -68,19 +68,19 @@ public interface IPlatformUnitOfWorkManager : IDisposable
     /// Gets currently latest active unit of work. Return null if no active uow
     /// </summary>
     [return: MaybeNull]
-    public IPlatformUnitOfWork TryGetCurrentActiveUow();
+    public IPlatformUnitOfWork? TryGetCurrentActiveUow();
 
     /// <summary>
     /// Gets currently latest or created active unit of work has id equal uowId. Return null if no active uow
     /// </summary>
     [return: MaybeNull]
-    public IPlatformUnitOfWork TryGetCurrentOrCreatedActiveUow(string uowId);
+    public IPlatformUnitOfWork? TryGetCurrentOrCreatedActiveUow(string uowId);
 
     /// <summary>
     /// Gets currently latest active unit of work has id equal uowId. Return null if no active uow
     /// </summary>
     [return: MaybeNull]
-    public IPlatformUnitOfWork TryGetCurrentActiveUow(string uowId);
+    public IPlatformUnitOfWork? TryGetCurrentActiveUow(string uowId);
 
     /// <summary>
     /// Check that is there any currently latest active unit of work
@@ -162,14 +162,14 @@ public abstract class PlatformUnitOfWorkManager(Lazy<IPlatformCqrs> cqrs, IPlatf
         return currentUow;
     }
 
-    public IPlatformUnitOfWork TryGetCurrentActiveUow()
+    public IPlatformUnitOfWork? TryGetCurrentActiveUow()
     {
         return CurrentUow()?.IsActive() == true
             ? CurrentUow()
             : null;
     }
 
-    public IPlatformUnitOfWork TryGetCurrentOrCreatedActiveUow(string uowId)
+    public IPlatformUnitOfWork? TryGetCurrentOrCreatedActiveUow(string uowId)
     {
         if (uowId == null) return TryGetCurrentActiveUow();
 
@@ -180,7 +180,7 @@ public abstract class PlatformUnitOfWorkManager(Lazy<IPlatformCqrs> cqrs, IPlatf
             : null;
     }
 
-    public IPlatformUnitOfWork TryGetCurrentActiveUow(string uowId)
+    public IPlatformUnitOfWork? TryGetCurrentActiveUow(string uowId)
     {
         if (uowId == null) return TryGetCurrentActiveUow();
 

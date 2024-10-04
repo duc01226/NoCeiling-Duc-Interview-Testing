@@ -61,6 +61,17 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     public virtual double RetryOnFailedDelaySeconds { get; set; } = 0.5;
 
+    /// <summary>
+    /// The MustWaitHandlerExecutionFinishedImmediately method is part of the IPlatformCqrsEvent interface and its implementation is in the PlatformCqrsEvent class. This method is used to determine whether the execution of a specific event handler should be waited for to finish immediately or not.
+    /// <br />
+    /// In the context of the Command Query Responsibility Segregation (CQRS) pattern, this method provides a way to control the execution flow of event handlers. By default, event handlers are executed in the background and the command returns immediately without waiting for the handlers to finish. However, there might be cases where it's necessary to wait for a handler to finish its execution before proceeding, and this is where MustWaitHandlerExecutionFinishedImmediately comes into play.
+    /// <br />
+    /// The method takes a Type parameter, which represents the event handler type, and returns a boolean. If the method returns true, it means that the execution of the event handler of the provided type should be waited for to finish immediately.
+    /// <br />
+    /// In the DoHandle method of the PlatformCqrsEventHandler class, this method is used to decide whether to queue the event handler execution in the background or execute it immediately. If MustWaitHandlerExecutionFinishedImmediately returns true for the event handler type, the handler is executed immediately using the same current active uow if existing active uow; otherwise, it's queued to run in the background.
+    /// </summary>
+    protected virtual bool MustWaitHandlerExecutionFinishedImmediately => false;
+
     public virtual int RetryOnFailedTimes { get; set; } = 2;
 
     public bool ForceCurrentInstanceHandleInCurrentThread { get; set; }
@@ -75,7 +86,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     public virtual Task Handle(TEvent notification, CancellationToken cancellationToken)
     {
-        return DoHandle(notification, cancellationToken, () => true);
+        return DoHandle(notification, cancellationToken);
     }
 
     public virtual async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
@@ -85,7 +96,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     public abstract bool HandleWhen(TEvent @event);
 
-    protected virtual async Task DoHandle(TEvent @event, CancellationToken cancellationToken, Func<bool> couldRunInBackgroundThread)
+    protected virtual async Task DoHandle(TEvent @event, CancellationToken cancellationToken)
     {
         if (!HandleWhen(@event)) return;
 
@@ -97,8 +108,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
         // so that it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
         if (AllowHandleInBackgroundThread(@event) &&
             !ForceCurrentInstanceHandleInCurrentThread &&
-            !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()) &&
-            couldRunInBackgroundThread())
+            NotNeedWaitHandlerExecutionFinishedImmediately(@event))
             Util.TaskRunner.QueueActionInBackground(
                 async () => await ExecuteHandleInNewScopeAsync(@event, cancellationToken),
                 () => LoggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}"),
@@ -106,6 +116,11 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                 logFullStackTraceBeforeBackgroundTask: false);
         else
             await ExecuteRetryHandleAsync(this, @event);
+    }
+
+    protected bool NotNeedWaitHandlerExecutionFinishedImmediately(TEvent @event)
+    {
+        return !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()) && !MustWaitHandlerExecutionFinishedImmediately;
     }
 
     /// <summary>

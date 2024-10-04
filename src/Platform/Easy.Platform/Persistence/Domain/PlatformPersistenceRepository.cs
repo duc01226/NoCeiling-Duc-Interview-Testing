@@ -101,8 +101,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
-            (_, query) => FirstOrDefaultAsync(query.Where(p => p.Id!.Equals(id)), cancellationToken)
-                .EnsureFound($"{typeof(TEntity).Name} with Id {id} is not found"),
+            (_, query) => FirstOrDefaultAsync(query.Where(p => p.Id!.Equals(id)), cancellationToken),
             loadRelatedEntities);
     }
 

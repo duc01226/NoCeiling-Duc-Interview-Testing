@@ -49,6 +49,7 @@ public static class PlatformInboxMessageBusConsumerHelper
     /// <param name="subQueueMessageIdPrefix">A prefix for the message ID, used for sub-queueing.</param>
     /// <param name="autoDeleteProcessedMessageImmediately">Indicates whether processed messages should be deleted immediately.</param>
     /// <param name="needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage">Indicates whether to check for other unprocessed messages with the same sub-queue message ID prefix.</param>
+    /// <param name="allowHandleNewInboxMessageInBackground">allowHandleNewInboxMessageInBackground</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken" /> that can be used to cancel the operation.</param>
     /// <returns>A <see cref="Task" /> representing the asynchronous operation.</returns>
     public static async Task HandleExecutingInboxConsumerAsync<TMessage>(
@@ -69,7 +70,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         string subQueueMessageIdPrefix,
         bool autoDeleteProcessedMessageImmediately = false,
         bool needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage = true,
-        bool allowHandleNewInboxMessageInBackground = false,
+        bool allowHandleNewInboxMessageInBackground = true,
         CancellationToken cancellationToken = default) where TMessage : class, new()
     {
         // If there's an existing inbox message that's not processed or ignored, handle it directly.
@@ -125,6 +126,7 @@ public static class PlatformInboxMessageBusConsumerHelper
     /// <param name="needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage">Indicates whether to check for other unprocessed messages with the same sub-queue message ID prefix.</param>
     /// <param name="subQueueMessageIdPrefix">A prefix for the message ID, used for sub-queueing.</param>
     /// <param name="retryProcessFailedMessageInSecondsUnit">The time unit in seconds for retrying failed message processing.</param>
+    /// <param name="allowHandleNewInboxMessageInBackground">allowHandleNewInboxMessageInBackground</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken" /> that can be used to cancel the operation.</param>
     /// <returns>A <see cref="Task" /> representing the asynchronous operation.</returns>
     private static async Task SaveAndTryConsumeNewInboxMessageAsync<TMessage>(
