@@ -642,15 +642,18 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
                     vmValueItem === undefined
                         ? null
                         : (<unknown[]>vmValueItem).map((vmValueArrayItem, index) => {
+                              const currentReactiveFormValueArrayItem =
+                                  <unknown[]>currentReactiveFormValues[formControlKey] != null
+                                      ? (<unknown[]>currentReactiveFormValues[formControlKey])[index]
+                                      : null;
+
                               if (
                                   !isSinglePrimitiveOrImmutableType(vmValueArrayItem) &&
-                                  !isSinglePrimitiveOrImmutableType(
-                                      (<unknown[]>currentReactiveFormValues[formControlKey])[index]
-                                  )
+                                  !isSinglePrimitiveOrImmutableType(currentReactiveFormValueArrayItem)
                               ) {
                                   return this.getFromVmFormValues(
                                       <Dictionary<unknown>>vmValueArrayItem,
-                                      <Dictionary<unknown>>(<unknown[]>currentReactiveFormValues[formControlKey])[index]
+                                      <Dictionary<unknown>>currentReactiveFormValueArrayItem
                                   );
                               }
 
