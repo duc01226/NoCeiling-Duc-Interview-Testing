@@ -18,14 +18,15 @@ import { list_distinct } from './utils.list';
 export function keys<T extends object>(
     source: T,
     ignorePrivate: boolean = true,
-    excludeKeys?: (keyof T)[]
+    excludeKeys?: (keyof T)[],
+    includeFunction?: boolean
 ): (keyof T & string)[] {
     if (typeof source != 'object' || source == null) return [];
 
     const objectOwnProps: (keyof T & string)[] = [];
     for (const key in source) {
         if (
-            typeof (<any>source)[key] != 'function' &&
+            (typeof (<any>source)[key] != 'function' || includeFunction == true) &&
             (ignorePrivate == false || !key.startsWith('_')) &&
             !excludeKeys?.includes(key)
         ) {
@@ -97,8 +98,7 @@ export function dictionaryMapTo<TSource, TTarget>(
  */
 export function toPlainObj<T>(source: T, ignorePrivate: boolean = true, onlyKeysExistInPartialObject?: object): any {
     if (source == undefined) return undefined;
-    if (typeof source != 'object' || source instanceof Date || source instanceof Time || source instanceof File)
-        return source;
+    if (isSinglePrimitiveOrImmutableType(source)) return source;
     if (source instanceof Array) {
         return source.map(p => toPlainObj(p, ignorePrivate));
     }
@@ -108,6 +108,16 @@ export function toPlainObj<T>(source: T, ignorePrivate: boolean = true, onlyKeys
             objResult[key] = toPlainObj((<any>source)[key], ignorePrivate);
     });
     return objResult;
+}
+
+export function isSinglePrimitiveOrImmutableType(source: unknown) {
+    return (
+        source == null ||
+        typeof source != 'object' ||
+        source instanceof Date ||
+        source instanceof Time ||
+        source instanceof File
+    );
 }
 
 export function clone<T>(value: T, updateClonedValueAction?: (clonedValue: T) => undefined | T | void): T {
@@ -340,18 +350,20 @@ export function assignDeep<T extends object>(
     target: T,
     source: T,
     checkDiff: false | true | 'deepCheck' = false,
-    maxDeepLevel?: number
+    maxDeepLevel?: number,
+    includeFunction?: boolean
 ): boolean | undefined {
-    return assignOrSetDeep(target, source, false, false, checkDiff, maxDeepLevel);
+    return assignOrSetDeep(target, source, false, false, checkDiff, maxDeepLevel, undefined, includeFunction);
 }
 
 export function setDeep<T extends object>(
     target: T,
     source: T,
     checkDiff: false | true | 'deepCheck' = false,
-    maxDeepLevel?: number
+    maxDeepLevel?: number,
+    includeFunction?: boolean
 ): boolean | undefined {
-    return assignOrSetDeep(target, source, false, true, checkDiff, maxDeepLevel);
+    return assignOrSetDeep(target, source, false, true, checkDiff, maxDeepLevel, undefined, includeFunction);
 }
 
 export function getCurrentMissingItems<T>(prevValue: Dictionary<T>, currentValue: Dictionary<T>): T[] {
@@ -418,7 +430,8 @@ function assignOrSetDeep<T extends object>(
     makeTargetValuesSameSourceValues: boolean = false,
     checkDiff: false | true | 'deepCheck' = false,
     maxDeepLevel?: number,
-    currentDeepLevel?: number
+    currentDeepLevel?: number,
+    includeFunction?: boolean
 ): boolean | undefined {
     let hasDataChanged: boolean | undefined = undefined;
     currentDeepLevel ??= 1;
@@ -443,7 +456,7 @@ function assignOrSetDeep<T extends object>(
         const cloneOrPlainObjTarget =
             checkDiff === true ? clone(target) : checkDiff == 'deepCheck' ? toPlainObj(target, true, source) : null;
 
-        keys(source).forEach(key => {
+        keys(source, undefined, undefined, includeFunction).forEach(key => {
             const targetKeyPropertyDescriptor = getPropertyDescriptor(target, key);
             if (
                 (targetKeyPropertyDescriptor?.get != null && targetKeyPropertyDescriptor?.set == null) ||
@@ -454,11 +467,13 @@ function assignOrSetDeep<T extends object>(
             if (
                 (checkDiff === true && cloneOrPlainObjTarget[key] == (<any>source)[key]) ||
                 (checkDiff === 'deepCheck' &&
+                    typeof (<any>source)[key] != 'function' &&
+                    typeof cloneOrPlainObjTarget[key] != 'function' &&
                     !isDifferent(cloneOrPlainObjTarget[key], toPlainObj((<any>source)[key], true)))
             )
                 return;
 
-            setNewValueToTargetKeyProp(key, <number>currentDeepLevel);
+            setNewValueToTargetKeyProp(key, currentDeepLevel);
             hasDataChanged = true;
         });
     }
@@ -509,14 +524,7 @@ function assignOrSetDeep<T extends object>(
     }
 
     function checkTwoValueShouldSetDirectlyAndNotSetDeep(targetValue: unknown, sourceValue: unknown) {
-        return (
-            targetValue == undefined ||
-            sourceValue == undefined ||
-            typeof targetValue != 'object' ||
-            typeof sourceValue != 'object' ||
-            sourceValue instanceof Date ||
-            sourceValue instanceof Time
-        );
+        return isSinglePrimitiveOrImmutableType(sourceValue) || isSinglePrimitiveOrImmutableType(targetValue);
     }
 
     function assignOrSetDeepArray(

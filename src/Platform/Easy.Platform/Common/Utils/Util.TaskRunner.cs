@@ -13,7 +13,7 @@ public static partial class Util
     public static class TaskRunner
     {
         public const int DefaultWaitUntilMaxSeconds = 60;
-        public const double DefaultWaitIntervalSeconds = 1;
+        public const double DefaultWaitIntervalSeconds = 2;
         public const int DefaultResilientRetryCount = 3;
 
         /// <summary>

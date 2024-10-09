@@ -98,23 +98,31 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     protected virtual async Task DoHandle(TEvent @event, CancellationToken cancellationToken)
     {
-        if (!await HandleWhen(@event)) return;
+        try
+        {
+            if (!await HandleWhen(@event)) return;
 
-        if (RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTraceEnabled() == true &&
-            @event.StackTrace == null)
-            @event.StackTrace = PlatformEnvironment.StackTrace();
+            if (RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTraceEnabled() == true &&
+                @event.StackTrace == null)
+                @event.StackTrace = PlatformEnvironment.StackTrace();
 
-        // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
-        // so that it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
-        if (AllowHandleInBackgroundThread(@event) &&
-            NotNeedWaitHandlerExecutionFinishedImmediately(@event))
-            Util.TaskRunner.QueueActionInBackground(
-                async () => await ExecuteHandleInNewScopeAsync(@event, cancellationToken),
-                () => LoggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}"),
-                cancellationToken: default,
-                logFullStackTraceBeforeBackgroundTask: false);
-        else
-            await ExecuteRetryHandleAsync(this, @event);
+            // Use ServiceCollection.BuildServiceProvider() to create new Root ServiceProvider
+            // so that it wont be disposed when run in background thread, this handler ServiceProvider will be disposed
+            if (AllowHandleInBackgroundThread(@event) &&
+                NotNeedWaitHandlerExecutionFinishedImmediately(@event))
+                Util.TaskRunner.QueueActionInBackground(
+                    async () => await ExecuteHandleInNewScopeAsync(@event, cancellationToken),
+                    () => LoggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}"),
+                    cancellationToken: default,
+                    logFullStackTraceBeforeBackgroundTask: false);
+            else
+                await ExecuteRetryHandleAsync(this, @event);
+        }
+        catch (Exception e)
+        {
+            if (ThrowExceptionOnHandleFailed) throw;
+            LogError(@event, e.BeautifyStackTrace(), LoggerFactory);
+        }
     }
 
     protected bool NotNeedWaitHandlerExecutionFinishedImmediately(TEvent @event)

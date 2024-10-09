@@ -13,8 +13,8 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
     public const double DefaultRetryProcessFailedMessageInSecondsUnit = 30;
     public const string BuildIdPrefixSeparator = "----";
     public const string BuildIdSubQueuePrefixSeparator = "++++";
-    public const int CheckProcessingPingIntervalSeconds = 30;
-    public const int MaxAllowedProcessingPingMisses = 100;
+    public const int CheckProcessingPingIntervalSeconds = 60;
+    public const int MaxAllowedProcessingPingMisses = 30;
 
     public string JsonMessage { get; set; }
 

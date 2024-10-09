@@ -119,3 +119,10 @@ export function string_transformSpaceTo(
         (suffix != undefined ? `${linkingSymbol}${suffix.toLowerCase()}` : '')
     );
 }
+
+export function string_isEmail(email: string | undefined): boolean {
+    if (email == undefined) return false;
+    const regExp = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+    const regExpForFirstCharacter = /[0-9a-zA-Z]+$/i;
+    return regExp.test(email) && regExpForFirstCharacter.test(email[0]!);
+}

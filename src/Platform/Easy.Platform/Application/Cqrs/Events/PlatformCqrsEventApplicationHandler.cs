@@ -217,26 +217,34 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     /// </remarks>
     protected override async Task DoHandle(TEvent @event, CancellationToken cancellationToken)
     {
-        if (@event.RequestContext == null || @event.RequestContext.IsEmpty())
-            @event.SetRequestContextValues(requestContextAccessor.Current.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()));
+        try
+        {
+            if (@event.RequestContext == null || @event.RequestContext.IsEmpty())
+                @event.SetRequestContextValues(requestContextAccessor.Current.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()));
 
-        if (!await HandleWhen(@event)) return;
+            if (!await HandleWhen(@event)) return;
 
-        if (RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTraceEnabled() == true &&
-            @event.StackTrace == null)
-            @event.StackTrace = PlatformEnvironment.StackTrace();
+            if (RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTraceEnabled() == true &&
+                @event.StackTrace == null)
+                @event.StackTrace = PlatformEnvironment.StackTrace();
 
-        var eventSourceUow = TryGetCurrentOrCreatedActiveUow(@event);
+            var eventSourceUow = TryGetCurrentOrCreatedActiveUow(@event);
 
-        if (eventSourceUow?.IsPseudoTransactionUow() == false &&
-            NotNeedWaitHandlerExecutionFinishedImmediately(@event))
-            eventSourceUow.OnSaveChangesCompletedActions.Add(
-                async () =>
-                {
-                    await ExecuteHandleInNewScopeAsync(@event, cancellationToken);
-                });
-        else
-            await base.DoHandle(@event, cancellationToken);
+            if (eventSourceUow?.IsPseudoTransactionUow() == false &&
+                NotNeedWaitHandlerExecutionFinishedImmediately(@event))
+                eventSourceUow.OnSaveChangesCompletedActions.Add(
+                    async () =>
+                    {
+                        await ExecuteHandleInNewScopeAsync(@event, cancellationToken);
+                    });
+            else
+                await base.DoHandle(@event, cancellationToken);
+        }
+        catch (Exception e)
+        {
+            if (ThrowExceptionOnHandleFailed) throw;
+            LogError(@event, e.BeautifyStackTrace(), LoggerFactory);
+        }
     }
 
     /// <summary>

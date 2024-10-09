@@ -12,16 +12,25 @@ import {
     signal,
     Signal
 } from '@angular/core';
-import { FormArray, FormControl, FormGroup, ValidatorFn } from '@angular/forms';
+import { AbstractControl, FormArray, FormControl, FormGroup, ValidatorFn } from '@angular/forms';
 
 import { asyncScheduler, delay, distinctUntilChanged, filter, map, merge, Observable, throttleTime } from 'rxjs';
 
+import { clone } from 'lodash-es';
 import { PartialDeep } from 'type-fest';
 import { ArrayElement } from 'type-fest/source/internal';
 import { IPlatformFormValidationError } from '../../form-validators';
 import { FormHelpers } from '../../helpers';
 import { distinctUntilObjectValuesChanged } from '../../rxjs';
-import { immutableUpdate, ImmutableUpdateOptions, isDifferent, keys, task_delay, toPlainObj } from '../../utils';
+import {
+    immutableUpdate,
+    ImmutableUpdateOptions,
+    isDifferent,
+    isSinglePrimitiveOrImmutableType,
+    keys,
+    task_delay,
+    toPlainObj
+} from '../../utils';
 import { IPlatformVm, PlatformFormMode, requestStateDefaultKey } from '../../view-models';
 import { ComponentStateStatus, PlatformComponent } from './platform.component';
 import { PlatformVmComponent } from './platform.vm-component';
@@ -77,6 +86,11 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     extends PlatformVmComponent<TViewModel>
     implements IPlatformFormComponent<TViewModel>, OnInit
 {
+    public static readonly updateVmOnFormValuesChangeDelayMs = 1;
+    // because we are using vm() signal, when updateVmOnFormValuesChange => setTimeout to ensure the value
+    // in vm signal is updated => then run validation to make sure it works correctly if validation logic is using vm signal value
+    public static readonly processFormValidationsDelays = 10;
+
     protected environmentInjector = inject(EnvironmentInjector);
 
     public constructor() {
@@ -390,21 +404,26 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
                 buildControlValueChangesSubscriptionKey(formControlKey),
                 (<FormControl>(<Dictionary<unknown>>this.form.controls)[formControlKey]).valueChanges
                     .pipe(
-                        delay(1, asyncScheduler), // Delay 1 to push item in async queue to ensure control value has been updated
                         throttleTime(PlatformComponent.defaultDetectChangesThrottleTime, asyncScheduler, {
                             leading: true,
                             trailing: true
                         }),
-                        distinctUntilObjectValuesChanged()
+                        distinctUntilObjectValuesChanged(),
+                        map(value => {
+                            const currentReactiveFormValues = <Dictionary<TViewModel[keyof TViewModel]>>(
+                                this.getCurrentReactiveFormControlValues()
+                            );
+                            const hasVmChanged = this.updateVmOnFormValuesChange(
+                                <Partial<TViewModel>>{ [formControlKey]: value },
+                                currentReactiveFormValues
+                            );
+
+                            return hasVmChanged;
+                        }),
+                        delay(PlatformFormComponent.updateVmOnFormValuesChangeDelayMs) // Delay updateVmOnFormValuesChangeDelayMs to push item in async queue to ensure control value has been updated to run processMainFormValidations
                     )
-                    .subscribe(value => {
-                        if (this.updateVmOnFormValuesChange(<Partial<TViewModel>>{ [formControlKey]: value })) {
-                            // because we are using vm() signal, when updateVmOnFormValuesChange => setTimeout to ensure the value
-                            // in vm signal is updated => then run validation to make sure it works correctly if validation logic is using vm signal value
-                            setTimeout(() => {
-                                this.processMainFormValidations(<keyof TViewModel>formControlKey);
-                            });
-                        }
+                    .subscribe(hasVmChanged => {
+                        if (hasVmChanged) this.processMainFormOtherRelatedValidations(<keyof TViewModel>formControlKey);
                     })
             );
         });
@@ -423,7 +442,8 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     protected override internalSetVm = (
         v: TViewModel | undefined,
         shallowCheckDiff: boolean = true,
-        onVmChanged?: (vm: TViewModel | undefined) => unknown
+        onVmChanged?: (vm: TViewModel | undefined) => unknown,
+        currentReactiveFormValues?: Dictionary<TViewModel[keyof TViewModel]>
     ): boolean => {
         if (shallowCheckDiff == false || this._vm != v) {
             const prevVm = this._vm;
@@ -431,7 +451,8 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
             this._vm = v;
             this.vm.set(v);
 
-            if (v != undefined && this.initiated$.value && this.formConfig != undefined) this.patchVmValuesToForm(v);
+            if (v != undefined && this.initiated$.value && this.formConfig != undefined)
+                this.patchVmValuesToForm(v, true, currentReactiveFormValues);
             if (this.initiated$.value || prevVm == undefined) this.vmChangeEvent.emit(v);
 
             if (onVmChanged != undefined) onVmChanged(this._vm);
@@ -521,10 +542,16 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
      * }
      * ```
      */
-    public patchVmValuesToForm(vm: TViewModel, runFormValidation: boolean = true): void {
-        const vmFormValues = <Dictionary<TViewModel[keyof TViewModel]>>this.getFromVmFormValues(vm);
-        const currentReactiveFormValues = <Dictionary<TViewModel[keyof TViewModel]>>(
+    public patchVmValuesToForm(
+        vm: TViewModel,
+        runFormValidation: boolean = true,
+        currentReactiveFormValues?: Dictionary<TViewModel[keyof TViewModel]>
+    ): void {
+        currentReactiveFormValues ??= <Dictionary<TViewModel[keyof TViewModel]>>(
             this.getCurrentReactiveFormControlValues()
+        );
+        const vmFormValues = <Dictionary<TViewModel[keyof TViewModel]>>(
+            this.getFromVmFormValues(vm, currentReactiveFormValues)
         );
 
         const formControls = <PlatformFormGroupControls<TViewModel>>this.form.controls;
@@ -536,14 +563,11 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
             const formControl = formControls[vmFormKey];
 
             if (isDifferent(vmFormKeyValue, currentReactiveFormValues[formKey])) {
-                if (
-                    formControl instanceof FormArray &&
-                    vmFormKeyValue instanceof Array &&
-                    formControl.length != vmFormKeyValue.length
-                ) {
+                if (formControl instanceof FormArray && vmFormKeyValue instanceof Array) {
                     const listControlformConfig = <
                         PlatformFormGroupControlConfigPropArray<ArrayElement<TViewModel[keyof TViewModel]>>
                     >this.formConfig.controls[vmFormKey];
+                    const previousControls = clone((<FormArray>formControl).controls);
 
                     formControl.clear({ emitEvent: false });
                     vmFormKeyValue.forEach((modelItem: ArrayElement<TViewModel[keyof TViewModel]>, index) => {
@@ -553,9 +577,17 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
                             modelItem,
                             index
                         );
+
                         formControl.push(fromArrayControlItem, {
                             emitEvent: false
                         });
+
+                        if (previousControls[index] != null && previousControls[index]!.touched)
+                            formControl.at(index)!.markAllAsTouched();
+                        if (previousControls[index] != null && previousControls[index]!.dirty)
+                            formControl.at(index)!.markAsDirty();
+                        if (previousControls[index] != null && previousControls[index]!.pristine)
+                            formControl.at(index)!.markAsPristine();
                     });
                 }
 
@@ -564,13 +596,16 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
                 });
 
                 if (!this.isViewMode && runFormValidation) {
-                    this.processMainFormValidations(vmFormKey);
+                    setTimeout(() => {
+                        this.validateFormControl(this.form, vmFormKey);
+                    }, PlatformFormComponent.processFormValidationsDelays);
+                    this.processMainFormOtherRelatedValidations(vmFormKey);
                 }
             }
         });
     }
 
-    private processMainFormValidations(vmFormKey: keyof TViewModel) {
+    private processMainFormOtherRelatedValidations(vmFormKey: keyof TViewModel) {
         this.processGroupValidation(this.formConfig.groupValidations, 'mainForm', this.form, vmFormKey);
         this.processDependentValidations(this.formConfig.dependentValidations, 'mainForm', this.form, vmFormKey);
     }
@@ -585,15 +620,58 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
         return reactiveFormValues;
     }
 
-    public getFromVmFormValues(vm: TViewModel): Partial<TViewModel> {
+    /**
+     * Get form values from view model
+     */
+    public getFromVmFormValues(
+        vmValue: TViewModel | Dictionary<unknown> | unknown[],
+        currentReactiveFormValues: Dictionary<TViewModel[keyof TViewModel]> | Dictionary<unknown> | unknown[]
+    ): Partial<TViewModel> {
         const vmFormValues: Partial<TViewModel> = {};
 
-        keys(this.formConfig.controls).forEach(formControlKey => {
-            (<Dictionary<unknown>>vmFormValues)[formControlKey] = (<Dictionary<unknown>>(<unknown>vm))[formControlKey];
+        // Explain 1: keys(currentReactiveFormValues)
+        // use currentReactiveFormValues as object to get keys from to build object get value from view model with structure (count and order of properties) same as structure
+        // from currentReactiveFormValues => so that when compare isValueDifferent would be correct
+        keys(currentReactiveFormValues).forEach(formControlKey => {
+            const vmValueItem = (<Dictionary<unknown>>(<unknown>vmValue))[formControlKey];
+
+            // vmValueItem === undefined => return null to make sure the vmFormValues result return must exist property formControlKey.
+            // If set undefine => key in the object will not exist. Need to set null the make the key exist in the return result
+            if (currentReactiveFormValues[formControlKey] instanceof Array || vmValueItem instanceof Array) {
+                (<Dictionary<unknown>>vmFormValues)[formControlKey] =
+                    vmValueItem === undefined
+                        ? null
+                        : (<unknown[]>vmValueItem).map((vmValueArrayItem, index) => {
+                              if (
+                                  !isSinglePrimitiveOrImmutableType(vmValueArrayItem) &&
+                                  !isSinglePrimitiveOrImmutableType(
+                                      (<unknown[]>currentReactiveFormValues[formControlKey])[index]
+                                  )
+                              ) {
+                                  return this.getFromVmFormValues(
+                                      <Dictionary<unknown>>vmValueArrayItem,
+                                      <Dictionary<unknown>>(<unknown[]>currentReactiveFormValues[formControlKey])[index]
+                                  );
+                              }
+
+                              return vmValueArrayItem;
+                          });
+            } else if (
+                !isSinglePrimitiveOrImmutableType(vmValueItem) &&
+                !isSinglePrimitiveOrImmutableType(currentReactiveFormValues[formControlKey])
+            ) {
+                (<Dictionary<unknown>>vmFormValues)[formControlKey] = this.getFromVmFormValues(
+                    <Dictionary<unknown>>vmValueItem,
+                    <Dictionary<unknown>>currentReactiveFormValues[formControlKey]
+                );
+            } else {
+                // vmValueItem === undefined => return null to make sure the vmFormValues result return must exist property formControlKey.
+                // If set undefine => key in the object will not exist. Need to set null the make the key exist in the return result
+                (<Dictionary<unknown>>vmFormValues)[formControlKey] = vmValueItem === undefined ? null : vmValueItem;
+            }
         });
 
-        // To toPlainObj to ensure removing getter/setter which help angular lib can read prop keys and apply data from vm
-        // to form
+        // To toPlainObj to ensure removing getter/setter which help angular lib can read prop keys and apply data from vm to form
         return toPlainObj(vmFormValues);
     }
 
@@ -644,7 +722,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 
     public formControlValueChanges<TKey extends keyof TViewModel>(key: TKey): Observable<TViewModel[TKey]> {
         return this.formControls(key).valueChanges.pipe(
-            delay(1, asyncScheduler), // Delay 1 to push item in async queue to ensure control value has been updated,
+            delay(PlatformFormComponent.updateVmOnFormValuesChangeDelayMs, asyncScheduler), // Delay PlatformFormComponent.updateVmOnFormValuesChangeDelayMs to push item in async queue to ensure control value has been updated,
             distinctUntilObjectValuesChanged(),
             this.untilDestroyed()
         );
@@ -965,15 +1043,12 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
                 groupValidations?.forEach(groupValidators => {
                     if (groupValidators.includes(formControlKey))
                         groupValidators.forEach(groupValidatorControlKey => {
-                            this.getFormControls(formGroup, groupValidatorControlKey).updateValueAndValidity({
-                                emitEvent: true,
-                                onlySelf: false
-                            });
+                            this.validateFormControl<TFormModel>(formGroup, groupValidatorControlKey);
                         });
                 });
 
                 this.detectChanges();
-            }, 0)
+            }, PlatformFormComponent.processFormValidationsDelays)
         );
     }
 
@@ -1007,17 +1082,12 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
                         dependentValidations[<keyof TFormModel>dependentValidationControlKey]!;
 
                     if (dependedOnOtherControlKeys.includes(formControlKey)) {
-                        this.getFormControls(
-                            formGroup,
-                            <keyof TFormModel>dependentValidationControlKey
-                        ).updateValueAndValidity({
-                            emitEvent: true,
-                            onlySelf: false
-                        });
-                        this.detectChanges();
+                        this.validateFormControl(formGroup, <keyof TFormModel>dependentValidationControlKey);
                     }
                 });
-            }, 0)
+
+                this.detectChanges();
+            }, PlatformFormComponent.processFormValidationsDelays)
         );
     }
 
@@ -1030,6 +1100,41 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
             }),
             distinctUntilObjectValuesChanged()
         );
+    }
+
+    protected validateFormControl<TFormModel>(
+        formGroup: FormGroup<PlatformFormGroupControls<TFormModel>>,
+        formControlKey: keyof TFormModel
+    ) {
+        const formControl = this.getFormControls(formGroup, formControlKey);
+
+        this.validateAbstractControl(formControl);
+
+        this.detectChanges();
+    }
+
+    protected validateFormArrayControl(formArrayControl: FormArray<AbstractControl<unknown>>) {
+        formArrayControl.controls.forEach(childControl => {
+            this.validateAbstractControl(childControl);
+        });
+    }
+
+    protected validateFormGroupControl(formGroupControl: FormGroup<any>) {
+        Object.keys(formGroupControl.controls).forEach(childControlKey => {
+            const childControl = formGroupControl.controls[childControlKey]!;
+
+            this.validateAbstractControl(childControl);
+        });
+    }
+
+    protected validateAbstractControl(childControl: AbstractControl<unknown, unknown>) {
+        if (childControl instanceof FormGroup) this.validateFormGroupControl(<FormGroup>childControl);
+        else if (childControl instanceof FormArray) this.validateFormArrayControl(childControl);
+
+        childControl.updateValueAndValidity({
+            emitEvent: true,
+            onlySelf: false
+        });
     }
 
     /**
@@ -1068,11 +1173,14 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
         return new FormArray(items.map(item => formItemControl(item)));
     }
 
-    protected updateVmOnFormValuesChange(values: Partial<TViewModel>) {
+    protected updateVmOnFormValuesChange(
+        values: Partial<TViewModel>,
+        currentReactiveFormValues: Dictionary<TViewModel[keyof TViewModel]>
+    ) {
         const newUpdatedVm: TViewModel = immutableUpdate(this.currentVm(), values);
 
         if (newUpdatedVm != this._vm) {
-            this.internalSetVm(newUpdatedVm, false);
+            this.internalSetVm(newUpdatedVm, false, undefined, currentReactiveFormValues);
             return true;
         }
 
@@ -1173,7 +1281,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
                     ),
                     (<FormControl>(<Dictionary<unknown>>result.controls)[formControlKey]).valueChanges
                         .pipe(
-                            delay(1, asyncScheduler), // Delay 1 to push item in async queue to ensure control value has been updated
+                            delay(PlatformFormComponent.updateVmOnFormValuesChangeDelayMs, asyncScheduler), // Delay PlatformFormComponent.updateVmOnFormValuesChangeDelayMs to push item in async queue to ensure control value has been updated
                             throttleTime(PlatformComponent.defaultDetectChangesThrottleTime, asyncScheduler, {
                                 leading: true,
                                 trailing: true
