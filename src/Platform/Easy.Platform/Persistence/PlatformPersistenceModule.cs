@@ -69,6 +69,8 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
 
     public static int DefaultDbInitAndMigrationRetryCount => PlatformEnvironment.IsDevelopment ? 5 : 10;
 
+    public static int DefaultDbInitAndMigrationRetryDelaySeconds => PlatformEnvironment.IsDevelopment ? 15 : 30;
+
     public override string[] TracingSources()
     {
         return Util.ListBuilder.NewArray(
@@ -236,7 +238,7 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
             {
                 await serviceScope.ServiceProvider.GetRequiredService<TDbContext>().MigrateApplicationDataAsync(serviceScope.ServiceProvider);
             },
-            sleepDurationProvider: retryAttempt => 10.Seconds(),
+            sleepDurationProvider: retryAttempt => DefaultDbInitAndMigrationRetryDelaySeconds.Seconds(),
             retryCount: DefaultDbInitAndMigrationRetryCount,
             onBeforeThrowFinalExceptionFn: exception => Logger.LogError(
                 exception.BeautifyStackTrace(),

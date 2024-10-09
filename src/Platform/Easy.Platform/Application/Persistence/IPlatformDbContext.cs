@@ -20,9 +20,11 @@ namespace Easy.Platform.Application.Persistence;
 public interface IPlatformDbContext : IDisposable
 {
     public const int DefaultPageSize = 10;
+    public const int SaveMigrationHistoryRetryCount = 100;
 
-    public const int SaveMigrationHistoryFailedRetryCount = 100;
     public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformDbContext)}");
+    public static int MigrationRetryCount => PlatformEnvironment.IsDevelopment ? 5 : 10;
+    public static int MigrationRetryDelaySeconds => PlatformEnvironment.IsDevelopment ? 15 : 30;
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery { get; }
 
@@ -54,10 +56,16 @@ public interface IPlatformDbContext : IDisposable
             async () =>
             {
                 await backgroundThreadMigrations.ForEachAsync(
-                    async migrationExecution => await rootServiceProvider.ExecuteInjectScopedAsync(
-                        async (IServiceProvider sp, TDbContext dbContext) =>
-                            await dbContext.ExecuteDataMigrationExecutor(
-                                PlatformDataMigrationExecutor<TDbContext>.CreateNewInstance(sp, migrationExecution.GetType()))));
+                    async migrationExecution =>
+                    {
+                        await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                            () => rootServiceProvider.ExecuteInjectScopedAsync(
+                                async (IServiceProvider sp, TDbContext dbContext) =>
+                                    await dbContext.ExecuteDataMigrationExecutor(
+                                        PlatformDataMigrationExecutor<TDbContext>.CreateNewInstance(sp, migrationExecution.GetType()))),
+                            sleepDurationProvider: retry => MigrationRetryDelaySeconds.Seconds(),
+                            retryCount: MigrationRetryCount);
+                    });
             },
             () => rootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType()));
     }
@@ -104,7 +112,7 @@ public interface IPlatformDbContext : IDisposable
 
                         await startIntervalPingProcessingMigrationHistoryCts.CancelAsync();
 
-                        // Delay ton ensure interval finished
+                        // Delay to ensure interval finished
                         await Task.Delay(10.Seconds(), CancellationToken.None);
 
                         // Retry in case interval ping make it failed for concurrency token
@@ -124,7 +132,7 @@ public interface IPlatformDbContext : IDisposable
                                 await SaveChangesAsync(CancellationToken.None);
                             },
                             retryTime => retryTime.Seconds(),
-                            SaveMigrationHistoryFailedRetryCount,
+                            SaveMigrationHistoryRetryCount,
                             onRetry: (ex, delayRetryTime, retryAttempt, context) =>
                             {
                                 if (retryAttempt > 3) Logger.LogError(ex.BeautifyStackTrace(), "Upsert DataMigrationHistory Status=Processed failed");
@@ -153,7 +161,7 @@ public interface IPlatformDbContext : IDisposable
                                             CancellationToken.None);
                                 }),
                             retryTime => retryTime.Seconds(),
-                            SaveMigrationHistoryFailedRetryCount,
+                            SaveMigrationHistoryRetryCount,
                             (ex, delayRetryTime, retryAttempt, context) =>
                             {
                                 if (retryAttempt > 3) Logger.LogError(ex.BeautifyStackTrace(), "Upsert DataMigrationHistory Status=Failed failed");
@@ -215,7 +223,7 @@ public interface IPlatformDbContext : IDisposable
                             }
                         },
                         cancellationToken: CancellationToken.None,
-                        retryCount: SaveMigrationHistoryFailedRetryCount,
+                        retryCount: SaveMigrationHistoryRetryCount,
                         onRetry: (ex, delayRetryTime, retryAttempt, context) =>
                         {
                             if (retryAttempt > 3) Logger.LogError(ex.BeautifyStackTrace(), "Upsert DataMigrationHistory LastProcessingPingTime failed");
