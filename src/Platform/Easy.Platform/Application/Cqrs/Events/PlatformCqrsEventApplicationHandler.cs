@@ -1,6 +1,5 @@
 using Easy.Platform.Application.Cqrs.Events.InboxSupport;
 using Easy.Platform.Application.MessageBus.InboxPattern;
-using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs.Events;
@@ -175,11 +174,6 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                !ForceCurrentInstanceHandleInCurrentThread;
     }
 
-    protected bool HasOutboxMessageSupport()
-    {
-        return RootServiceProvider.CheckHasRegisteredScopedService<IPlatformOutboxBusMessageRepository>();
-    }
-
     /// <summary>
     /// Copies properties from the previous instance of the event handler to the new instance before execution.
     /// </summary>
@@ -221,8 +215,6 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         {
             if (@event.RequestContext == null || @event.RequestContext.IsEmpty())
                 @event.SetRequestContextValues(requestContextAccessor.Current.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()));
-
-            if (!await HandleWhen(@event)) return;
 
             if (RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTraceEnabled() == true &&
                 @event.StackTrace == null)
@@ -272,6 +264,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                 // Try to execute directly once to enhance performance, if failed then try use inbox
                 try
                 {
+                    if (!await HandleWhen(@event)) return;
+
                     await RunHandleAsync(@event, cancellationToken);
                 }
                 catch (Exception)
@@ -312,6 +306,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                 await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync<PlatformDomainRowVersionConflictException>(
                     async () =>
                     {
+                        if (!await HandleWhen(@event)) return;
+
                         await RunHandleAsync(@event, cancellationToken);
                     },
                     retryCount: Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio,

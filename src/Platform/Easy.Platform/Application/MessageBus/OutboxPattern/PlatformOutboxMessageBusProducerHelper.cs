@@ -544,59 +544,80 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         IPlatformOutboxBusMessageRepository outboxBusMessageRepository)
         where TMessage : class, new()
     {
-        // Get or create the outbox message to process.
-        var toProcessOutboxMessage = await GetOrCreateToProcessOutboxMessage(
-            message,
-            routingKey,
-            subQueueMessageIdPrefix,
-            cancellationToken,
-            outboxBusMessageRepository);
+        // Get the current active unit of work, if applicable.
+        var currentActiveUow = sourceOutboxUowId != null
+            ? unitOfWorkManager.TryGetCurrentOrCreatedActiveUow(sourceOutboxUowId)
+            : null;
 
-        if (toProcessOutboxMessage != null)
-        {
-            // Get the current active unit of work, if applicable.
-            var currentActiveUow = sourceOutboxUowId != null
-                ? unitOfWorkManager.TryGetCurrentOrCreatedActiveUow(sourceOutboxUowId)
-                : null;
+        // If there's no active unit of work or the unit of work is a pseudo transaction, send the message immediately in a background thread.
+        var canSendMessageDirectlyWithoutWaitUowTransaction = currentActiveUow == null ||
+                                                              (currentActiveUow.IsPseudoTransactionUow() &&
+                                                               outboxBusMessageRepository.TryGetCurrentOrCreatedActiveUow(sourceOutboxUowId) != null);
 
-            // If there's no active unit of work or the unit of work is a pseudo transaction, send the message immediately in a background thread.
-            if (currentActiveUow == null ||
-                (currentActiveUow.IsPseudoTransactionUow() && outboxBusMessageRepository.TryGetCurrentOrCreatedActiveUow(sourceOutboxUowId) != null))
+        if (canSendMessageDirectlyWithoutWaitUowTransaction)
+            // Try to send directly first without using outbox for faster performance if no uow or fake uow. If failed => use inbox to support retry later
+            try
             {
-                // If there's an active unit of work, save changes to ensure the outbox message is persisted.
-                if (outboxBusMessageRepository.UowManager().TryGetCurrentActiveUow() != null)
-                    await outboxBusMessageRepository.UowManager().CurrentActiveUow().SaveChangesAsync(cancellationToken);
-
-                Util.TaskRunner.QueueActionInBackground(
-                    async () => await rootServiceProvider.ExecuteInjectScopedAsync(
-                        SendExistingOutboxMessageAsync<TMessage>,
-                        toProcessOutboxMessage,
-                        message,
-                        routingKey,
-                        retryProcessFailedMessageInSecondsUnit,
-                        needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
-                        cancellationToken,
-                        logger),
-                    loggerFactory: CreateLogger,
-                    cancellationToken: cancellationToken,
-                    logFullStackTraceBeforeBackgroundTask: false);
+                await messageBusProducer.SendAsync(message, routingKey, cancellationToken);
             }
-            else
+            catch (Exception)
             {
-                // If there's an active unit of work, add an action to send the message after the unit of work completes.
-                currentActiveUow.OnSaveChangesCompletedActions.Add(
-                    async () =>
-                    {
-                        // Try to process sending the outbox message immediately after the unit of work completes.
-                        await SendExistingOutboxMessageInNewScopeAsync(
+                await DoCreateNewInboxAndSendMessage();
+            }
+        else
+            await DoCreateNewInboxAndSendMessage();
+
+
+        async Task DoCreateNewInboxAndSendMessage()
+        {
+            // Get or create the outbox message to process.
+            var toProcessOutboxMessage = await GetOrCreateToProcessOutboxMessage(
+                message,
+                routingKey,
+                subQueueMessageIdPrefix,
+                cancellationToken,
+                outboxBusMessageRepository);
+
+            if (toProcessOutboxMessage != null)
+            {
+                // If there's no active unit of work or the unit of work is a pseudo transaction, send the message immediately in a background thread.
+                if (canSendMessageDirectlyWithoutWaitUowTransaction)
+                {
+                    // If there's an active unit of work, save changes to ensure the outbox message is persisted.
+                    if (outboxBusMessageRepository.UowManager().TryGetCurrentActiveUow() != null)
+                        await outboxBusMessageRepository.UowManager().CurrentActiveUow().SaveChangesAsync(cancellationToken);
+
+                    Util.TaskRunner.QueueActionInBackground(
+                        async () => await rootServiceProvider.ExecuteInjectScopedAsync(
+                            SendExistingOutboxMessageAsync<TMessage>,
                             toProcessOutboxMessage,
                             message,
                             routingKey,
                             retryProcessFailedMessageInSecondsUnit,
                             needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
                             cancellationToken,
-                            logger);
-                    });
+                            logger),
+                        loggerFactory: CreateLogger,
+                        cancellationToken: cancellationToken,
+                        logFullStackTraceBeforeBackgroundTask: false);
+                }
+                else
+                {
+                    // If there's an active unit of work, add an action to send the message after the unit of work completes.
+                    currentActiveUow!.OnSaveChangesCompletedActions.Add(
+                        async () =>
+                        {
+                            // Try to process sending the outbox message immediately after the unit of work completes.
+                            await SendExistingOutboxMessageInNewScopeAsync(
+                                toProcessOutboxMessage,
+                                message,
+                                routingKey,
+                                retryProcessFailedMessageInSecondsUnit,
+                                needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
+                                cancellationToken,
+                                logger);
+                        });
+                }
             }
         }
     }

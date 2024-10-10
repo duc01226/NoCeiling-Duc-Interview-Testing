@@ -8,8 +8,8 @@ namespace Easy.Platform.Persistence.DataMigration;
 public class PlatformDataMigrationHistory : IRowVersionEntity
 {
     public const string DbInitializedMigrationHistoryName = "DbInitialized";
-    public const int ProcessingPingIntervalSeconds = 10;
-    public const int MaxAllowedProcessingPingMisses = 3;
+    public const int ProcessingPingIntervalSeconds = 30;
+    public const int MaxAllowedProcessingPingMisses = 10;
 
     private DateTime? createdDate;
 

@@ -337,13 +337,30 @@ public static class PlatformInboxMessageBusConsumerHelper
                         .With(uow => uow.NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage = false)
                         .With(uow => uow.AutoDeleteProcessedInboxEventMessageImmediately = autoDeleteProcessedMessage);
 
-                    // Execute the consumer's HandleAsync method with a timeout.
-                    await consumer
-                        .HandleAsync(message, routingKey);
+                    try
+                    {
+                        // Execute the consumer's HandleAsync method with a timeout.
+                        await consumer
+                            .HandleAsync(message, routingKey);
+                    }
+                    catch (Exception ex)
+                    {
+                        // If an error occurs during consumer execution, update the inbox message as failed.
+                        await UpdateExistingInboxFailedMessageAsync(
+                            serviceProvider,
+                            newInboxMessage,
+                            message,
+                            consumerType,
+                            ex,
+                            retryProcessFailedMessageInSecondsUnit,
+                            loggerFactory,
+                            consumerHasErrorAndShouldNeverRetry: consumer.HasErrorAndShouldNeverRetry,
+                            cancellationToken: cancellationToken);
+                    }
                 }
                 catch (Exception ex)
                 {
-                    // If an error occurs during consumer execution, update the inbox message as failed.
+                    // If an error occurs during consumer resolve, update the inbox message as ignored, never retry.
                     await UpdateExistingInboxFailedMessageAsync(
                         serviceProvider,
                         newInboxMessage,
@@ -352,7 +369,8 @@ public static class PlatformInboxMessageBusConsumerHelper
                         ex,
                         retryProcessFailedMessageInSecondsUnit,
                         loggerFactory,
-                        cancellationToken);
+                        consumerHasErrorAndShouldNeverRetry: true,
+                        cancellationToken: cancellationToken);
                 }
             });
     }
@@ -455,6 +473,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 ex,
                 retryProcessFailedMessageInSecondsUnit,
                 loggerFactory,
+                consumer.HasErrorAndShouldNeverRetry,
                 cancellationToken);
         }
         finally
@@ -740,6 +759,7 @@ public static class PlatformInboxMessageBusConsumerHelper
     /// <param name="exception">The exception that caused the failure.</param>
     /// <param name="retryProcessFailedMessageInSecondsUnit">The time unit in seconds for retrying failed message processing.</param>
     /// <param name="loggerFactory">A factory for creating loggers.</param>
+    /// <param name="consumerHasErrorAndShouldNeverRetry">consumerHasErrorAndShouldNeverRetry</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken" /> that can be used to cancel the operation.</param>
     /// <returns>A <see cref="Task" /> representing the asynchronous operation.</returns>
     public static async Task UpdateExistingInboxFailedMessageAsync<TMessage>(
@@ -750,6 +770,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         Exception exception,
         double retryProcessFailedMessageInSecondsUnit,
         Func<ILogger> loggerFactory,
+        bool consumerHasErrorAndShouldNeverRetry,
         CancellationToken cancellationToken = default) where TMessage : class, new()
     {
         try
@@ -780,6 +801,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                                 await UpdateExistingInboxFailedMessageAsync(
                                     exception,
                                     retryProcessFailedMessageInSecondsUnit,
+                                    consumerHasErrorAndShouldNeverRetry,
                                     cancellationToken,
                                     latestCurrentExistingInboxMessage,
                                     inboxBusMessageRepo);
@@ -805,11 +827,13 @@ public static class PlatformInboxMessageBusConsumerHelper
     private static async Task UpdateExistingInboxFailedMessageAsync(
         Exception exception,
         double retryProcessFailedMessageInSecondsUnit,
+        bool consumerHasErrorAndShouldNeverRetry,
         CancellationToken cancellationToken,
         PlatformInboxBusMessage existingInboxMessage,
         IPlatformInboxBusMessageRepository inboxBusMessageRepo)
     {
-        existingInboxMessage.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Failed;
+        existingInboxMessage.ConsumeStatus =
+            consumerHasErrorAndShouldNeverRetry ? PlatformInboxBusMessage.ConsumeStatuses.Ignored : PlatformInboxBusMessage.ConsumeStatuses.Failed;
         existingInboxMessage.LastConsumeDate = Clock.UtcNow;
         existingInboxMessage.LastProcessingPingDate = Clock.UtcNow;
         existingInboxMessage.LastConsumeError = exception.BeautifyStackTrace().Serialize();

@@ -349,12 +349,13 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                         ex,
                         PlatformInboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit,
                         () => Logger,
-                        cancellationToken);
+                        consumerHasErrorAndShouldNeverRetry: consumer.HasErrorAndShouldNeverRetry,
+                        cancellationToken: cancellationToken);
                 }
         }
         else
         {
-            // If the consumer type cannot be resolved, update the inbox message as failed.
+            // If the consumer type cannot be resolved, update the inbox message as ignored, never retry.
             await PlatformInboxMessageBusConsumerHelper.UpdateExistingInboxFailedMessageAsync(
                 ServiceProvider,
                 toHandleInboxMessage,
@@ -363,7 +364,8 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                 new Exception($"Error resolve consumer type {toHandleInboxMessage.ConsumerBy}. InboxId:{toHandleInboxMessage.Id}"),
                 PlatformInboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit,
                 () => Logger,
-                cancellationToken);
+                consumerHasErrorAndShouldNeverRetry: true,
+                cancellationToken: cancellationToken);
         }
     }
 

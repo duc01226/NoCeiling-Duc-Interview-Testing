@@ -37,6 +37,8 @@ public interface IPlatformApplicationMessageBusConsumer : IPlatformMessageBusCon
     /// Gets or sets a value indicating whether the instance is called to execute handling logic for an inbox message.
     /// </summary>
     public bool IsHandlingLogicForInboxMessage { get; set; }
+
+    public bool HasErrorAndShouldNeverRetry { get; set; }
 }
 
 /// <summary>
@@ -137,6 +139,8 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
 
     /// <inheritdoc />
     public bool IsHandlingLogicForInboxMessage { get; set; }
+
+    public bool HasErrorAndShouldNeverRetry { get; set; }
 
     /// <summary>
     /// Executes the message handling logic, either using the inbox pattern or directly.

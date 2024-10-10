@@ -89,6 +89,8 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     public virtual async Task ExecuteHandleAsync(TEvent @event, CancellationToken cancellationToken)
     {
+        if (!await HandleWhen(@event)) return;
+
         await ExecuteHandleWithTracingAsync(@event, () => HandleAsync(@event, cancellationToken));
     }
 
@@ -100,8 +102,6 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
     {
         try
         {
-            if (!await HandleWhen(@event)) return;
-
             if (RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTraceEnabled() == true &&
                 @event.StackTrace == null)
                 @event.StackTrace = PlatformEnvironment.StackTrace();

@@ -1,5 +1,4 @@
 using Easy.Platform.Common;
-using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.UnitOfWork;
@@ -40,14 +39,11 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
     }
 
     /// <summary>
-    /// Default handle only when data has changed
+    /// Default return True
     /// </summary>
-    public override async Task<bool> HandleWhen(PlatformCqrsEntityEvent<TEntity> @event)
+    public override Task<bool> HandleWhen(PlatformCqrsEntityEvent<TEntity> @event)
     {
-        return @event.CrudAction == PlatformCqrsEntityEventCrudAction.Created ||
-               @event.CrudAction == PlatformCqrsEntityEventCrudAction.Deleted ||
-               @event.ExistingEntityData == null ||
-               @event.ExistingEntityData.ToJson() != @event.EntityData.ToJson();
+        return Task.FromResult(true);
     }
 }
 
