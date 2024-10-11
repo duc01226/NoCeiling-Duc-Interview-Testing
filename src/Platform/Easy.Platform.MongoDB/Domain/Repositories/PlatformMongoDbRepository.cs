@@ -117,11 +117,13 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         IEnumerable<TSource> query,
         CancellationToken cancellationToken = default)
     {
+        // ReSharper disable once PossibleMultipleEnumeration
         LogDebugQueryLog(query);
 
         if (query.As<IMongoQueryable<TSource>>() != null)
             return await FirstOrDefaultAsync(query.As<IMongoQueryable<TSource>>(), cancellationToken);
 
+        // ReSharper disable once PossibleMultipleEnumeration
         return query.FirstOrDefault();
     }
 

@@ -27,11 +27,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     public const string PlatformOutboxBusMessageCollectionName = "OutboxEventBusMessage";
     public const string PlatformDataMigrationHistoryCollectionName = "MigrationHistory";
 
+    protected readonly IPlatformApplicationSettingContext ApplicationSettingContext;
     protected readonly Lazy<Dictionary<Type, string>> EntityTypeToCollectionNameDictionary;
     protected readonly PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration;
     protected readonly IPlatformApplicationRequestContextAccessor RequestContextAccessor;
     protected readonly IPlatformRootServiceProvider RootServiceProvider;
-    private readonly IPlatformApplicationSettingContext applicationSettingContext;
 
     private readonly Lazy<ILogger> lazyLogger;
 
@@ -50,10 +50,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         RequestContextAccessor = requestContextAccessor;
         PersistenceConfiguration = persistenceConfiguration;
         RootServiceProvider = rootServiceProvider;
-        lazyLogger = new Lazy<ILogger>(() => CreateLogger(loggerFactory));
-        this.applicationSettingContext = applicationSettingContext;
-
+        ApplicationSettingContext = applicationSettingContext;
         EntityTypeToCollectionNameDictionary = new Lazy<Dictionary<Type, string>>(BuildEntityTypeToCollectionNameDictionary);
+
+        lazyLogger = new Lazy<ILogger>(() => CreateLogger(loggerFactory));
     }
 
     public IMongoDatabase Database { get; }
@@ -501,7 +501,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     protected HashSet<string> IgnoreLogRequestContextKeys()
     {
-        return applicationSettingContext.GetIgnoreRequestContextKeys();
+        return ApplicationSettingContext.GetIgnoreRequestContextKeys();
     }
 
     public ILogger CreateLogger(ILoggerFactory loggerFactory)

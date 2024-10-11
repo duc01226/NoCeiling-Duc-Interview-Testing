@@ -21,6 +21,7 @@ namespace Easy.Platform.Application.MessageBus.InboxPattern;
 public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHostingBackgroundService
 {
     private readonly SemaphoreSlim processMessageParallelLimitLock;
+    private bool isFirstTimeProcess = true;
     private bool isProcessing;
 
     /// <summary>
@@ -138,6 +139,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
         }
 
         isProcessing = false;
+        isFirstTimeProcess = false;
     }
 
     /// <summary>
@@ -166,7 +168,8 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                                         .Where(
                                             PlatformInboxBusMessage.CanHandleMessagesExpr(
                                                 ApplicationSettingContext.ApplicationName,
-                                                InboxConfig.MaxRetriedProcessCount))
+                                                InboxConfig.MaxRetriedProcessCount,
+                                                retryFailedMessageImmediately: isFirstTimeProcess))
                                         .OrderBy(p => p.CreatedDate)
                                         .Skip(skipCount)
                                         .Take(pageSize)
@@ -222,7 +225,8 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                                 .Where(
                                     PlatformInboxBusMessage.CanHandleMessagesExpr(
                                         ApplicationSettingContext.ApplicationName,
-                                        InboxConfig.MaxRetriedProcessCount)),
+                                        InboxConfig.MaxRetriedProcessCount,
+                                        retryFailedMessageImmediately: isFirstTimeProcess)),
                             cancellationToken: cancellationToken),
                         // Set the page size for retrieving message prefixes.
                         pageSize: InboxConfig.GetCanHandleMessageGroupedByConsumerIdPrefixesPageSize,
@@ -448,7 +452,8 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
             .Where(
                 PlatformInboxBusMessage.CanHandleMessagesExpr(
                     ApplicationSettingContext.ApplicationName,
-                    InboxConfig.MaxRetriedProcessCount))
+                    InboxConfig.MaxRetriedProcessCount,
+                    retryFailedMessageImmediately: isFirstTimeProcess))
             // Order messages by creation date.
             .OrderBy(p => p.CreatedDate);
     }

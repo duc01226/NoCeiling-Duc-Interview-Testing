@@ -431,7 +431,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
         var currentActiveUow = UnitOfWorkManager.CurrentActiveUow();
 
-        var result = await ExecuteUowThreadSafe(UnitOfWorkManager.CurrentActiveUow(), uow => ExecuteReadData(uow, readDataFn, loadRelatedEntities));
+        var result = await ExecuteUowThreadSafe(currentActiveUow, uow => ExecuteReadData(uow, readDataFn, loadRelatedEntities));
 
         this.As<IPlatformRepository<TEntity, TPrimaryKey>>().SetCachedExistingEntitiesForUow(result, currentActiveUow);
 

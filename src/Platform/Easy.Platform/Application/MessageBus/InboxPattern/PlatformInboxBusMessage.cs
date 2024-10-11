@@ -49,12 +49,14 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
 
     public static Expression<Func<PlatformInboxBusMessage, bool>> CanHandleMessagesExpr(
         string? forApplicationName,
-        int maxRetriedProcessCount)
+        int maxRetriedProcessCount,
+        bool retryFailedMessageImmediately = false)
     {
         Expression<Func<PlatformInboxBusMessage, bool>> initialExpr =
             p => p.ConsumeStatus == ConsumeStatuses.New ||
-                 (p.ConsumeStatus == ConsumeStatuses.Failed && p.RetriedProcessCount <= maxRetriedProcessCount &&
-                  (p.NextRetryProcessAfter == null || p.NextRetryProcessAfter <= DateTime.UtcNow)) ||
+                 (p.ConsumeStatus == ConsumeStatuses.Failed && (retryFailedMessageImmediately || (p.RetriedProcessCount <= maxRetriedProcessCount &&
+                                                                                                  (p.NextRetryProcessAfter == null ||
+                                                                                                   p.NextRetryProcessAfter <= DateTime.UtcNow)))) ||
                  (p.ConsumeStatus == ConsumeStatuses.Processing &&
                   (p.LastProcessingPingDate == null ||
                    p.LastProcessingPingDate < Clock.UtcNow.AddSeconds(-CheckProcessingPingIntervalSeconds * MaxAllowedProcessingPingMisses)));

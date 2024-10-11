@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 using Easy.Platform.Common.Extensions.WhenCases;
 using Easy.Platform.Common.Utils;
-using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Common.Extensions;
 
@@ -73,7 +72,7 @@ public static class TaskExtension
     /// <param name="task">The task to await.</param>
     /// <param name="f">The function to execute after the task completes.</param>
     /// <returns>A Task representing the asynchronous operation.</returns>
-    public static async Task ThenAction(
+    public static async Task ThenActionAsync(
         this Task task,
         Func<Task> f)
     {
@@ -244,88 +243,6 @@ public static class TaskExtension
         var targetValue = await task;
 
         if (actionIf(targetValue)) await nextTask(targetValue);
-
-        return targetValue;
-    }
-
-    /// <summary>
-    /// Executes a side effect action on the result of the given task. If the side effect action throws an exception, it logs the error and continues with the original task result.
-    /// </summary>
-    /// <typeparam name="T">The type of the result of the task.</typeparam>
-    /// <param name="task">The task on which to perform the side effect action.</param>
-    /// <param name="action">The side effect action to perform on the result of the task.</param>
-    /// <param name="logger">The logger used to log any exceptions thrown by the side effect action.</param>
-    /// <returns>The original task result, regardless of whether the side effect action succeeded or failed.</returns>
-    public static async Task<T> ThenSideEffectAction<T>(
-        this Task<T> task,
-        Action<T> action,
-        ILogger logger = null)
-    {
-        var targetValue = await task;
-
-        try
-        {
-            action(targetValue);
-        }
-        catch (Exception e)
-        {
-            logger?.LogError(e.BeautifyStackTrace(), "SideEffectAction failed");
-        }
-
-        return targetValue;
-    }
-
-    /// <summary>
-    /// Executes the given task and then performs a side effect action asynchronously. If the side effect action fails, the exception is logged.
-    /// </summary>
-    /// <param name="task">The task to be executed.</param>
-    /// <param name="nextTask">The side effect action to be performed after the task execution.</param>
-    /// <param name="logger">The logger used to log any exceptions that occur during the execution of the side effect action.</param>
-    /// <returns>A Task representing the asynchronous operation.</returns>
-    public static async Task ThenSideEffectActionAsync(
-        this Task task,
-        Func<Task> nextTask,
-        ILogger logger = null)
-    {
-        await task;
-
-        try
-        {
-            await nextTask();
-        }
-        catch (Exception e)
-        {
-            logger?.LogError(e.BeautifyStackTrace(), "SideEffectAction failed");
-        }
-    }
-
-    /// <summary>
-    /// Executes a side effect action asynchronously after the completion of the given task.
-    /// </summary>
-    /// <typeparam name="T">The type of the result produced by the task.</typeparam>
-    /// <param name="task">The task after which the side effect action is to be executed.</param>
-    /// <param name="nextTask">The side effect action to be executed after the task. This action takes the result of the task as a parameter.</param>
-    /// <param name="logger">The logger to be used for logging any exceptions that occur during the execution of the side effect action.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the result of the original task.</returns>
-    /// <remarks>
-    /// The side effect action is executed regardless of whether the original task completed successfully or faulted.
-    /// If the side effect action throws an exception, this exception is logged and ignored, and does not affect the result of the returned task.
-    /// </remarks>
-    public static async Task<T> ThenSideEffectActionAsync<T>(
-        this Task<T> task,
-        Func<T, Task> nextTask,
-        ILogger logger = null)
-    {
-        var targetValue = await task;
-
-        try
-        {
-            await nextTask(targetValue);
-        }
-        catch (Exception e)
-        {
-            logger?.LogError(e.BeautifyStackTrace(), "SideEffectAction failed");
-        }
 
         return targetValue;
     }
