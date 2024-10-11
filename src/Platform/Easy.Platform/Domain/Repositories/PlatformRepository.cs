@@ -405,7 +405,6 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
     protected abstract void HandleDisposeUsingOnceTimeContextLogic<TResult>(
         IPlatformUnitOfWork uow,
-        bool doesNeedKeepUowForQueryOrEnumerableExecutionLater,
         Expression<Func<TEntity, object>>[] loadRelatedEntities,
         TResult result);
 
@@ -426,11 +425,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
             }
             finally
             {
-                HandleDisposeUsingOnceTimeContextLogic(
-                    useOnceTransientUow,
-                    DoesNeedKeepUowForQueryOrEnumerableExecutionLater(useOnceTransientUowResult, useOnceTransientUow),
-                    loadRelatedEntities,
-                    useOnceTransientUowResult);
+                HandleDisposeUsingOnceTimeContextLogic(useOnceTransientUow, loadRelatedEntities, useOnceTransientUowResult);
             }
         }
 
@@ -478,9 +473,9 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(ReadDataFnAsync, loadRelatedEntities);
 
-        Task<TResult> ReadDataFnAsync(IPlatformUnitOfWork unitOfWork, IQueryable<TEntity> entities)
+        async Task<TResult> ReadDataFnAsync(IPlatformUnitOfWork unitOfWork, IQueryable<TEntity> entities)
         {
-            return readDataFn(unitOfWork, entities).BoxedInTask();
+            return readDataFn(unitOfWork, entities);
         }
     }
 

@@ -51,6 +51,11 @@ public interface IPlatformUnitOfWork : IDisposable
     public List<Func<Task>> OnDisposedActions { get; set; }
 
     /// <summary>
+    /// Gets or sets the list of actions to be executed when the unit of work is completed.
+    /// </summary>
+    public List<Func<Task>> OnUowCompletedActions { get; set; }
+
+    /// <summary>
     /// Gets or sets the list of actions to be executed when the unit of work save changes fails.
     /// Each action is a function that takes a PlatformUnitOfWorkFailedArgs object and returns a Task.
     /// </summary>
@@ -208,6 +213,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 
     public List<Func<Task>> OnSaveChangesCompletedActions { get; set; } = [];
     public List<Func<Task>> OnDisposedActions { get; set; } = [];
+    public List<Func<Task>> OnUowCompletedActions { get; set; } = [];
     public List<Func<PlatformUnitOfWorkFailedArgs, Task>> OnSaveChangesFailedActions { get; set; } = [];
     public List<IPlatformUnitOfWork> InnerUnitOfWorks { get; protected set; } = [];
     public IPlatformUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
@@ -219,6 +225,8 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
         await InnerUnitOfWorks.Where(p => p.IsActive()).ParallelAsync(p => p.CompleteAsync(cancellationToken));
 
         await SaveChangesAsync(cancellationToken);
+
+        await InvokeOnUowCompletedActions();
 
         Completed = true;
     }
@@ -258,7 +266,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     {
         // Store stack trace before save changes so that if something went wrong in save into db, stack trace could
         // be tracked. Because call to db if failed lose stack trace
-        var fullStackTrace = PlatformEnvironment.StackTrace();
+        // var fullStackTrace = PlatformEnvironment.StackTrace();
 
         try
         {
@@ -275,7 +283,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
             await InvokeOnSaveChangesFailedActions(new PlatformUnitOfWorkFailedArgs(ex));
 
             throw new Exception(
-                $"{GetType().Name} save changes uow failed. [[Exception:{ex}]]. FullStackTrace:{fullStackTrace}]]",
+                $"{GetType().Name} save changes uow failed. [[Exception:{ex}]]",
                 ex);
         }
     }
@@ -335,23 +343,24 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
         }
     }
 
-    protected virtual Task InvokeOnSaveChangesCompletedActions()
+    protected virtual async Task InvokeOnSaveChangesCompletedActions()
     {
-        if (!OnSaveChangesCompletedActions.IsEmpty())
-            Util.TaskRunner.QueueActionInBackground(
-                async () =>
-                {
-                    await OnSaveChangesCompletedActions.ParallelAsync(
-                        p => Util.TaskRunner.CatchException(
-                            p.Invoke,
-                            ex => LoggerFactory.CreateLogger(GetType()).LogError(ex.BeautifyStackTrace(), "Invoke CompletedActions error.")));
+        await OnSaveChangesCompletedActions.ParallelAsync(
+            p => Util.TaskRunner.CatchException(
+                p.Invoke,
+                ex => LoggerFactory.CreateLogger(GetType()).LogError(ex.BeautifyStackTrace(), "Invoke CompletedActions error.")));
 
-                    OnSaveChangesCompletedActions.Clear();
-                },
-                () => LoggerFactory.CreateLogger(GetType()),
-                logFullStackTraceBeforeBackgroundTask: false);
+        OnSaveChangesCompletedActions.Clear();
+    }
 
-        return Task.CompletedTask;
+    protected virtual async Task InvokeOnUowCompletedActions()
+    {
+        await OnUowCompletedActions.ParallelAsync(
+            p => Util.TaskRunner.CatchException(
+                p.Invoke,
+                ex => LoggerFactory.CreateLogger(GetType()).LogError(ex.BeautifyStackTrace(), "Invoke UowCompletedActions error.")));
+
+        OnUowCompletedActions.Clear();
     }
 
     protected async Task InvokeOnSaveChangesFailedActions(PlatformUnitOfWorkFailedArgs e)

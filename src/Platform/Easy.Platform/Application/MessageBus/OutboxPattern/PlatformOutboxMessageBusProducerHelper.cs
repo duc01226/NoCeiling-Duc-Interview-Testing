@@ -608,7 +608,8 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         async () =>
                         {
                             // Try to process sending the outbox message immediately after the unit of work completes.
-                            await SendExistingOutboxMessageInNewScopeAsync(
+                            // Execute task in background thread
+                            _ = SendExistingOutboxMessageInNewScopeAsync(
                                 toProcessOutboxMessage,
                                 message,
                                 routingKey,

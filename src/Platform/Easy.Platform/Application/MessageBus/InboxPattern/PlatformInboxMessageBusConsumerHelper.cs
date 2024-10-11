@@ -168,16 +168,20 @@ public static class PlatformInboxMessageBusConsumerHelper
             if (handleInUow != null && !handleInUow.IsPseudoTransactionUow())
             {
                 handleInUow.OnSaveChangesCompletedActions.Add(
-                    async () => await ExecuteConsumerForNewInboxMessage(
-                        rootServiceProvider,
-                        consumerType,
-                        message,
-                        toProcessInboxMessage,
-                        routingKey,
-                        autoDeleteProcessedMessage,
-                        retryProcessFailedMessageInSecondsUnit,
-                        loggerFactory,
-                        cancellationToken));
+                    async () =>
+                    {
+                        // Execute task in background thread
+                        _ = ExecuteConsumerForNewInboxMessage(
+                            rootServiceProvider,
+                            consumerType,
+                            message,
+                            toProcessInboxMessage,
+                            routingKey,
+                            autoDeleteProcessedMessage,
+                            retryProcessFailedMessageInSecondsUnit,
+                            loggerFactory,
+                            cancellationToken);
+                    });
             }
             else
             {

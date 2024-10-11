@@ -14,9 +14,17 @@ public static class UrlExtension
     /// </summary>
     /// <param name="url">The string to convert.</param>
     /// <returns>The Uri created from the string.</returns>
-    public static Uri ToUri(this string url)
+    public static Uri ToUri(this string url, params ValueTuple<string, object?>[] queryParams)
     {
-        return new Uri(url);
+        return new UriBuilder(url)
+            .PipeIf(
+                queryParams.Any(),
+                uriBuilder =>
+                    uriBuilder.With(
+                        p => p.Query = HttpUtility.ParseQueryString(string.Empty)
+                            .PipeAction(queryCollection => queryParams.ForEach(queryParam => queryCollection[queryParam.Item1] = queryParam.Item2?.ToString()))
+                            .ToString()))
+            .Uri;
     }
 
     /// <summary>

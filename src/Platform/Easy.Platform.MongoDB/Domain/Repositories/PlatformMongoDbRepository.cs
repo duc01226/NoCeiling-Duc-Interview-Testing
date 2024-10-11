@@ -182,15 +182,12 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
     {
         if (result == null) return false;
 
-        if (result.GetType().IsAssignableToGenericType(typeof(IQueryable<>)) ||
-            result.GetType().IsAssignableToGenericType(typeof(IAsyncEnumerable<>))) return true;
-
-        return false;
+        return result.GetType().IsAssignableToGenericType(typeof(IQueryable<>)) ||
+               result.GetType().IsAssignableToGenericType(typeof(IAsyncEnumerable<>));
     }
 
     protected override void HandleDisposeUsingOnceTimeContextLogic<TResult>(
         IPlatformUnitOfWork uow,
-        bool doesNeedKeepUowForQueryOrEnumerableExecutionLater,
         Expression<Func<TEntity, object>>[] loadRelatedEntities,
         TResult result)
     {

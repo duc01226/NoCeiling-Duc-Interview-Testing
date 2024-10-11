@@ -40,8 +40,7 @@ public static class PlatformRequestContextHelper
     /// </summary>
     public static bool TryGetParsedValuesFromStringValues<T>(out T foundValue, List<string> stringValues)
     {
-        if (FindFirstValueListInterfaceType<T>() == null &&
-            !stringValues.Any())
+        if (FindFirstValueListInterfaceType<T>() == null && !stringValues.Any())
         {
             foundValue = default;
             return false;
@@ -102,11 +101,7 @@ public static class PlatformRequestContextHelper
     {
         var firstValueListInterface = typeof(T)
             .GetInterfaces()
-            .FirstOrDefault(
-                p =>
-                    p.IsGenericType &&
-                    (p.GetGenericTypeDefinition().IsAssignableTo(typeof(IEnumerable<>)) ||
-                     p.GetGenericTypeDefinition().IsAssignableTo(typeof(ICollection<>))));
+            .FirstOrDefault(p => p.IsAssignableToGenericType(typeof(IEnumerable<>)));
         return firstValueListInterface;
     }
 

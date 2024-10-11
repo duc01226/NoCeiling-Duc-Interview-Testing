@@ -24,7 +24,6 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
         // to use it directly in application layer in some project or cases without using repository.
         // But we still want to support Uow create new like transient, each uow associated with new db context
         // So that we can begin/destroy uow separately
-
         var newScope = ServiceProvider.CreateScope();
 
         var uow = new PlatformAggregatedPersistenceUnitOfWork(
@@ -38,7 +37,8 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
                 associatedServiceScope: newScope)
             .With(uow => uow.CreatedByUnitOfWorkManager = this);
 
-        uow.OnDisposedActions.Add(async () => await Task.Run(() => uow.CreatedByUnitOfWorkManager.RemoveAllInactiveUow()));
+        uow.OnUowCompletedActions.Add(() => Task.Run(() => uow.CreatedByUnitOfWorkManager.RemoveAllInactiveUow()));
+        uow.OnDisposedActions.Add(() => Task.Run(() => uow.CreatedByUnitOfWorkManager.RemoveAllInactiveUow()));
 
         FreeCreatedUnitOfWorks.Value.TryAdd(uow.Id, uow);
 

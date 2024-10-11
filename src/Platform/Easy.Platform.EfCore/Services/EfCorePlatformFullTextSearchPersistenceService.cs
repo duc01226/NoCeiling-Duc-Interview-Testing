@@ -92,6 +92,8 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
         List<string> removedSpecialCharacterSearchTextWords,
         bool exactMatch)
     {
+        if (removedSpecialCharacterSearchTextWords.IsEmpty()) return originalQuery;
+
         var predicate = removedSpecialCharacterSearchTextWords
             .Select(searchWord => BuildFullTextSearchSinglePropPerWordPredicate<T>(fullTextSearchSinglePropName, searchWord))
             .Aggregate((current, next) => exactMatch ? current.AndAlso(next) : current.Or(next));

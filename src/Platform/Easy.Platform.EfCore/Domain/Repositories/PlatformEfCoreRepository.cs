@@ -1,7 +1,7 @@
+using System.Collections;
 using System.Linq.Expressions;
 using System.Reflection;
 using Easy.Platform.Application.Persistence;
-using Easy.Platform.Common.ValueObjects.Abstract;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Repositories;
 using Easy.Platform.Domain.UnitOfWork;
@@ -13,17 +13,6 @@ namespace Easy.Platform.EfCore.Domain.Repositories;
 
 public interface IPlatformEfCoreRepository
 {
-    public static readonly Type[] DefaultCheckNoNeedKeepUowPrimitiveTypes =
-    [
-        typeof(string),
-        typeof(Guid),
-        typeof(DateTime),
-        typeof(int),
-        typeof(long),
-        typeof(double),
-        typeof(float),
-        typeof(DateOnly)
-    ];
 }
 
 public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
@@ -39,16 +28,9 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         serviceProvider)
     {
         DbContextOptions = dbContextOptions;
-        AllAvailableEntityTypes = new Lazy<HashSet<Type>>(
-            () => typeof(TEntity).Assembly.GetTypes().Where(p => p.IsClass && !p.IsAbstract && p.IsAssignableTo(typeof(IEntity))).ToHashSet());
-        ToCheckNoNeedKeepUowPrimitiveTypes = IPlatformEfCoreRepository.DefaultCheckNoNeedKeepUowPrimitiveTypes;
     }
 
     protected DbContextOptions<TDbContext> DbContextOptions { get; }
-
-    protected Lazy<HashSet<Type>> AllAvailableEntityTypes { get; }
-
-    protected Type[] ToCheckNoNeedKeepUowPrimitiveTypes { get; }
 
     public virtual DbSet<TEntity> Table => DbContext.Set<TEntity>();
 
@@ -168,13 +150,12 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
 
     protected override void HandleDisposeUsingOnceTimeContextLogic<TResult>(
         IPlatformUnitOfWork uow,
-        bool doesNeedKeepUowForQueryOrEnumerableExecutionLater,
         Expression<Func<TEntity, object>>[] loadRelatedEntities,
         TResult result)
     {
-        var needDisposeContext = !doesNeedKeepUowForQueryOrEnumerableExecutionLater;
+        var canDisposeContext = !DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result, uow);
 
-        if (loadRelatedEntities?.Any() == true && needDisposeContext && DbContextOptions.IsUsingLazyLoadingProxy())
+        if (DbContextOptions.IsUsingLazyLoadingProxy() && loadRelatedEntities?.Any() == true && canDisposeContext)
         {
             // Fix Eager loading include with using UseLazyLoadingProxies of EfCore by try to access the entity before dispose context
             if (result is TEntity entity)
@@ -190,77 +171,59 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
                             .ForEach(loadRelatedEntityFn => loadRelatedEntityFn.Compile()(entityPropertyInfo.GetValue(result).As<TEntity>())));
         }
 
-        if (needDisposeContext) uow.Dispose();
+        if (canDisposeContext)
+            uow.Dispose();
     }
 
     // If result has entity instance and MustKeepUowForQuery == true => ef core might use lazy-loading => need to keep the uow for db context
     // to help the entity could load lazy navigation property. If uow disposed => context disposed => lazy-loading proxy failed because db-context disposed
     protected override bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IPlatformUnitOfWork uow)
     {
-        if (result == null) return false;
-
-        var matchedDbContextUow = uow.UowOfType<IPlatformEfCorePersistenceUnitOfWork<TDbContext>>();
-        if (matchedDbContextUow != null && (matchedDbContextUow.MustKeepUowForQuery() == false || matchedDbContextUow.IsPseudoTransactionUow()))
+        if (result == null ||
+            result.GetType().Pipe(p => p.IsPrimitive || p.IsValueType) ||
+            result is string ||
+            result.As<ICollection>()?.Count == 0)
             return false;
 
-        // Not need to keep uow for lazy-loading If the result is primitive-type/value-object or Enumerable of primitive type/value-object
-        if (IsPrimitiveOrValueObjectType(result) ||
-            IsCollectionOfPrimitiveOrValueObjectType(result))
-            return false;
-
-        if (result.GetType().IsAssignableToGenericType(typeof(IQueryable<>)) ||
-            result.GetType().IsAssignableToGenericType(typeof(IAsyncEnumerable<>))) return true;
+        if (result.GetType()
+            .Pipe(
+                resultType => IsEnumerableExecutionLaterType(resultType) ||
+                              resultType.GetInterfaces()
+                                  .FirstOrDefault(p => p.IsAssignableToGenericType(typeof(IDictionary<,>)))
+                                  .Pipe(p => p != null && IsEnumerableExecutionLaterType(p.GenericTypeArguments[1]))))
+            return true;
 
         // Keep uow for lazy-loading if the result is entity, Dictionary or Grouped result of entity or list entities
-        return IsEntityOrListEntity(result) ||
-               result.As<IDictionary<string, object>>()?.Any(p => IsEntityOrListEntity(p.Value)) == true ||
-               IsDictionaryOfValueOfEntityOrListEntity(result, ToCheckNoNeedKeepUowPrimitiveTypes, AllAvailableEntityTypes);
-
-        static bool IsPrimitiveOrValueObjectType<TData>(TData data)
-        {
-            var result = data is string ||
-                         data.GetType().IsValueType ||
-                         data is IPlatformValueObject;
-
-            return result;
-        }
+        return DbContextOptions.IsUsingLazyLoadingProxy() &&
+               (IsEntityOrListEntity(result) || IsDictionaryOfValueOfEntityOrListEntity(result.GetType()));
 
         static bool IsEntityOrListEntity<TData>(TData data)
         {
             var result = data is IEntity ||
-                         data.As<IEnumerable<IEntity>>()?.Any() == true ||
-                         data.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public).Any(p => p.PropertyType.IsAssignableTo(typeof(IEntity)));
+                         data.GetType()
+                             .Pipe(
+                                 p => p.GetInterfaces()
+                                          .FirstOrDefault(p => p.IsAssignableToGenericType(typeof(IEnumerable<>)))
+                                          .Pipe(p => p != null && p.GenericTypeArguments[0].IsAssignableTo(typeof(IEntity))) ||
+                                      p.GetProperties(BindingFlags.Instance | BindingFlags.Public).Any(p => p.PropertyType.IsAssignableTo(typeof(IEntity))));
 
             return result;
         }
 
-        static bool IsDictionaryOfValueOfEntityOrListEntity(TResult data, Type[] allAvailableEntityDictionaryKeyTypes, Lazy<HashSet<Type>> allAvailableEntityTypes)
+        bool IsDictionaryOfValueOfEntityOrListEntity(Type resultType)
         {
-            if (!data.GetType().IsAssignableToGenericType(typeof(IDictionary<,>)))
-                return false;
-
-            var result = allAvailableEntityDictionaryKeyTypes.Any(
-                keyType => allAvailableEntityTypes.Value.Any(
-                    entityType => IsDictionaryOfValueOfEntityOrListEntity(data, keyType, typeof(TEntity)) ||
-                                  IsDictionaryOfValueOfEntityOrListEntity(data, keyType, entityType)));
-
-            return result;
-
-            static bool IsDictionaryOfValueOfEntityOrListEntity(TResult result, Type keyType, Type entityType)
-            {
-                return result.GetType().IsAssignableTo(typeof(IDictionary<,>).MakeGenericType(keyType, entityType)) ||
-                       result.GetType().IsAssignableTo(typeof(IDictionary<,>).MakeGenericType(keyType, typeof(IEnumerable<>).MakeGenericType(entityType))) ||
-                       result.GetType().IsAssignableTo(typeof(IDictionary<,>).MakeGenericType(keyType, typeof(List<>).MakeGenericType(entityType))) ||
-                       result.GetType().IsAssignableTo(typeof(IDictionary<,>).MakeGenericType(keyType, typeof(HashSet<>).MakeGenericType(entityType))) ||
-                       result.GetType().IsAssignableTo(typeof(IDictionary<,>).MakeGenericType(keyType, typeof(ICollection<>).MakeGenericType(entityType)));
-            }
+            return resultType
+                .GetInterfaces()
+                .FirstOrDefault(p => p.IsAssignableToGenericType(typeof(IDictionary<,>)))
+                .Pipe(p => p != null && IsEntityOrListEntity(p.GenericTypeArguments[1]));
         }
-    }
 
-    private bool IsCollectionOfPrimitiveOrValueObjectType<TResult>(TResult result)
-    {
-        return result.GetType().IsAssignableToGenericType(typeof(IEnumerable<>)) &&
-               ToCheckNoNeedKeepUowPrimitiveTypes.Any(primitiveType => result.GetType().IsAssignableTo(typeof(IEnumerable<>).MakeGenericType(primitiveType)));
+        bool IsEnumerableExecutionLaterType(Type resultType)
+        {
+            return resultType.IsAssignableToGenericType(typeof(IQueryable<>)) ||
+                   resultType.IsAssignableToGenericType(typeof(IAsyncEnumerable<>)) ||
+                   (resultType.IsAssignableToGenericType(typeof(IEnumerable<>)) && !resultType.IsAssignableToGenericType(typeof(ICollection<>)));
+        }
     }
 }
 

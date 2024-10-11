@@ -16,7 +16,7 @@ public class PlatformCacheSettings
         if (SlowWarning.IsEnabled)
         {
             // Store stack trace before call redisCache.Value.GetAsync to keep the original stack trace to log
-            // after redisCache.Value.GetAsync will lose full stack trace (may because it connect async to other external service)
+            // after redisCache.Value.GetAsync will lose full stack trace (may because it connects async to other external service)
             var fullStackTrace = PlatformEnvironment.StackTrace();
 
             var startQueryTimeStamp = Stopwatch.GetTimestamp();

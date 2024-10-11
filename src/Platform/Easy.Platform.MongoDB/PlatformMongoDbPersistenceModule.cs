@@ -123,8 +123,7 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
                 {
                     var serializerHandleValueType = p.GetInterfaces()
                         .First(
-                            p => p.IsGenericType &&
-                                 p.GetGenericTypeDefinition() == typeof(IPlatformMongoAutoRegisterBaseSerializer<>))
+                            p => p.IsAssignableToGenericType(typeof(IPlatformMongoAutoRegisterBaseSerializer<>)))
                         .GetGenericArguments()[0];
 
                     if (!PlatformMongoDbPersistenceModuleCache.RegisteredSerializerTypes.Contains(serializerHandleValueType))

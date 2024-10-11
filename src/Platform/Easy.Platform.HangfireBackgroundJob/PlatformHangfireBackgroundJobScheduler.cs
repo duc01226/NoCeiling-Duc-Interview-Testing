@@ -298,8 +298,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
             .GetType()
             .GetInterfaces()
             .FirstOrDefault(
-                x => x.IsGenericType &&
-                     x.GetGenericTypeDefinition() == typeof(IPlatformBackgroundJobExecutor<>));
+                x => x.IsAssignableToGenericType(typeof(IPlatformBackgroundJobExecutor<>)));
 
         if (withParamJobExecutorType != null)
         {

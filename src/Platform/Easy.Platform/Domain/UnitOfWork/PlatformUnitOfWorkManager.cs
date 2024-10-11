@@ -139,8 +139,6 @@ public abstract class PlatformUnitOfWorkManager(Lazy<IPlatformCqrs> cqrs, IPlatf
 
     public virtual IPlatformUnitOfWork CurrentUow()
     {
-        RemoveAllInactiveUow();
-
         return CurrentUnitOfWorks.LastOrDefault();
     }
 
@@ -203,8 +201,6 @@ public abstract class PlatformUnitOfWorkManager(Lazy<IPlatformCqrs> cqrs, IPlatf
 
     public virtual IPlatformUnitOfWork Begin(bool suppressCurrentUow = true)
     {
-        RemoveAllInactiveUow();
-
         if (suppressCurrentUow || CurrentUnitOfWorks.IsEmpty()) CurrentUnitOfWorks.Add(CreateNewUow(false));
 
         return CurrentUow();
@@ -233,7 +229,7 @@ public abstract class PlatformUnitOfWorkManager(Lazy<IPlatformCqrs> cqrs, IPlatf
 
     public void RemoveAllInactiveUow()
     {
-        if (disposed || disposing) return;
+        if (disposed || disposing || (CurrentUnitOfWorks.IsEmpty() && (!FreeCreatedUnitOfWorks.IsValueCreated || FreeCreatedUnitOfWorks.Value.IsEmpty))) return;
 
         List<IPlatformUnitOfWork> removedUOWs = [];
         try
@@ -264,8 +260,6 @@ public abstract class PlatformUnitOfWorkManager(Lazy<IPlatformCqrs> cqrs, IPlatf
 
     public virtual IPlatformUnitOfWork CurrentOrCreatedUow(string uowId)
     {
-        RemoveAllInactiveUow();
-
         return LastOrDefaultMatchedUowOfId(CurrentUnitOfWorks, uowId) ??
                (FreeCreatedUnitOfWorks.IsValueCreated
                    ? LastOrDefaultMatchedUowOfId(FreeCreatedUnitOfWorks.Value.Values.ToList(), uowId)

@@ -322,11 +322,13 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
     {
         var contextKeyMappedToOneOfClaimTypes = GetContextKeyMappedToOneOfClaimTypes(contextKey, claimTypeMapper);
 
-        var matchedClaimStringValues = contextKeyMappedToOneOfClaimTypes
-            .Select(contextKeyMappedToJwtClaimType => userClaims.FindAll(contextKeyMappedToJwtClaimType).Select(p => p.Value))
-            .Aggregate((current, next) => current.Concat(next).ToList())
-            .Distinct()
-            .ToList();
+        var matchedClaimStringValues = contextKeyMappedToOneOfClaimTypes.Any()
+            ? contextKeyMappedToOneOfClaimTypes
+                .Select(contextKeyMappedToJwtClaimType => userClaims.FindAll(contextKeyMappedToJwtClaimType).Select(p => p.Value))
+                .Aggregate((current, next) => current.Concat(next).ToList())
+                .Distinct()
+                .ToList()
+            : [];
 
         // Try Get Deserialized value from matchedClaimStringValues
         return PlatformRequestContextHelper.TryGetParsedValuesFromStringValues(out foundValue, matchedClaimStringValues);

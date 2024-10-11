@@ -119,7 +119,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
     {
         var consumerGenericType = consumerType
                                       .GetInterfaces()
-                                      .FirstOrDefault(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IPlatformMessageBusConsumer<>)) ??
+                                      .FirstOrDefault(x => x.IsAssignableToGenericType(typeof(IPlatformMessageBusConsumer<>))) ??
                                   throw new Exception("Must be implementation of IPlatformMessageBusConsumer<>");
 
         return IPlatformMessageBusConsumer.GetMessageTypeOfConsumerGenericType(consumerGenericType);

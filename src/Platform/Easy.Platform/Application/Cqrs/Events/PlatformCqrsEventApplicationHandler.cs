@@ -227,7 +227,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                 eventSourceUow.OnSaveChangesCompletedActions.Add(
                     async () =>
                     {
-                        await ExecuteHandleInNewScopeAsync(@event, cancellationToken);
+                        // Execute task in background thread
+                        _ = ExecuteHandleInNewScopeAsync(@event, cancellationToken);
                     });
             else
                 await base.DoHandle(@event, cancellationToken);
