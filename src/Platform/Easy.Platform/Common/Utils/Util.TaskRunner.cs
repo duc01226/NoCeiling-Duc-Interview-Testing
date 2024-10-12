@@ -91,7 +91,7 @@ public static partial class Util
             Func<ILogger> loggerFactory,
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default,
-            bool logFullStackTraceBeforeBackgroundTask = true)
+            bool logFullStackTraceBeforeBackgroundTask = false)
         {
             // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
             var fullStackTrace = logFullStackTraceBeforeBackgroundTask ? PlatformEnvironment.StackTrace() : null;
@@ -131,7 +131,7 @@ public static partial class Util
             Func<ILogger> loggerFactory,
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default,
-            bool logFullStackTraceBeforeBackgroundTask = true)
+            bool logFullStackTraceBeforeBackgroundTask = false)
         {
             // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
             var fullStackTrace = logFullStackTraceBeforeBackgroundTask ? PlatformEnvironment.StackTrace() : null;
@@ -171,7 +171,7 @@ public static partial class Util
             Func<ILogger> loggerFactory,
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default,
-            bool logFullStackTraceBeforeBackgroundTask = true)
+            bool logFullStackTraceBeforeBackgroundTask = false)
         {
             // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
             var fullStackTrace = logFullStackTraceBeforeBackgroundTask ? PlatformEnvironment.StackTrace() : null;
@@ -248,7 +248,7 @@ public static partial class Util
             int? maximumIntervalExecutionCount = null,
             bool executeOnceImmediately = true,
             CancellationToken cancellationToken = default,
-            bool logFullStackTraceBeforeBackgroundTask = true)
+            bool logFullStackTraceBeforeBackgroundTask = false)
         {
             // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
             var fullStackTrace = logFullStackTraceBeforeBackgroundTask ? PlatformEnvironment.StackTrace() : null;

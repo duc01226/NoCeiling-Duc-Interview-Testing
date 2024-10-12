@@ -52,6 +52,10 @@ public class PlatformPersistenceConfiguration<TDbContext> : PlatformPersistenceC
     public PlatformPersistenceConfigurationPooledDbContextOptions PooledOptions { get; set; }
 }
 
+/// <summary>
+/// Support log warning for slow query in the application. Aware that if enable this feature, performance of the application might be affected
+/// It will log the data count and also get stack trace to log the slow query
+/// </summary>
 public class PlatformPersistenceConfigurationBadQueryWarningConfig
 {
     public bool IsEnabled { get; set; }

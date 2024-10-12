@@ -100,14 +100,7 @@ public interface IPlatformRepository<TEntity, TPrimaryKey> : IPlatformRepository
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
-    public void SetCachedExistingEntitiesForUow<TResult>(TResult result, IPlatformUnitOfWork uow)
-    {
-        // save cached existing entities
-        if (result is TEntity resultSingleEntity)
-            uow.SetCachedExistingOriginalEntity(resultSingleEntity.DeepClone());
-        if (result is ICollection<TEntity> resultMultipleEntities && resultMultipleEntities.Any())
-            resultMultipleEntities.ForEach(p => uow.SetCachedExistingOriginalEntity(p.DeepClone()));
-    }
+    public void SetCachedExistingEntitiesForUow<TResult>(TResult result, IPlatformUnitOfWork uow);
 }
 
 public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformRepository<TEntity, TPrimaryKey>

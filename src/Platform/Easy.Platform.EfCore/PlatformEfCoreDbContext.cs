@@ -576,7 +576,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 RootServiceProvider,
                 MappedUnitOfWork,
                 toBeUpdatedEntity,
-                existingEntity,
+                existingEntity ?? MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()),
                 entity =>
                 {
                     var result = GetTable<TEntity>()

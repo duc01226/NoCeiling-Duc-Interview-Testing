@@ -527,14 +527,14 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 ? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!
                 : p => p.Id.Equals(entity.Id);
 
-            existingEntity = MappedUnitOfWork.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
+            existingEntity = MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
                              await GetQuery<TEntity>()
                                  .Where(existingEntityPredicate)
                                  .FirstOrDefaultAsync(cancellationToken)
                                  .EnsureFound($"Entity {typeof(TEntity).Name} with [Id:{entity.Id}] not found to update")
                                  .ThenActionIf(
-                                     MappedUnitOfWork.CreatedByUnitOfWorkManager.HasCurrentActiveUow(),
-                                     p => MappedUnitOfWork.SetCachedExistingOriginalEntity(p));
+                                     MappedUnitOfWork?.CreatedByUnitOfWorkManager.HasCurrentActiveUow() == true,
+                                     p => MappedUnitOfWork?.SetCachedExistingOriginalEntity(p));
 
             if (!existingEntity.Id.Equals(entity.Id)) entity.Id = existingEntity.Id;
         }
@@ -561,7 +561,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 RootServiceProvider,
                 MappedUnitOfWork,
                 toBeUpdatedEntity,
-                existingEntity,
+                existingEntity ?? MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()),
                 entity => GetTable<TEntity>()
                     .ReplaceOneAsync(
                         p => p.Id.Equals(entity.Id) &&
@@ -591,7 +591,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 RootServiceProvider,
                 MappedUnitOfWork,
                 toBeUpdatedEntity,
-                existingEntity,
+                existingEntity ?? MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()),
                 _ => GetTable<TEntity>()
                     .ReplaceOneAsync(
                         p => p.Id.Equals(toBeUpdatedEntity.Id),

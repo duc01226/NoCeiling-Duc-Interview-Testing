@@ -30,9 +30,9 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         DbContextOptions = dbContextOptions;
     }
 
-    protected DbContextOptions<TDbContext> DbContextOptions { get; }
+    protected override bool SetCachedExistingEntitiesForUowUseDeepCloneWithReflection => !DbContextOptions.IsUsingLazyLoadingProxy();
 
-    public virtual DbSet<TEntity> Table => DbContext.Set<TEntity>();
+    protected DbContextOptions<TDbContext> DbContextOptions { get; }
 
     public virtual DbSet<TEntity> GetTable(IPlatformUnitOfWork uow)
     {

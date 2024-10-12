@@ -60,7 +60,7 @@ public class PlatformRabbitMqOptions
     /// <br />
     /// - Setting the Correct Prefetch Value: <see href="https://www.cloudamqp.com/blog/part1-rabbitmq-best-practice.html#how-to-set-correct-prefetch-value" />
     /// </summary>
-    public ushort QueuePrefetchCount { get; set; } = (ushort)Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
+    public ushort QueuePrefetchCount { get; set; } = (ushort)(Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent * 2);
 
     /// <summary>
     /// Gets or sets the interval in seconds for network recovery attempts.
