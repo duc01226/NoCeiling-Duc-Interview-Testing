@@ -141,7 +141,7 @@ public interface IPlatformUnitOfWork : IDisposable
     /// This method is used to cache an entity, so it can be retrieved later without querying the database again.
     /// It helps in improving performance by reducing the number of database calls.
     /// </remarks>
-    public TEntity SetCachedExistingOriginalEntity<TEntity>(TEntity existingEntity, bool needDeepCloneEntity = true, Type runtimeEntityType = null)
+    public TEntity SetCachedExistingOriginalEntityForTrackingCompareAfterUpdate<TEntity>(TEntity existingEntity, Type runtimeEntityType = null)
         where TEntity : class, IEntity;
 
     /// <summary>
@@ -300,11 +300,11 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
         return cachedExistingOriginalEntity.As<TEntity>();
     }
 
-    public virtual TEntity SetCachedExistingOriginalEntity<TEntity>(TEntity existingEntity, bool needDeepCloneEntity = true, Type runtimeEntityType = null)
+    public virtual TEntity SetCachedExistingOriginalEntityForTrackingCompareAfterUpdate<TEntity>(TEntity existingEntity, Type runtimeEntityType = null)
         where TEntity : class, IEntity
     {
         var castedRuntimeTypeExistingEntity = (runtimeEntityType != null ? Convert.ChangeType(existingEntity, runtimeEntityType) : existingEntity)
-            .Pipe(p => needDeepCloneEntity ? p.DeepClone() : p.ShallowClone());
+            .Pipe(p => p.DeepClone());
 
         CachedExistingOriginalEntities.AddOrUpdate(
             existingEntity.GetId().ToString(),

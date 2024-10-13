@@ -100,7 +100,7 @@ public interface IPlatformRepository<TEntity, TPrimaryKey> : IPlatformRepository
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
-    public void SetCachedExistingEntitiesForUow<TResult>(TResult result, IPlatformUnitOfWork uow);
+    public void SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate<TResult>(TResult result, IPlatformUnitOfWork uow);
 }
 
 public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformRepository<TEntity, TPrimaryKey>
@@ -872,7 +872,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                             cancellationToken: cancellationToken)
                         .ThenAction(items => items.ForEach(updateAction));
 
-                    SetCachedExistingEntitiesForUow(pagingUpdateItems, uow);
+                    SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate(pagingUpdateItems, uow);
 
                     await UpdateManyAsync(uow, pagingUpdateItems, dismissSendEvent, eventCustomConfig, cancellationToken);
 
@@ -914,7 +914,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                             cancellationToken: cancellationToken)
                         .ThenAction(items => items.ForEach(updateAction));
 
-                    SetCachedExistingEntitiesForUow(pagingUpdateItems, uow);
+                    SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate(pagingUpdateItems, uow);
 
                     var updatedItems = await UpdateManyAsync(uow, pagingUpdateItems, dismissSendEvent, eventCustomConfig, cancellationToken);
 

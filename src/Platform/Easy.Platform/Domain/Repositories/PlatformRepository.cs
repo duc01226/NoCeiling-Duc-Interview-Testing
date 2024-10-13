@@ -133,21 +133,16 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
-    public void SetCachedExistingEntitiesForUow<TResult>(TResult result, IPlatformUnitOfWork uow)
+    public void SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate<TResult>(TResult result, IPlatformUnitOfWork uow)
     {
-        if (result is TEntity resultSingleEntity)
-        {
-            // save cached existing entities for entity event handler check. Call each if to optimize performance
-            var needDeepCloneEntity = PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider);
+        var isAnyKindsOfEventHandlerRegisteredForEntity = PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider);
 
-            uow.SetCachedExistingOriginalEntity(resultSingleEntity, needDeepCloneEntity);
-        }
-        else if (result is ICollection<TEntity> resultMultipleEntities && resultMultipleEntities.Any())
+        if (isAnyKindsOfEventHandlerRegisteredForEntity)
         {
-            // save cached existing entities for entity event handler check. Call each if to optimize performance
-            var needDeepCloneEntity = PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider);
-
-            resultMultipleEntities.ForEach(p => uow.SetCachedExistingOriginalEntity(p, needDeepCloneEntity));
+            if (result is TEntity resultSingleEntity)
+                uow.SetCachedExistingOriginalEntityForTrackingCompareAfterUpdate(resultSingleEntity);
+            else if (result is ICollection<TEntity> resultMultipleEntities && resultMultipleEntities.Any())
+                resultMultipleEntities.ForEach(p => uow.SetCachedExistingOriginalEntityForTrackingCompareAfterUpdate(p));
         }
     }
 
@@ -451,7 +446,8 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
         var result = await ExecuteUowThreadSafe(currentActiveUow, uow => ExecuteReadData(uow, readDataFn, loadRelatedEntities));
 
-        this.As<IPlatformRepository<TEntity, TPrimaryKey>>().SetCachedExistingEntitiesForUow(result, currentActiveUow);
+        // If there is opening uow, may get data for update => set cached original entities for track update
+        SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate(result, currentActiveUow);
 
         return result;
     }

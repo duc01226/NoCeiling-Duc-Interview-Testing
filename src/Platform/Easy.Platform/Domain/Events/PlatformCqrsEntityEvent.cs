@@ -178,20 +178,14 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                     p => eventStackTrace != null,
                     p => p.StackTrace = eventStackTrace);
 
-            if (entityEvent.CrudAction != PlatformCqrsEntityEventCrudAction.Updated ||
-                entityEvent.ExistingEntityData == null ||
-                entityEvent.RequestContext.ContainsKey(RequestContextForceSyncDataNoCheckUpdateDataIsDifferentKey) ||
-                entityEvent.ExistingEntityData.IsValuesDifferent(entityEvent.EntityData))
-            {
-                if (mappedToDbContextUow != null)
-                    await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs.SendEvent(entityEvent, cancellationToken);
-                else
-                    await rootServiceProvider.ExecuteInjectScopedAsync(
-                        async (IPlatformCqrs cqrs) =>
-                        {
-                            await cqrs.SendEvent(entityEvent, cancellationToken);
-                        });
-            }
+            if (mappedToDbContextUow != null)
+                await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs.SendEvent(entityEvent, cancellationToken);
+            else
+                await rootServiceProvider.ExecuteInjectScopedAsync(
+                    async (IPlatformCqrs cqrs) =>
+                    {
+                        await cqrs.SendEvent(entityEvent, cancellationToken);
+                    });
         }
     }
 
