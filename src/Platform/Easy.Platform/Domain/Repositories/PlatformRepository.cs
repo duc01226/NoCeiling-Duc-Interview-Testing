@@ -138,16 +138,16 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         if (result is TEntity resultSingleEntity)
         {
             // save cached existing entities for entity event handler check. Call each if to optimize performance
-            var needCloneEntity = PlatformCqrsEntityEvent.IsAnyEntityEventHandlerRegisteredForEntity<TEntity>(RootServiceProvider);
+            var needDeepCloneEntity = PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider);
 
-            uow.SetCachedExistingOriginalEntity(resultSingleEntity, needCloneEntity);
+            uow.SetCachedExistingOriginalEntity(resultSingleEntity, needDeepCloneEntity);
         }
         else if (result is ICollection<TEntity> resultMultipleEntities && resultMultipleEntities.Any())
         {
             // save cached existing entities for entity event handler check. Call each if to optimize performance
-            var needCloneEntity = PlatformCqrsEntityEvent.IsAnyEntityEventHandlerRegisteredForEntity<TEntity>(RootServiceProvider);
+            var needDeepCloneEntity = PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider);
 
-            resultMultipleEntities.ForEach(p => uow.SetCachedExistingOriginalEntity(p, needCloneEntity));
+            resultMultipleEntities.ForEach(p => uow.SetCachedExistingOriginalEntity(p, needDeepCloneEntity));
         }
     }
 

@@ -218,6 +218,13 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         return IsAnyEventHandlerRegistered<PlatformCqrsBulkEntitiesEvent<TEntity, TPrimaryKey>>(rootServiceProvider);
     }
 
+    public static bool IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(IPlatformRootServiceProvider rootServiceProvider)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        return IsAnyEntityEventHandlerRegisteredForEntity<TEntity>(rootServiceProvider) ||
+               IsAnyBulkEntitiesEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(rootServiceProvider);
+    }
+
     public static async Task SendEvent<TEntity>(
         IPlatformRootServiceProvider rootServiceProvider,
         IPlatformUnitOfWork? mappedToDbContextUow,

@@ -134,14 +134,14 @@ public interface IPlatformUnitOfWork : IDisposable
     /// </summary>
     /// <typeparam name="TEntity">The type of the entity.</typeparam>
     /// <param name="existingEntity">The existing entity to cache.</param>
-    /// <param name="needCloneEntity">needCloneEntity</param>
+    /// <param name="needDeepCloneEntity">needDeepCloneEntity</param>
     /// <param name="runtimeEntityType">The runtime type of the entity, if different from the compile-time type.</param>
     /// <returns>The cached existing original entity.</returns>
     /// <remarks>
     /// This method is used to cache an entity, so it can be retrieved later without querying the database again.
     /// It helps in improving performance by reducing the number of database calls.
     /// </remarks>
-    public TEntity SetCachedExistingOriginalEntity<TEntity>(TEntity existingEntity, bool needCloneEntity = true, Type runtimeEntityType = null)
+    public TEntity SetCachedExistingOriginalEntity<TEntity>(TEntity existingEntity, bool needDeepCloneEntity = true, Type runtimeEntityType = null)
         where TEntity : class, IEntity;
 
     /// <summary>
@@ -300,11 +300,11 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
         return cachedExistingOriginalEntity.As<TEntity>();
     }
 
-    public virtual TEntity SetCachedExistingOriginalEntity<TEntity>(TEntity existingEntity, bool needCloneEntity = true, Type runtimeEntityType = null)
+    public virtual TEntity SetCachedExistingOriginalEntity<TEntity>(TEntity existingEntity, bool needDeepCloneEntity = true, Type runtimeEntityType = null)
         where TEntity : class, IEntity
     {
         var castedRuntimeTypeExistingEntity = (runtimeEntityType != null ? Convert.ChangeType(existingEntity, runtimeEntityType) : existingEntity)
-            .PipeIf(needCloneEntity, p => p.DeepClone());
+            .Pipe(p => needDeepCloneEntity ? p.DeepClone() : p.ShallowClone());
 
         CachedExistingOriginalEntities.AddOrUpdate(
             existingEntity.GetId().ToString(),
