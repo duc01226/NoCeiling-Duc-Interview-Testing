@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Numerics;
@@ -1045,5 +1046,23 @@ public static class ListExtension
     public static bool ContainsIgnoreCase(this IEnumerable<string> list, string value)
     {
         return list.Any(p => p.EqualsIgnoreCase(value));
+    }
+
+    public static List<object> ToObjectList(this ICollection collection)
+    {
+        var result = new List<object>(collection.Count);
+
+        foreach (var item in collection) result.Add(item);
+
+        return result;
+    }
+
+    public static List<DictionaryEntry> ToEntryItemList(this IDictionary dictionary)
+    {
+        var result = new List<DictionaryEntry>(dictionary.Count);
+
+        foreach (DictionaryEntry item in dictionary) result.Add(item);
+
+        return result;
     }
 }

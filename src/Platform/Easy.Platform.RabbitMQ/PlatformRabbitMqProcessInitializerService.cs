@@ -478,14 +478,21 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
     {
         // Acknowledge the message in the background to avoid blocking the message processing loop.
         Util.TaskRunner.QueueActionInBackground(
-            () =>
+            async () =>
             {
+                if (channel.IsClosedPermanently())
+                {
+                    // If something go wrong, chanel is invalid, then reconnect all channel again
+                    await ConnectConsumersToQueues();
+                    return;
+                }
+
                 var waitingAckMessageKey = GetWaitingAckMessageKey(rabbitMqMessageArgs, channel);
 
                 waitingAckMessages.TryAdd(waitingAckMessageKey, null);
 
                 // Retry acknowledging the message multiple times in case of transient errors.
-                Util.TaskRunner.WaitRetryThrowFinalException(
+                await Util.TaskRunner.WaitRetryThrowFinalException(
                     async () =>
                     {
                         if (!channel.IsClosedPermanently())

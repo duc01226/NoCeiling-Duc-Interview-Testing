@@ -52,22 +52,16 @@ public class PlatformRootServiceProvider : IPlatformRootServiceProvider
 
     public bool IsAnyImplementationAssignableToServiceTypeRegistered(Type assignableToServiceType)
     {
-        if (assignableToServiceTypeRegisteredDict.ContainsKey(assignableToServiceType) == false)
-            assignableToServiceTypeRegisteredDict.TryAdd(
-                assignableToServiceType,
-                InternalCheckIsAnyImplementationAssignableToServiceTypeRegistered(assignableToServiceType));
-
-        return assignableToServiceTypeRegisteredDict[assignableToServiceType];
+        return assignableToServiceTypeRegisteredDict.GetOrAdd(
+            assignableToServiceType,
+            assignableToServiceType => InternalCheckIsAnyImplementationAssignableToServiceTypeRegistered(assignableToServiceType));
     }
 
     public Type GetRegisteredPlatformModuleAssembliesType(string typeName)
     {
-        if (registeredPlatformModuleAssembliesTypeByNameCachedDict.ContainsKey(typeName) == false)
-            registeredPlatformModuleAssembliesTypeByNameCachedDict.TryAdd(
-                typeName,
-                InternalGetRegisteredPlatformModuleAssembliesType(typeName));
-
-        return registeredPlatformModuleAssembliesTypeByNameCachedDict[typeName];
+        return registeredPlatformModuleAssembliesTypeByNameCachedDict.GetOrAdd(
+            typeName,
+            typeName => InternalGetRegisteredPlatformModuleAssembliesType(typeName));
     }
 
     private Type InternalGetRegisteredPlatformModuleAssembliesType(string typeName)

@@ -411,7 +411,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                                  .FirstOrDefaultAsync(cancellationToken)
                                  .ThenActionIf(
                                      p => p != null && MappedUnitOfWork?.CreatedByUnitOfWorkManager.HasCurrentActiveUow() == true,
-                                     p => MappedUnitOfWork?.SetCachedExistingOriginalEntity(p));
+                                     p => MappedUnitOfWork?.SetCachedExistingOriginalEntity(p, false));
 
         if (existingEntity != null)
             return await UpdateAsync<TEntity, TPrimaryKey>(
@@ -534,7 +534,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                                  .EnsureFound($"Entity {typeof(TEntity).Name} with [Id:{entity.Id}] not found to update")
                                  .ThenActionIf(
                                      MappedUnitOfWork?.CreatedByUnitOfWorkManager.HasCurrentActiveUow() == true,
-                                     p => MappedUnitOfWork?.SetCachedExistingOriginalEntity(p));
+                                     p => MappedUnitOfWork?.SetCachedExistingOriginalEntity(p, false));
 
             if (!existingEntity.Id.Equals(entity.Id)) entity.Id = existingEntity.Id;
         }

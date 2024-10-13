@@ -115,6 +115,7 @@ public abstract class RootAuditedEntity<TEntity, TPrimaryKey, TUserId> : RootEnt
         set => createdDate = value;
     }
 
+    [PlatformIgnoreCheckValueDiff]
     public DateTime? LastUpdatedDate
     {
         get => lastUpdatedDate ??= CreatedDate;

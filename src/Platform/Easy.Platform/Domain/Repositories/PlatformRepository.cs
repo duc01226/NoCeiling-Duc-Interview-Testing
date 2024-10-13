@@ -30,8 +30,6 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     protected IPlatformCqrs Cqrs => cqrsLazy.Value;
     protected IServiceProvider ServiceProvider { get; }
 
-    protected virtual bool SetCachedExistingEntitiesForUowUseDeepCloneWithReflection => true;
-
     public IPlatformUnitOfWork CurrentActiveUow()
     {
         return UnitOfWorkManager.CurrentActiveUow().UowOfType<TUow>();
@@ -135,13 +133,22 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
-    public virtual void SetCachedExistingEntitiesForUow<TResult>(TResult result, IPlatformUnitOfWork uow)
+    public void SetCachedExistingEntitiesForUow<TResult>(TResult result, IPlatformUnitOfWork uow)
     {
-        // save cached existing entities
         if (result is TEntity resultSingleEntity)
-            uow.SetCachedExistingOriginalEntity(resultSingleEntity.DeepClone(SetCachedExistingEntitiesForUowUseDeepCloneWithReflection));
-        if (result is ICollection<TEntity> resultMultipleEntities && resultMultipleEntities.Any())
-            resultMultipleEntities.ForEach(p => uow.SetCachedExistingOriginalEntity(p.DeepClone(SetCachedExistingEntitiesForUowUseDeepCloneWithReflection)));
+        {
+            // save cached existing entities for entity event handler check. Call each if to optimize performance
+            var needCloneEntity = PlatformCqrsEntityEvent.IsAnyEntityEventHandlerRegisteredForEntity<TEntity>(RootServiceProvider);
+
+            uow.SetCachedExistingOriginalEntity(resultSingleEntity, needCloneEntity);
+        }
+        else if (result is ICollection<TEntity> resultMultipleEntities && resultMultipleEntities.Any())
+        {
+            // save cached existing entities for entity event handler check. Call each if to optimize performance
+            var needCloneEntity = PlatformCqrsEntityEvent.IsAnyEntityEventHandlerRegisteredForEntity<TEntity>(RootServiceProvider);
+
+            resultMultipleEntities.ForEach(p => uow.SetCachedExistingOriginalEntity(p, needCloneEntity));
+        }
     }
 
     public Task<List<TEntity>> GetAllAsync(

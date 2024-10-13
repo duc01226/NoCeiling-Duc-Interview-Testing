@@ -131,6 +131,15 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
 {
     public const string EventTypeValue = nameof(PlatformCqrsEntityEvent);
 
+    /// <summary>
+    /// Upsert to request context before update data so that event if update entity is not changed, entity event still emit.
+    /// Example for sync data event update event data entity value not changed
+    /// if (message.ForceSyncNoCheckDiff == true)
+    /// RequestContextAccessor.Current.Upsert(PlatformCqrsEntityEvent.RequestContextForceSyncDataNoCheckUpdateDataIsDifferentKey, true);
+    /// Consumer: if (checkDiff || RequestContextAccessor.Current.ContainsKey(PlatformCqrsEntityEvent.RequestContextForceSyncDataNoCheckUpdateDataIsDifferentKey)) // Do something
+    /// </summary>
+    public const string RequestContextForceSyncDataNoCheckUpdateDataIsDifferentKey = "RequestContextForceSyncDataNoCheckUpdateDataIsDifferent";
+
     public PlatformCqrsEntityEventCrudAction CrudAction { get; set; }
 
     public object EntityData { get; set; }
@@ -171,7 +180,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
 
             if (entityEvent.CrudAction != PlatformCqrsEntityEventCrudAction.Updated ||
                 entityEvent.ExistingEntityData == null ||
-                entityEvent.ExistingEntityData.ToJson() != entityEvent.EntityData.ToJson())
+                entityEvent.RequestContext.ContainsKey(RequestContextForceSyncDataNoCheckUpdateDataIsDifferentKey) ||
+                entityEvent.ExistingEntityData.IsValuesDifferent(entityEvent.EntityData))
             {
                 if (mappedToDbContextUow != null)
                     await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs.SendEvent(entityEvent, cancellationToken);

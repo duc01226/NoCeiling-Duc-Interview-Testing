@@ -488,23 +488,6 @@ public static class DateTimeExtension
         return DateTime.IsLeapYear(year) ? 366 : 365;
     }
 
-    /// <summary>
-    /// Represents the days of the week, starting from Monday and ending on Sunday.
-    /// </summary>
-    /// <remarks>
-    /// This enumeration is used in various parts of the application where the week is considered to start on Monday instead of Sunday.
-    /// </remarks>
-    public enum MonToSunDayOfWeeks
-    {
-        Monday,
-        Tuesday,
-        Wednesday,
-        Thursday,
-        Friday,
-        Saturday,
-        Sunday
-    }
-
     /// Retrieves the UTC offset for the specified
     /// <paramref name="timezoneString" />
     /// based on the provided
@@ -534,5 +517,48 @@ public static class DateTimeExtension
         var offset = timeZone.GetUtcOffset(dateTime);
 
         return $"UTC{(offset.Hours >= 0 ? "+" : "-")}{Math.Abs(offset.Hours):D2}:{Math.Abs(offset.Minutes):D2}";
+    }
+
+    public static bool EqualIgnoringNanoseconds(this DateTime dt1, DateTime dt2)
+    {
+        // Truncate to milliseconds by ignoring ticks
+        dt1 = dt1.AddTicks(-(dt1.Ticks % TimeSpan.TicksPerMillisecond));
+        dt2 = dt2.AddTicks(-(dt2.Ticks % TimeSpan.TicksPerMillisecond));
+
+        return dt1 == dt2;
+    }
+
+    public static bool EqualIgnoringNanoseconds(this DateTime? dt1, DateTime? dt2)
+    {
+        if (dt1 != null && dt2 != null) return EqualIgnoringNanoseconds(dt1.Value, dt2.Value);
+
+        return false;
+    }
+
+    public static bool IsDifferentIgnoringNanoseconds(this DateTime dt1, DateTime dt2)
+    {
+        return !dt1.EqualIgnoringNanoseconds(dt2);
+    }
+
+    public static bool IsDifferentIgnoringNanoseconds(this DateTime? dt1, DateTime? dt2)
+    {
+        return !dt1.EqualIgnoringNanoseconds(dt2);
+    }
+
+    /// <summary>
+    /// Represents the days of the week, starting from Monday and ending on Sunday.
+    /// </summary>
+    /// <remarks>
+    /// This enumeration is used in various parts of the application where the week is considered to start on Monday instead of Sunday.
+    /// </remarks>
+    public enum MonToSunDayOfWeeks
+    {
+        Monday,
+        Tuesday,
+        Wednesday,
+        Thursday,
+        Friday,
+        Saturday,
+        Sunday
     }
 }
