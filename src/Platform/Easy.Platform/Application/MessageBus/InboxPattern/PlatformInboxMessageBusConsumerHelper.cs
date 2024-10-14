@@ -343,9 +343,7 @@ public static class PlatformInboxMessageBusConsumerHelper
 
                     try
                     {
-                        // Execute the consumer's HandleAsync method with a timeout.
-                        await consumer
-                            .HandleAsync(message, routingKey);
+                        await consumer.HandleAsync(message, routingKey);
                     }
                     catch (Exception ex)
                     {

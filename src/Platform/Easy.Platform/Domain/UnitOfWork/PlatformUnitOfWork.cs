@@ -144,6 +144,10 @@ public interface IPlatformUnitOfWork : IDisposable
     public TEntity SetCachedExistingOriginalEntityForTrackingCompareAfterUpdate<TEntity>(TEntity existingEntity, Type runtimeEntityType = null)
         where TEntity : class, IEntity;
 
+    public void RemoveCachedExistingOriginalEntityForTrackingCompareAfterUpdate(string existingEntityId);
+
+    public void ClearCachedExistingOriginalEntityForTrackingCompareAfterUpdate();
+
     /// <summary>
     /// Get itself or inner uow which is TUnitOfWork.
     /// </summary>
@@ -312,6 +316,16 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
             (key, oldItem) => castedRuntimeTypeExistingEntity);
 
         return existingEntity;
+    }
+
+    public void RemoveCachedExistingOriginalEntityForTrackingCompareAfterUpdate(string existingEntityId)
+    {
+        CachedExistingOriginalEntities.TryRemove(existingEntityId, out _);
+    }
+
+    public void ClearCachedExistingOriginalEntityForTrackingCompareAfterUpdate()
+    {
+        CachedExistingOriginalEntities.Clear();
     }
 
     protected abstract Task InternalSaveChangesAsync(CancellationToken cancellationToken);

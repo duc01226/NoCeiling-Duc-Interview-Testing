@@ -419,11 +419,6 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent, IPlatfo
     {
         return EntityData?.GetId()?.ToString();
     }
-
-    public PlatformCqrsEntityEvent<TEntity> Clone()
-    {
-        return MemberwiseClone().As<PlatformCqrsEntityEvent<TEntity>>();
-    }
 }
 
 /// <summary>

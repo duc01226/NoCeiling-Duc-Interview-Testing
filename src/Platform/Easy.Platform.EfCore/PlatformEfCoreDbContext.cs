@@ -5,6 +5,7 @@ using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
+using Easy.Platform.Domain.Exceptions;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.EfCore.EntityConfiguration;
 using Easy.Platform.Persistence;
@@ -114,9 +115,24 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         await RootServiceProvider.ExecuteInjectScopedAsync(async (TDbContext context) => await fn(context));
     }
 
-    public new Task SaveChangesAsync(CancellationToken cancellationToken = default)
+    public new async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        return base.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await base.SaveChangesAsync(cancellationToken);
+
+            MappedUnitOfWork?.ClearCachedExistingOriginalEntityForTrackingCompareAfterUpdate();
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            ChangeTracker.Entries()
+                .Where(p => p.State == EntityState.Modified || p.State == EntityState.Added || p.State == EntityState.Deleted)
+                .Select(p => p.Entity.As<IEntity>()?.GetId()?.ToString())
+                .Where(p => p != null)
+                .ForEach(id => MappedUnitOfWork?.RemoveCachedExistingOriginalEntityForTrackingCompareAfterUpdate(id));
+
+            throw new PlatformDomainRowVersionConflictException($"Save changes has conflicted version. {ex.Message}", ex);
+        }
     }
 
     public IQueryable<TEntity> GetQuery<TEntity>() where TEntity : class, IEntity
@@ -449,6 +465,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             var entityIds = entities.Select(p => p.Id);
 
             var existingEntitiesQuery = GetQuery<TEntity>()
+                .AsNoTracking()
                 .Pipe(
                     query => customCheckExistingPredicateBuilder != null ||
                              entities.FirstOrDefault()?.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() != null
@@ -465,15 +482,16 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 entities.FirstOrDefault()?.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() == null)
             {
                 var existingEntityIds = await existingEntitiesQuery.Select(p => p.Id).ToListAsync(cancellationToken).Then(items => items.ToHashSet());
+                var (existingEntities, newEntities) = entities.WhereSplitResult(p => existingEntityIds.Contains(p.Id));
 
                 // Ef core is not thread safe so that couldn't use when all
                 await CreateManyAsync<TEntity, TPrimaryKey>(
-                    entities.Where(p => !existingEntityIds.Contains(p.Id)).ToList(),
+                    newEntities,
                     dismissSendEvent,
                     eventCustomConfig,
                     cancellationToken);
                 await UpdateManyAsync<TEntity, TPrimaryKey>(
-                    entities.Where(p => existingEntityIds.Contains(p.Id)).ToList(),
+                    existingEntities,
                     dismissSendEvent,
                     eventCustomConfig,
                     cancellationToken);
@@ -482,7 +500,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             {
                 var existingEntities = await existingEntitiesQuery.ToListAsync(cancellationToken);
 
-                var toUpsertEntityToExistingEntityPairs = entities.SelectList(
+                var toUpsertEntityToExistingEntityPairs = entities.Select(
                     toUpsertEntity =>
                     {
                         var matchedExistingEntity = existingEntities.FirstOrDefault(
@@ -495,14 +513,16 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                         return new { toUpsertEntity, matchedExistingEntity };
                     });
 
+                var (existingToUpdateEntities, newEntities) = toUpsertEntityToExistingEntityPairs.WhereSplitResult(p => p.matchedExistingEntity != null);
+
                 await Util.TaskRunner.WhenAll(
                     CreateManyAsync<TEntity, TPrimaryKey>(
-                        toUpsertEntityToExistingEntityPairs.Where(p => p.matchedExistingEntity == null).Select(p => p!.toUpsertEntity).ToList(),
+                        newEntities.Select(p => p!.toUpsertEntity).ToList(),
                         dismissSendEvent,
                         eventCustomConfig,
                         cancellationToken),
                     UpdateManyAsync<TEntity, TPrimaryKey>(
-                        toUpsertEntityToExistingEntityPairs.Where(p => p.matchedExistingEntity != null).Select(p => p.toUpsertEntity).ToList(),
+                        existingToUpdateEntities.Select(p => p.toUpsertEntity).ToList(),
                         dismissSendEvent,
                         eventCustomConfig,
                         cancellationToken));
@@ -536,8 +556,10 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
             await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
 
+            var isEntityRowVersionEntityMissingConcurrencyUpdateToken = entity is IRowVersionEntity { ConcurrencyUpdateToken: null };
+
             if (existingEntity == null &&
-                ((!dismissSendEvent && entity.HasTrackValueUpdatedDomainEventAttribute()) || entity is IRowVersionEntity { ConcurrencyUpdateToken: null }))
+                ((!dismissSendEvent && entity.HasTrackValueUpdatedDomainEventAttribute()) || isEntityRowVersionEntityMissingConcurrencyUpdateToken))
             {
                 var existingEntityPredicate = entity.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() != null
                     ? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!
@@ -556,7 +578,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 if (!existingEntity.Id.Equals(entity.Id)) entity.Id = existingEntity.Id;
             }
 
-            if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })
+            if (isEntityRowVersionEntityMissingConcurrencyUpdateToken)
                 entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = existingEntity.As<IRowVersionEntity>().ConcurrencyUpdateToken;
 
             // Run DetachLocalIfAny to prevent

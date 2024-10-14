@@ -128,6 +128,8 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
 
     public bool AllowHandleNewInboxMessageInBackground { get; set; } = false;
 
+    public virtual int MinRowVersionConflictRetryOnFailedTimes { get; set; } = Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
+
     /// <inheritdoc />
     public bool NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage { get; set; } = true;
 
@@ -158,7 +160,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                 try
                 {
                     // Try to execute directly to improve performance. Then if failed execute use inbox to support retry failed message later.
-                    await HandleMessageDirectly(message, routingKey, 1);
+                    await HandleMessageDirectly(message, routingKey);
                 }
                 catch (Exception)
                 {
@@ -197,7 +199,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
             allowHandleNewInboxMessageInBackground: AllowHandleNewInboxMessageInBackground);
     }
 
-    private async Task HandleMessageDirectly(TMessage message, string routingKey, int? retryCount = null)
+    private async Task HandleMessageDirectly(TMessage message, string routingKey)
     {
         await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync<PlatformDomainRowVersionConflictException>(
             async () =>
@@ -233,7 +235,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                         await Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
                 }
             },
-            retryCount: retryCount ?? Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio,
+            retryCount: MinRowVersionConflictRetryOnFailedTimes + RetryOnFailedTimes,
             sleepDurationProvider: p => TimeSpan.Zero);
     }
 }

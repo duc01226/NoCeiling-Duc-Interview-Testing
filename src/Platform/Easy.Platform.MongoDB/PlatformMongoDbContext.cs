@@ -311,7 +311,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         return Util.Pager.ExecutePagingAsync(
                 (skipCount, pageSize) => entities.Skip(skipCount)
                     .Take(pageSize)
-                    .SelectAsync(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken)),
+                    .ParallelAsync(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken)),
                 entities.Count,
                 IPlatformDbContext.DefaultPageSize,
                 cancellationToken: cancellationToken)
@@ -452,15 +452,16 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 entities.FirstOrDefault()?.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() == null)
             {
                 var existingEntityIds = await existingEntitiesQuery.Select(p => p.Id).ToListAsync(cancellationToken).Then(items => items.ToHashSet());
+                var (existingEntities, newEntities) = entities.WhereSplitResult(p => existingEntityIds.Contains(p.Id));
 
                 await Util.TaskRunner.WhenAll(
                     CreateManyAsync<TEntity, TPrimaryKey>(
-                        entities.Where(p => !existingEntityIds.Contains(p.Id)).ToList(),
+                        newEntities,
                         dismissSendEvent,
                         eventCustomConfig,
                         cancellationToken),
                     UpdateManyAsync<TEntity, TPrimaryKey>(
-                        entities.Where(p => existingEntityIds.Contains(p.Id)).ToList(),
+                        existingEntities,
                         dismissSendEvent,
                         eventCustomConfig,
                         cancellationToken));
@@ -482,14 +483,16 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         return new { toUpsertEntity, matchedExistingEntity };
                     });
 
+                var (existingToUpdateEntities, newEntities) = toUpsertEntityToExistingEntityPairs.WhereSplitResult(p => p.matchedExistingEntity != null);
+
                 await Util.TaskRunner.WhenAll(
                     CreateManyAsync<TEntity, TPrimaryKey>(
-                        toUpsertEntityToExistingEntityPairs.Where(p => p.matchedExistingEntity == null).Select(p => p.toUpsertEntity).ToList(),
+                        newEntities.Select(p => p!.toUpsertEntity).ToList(),
                         dismissSendEvent,
                         eventCustomConfig,
                         cancellationToken),
                     UpdateManyAsync<TEntity, TPrimaryKey>(
-                        toUpsertEntityToExistingEntityPairs.Where(p => p.matchedExistingEntity != null).Select(p => p.toUpsertEntity).ToList(),
+                        existingToUpdateEntities.Select(p => p.toUpsertEntity).ToList(),
                         dismissSendEvent,
                         eventCustomConfig,
                         cancellationToken));
@@ -519,9 +522,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     {
         await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
 
+        var isEntityRowVersionEntityMissingConcurrencyUpdateToken = entity is IRowVersionEntity { ConcurrencyUpdateToken: null };
+
         if (existingEntity == null &&
             ((!dismissSendEvent && entity.HasTrackValueUpdatedDomainEventAttribute()) ||
-             entity is IRowVersionEntity { ConcurrencyUpdateToken: null }))
+             isEntityRowVersionEntityMissingConcurrencyUpdateToken))
         {
             var existingEntityPredicate = entity.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() != null
                 ? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!
@@ -539,7 +544,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             if (!existingEntity.Id.Equals(entity.Id)) entity.Id = existingEntity.Id;
         }
 
-        if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })
+        if (isEntityRowVersionEntityMissingConcurrencyUpdateToken)
             entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = existingEntity.As<IRowVersionEntity>().ConcurrencyUpdateToken;
 
         var toBeUpdatedEntity = entity
@@ -580,8 +585,13 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             if (result.MatchedCount <= 0)
             {
                 if (await GetTable<TEntity>().AsQueryable().AnyAsync(p => p.Id.Equals(toBeUpdatedEntity.Id), cancellationToken))
+                {
+                    MappedUnitOfWork?.RemoveCachedExistingOriginalEntityForTrackingCompareAfterUpdate(toBeUpdatedEntity.Id.ToString());
+
                     throw new PlatformDomainRowVersionConflictException(
                         $"Update {typeof(TEntity).Name} with Id:{toBeUpdatedEntity.Id} has conflicted version.");
+                }
+
                 throw new PlatformDomainEntityNotFoundException<TEntity>(toBeUpdatedEntity.Id.ToString());
             }
         }
@@ -607,6 +617,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             if (result.MatchedCount <= 0)
                 throw new PlatformDomainEntityNotFoundException<TEntity>(toBeUpdatedEntity.Id.ToString());
         }
+
+        MappedUnitOfWork?.RemoveCachedExistingOriginalEntityForTrackingCompareAfterUpdate(entity.Id.ToString());
 
         return entity;
     }

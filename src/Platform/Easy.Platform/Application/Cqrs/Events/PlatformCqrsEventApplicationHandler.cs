@@ -86,6 +86,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     public int RetryEventInboxBusMessageConsumerMaxCount { get; set; } = 3;
 
+    public virtual int MinRowVersionConflictRetryOnFailedTimes { get; set; } = Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
+
     public override int RetryOnFailedTimes
     {
         get => !HasInboxMessageSupport() && !MustWaitHandlerExecutionFinishedImmediately ? retryOnFailedTimes * 100 : retryOnFailedTimes;
@@ -265,8 +267,6 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                 // Try to execute directly once to enhance performance, if failed then try use inbox
                 try
                 {
-                    if (!await HandleWhen(@event)) return;
-
                     await RunHandleAsync(@event, cancellationToken);
                 }
                 catch (Exception)
@@ -304,16 +304,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                             });
                 }
             else
-                await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync<PlatformDomainRowVersionConflictException>(
-                    async () =>
-                    {
-                        if (!await HandleWhen(@event)) return;
-
-                        await RunHandleAsync(@event, cancellationToken);
-                    },
-                    retryCount: Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio,
-                    sleepDurationProvider: p => TimeSpan.Zero,
-                    cancellationToken: cancellationToken);
+                await RunHandleAsync(@event, cancellationToken);
         }
         finally
         {
@@ -324,35 +315,44 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     protected async Task RunHandleAsync(TEvent @event, CancellationToken cancellationToken)
     {
-        if (AutoOpenUow)
-        {
-            // If handler already executed in background or from inbox consumer, not need to open new scope for open uow
-            // If not then create new scope to open new uow so that multiple events handlers from an event do not get conflicted
-            // uow in the same scope if not open new scope
-            if (AllowHandleInBackgroundThread(@event) || CanExecuteHandlingEventUsingInboxConsumer(@event))
-                using (var uow = UnitOfWorkManager.Begin())
+        if (!await HandleWhen(@event)) return;
+
+        await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync<PlatformDomainRowVersionConflictException>(
+            async () =>
+            {
+                if (AutoOpenUow)
+                {
+                    // If handler already executed in background or from inbox consumer, not need to open new scope for open uow
+                    // If not then create new scope to open new uow so that multiple events handlers from an event do not get conflicted
+                    // uow in the same scope if not open new scope
+                    if (AllowHandleInBackgroundThread(@event) || CanExecuteHandlingEventUsingInboxConsumer(@event))
+                        using (var uow = UnitOfWorkManager.Begin())
+                        {
+                            await HandleAsync(@event, cancellationToken);
+                            await uow.CompleteAsync(cancellationToken);
+                        }
+                    else
+                        using (var newScope = RootServiceProvider.CreateScope())
+                        {
+                            using (var uow = newScope.ServiceProvider.GetRequiredService<IPlatformUnitOfWorkManager>().Begin())
+                            {
+                                await newScope.ServiceProvider.GetRequiredService(GetType())
+                                    .As<PlatformCqrsEventApplicationHandler<TEvent>>()
+                                    .With(newInstance => CopyPropertiesToNewInstanceBeforeExecution(this, newInstance))
+                                    .HandleAsync(@event, cancellationToken);
+
+                                await uow.CompleteAsync(cancellationToken);
+                            }
+                        }
+                }
+                else
                 {
                     await HandleAsync(@event, cancellationToken);
-                    await uow.CompleteAsync(cancellationToken);
                 }
-            else
-                using (var newScope = RootServiceProvider.CreateScope())
-                {
-                    using (var uow = newScope.ServiceProvider.GetRequiredService<IPlatformUnitOfWorkManager>().Begin())
-                    {
-                        await newScope.ServiceProvider.GetRequiredService(GetType())
-                            .As<PlatformCqrsEventApplicationHandler<TEvent>>()
-                            .With(newInstance => CopyPropertiesToNewInstanceBeforeExecution(this, newInstance))
-                            .HandleAsync(@event, cancellationToken);
-
-                        await uow.CompleteAsync(cancellationToken);
-                    }
-                }
-        }
-        else
-        {
-            await HandleAsync(@event, cancellationToken);
-        }
+            },
+            retryCount: MinRowVersionConflictRetryOnFailedTimes + RetryOnFailedTimes,
+            sleepDurationProvider: p => TimeSpan.Zero,
+            cancellationToken: cancellationToken);
     }
 
     protected bool HasInboxMessageSupport()

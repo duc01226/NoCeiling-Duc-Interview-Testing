@@ -19,8 +19,8 @@ namespace Easy.Platform.Application.Persistence;
 
 public interface IPlatformDbContext : IDisposable
 {
-    public const int DefaultPageSize = 10;
-    public const int SaveMigrationHistoryRetryCount = 100;
+    public static readonly int DefaultPageSize = Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
+    public static readonly int SaveMigrationHistoryRetryCount = 100;
 
     public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformDbContext)}");
     public static int MigrationRetryCount => PlatformEnvironment.IsDevelopment ? 5 : 10;

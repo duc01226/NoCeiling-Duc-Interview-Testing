@@ -1048,6 +1048,39 @@ public static class ListExtension
         return list.Any(p => p.EqualsIgnoreCase(value));
     }
 
+    /// <summary>
+    /// Splits the input list into two separate lists based on a given predicate.
+    /// </summary>
+    /// <typeparam name="T">The type of elements in the input list.</typeparam>
+    /// <param name="list">The source list to be split.</param>
+    /// <param name="predicate">
+    /// A lambda expression used to determine which items should go into the first list (those that match the predicate).
+    /// </param>
+    /// <returns>
+    /// A <see cref="ValueTuple" /> containing two lists:
+    /// <list type="bullet">
+    ///     <item>
+    ///         <description>The first list contains items that satisfy the predicate.</description>
+    ///     </item>
+    ///     <item>
+    ///         <description>The second list contains items that do not satisfy the predicate.</description>
+    ///     </item>
+    /// </list>
+    /// </returns>
+    public static ValueTuple<List<T>, List<T>> WhereSplitResult<T>(this IEnumerable<T> list, Expression<Func<T, bool>> predicate)
+    {
+        var matchItems = new List<T>();
+        var notMatchItems = new List<T>();
+        var predicateFn = predicate.Compile();
+
+        foreach (var item in list)
+            if (predicateFn(item)) matchItems.Add(item);
+            else notMatchItems.Add(item);
+
+        return (matchItems, notMatchItems);
+    }
+
+
     public static List<object> ToObjectList(this ICollection collection)
     {
         var result = new List<object>(collection.Count);

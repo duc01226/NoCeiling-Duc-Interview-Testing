@@ -550,9 +550,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             : null;
 
         // If there's no active unit of work or the unit of work is a pseudo transaction, send the message immediately in a background thread.
-        var canSendMessageDirectlyWithoutWaitUowTransaction = currentActiveUow == null ||
-                                                              (currentActiveUow.IsPseudoTransactionUow() &&
-                                                               outboxBusMessageRepository.TryGetCurrentOrCreatedActiveUow(sourceOutboxUowId) != null);
+        var canSendMessageDirectlyWithoutWaitUowTransaction = currentActiveUow == null || currentActiveUow.IsPseudoTransactionUow();
 
         if (canSendMessageDirectlyWithoutWaitUowTransaction)
             // Try to send directly first without using outbox for faster performance if no uow or fake uow. If failed => use inbox to support retry later
