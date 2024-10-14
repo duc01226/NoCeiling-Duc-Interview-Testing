@@ -261,17 +261,6 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         return await UpdateManyAsync(updateItems, dismissSendEvent, eventCustomConfig, cancellationToken);
     }
 
-    public async Task<List<TEntity>> DeleteManyAsync(
-        Expression<Func<TEntity, bool>> predicate,
-        bool dismissSendEvent = false,
-        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
-        CancellationToken cancellationToken = default)
-    {
-        var toDeleteEntities = await GetAllAsync(predicate, cancellationToken);
-
-        return await DeleteManyAsync(toDeleteEntities, dismissSendEvent, eventCustomConfig, cancellationToken);
-    }
-
     public IPlatformUnitOfWork TryGetCurrentActiveUow()
     {
         return UnitOfWorkManager.TryGetCurrentActiveUow()?.UowOfType<TUow>();
@@ -390,7 +379,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
-    public abstract Task<List<TEntity>> DeleteManyAsync(
+    public abstract Task<List<TPrimaryKey>> DeleteManyAsync(
         List<TPrimaryKey> entityIds,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
@@ -398,6 +387,19 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
     public abstract Task<List<TEntity>> DeleteManyAsync(
         List<TEntity> entities,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default);
+
+    public abstract Task<int> DeleteManyAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default);
+
+    public abstract Task<int> DeleteManyAsync(
+        IPlatformUnitOfWork uow,
+        Expression<Func<TEntity, bool>> predicate,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);

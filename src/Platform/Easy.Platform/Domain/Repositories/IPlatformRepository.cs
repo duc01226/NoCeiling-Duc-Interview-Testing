@@ -164,8 +164,8 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
                         immediatelyUow,
                         entity,
                         dismissSendEvent,
-                        eventCustomConfig: eventCustomConfig,
-                        cancellationToken: cancellationToken);
+                        eventCustomConfig,
+                        cancellationToken);
 
                     await immediatelyUow.CompleteAsync(cancellationToken);
 
@@ -377,7 +377,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         }
     }
 
-    public async Task<List<TEntity>> DeleteManyImmediatelyAsync(
+    public async Task<int> DeleteManyImmediatelyAsync(
         Expression<Func<TEntity, bool>> predicate,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
@@ -385,14 +385,34 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
     {
         using (var immediatelyUow = UowManager().CreateNewUow(true))
         {
-            var toDeleteEntities = await GetAllAsync(predicate, cancellationToken);
-
-            var result = await DeleteManyAsync(immediatelyUow, toDeleteEntities, dismissSendEvent, eventCustomConfig, cancellationToken);
-
-            await immediatelyUow.CompleteAsync(cancellationToken);
-
-            return result;
+            return await DeleteManyAsync(immediatelyUow, predicate, true, eventCustomConfig, cancellationToken);
         }
+    }
+
+    public async Task<List<TEntity>> DeleteManyReturnDeletedItemsAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+    {
+        var items = await GetAllAsync(predicate, cancellationToken);
+
+        await DeleteManyAsync(items, dismissSendEvent, eventCustomConfig, cancellationToken);
+
+        return items;
+    }
+
+    public async Task<List<TEntity>> DeleteManyReturnDeletedItemsAsync(
+        List<TPrimaryKey> entityIds,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+    {
+        var items = await GetAllAsync(p => entityIds.Contains(p.Id), cancellationToken);
+
+        await DeleteManyAsync(items, dismissSendEvent, eventCustomConfig, cancellationToken);
+
+        return items;
     }
 
     /// <summary>
@@ -494,7 +514,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
-    public Task<List<TEntity>> DeleteManyAsync(
+    public Task<List<TPrimaryKey>> DeleteManyAsync(
         List<TPrimaryKey> entityIds,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
@@ -540,7 +560,14 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         }
     }
 
-    public Task<List<TEntity>> DeleteManyAsync(
+    public Task<int> DeleteManyAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default);
+
+    public Task<int> DeleteManyAsync(
+        IPlatformUnitOfWork uow,
         Expression<Func<TEntity, bool>> predicate,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
@@ -569,7 +596,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        var isExisted = await AnyAsync(predicate, cancellationToken: cancellationToken);
+        var isExisted = await AnyAsync(predicate, cancellationToken);
         if (isExisted)
             return entity;
 
@@ -828,7 +855,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                 {
                     var pagingDeleteItems = await GetAllAsync(
                         GetQuery(uow).Where(predicate).Take(pageSize.Value),
-                        cancellationToken: cancellationToken);
+                        cancellationToken);
 
                     await DeleteManyAsync(uow, pagingDeleteItems, dismissSendEvent, eventCustomConfig, cancellationToken);
 
@@ -837,7 +864,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                     return pagingDeleteItems;
                 }
             },
-            maxExecutionCount: await CountAsync(predicate, cancellationToken)
+            await CountAsync(predicate, cancellationToken)
                 .Then(totalItemsCount => totalItemsCount / pageSize.Value),
             cancellationToken: cancellationToken);
     }
@@ -869,7 +896,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                 {
                     var pagingUpdateItems = await GetAllAsync(
                             GetQuery(uow).Where(predicate).Skip(skipCount).Take(pageSize),
-                            cancellationToken: cancellationToken)
+                            cancellationToken)
                         .ThenAction(items => items.ForEach(updateAction));
 
                     SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate(pagingUpdateItems, uow);
@@ -879,8 +906,8 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                     await uow.CompleteAsync(cancellationToken);
                 }
             },
-            maxItemCount: await CountAsync(predicate, cancellationToken),
-            pageSize: pageSize.Value,
+            await CountAsync(predicate, cancellationToken),
+            pageSize.Value,
             cancellationToken: cancellationToken);
     }
 
@@ -911,7 +938,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                 {
                     var pagingUpdateItems = await GetAllAsync(
                             GetQuery(uow).Where(predicate).Take(pageSize.Value),
-                            cancellationToken: cancellationToken)
+                            cancellationToken)
                         .ThenAction(items => items.ForEach(updateAction));
 
                     SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate(pagingUpdateItems, uow);
@@ -921,7 +948,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                     return updatedItems;
                 }
             },
-            maxExecutionCount: await CountAsync(predicate, cancellationToken)
+            await CountAsync(predicate, cancellationToken)
                 .Then(totalItemsCount => totalItemsCount / pageSize.Value),
             cancellationToken: cancellationToken);
     }

@@ -7,7 +7,7 @@ namespace PlatformExampleApp.TextSnippet.Domain.Repositories.Extensions;
 /// </summary>
 public static class MultiDbDemoRepositoryExtensions
 {
-    public static async Task<List<MultiDbDemoEntity>> DeleteByName(
+    public static async Task<int> DeleteByName(
         this ITextSnippetRootRepository<MultiDbDemoEntity> repository,
         string name)
     {

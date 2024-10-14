@@ -636,7 +636,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             uow);
     }
 
-    public override async Task<List<TEntity>> DeleteManyAsync(
+    public override async Task<List<TPrimaryKey>> DeleteManyAsync(
         List<TPrimaryKey> entityIds,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
@@ -656,6 +656,38 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
 
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entityIds, dismissSendEvent, eventCustomConfig, cancellationToken));
+    }
+
+    public override async Task<int> DeleteManyAsync(
+        Expression<Func<TEntity, bool>> predicate,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+    {
+        return await DeleteManyAsync(null, predicate, dismissSendEvent, eventCustomConfig, cancellationToken);
+    }
+
+    public override async Task<int> DeleteManyAsync(
+        IPlatformUnitOfWork uow,
+        Expression<Func<TEntity, bool>> predicate,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteManyAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+                activity?.AddTag("EntityPredicate", predicate.ToString());
+
+                return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+                    uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(predicate, dismissSendEvent, eventCustomConfig, cancellationToken),
+                    uow);
+            }
+
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+            uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(predicate, dismissSendEvent, eventCustomConfig, cancellationToken),
+            uow);
     }
 
     public override async Task<List<TEntity>> DeleteManyAsync(

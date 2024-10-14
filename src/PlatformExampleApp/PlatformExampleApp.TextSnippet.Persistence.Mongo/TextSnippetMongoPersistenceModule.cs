@@ -1,7 +1,6 @@
 using Easy.Platform.MongoDB;
 using Easy.Platform.Persistence;
 using Microsoft.Extensions.Configuration;
-using PlatformExampleApp.TextSnippet.Application;
 
 namespace PlatformExampleApp.TextSnippet.Persistence.Mongo;
 
@@ -18,11 +17,10 @@ public class TextSnippetMongoPersistenceModule : PlatformMongoDbPersistenceModul
         options.ConnectionString = Configuration.GetSection("MongoDB:ConnectionString").Value;
         options.Database = Configuration.GetSection("MongoDB:Database").Value;
         options.MinConnectionPoolSize =
-            Configuration.GetValue<int?>("MongoDB:MinConnectionPoolSize") ??
-            TextSnippetApplicationConstants.DefaultBackgroundJobWorkerCount + 1; // Always available connection to serve request, reduce latency
+            Configuration.GetValue<int?>("MongoDB:MinConnectionPoolSize") ?? 1; // Always available connection to serve request, reduce latency
         options.MaxConnectionPoolSize =
             Configuration.GetValue<int?>("MongoDB:MaxConnectionPoolSize") ??
-            Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent; // Setup max pool size depend on the database maximum connections available
+            Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent * 2; // Setup max pool size depend on the database maximum connections available
     }
 
     protected override bool EnableInboxBusMessage()

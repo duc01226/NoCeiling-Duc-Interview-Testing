@@ -27,6 +27,10 @@ internal sealed class TransferSnippetTextToMultiDbDemoEntityNameDomainEventConsu
         PlatformBusMessage<TransferSnippetTextToMultiDbDemoEntityNameDomainEvent> message,
         string routingKey)
     {
+        // Example for sync data event update event data entity value not changed
+        // if (message.ForceSyncNoCheckDiff == true)
+        //    RequestContextAccessor.Current.Upsert(PlatformCqrsEntityEvent.RequestContextForceSyncDataNoCheckUpdateDataIsDifferentKey, true);
+
         Util.RandomGenerator.DoByChance(
             percentChance: 5,
             () => throw new Exception("Random Test Retry Consumer Throw Exception"));

@@ -40,7 +40,7 @@ public class PlatformOutboxConfig
     /// <summary>
     /// Default number messages is processed to be Deleted/Ignored in batch. Default is 100;
     /// </summary>
-    public int NumberOfDeleteMessagesBatch { get; set; } = 10;
+    public int NumberOfDeleteMessagesBatch { get; set; } = Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent / 2;
 
     public double MessageCleanerTriggerIntervalInMinutes { get; set; } = 1;
 

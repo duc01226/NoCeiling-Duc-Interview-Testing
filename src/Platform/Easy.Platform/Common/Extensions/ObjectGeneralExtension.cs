@@ -31,135 +31,87 @@ public static class ObjectGeneralExtension
 
         static bool InternalIsValuesDifferent(object obj1, object obj2, Type obj1CheckType, Type obj2CheckType)
         {
-            try
+            if ((obj1 == null && obj2 != null) || (obj2 == null && obj1 != null))
+                return true;
+
+            // Case both obj is null
+            if (obj1 == null)
+                return false;
+
+            var obj1Type = obj1.GetType()
+                .Pipe(obj1RuntimeType => obj1RuntimeType != obj1CheckType && obj1CheckType == typeof(object) ? obj1RuntimeType : obj1CheckType);
+            var obj2Type = obj2.GetType()
+                .Pipe(obj2RuntimeType => obj2RuntimeType != obj2CheckType && obj2CheckType == typeof(object) ? obj2RuntimeType : obj2CheckType);
+
+            if (obj1 is DateTime obj1DateTime && obj2 is DateTime obj2DateTime)
+                return obj1DateTime.IsDifferentIgnoringNanoseconds(obj2DateTime);
+
+            if (obj1Type == obj2Type &&
+                (obj1Type.IsPrimitive || obj1Type.IsValueType || obj1Type == typeof(string)))
+                return !obj1.Equals(obj2);
+
+            if (obj1Type != obj2Type || obj1Type == typeof(object))
+                return PlatformJsonSerializer.Serialize(obj1) != PlatformJsonSerializer.Serialize(obj2);
+
+            // Handle collections (Collection<T>, List<T>, Dictionary<TKey, TValue>, etc.)
+            if (IsAssignableFromIEnumerable(obj1Type))
             {
-                if ((obj1 == null && obj2 != null) || (obj2 == null && obj1 != null))
-                    return true;
-
-                // Case both obj is null
-                if (obj1 == null)
-                    return false;
-
-                var obj1Type = obj1.GetType()
-                    .Pipe(obj1RuntimeType => obj1RuntimeType != obj1CheckType && obj1CheckType == typeof(object) ? obj1RuntimeType : obj1CheckType);
-                var obj2Type = obj2.GetType()
-                    .Pipe(obj2RuntimeType => obj2RuntimeType != obj2CheckType && obj2CheckType == typeof(object) ? obj2RuntimeType : obj2CheckType);
-
-                if (obj1 is DateTime obj1DateTime && obj2 is DateTime obj2DateTime)
-                    return obj1DateTime.IsDifferentIgnoringNanoseconds(obj2DateTime);
-
-                if (obj1Type == obj2Type &&
-                    (obj1Type.IsPrimitive || obj1Type.IsValueType || obj1Type == typeof(string)))
-                    return !obj1.Equals(obj2);
-
-                if (obj1Type != obj2Type || obj1Type == typeof(object))
-                    return PlatformJsonSerializer.Serialize(obj1) != PlatformJsonSerializer.Serialize(obj2);
-
-                // Handle collections (Collection<T>, List<T>, Dictionary<TKey, TValue>, etc.)
-                if (IsAssignableFromIEnumerable(obj1Type))
+                // Handle IList
+                if (IsAssignableFromIList(obj1Type))
                 {
-                    // Handle IList
-                    if (IsAssignableFromIList(obj1Type))
+                    var obj1List = obj1 as IList;
+                    var obj2List = obj2 as IList;
+
+                    if (obj1List!.Count != obj2List!.Count)
+                        return true;
+
+                    for (var i = 0; i < obj1List.Count; i++)
                     {
-                        var obj1List = obj1 as IList;
-                        var obj2List = obj2 as IList;
-
-                        if (obj1List!.Count != obj2List!.Count)
+                        if (IsValuesDifferent(obj1List[i], obj2List[i]))
                             return true;
-
-                        for (var i = 0; i < obj1List.Count; i++)
-                        {
-                            if (IsValuesDifferent(obj1List[i], obj2List[i]))
-                                return true;
-                        }
-
-                        return false;
                     }
 
-                    // Handle ICollection
-                    if (IsAssignableFromICollection(obj1Type))
-                    {
-                        var obj1Collection = obj1 as ICollection;
-                        var obj2Collection = obj2 as ICollection;
-
-                        if (obj1Collection!.Count != obj2Collection!.Count)
-                            return true;
-
-                        var obj1List = obj1Collection.ToObjectList();
-                        var obj2List = obj2Collection.ToObjectList();
-
-                        for (var i = 0; i < obj1List.Count; i++)
-                        {
-                            if (IsValuesDifferent(obj1List[i], obj2List[i]))
-                                return true;
-                        }
-
-                        return false;
-                    }
-
-                    // Handle Dictionary < TKey, TValue >
-                    if (IsAssignableFromIDictionary(obj1Type))
-                    {
-                        var obj1Dict = obj1 as IDictionary;
-                        var obj2Dict = obj2 as IDictionary;
-
-                        if (obj1Dict!.Count != obj2Dict!.Count)
-                            return true;
-
-                        var obj1List = obj1Dict.ToEntryItemList();
-                        var obj2List = obj2Dict.ToEntryItemList();
-
-                        for (var i = 0; i < obj1List.Count; i++)
-                        {
-                            if (IsValuesDifferent(obj1List[i].Value, obj2List[i].Value) ||
-                                IsValuesDifferent(obj1List[i].Key, obj2List[i].Key))
-                                return true;
-                        }
-
-                        return false;
-                    }
-
-                    return PlatformJsonSerializer.Serialize(obj1) != PlatformJsonSerializer.Serialize(obj2);
+                    return false;
                 }
 
-                // Handle classes (other reference types)
-                if (obj1Type.IsClass)
+                // Handle ICollection
+                if (IsAssignableFromICollection(obj1Type))
                 {
-                    var propInfos = CachedIsValuesDifferentTypeToPropsDict.GetOrAdd(
-                        obj1Type,
-                        type => type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                            .Where(
-                                propInfo => propInfo.GetCustomAttribute<JsonIgnoreAttribute>() == null &&
-                                            propInfo.GetCustomAttribute<PlatformIgnoreCheckValueDiffAttribute>() == null)
-                            .ToList());
+                    var obj1Collection = obj1 as ICollection;
+                    var obj2Collection = obj2 as ICollection;
 
-                    // Deep clone each field
-                    foreach (var propInfo in propInfos)
+                    if (obj1Collection!.Count != obj2Collection!.Count)
+                        return true;
+
+                    var obj1List = obj1Collection.ToObjectList();
+                    var obj2List = obj2Collection.ToObjectList();
+
+                    for (var i = 0; i < obj1List.Count; i++)
                     {
-                        var value1 = propInfo.GetValue(obj1);
-                        var value2 = propInfo.GetValue(obj2);
-
-                        // Ensure the values are compared using the appropriate method
-                        if (value1 != null && value2 != null)
-                        {
-                            if (value1.GetType() != value2.GetType())
-                            {
-                                if (PlatformJsonSerializer.Serialize(value1) != PlatformJsonSerializer.Serialize(value2))
-                                    return true;
-                            }
-                            else if (InternalIsValuesDifferent(
-                                propInfo.GetValue(obj1),
-                                propInfo.GetValue(obj2),
-                                propInfo.PropertyType,
-                                propInfo.PropertyType)) // Call with the correct types
-                            {
-                                return true;
-                            }
-                        }
-                        else if (value1 != value2) // Handle null comparison
-                        {
+                        if (IsValuesDifferent(obj1List[i], obj2List[i]))
                             return true;
-                        }
+                    }
+
+                    return false;
+                }
+
+                // Handle Dictionary < TKey, TValue >
+                if (IsAssignableFromIDictionary(obj1Type))
+                {
+                    var obj1Dict = obj1 as IDictionary;
+                    var obj2Dict = obj2 as IDictionary;
+
+                    if (obj1Dict!.Count != obj2Dict!.Count)
+                        return true;
+
+                    var obj1List = obj1Dict.ToEntryItemList();
+                    var obj2List = obj2Dict.ToEntryItemList();
+
+                    for (var i = 0; i < obj1List.Count; i++)
+                    {
+                        if (IsValuesDifferent(obj1List[i].Value, obj2List[i].Value) ||
+                            IsValuesDifferent(obj1List[i].Key, obj2List[i].Key))
+                            return true;
                     }
 
                     return false;
@@ -167,11 +119,51 @@ public static class ObjectGeneralExtension
 
                 return PlatformJsonSerializer.Serialize(obj1) != PlatformJsonSerializer.Serialize(obj2);
             }
-            catch (Exception e)
+
+            // Handle classes (other reference types)
+            if (obj1Type.IsClass)
             {
-                Console.WriteLine(e);
-                throw;
+                var propInfos = CachedIsValuesDifferentTypeToPropsDict.GetOrAdd(
+                    obj1Type,
+                    type => type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                        .Where(
+                            propInfo => propInfo.GetCustomAttribute<JsonIgnoreAttribute>() == null &&
+                                        propInfo.GetCustomAttribute<PlatformIgnoreCheckValueDiffAttribute>() == null)
+                        .ToList());
+
+                // Deep clone each field
+                foreach (var propInfo in propInfos)
+                {
+                    var value1 = propInfo.GetValue(obj1);
+                    var value2 = propInfo.GetValue(obj2);
+
+                    // Ensure the values are compared using the appropriate method
+                    if (value1 != null && value2 != null)
+                    {
+                        if (value1.GetType() != value2.GetType())
+                        {
+                            if (PlatformJsonSerializer.Serialize(value1) != PlatformJsonSerializer.Serialize(value2))
+                                return true;
+                        }
+                        else if (InternalIsValuesDifferent(
+                            propInfo.GetValue(obj1),
+                            propInfo.GetValue(obj2),
+                            propInfo.PropertyType,
+                            propInfo.PropertyType)) // Call with the correct types
+                        {
+                            return true;
+                        }
+                    }
+                    else if (value1 != value2) // Handle null comparison
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
             }
+
+            return PlatformJsonSerializer.Serialize(obj1) != PlatformJsonSerializer.Serialize(obj2);
         }
     }
 

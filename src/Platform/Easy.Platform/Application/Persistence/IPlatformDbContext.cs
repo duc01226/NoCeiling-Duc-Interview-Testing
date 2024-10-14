@@ -433,7 +433,7 @@ public interface IPlatformDbContext : IDisposable
         Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
-    public Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
+    public Task<List<TPrimaryKey>> DeleteManyAsync<TEntity, TPrimaryKey>(
         List<TPrimaryKey> entityIds,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
@@ -445,16 +445,11 @@ public interface IPlatformDbContext : IDisposable
         Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
-    public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
+    public Task<int> DeleteManyAsync<TEntity, TPrimaryKey>(
         Expression<Func<TEntity, bool>> predicate,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
-        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
-    {
-        var toDeleteEntities = await GetAllAsync(GetQuery<TEntity>().Where(predicate), cancellationToken);
-
-        return await DeleteManyAsync<TEntity, TPrimaryKey>(toDeleteEntities, dismissSendEvent, eventCustomConfig, cancellationToken);
-    }
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
