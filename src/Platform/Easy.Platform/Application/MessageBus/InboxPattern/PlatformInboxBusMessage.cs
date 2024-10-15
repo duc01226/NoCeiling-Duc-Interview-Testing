@@ -13,8 +13,8 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
     public const double DefaultRetryProcessFailedMessageInSecondsUnit = 60;
     public const string BuildIdPrefixSeparator = "----";
     public const string BuildIdSubQueuePrefixSeparator = "++++";
-    public const int CheckProcessingPingIntervalSeconds = 60;
-    public const int MaxAllowedProcessingPingMisses = 30;
+    public const int CheckProcessingPingIntervalSeconds = 30;
+    public const int MaxAllowedProcessingPingMisses = 10;
 
     public string JsonMessage { get; set; }
 
@@ -60,17 +60,6 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
                  (p.ConsumeStatus == ConsumeStatuses.Processing &&
                   (p.LastProcessingPingDate == null ||
                    p.LastProcessingPingDate < Clock.UtcNow.AddSeconds(-CheckProcessingPingIntervalSeconds * MaxAllowedProcessingPingMisses)));
-
-        return initialExpr.AndAlsoIf(forApplicationName.IsNotNullOrEmpty(), () => p => p.ForApplicationName == null || p.ForApplicationName == forApplicationName);
-    }
-
-    public static Expression<Func<PlatformInboxBusMessage, bool>> IsProcessingExpr(
-        string? forApplicationName)
-    {
-        Expression<Func<PlatformInboxBusMessage, bool>> initialExpr =
-            p => p.ConsumeStatus == ConsumeStatuses.Processing &&
-                 p.LastProcessingPingDate != null &&
-                 p.LastProcessingPingDate > Clock.UtcNow.AddSeconds(-CheckProcessingPingIntervalSeconds * MaxAllowedProcessingPingMisses);
 
         return initialExpr.AndAlsoIf(forApplicationName.IsNotNullOrEmpty(), () => p => p.ForApplicationName == null || p.ForApplicationName == forApplicationName);
     }

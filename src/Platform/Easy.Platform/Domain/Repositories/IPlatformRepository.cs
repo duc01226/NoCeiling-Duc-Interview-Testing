@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Linq.Expressions;
+using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Entities;
@@ -567,6 +568,12 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         CancellationToken cancellationToken = default);
 
     public Task<int> DeleteManyAsync(
+        Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default);
+
+    public Task<int> DeleteManyAsync(
         IPlatformUnitOfWork uow,
         Expression<Func<TEntity, bool>> predicate,
         bool dismissSendEvent = false,
@@ -827,6 +834,21 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
     : IPlatformQueryableRepository<TEntity, TPrimaryKey>, IPlatformRootRepository<TEntity, TPrimaryKey>
     where TEntity : class, IRootEntity<TPrimaryKey>, new()
 {
+    IPlatformRootServiceProvider GetRootServiceProvider();
+
+    public async Task<List<TEntity>> DeleteManyReturnDeletedItemsAsync(
+        Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+    {
+        var items = await GetAllAsync(queryBuilder, cancellationToken);
+
+        await DeleteManyAsync(items, dismissSendEvent, eventCustomConfig, cancellationToken);
+
+        return items;
+    }
+
     /// <summary>
     /// Asynchronously deletes multiple entities from the repository using a scrolling paging mechanism.
     /// </summary>
@@ -848,25 +870,28 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
     {
         pageSize ??= Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
 
-        await Util.Pager.ExecuteScrollingPagingAsync(
-            async () =>
-            {
-                using (var uow = UowManager().CreateNewUow(true))
+        if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(GetRootServiceProvider()))
+            await DeleteManyAsync(predicate, dismissSendEvent, eventCustomConfig, cancellationToken);
+        else
+            await Util.Pager.ExecuteScrollingPagingAsync(
+                async () =>
                 {
-                    var pagingDeleteItems = await GetAllAsync(
-                        GetQuery(uow).Where(predicate).Take(pageSize.Value),
-                        cancellationToken);
+                    using (var uow = UowManager().CreateNewUow(true))
+                    {
+                        var pagingDeleteItems = await GetAllAsync(
+                            GetQuery(uow).Where(predicate).Take(pageSize.Value),
+                            cancellationToken);
 
-                    await DeleteManyAsync(uow, pagingDeleteItems, dismissSendEvent, eventCustomConfig, cancellationToken);
+                        await DeleteManyAsync(uow, pagingDeleteItems, dismissSendEvent: false, eventCustomConfig, cancellationToken);
 
-                    await uow.CompleteAsync(cancellationToken);
+                        await uow.CompleteAsync(cancellationToken);
 
-                    return pagingDeleteItems;
-                }
-            },
-            await CountAsync(predicate, cancellationToken)
-                .Then(totalItemsCount => totalItemsCount / pageSize.Value),
-            cancellationToken: cancellationToken);
+                        return pagingDeleteItems;
+                    }
+                },
+                await CountAsync(predicate, cancellationToken)
+                    .Then(totalItemsCount => totalItemsCount / pageSize.Value),
+                cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -899,7 +924,8 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                             cancellationToken)
                         .ThenAction(items => items.ForEach(updateAction));
 
-                    SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate(pagingUpdateItems, uow);
+                    if (!dismissSendEvent)
+                        SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate(pagingUpdateItems, uow);
 
                     await UpdateManyAsync(uow, pagingUpdateItems, dismissSendEvent, eventCustomConfig, cancellationToken);
 
@@ -941,7 +967,8 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                             cancellationToken)
                         .ThenAction(items => items.ForEach(updateAction));
 
-                    SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate(pagingUpdateItems, uow);
+                    if (!dismissSendEvent)
+                        SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate(pagingUpdateItems, uow);
 
                     var updatedItems = await UpdateManyAsync(uow, pagingUpdateItems, dismissSendEvent, eventCustomConfig, cancellationToken);
 

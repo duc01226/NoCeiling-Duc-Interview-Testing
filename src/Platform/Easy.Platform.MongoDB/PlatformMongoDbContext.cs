@@ -409,6 +409,24 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent: false, eventCustomConfig, cancellationToken).Then(_ => entities.Count);
     }
 
+    public async Task<int> DeleteManyAsync<TEntity, TPrimaryKey>(
+        Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider))
+        {
+            var ids = await GetAllAsync<TEntity, TPrimaryKey>(queryBuilder: query => queryBuilder(query).Select(p => p.Id), cancellationToken);
+
+            return (int)await GetTable<TEntity>().DeleteManyAsync(p => ids.Contains(p.Id), null, cancellationToken).Then(p => p.DeletedCount);
+        }
+
+        var entities = await GetAllAsync(queryBuilder(GetQuery<TEntity>()), cancellationToken);
+
+        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent: false, eventCustomConfig, cancellationToken).Then(_ => entities.Count);
+    }
+
     public Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,

@@ -451,6 +451,12 @@ public interface IPlatformDbContext : IDisposable
         Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
+    public Task<int> DeleteManyAsync<TEntity, TPrimaryKey>(
+        Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
+
     public Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,

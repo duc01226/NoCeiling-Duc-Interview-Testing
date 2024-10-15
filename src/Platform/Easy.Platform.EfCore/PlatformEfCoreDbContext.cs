@@ -394,6 +394,20 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent: false, eventCustomConfig, cancellationToken).Then(_ => entities.Count);
     }
 
+    public async Task<int> DeleteManyAsync<TEntity, TPrimaryKey>(
+        Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider))
+            return await queryBuilder(GetTable<TEntity>()).ExecuteDeleteAsync(cancellationToken);
+
+        var entities = await GetAllAsync(queryBuilder(GetQuery<TEntity>()), cancellationToken);
+
+        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent: false, eventCustomConfig, cancellationToken).Then(_ => entities.Count);
+    }
+
     public async Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,

@@ -668,6 +668,37 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     }
 
     public override async Task<int> DeleteManyAsync(
+        Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+    {
+        return await DeleteManyAsync(null, queryBuilder, dismissSendEvent, eventCustomConfig, cancellationToken);
+    }
+
+    public override async Task<int> DeleteManyAsync(
+        IPlatformUnitOfWork uow,
+        Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (IsDistributedTracingEnabled)
+            using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteManyAsync)}"))
+            {
+                activity?.AddTag("EntityType", typeof(TEntity).FullName);
+
+                return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+                    uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(queryBuilder, dismissSendEvent, eventCustomConfig, cancellationToken),
+                    uow);
+            }
+
+        return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
+            uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(queryBuilder, dismissSendEvent, eventCustomConfig, cancellationToken),
+            uow);
+    }
+
+    public override async Task<int> DeleteManyAsync(
         IPlatformUnitOfWork uow,
         Expression<Func<TEntity, bool>> predicate,
         bool dismissSendEvent = false,

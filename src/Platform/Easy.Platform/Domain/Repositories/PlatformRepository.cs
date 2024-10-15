@@ -244,6 +244,11 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         return GetQuery(CurrentActiveUow(), loadRelatedEntities);
     }
 
+    public IPlatformRootServiceProvider GetRootServiceProvider()
+    {
+        return RootServiceProvider;
+    }
+
     public abstract Task<TSource> FirstOrDefaultAsync<TSource>(
         IEnumerable<TSource> query,
         CancellationToken cancellationToken = default);
@@ -398,8 +403,21 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         CancellationToken cancellationToken = default);
 
     public abstract Task<int> DeleteManyAsync(
+        Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default);
+
+    public abstract Task<int> DeleteManyAsync(
         IPlatformUnitOfWork uow,
         Expression<Func<TEntity, bool>> predicate,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default);
+
+    public abstract Task<int> DeleteManyAsync(
+        IPlatformUnitOfWork uow,
+        Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
