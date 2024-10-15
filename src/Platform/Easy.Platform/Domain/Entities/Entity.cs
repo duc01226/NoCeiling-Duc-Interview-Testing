@@ -184,7 +184,7 @@ public interface ISupportDomainEventsEntity
 /// </summary>
 /// <typeparam name="TEntity">Type of the entity.</typeparam>
 public interface ISupportDomainEventsEntity<out TEntity> : ISupportDomainEventsEntity
-    where TEntity : class, IEntity, new()
+    where TEntity : IEntity
 {
     /// <summary>
     /// Adds a domain event to the entity.
@@ -211,7 +211,16 @@ public interface IValidatableEntity<TEntity, TPrimaryKey> : IValidatableEntity<T
     public PlatformCheckUniqueValidator<TEntity> CheckUniqueValidator();
 }
 
-public interface IUniqueCompositeIdSupport<TEntity>
+public interface IUniqueCompositeIdSupport
+{
+    /// <summary>
+    /// Its unique composite ID.
+    /// Default should return Null if no unique composite ID is defined.
+    /// </summary>
+    public string UniqueCompositeId();
+}
+
+public interface IUniqueCompositeIdSupport<TEntity> : IUniqueCompositeIdSupport
     where TEntity : class, IEntity, new()
 {
     /// <summary>
@@ -220,13 +229,6 @@ public interface IUniqueCompositeIdSupport<TEntity>
     /// Used to check existing for create of update
     /// </summary>
     public Expression<Func<TEntity, bool>> FindByUniqueCompositeIdExpr();
-
-
-    /// <summary>
-    /// Its unique composite ID.
-    /// Default should return Null if no unique composite ID is defined.
-    /// </summary>
-    public string UniqueCompositeId();
 }
 
 /// <summary>

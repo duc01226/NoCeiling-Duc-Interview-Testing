@@ -63,7 +63,7 @@ public static class AutoAddFieldUpdatedEventEntityExtensions
     /// <br />
     /// In the context of the provided code, this method is used to determine whether an entity should automatically add a field updated event. Specifically, it's used in the AutoAddFieldUpdatedEvent method to decide if the entity's properties should be inspected for changes. If the entity has the TrackFieldUpdatedDomainEventAttribute, the method will iterate over the entity's properties, excluding certain ones, and check if their values have changed. If a property's value has changed, a field updated event is added.
     /// </summary>
-    public static bool HasTrackValueUpdatedDomainEventAttribute<TEntity>(this TEntity entity) where TEntity : class, IEntity, new()
+    public static bool HasTrackValueUpdatedDomainEventAttribute<TEntity>(this TEntity entity) where TEntity : IEntity
     {
         return entity is ISupportDomainEventsEntity<TEntity> &&
                typeof(TEntity).GetCustomAttribute(typeof(TrackFieldUpdatedDomainEventAttribute), true) != null;

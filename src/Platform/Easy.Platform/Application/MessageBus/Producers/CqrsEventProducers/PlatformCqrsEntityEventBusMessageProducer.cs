@@ -1,4 +1,5 @@
 using Easy.Platform.Common;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.UnitOfWork;
@@ -50,8 +51,8 @@ public abstract class PlatformCqrsEntityEventBusMessageProducer<TMessage, TEntit
 public class PlatformCqrsEntityEventBusMessage<TEntity, TPrimaryKey> : PlatformBusMessage<PlatformCqrsEntityEvent<TEntity>>
     where TEntity : class, IEntity<TPrimaryKey>, new()
 {
-    public override string SubQueuePrefix()
+    public override string? SubQueuePrefix()
     {
-        return Payload?.EntityData?.Id?.ToString() ?? TrackingId;
+        return Payload?.EntityData?.As<IUniqueCompositeIdSupport>()?.UniqueCompositeId() ?? Payload?.EntityData?.Id?.ToString();
     }
 }

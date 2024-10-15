@@ -96,7 +96,8 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                         .GetServices<IPlatformApplicationDataSeeder>()
                         .DistinctBy(p => p.GetType())
                         .Where(p => p.DelaySeedingInBackgroundBySeconds == 0)
-                        .OrderBy(p => p.SeedOrder)
+                        .GroupBy(p => p.SeedOrder)
+                        .OrderBy(p => p.Key)
                         .ToList());
 
                 await ExecuteDataSeeders(
@@ -104,7 +105,8 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                         .GetServices<IPlatformApplicationDataSeeder>()
                         .DistinctBy(p => p.GetType())
                         .Where(p => p.DelaySeedingInBackgroundBySeconds > 0)
-                        .OrderBy(p => p.SeedOrder)
+                        .GroupBy(p => p.SeedOrder)
+                        .OrderBy(p => p.Key)
                         .ToList(),
                     inBackground: true);
             },
@@ -128,7 +130,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             logger.LogInformation("[SeedData] {DataSeeder} FINISHED.", dataSeeder.GetType().Name);
         }
 
-        async Task ExecuteDataSeeders(List<IPlatformApplicationDataSeeder> dataSeeders, bool inBackground = false)
+        async Task ExecuteDataSeeders(List<IGrouping<int, IPlatformApplicationDataSeeder>> dataSeeders, bool inBackground = false)
         {
             if (inBackground)
                 Util.TaskRunner.QueueActionInBackground(
@@ -138,30 +140,34 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                 await RunDataSeeders(dataSeeders);
         }
 
-        async Task RunDataSeeders(List<IPlatformApplicationDataSeeder> dataSeeders, bool inNewScope = false)
+        async Task RunDataSeeders(List<IGrouping<int, IPlatformApplicationDataSeeder>> dataSeederGroups, bool inNewScope = false)
         {
-            await dataSeeders.ForEachAsync(
-                async seeder =>
+            await dataSeederGroups.ForEachAsync(
+                async dataSeederGroup =>
                 {
-                    if (seeder.DelaySeedingInBackgroundBySeconds > 0)
-                    {
-                        Logger.LogInformation(
-                            "[SeedData] {Seeder} is SCHEDULED running in background after {DelaySeedingInBackgroundBySeconds} seconds.",
-                            seeder.GetType().Name,
-                            seeder.DelaySeedingInBackgroundBySeconds);
-
-                        await Task.Delay(seeder.DelaySeedingInBackgroundBySeconds.Seconds());
-                    }
-
-                    if (inNewScope)
-                        using (var newScope = ServiceProvider.CreateScope())
+                    await dataSeederGroup.ParallelAsync(
+                        async seeder =>
                         {
-                            var dataSeeder = newScope.ServiceProvider.GetService(seeder.GetType()).As<IPlatformApplicationDataSeeder>();
+                            if (seeder.DelaySeedingInBackgroundBySeconds > 0)
+                            {
+                                Logger.LogInformation(
+                                    "[SeedData] {Seeder} is SCHEDULED running in background after {DelaySeedingInBackgroundBySeconds} seconds.",
+                                    seeder.GetType().Name,
+                                    seeder.DelaySeedingInBackgroundBySeconds);
 
-                            await ExecuteDataSeederWithLog(dataSeeder, Logger);
-                        }
-                    else
-                        await ExecuteDataSeederWithLog(seeder, Logger);
+                                await Task.Delay(seeder.DelaySeedingInBackgroundBySeconds.Seconds());
+                            }
+
+                            if (inNewScope)
+                                using (var newScope = ServiceProvider.CreateScope())
+                                {
+                                    var dataSeeder = newScope.ServiceProvider.GetService(seeder.GetType()).As<IPlatformApplicationDataSeeder>();
+
+                                    await ExecuteDataSeederWithLog(dataSeeder, Logger);
+                                }
+                            else
+                                await ExecuteDataSeederWithLog(seeder, Logger);
+                        });
                 });
         }
     }

@@ -141,12 +141,12 @@ public interface IPlatformUnitOfWork : IDisposable
     /// This method is used to cache an entity, so it can be retrieved later without querying the database again.
     /// It helps in improving performance by reducing the number of database calls.
     /// </remarks>
-    public TEntity SetCachedExistingOriginalEntityForTrackingCompareAfterUpdate<TEntity>(TEntity existingEntity, Type runtimeEntityType = null)
+    public TEntity SetCachedExistingOriginalEntity<TEntity>(TEntity existingEntity, Type runtimeEntityType = null)
         where TEntity : class, IEntity;
 
-    public void RemoveCachedExistingOriginalEntityForTrackingCompareAfterUpdate(string existingEntityId);
+    public void RemoveCachedExistingOriginalEntity(string existingEntityId);
 
-    public void ClearCachedExistingOriginalEntityForTrackingCompareAfterUpdate();
+    public void ClearCachedExistingOriginalEntity();
 
     /// <summary>
     /// Get itself or inner uow which is TUnitOfWork.
@@ -304,11 +304,11 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
         return cachedExistingOriginalEntity.As<TEntity>();
     }
 
-    public virtual TEntity SetCachedExistingOriginalEntityForTrackingCompareAfterUpdate<TEntity>(TEntity existingEntity, Type runtimeEntityType = null)
+    public virtual TEntity SetCachedExistingOriginalEntity<TEntity>(TEntity existingEntity, Type runtimeEntityType = null)
         where TEntity : class, IEntity
     {
         var castedRuntimeTypeExistingEntity = (runtimeEntityType != null ? Convert.ChangeType(existingEntity, runtimeEntityType) : existingEntity)
-            .Pipe(p => p.DeepClone());
+            .PipeIf(p => p.As<IEntity>().HasTrackValueUpdatedDomainEventAttribute(), p => p.DeepClone());
 
         CachedExistingOriginalEntities.AddOrUpdate(
             existingEntity.GetId().ToString(),
@@ -318,12 +318,12 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
         return existingEntity;
     }
 
-    public void RemoveCachedExistingOriginalEntityForTrackingCompareAfterUpdate(string existingEntityId)
+    public void RemoveCachedExistingOriginalEntity(string existingEntityId)
     {
         CachedExistingOriginalEntities.TryRemove(existingEntityId, out _);
     }
 
-    public void ClearCachedExistingOriginalEntityForTrackingCompareAfterUpdate()
+    public void ClearCachedExistingOriginalEntity()
     {
         CachedExistingOriginalEntities.Clear();
     }

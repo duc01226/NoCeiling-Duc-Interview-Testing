@@ -121,7 +121,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         {
             await base.SaveChangesAsync(cancellationToken);
 
-            MappedUnitOfWork?.ClearCachedExistingOriginalEntityForTrackingCompareAfterUpdate();
+            MappedUnitOfWork?.ClearCachedExistingOriginalEntity();
         }
         catch (DbUpdateConcurrencyException ex)
         {
@@ -129,7 +129,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 .Where(p => p.State == EntityState.Modified || p.State == EntityState.Added || p.State == EntityState.Deleted)
                 .Select(p => p.Entity.As<IEntity>()?.GetId()?.ToString())
                 .Where(p => p != null)
-                .ForEach(id => MappedUnitOfWork?.RemoveCachedExistingOriginalEntityForTrackingCompareAfterUpdate(id));
+                .ForEach(id => MappedUnitOfWork?.RemoveCachedExistingOriginalEntity(id));
             ChangeTracker.Clear();
 
             throw new PlatformDomainRowVersionConflictException($"Save changes has conflicted version. {ex.Message}", ex);
@@ -420,8 +420,6 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         {
             await NotThreadSafeDbContextQueryLock.WaitAsync(cancellationToken);
 
-            await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
-
             var toBeCreatedEntity = entity
                 .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
                 .PipeIf(
@@ -480,7 +478,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                                  .FirstOrDefaultAsync(cancellationToken)
                                  .ThenActionIf(
                                      p => p != null && MappedUnitOfWork?.CreatedByUnitOfWorkManager.HasCurrentActiveUow() == true,
-                                     p => MappedUnitOfWork?.SetCachedExistingOriginalEntityForTrackingCompareAfterUpdate(p));
+                                     p => MappedUnitOfWork?.SetCachedExistingOriginalEntity(p));
 
         if (existingEntity != null)
             return await UpdateAsync<TEntity, TPrimaryKey>(
@@ -593,8 +591,6 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         try
         {
             await NotThreadSafeDbContextQueryLock.WaitAsync(cancellationToken);
-
-            await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
 
             var isEntityRowVersionEntityMissingConcurrencyUpdateToken = entity is IRowVersionEntity { ConcurrencyUpdateToken: null };
 

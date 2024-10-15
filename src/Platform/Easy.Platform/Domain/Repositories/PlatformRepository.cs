@@ -140,9 +140,9 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         if (isAnyKindsOfEventHandlerRegisteredForEntity)
         {
             if (result is TEntity resultSingleEntity)
-                uow.SetCachedExistingOriginalEntityForTrackingCompareAfterUpdate(resultSingleEntity);
+                uow.SetCachedExistingOriginalEntity(resultSingleEntity);
             else if (result is ICollection<TEntity> resultMultipleEntities && resultMultipleEntities.Any())
-                resultMultipleEntities.ForEach(p => uow.SetCachedExistingOriginalEntityForTrackingCompareAfterUpdate(p));
+                resultMultipleEntities.ForEach(p => uow.SetCachedExistingOriginalEntity(p));
         }
     }
 

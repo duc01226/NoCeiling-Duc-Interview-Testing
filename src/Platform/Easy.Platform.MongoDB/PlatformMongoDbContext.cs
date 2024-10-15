@@ -455,7 +455,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                                  .FirstOrDefaultAsync(cancellationToken)
                                  .ThenActionIf(
                                      p => p != null && MappedUnitOfWork?.CreatedByUnitOfWorkManager.HasCurrentActiveUow() == true,
-                                     p => MappedUnitOfWork?.SetCachedExistingOriginalEntityForTrackingCompareAfterUpdate(p));
+                                     p => MappedUnitOfWork?.SetCachedExistingOriginalEntity(p));
 
         if (existingEntity != null)
             return await UpdateAsync<TEntity, TPrimaryKey>(
@@ -564,8 +564,6 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
-
         var isEntityRowVersionEntityMissingConcurrencyUpdateToken = entity is IRowVersionEntity { ConcurrencyUpdateToken: null };
 
         if (existingEntity == null &&
@@ -629,7 +627,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             {
                 if (await GetTable<TEntity>().AsQueryable().AnyAsync(p => p.Id.Equals(toBeUpdatedEntity.Id), cancellationToken))
                 {
-                    MappedUnitOfWork?.RemoveCachedExistingOriginalEntityForTrackingCompareAfterUpdate(toBeUpdatedEntity.Id.ToString());
+                    MappedUnitOfWork?.RemoveCachedExistingOriginalEntity(toBeUpdatedEntity.Id.ToString());
 
                     throw new PlatformDomainRowVersionConflictException(
                         $"Update {typeof(TEntity).Name} with Id:{toBeUpdatedEntity.Id} has conflicted version.");
@@ -661,7 +659,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 throw new PlatformDomainEntityNotFoundException<TEntity>(toBeUpdatedEntity.Id.ToString());
         }
 
-        MappedUnitOfWork?.RemoveCachedExistingOriginalEntityForTrackingCompareAfterUpdate(entity.Id.ToString());
+        MappedUnitOfWork?.RemoveCachedExistingOriginalEntity(entity.Id.ToString());
 
         return entity;
 
@@ -862,8 +860,6 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        await this.As<IPlatformDbContext>().EnsureEntityValid<TEntity, TPrimaryKey>(entity, cancellationToken);
-
         var toBeCreatedEntity = entity
             .PipeIf(
                 entity.IsAuditedUserEntity(),
