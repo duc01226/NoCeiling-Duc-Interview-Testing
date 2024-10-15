@@ -9,7 +9,8 @@ internal sealed class PlatformPseudoApplicationUnitOfWorkManager : PlatformUnitO
 {
     public PlatformPseudoApplicationUnitOfWorkManager(
         Lazy<IPlatformCqrs> cqrs,
-        IPlatformRootServiceProvider rootServiceProvider) : base(cqrs, rootServiceProvider)
+        IPlatformRootServiceProvider rootServiceProvider,
+        IServiceProvider serviceProvider) : base(cqrs, rootServiceProvider, serviceProvider)
     {
     }
 

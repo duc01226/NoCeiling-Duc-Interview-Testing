@@ -112,14 +112,61 @@ public interface IPlatformUnitOfWorkManager : IDisposable
     /// </remarks>
     public IPlatformUnitOfWork Begin(bool suppressCurrentUow = true);
 
+    IServiceProvider CurrentScopeServiceProvider();
+
+    IPlatformRootServiceProvider GetRootServiceProvider();
+
     /// <summary>
     /// Remove all managed inactive uow to clear memory
     /// </summary>
     public void RemoveAllInactiveUow();
+
+    /// <inheritdoc cref="DependencyInjectionExtension.ExecuteInjectScopedScrollingPagingAsync{TItem}(System.IServiceProvider,int,System.Delegate,object[])" />
+    public async Task ExecuteInjectScopedScrollingPagingAsync<TItem>(
+        Delegate method,
+        int maxExecutionCount,
+        params object[] manuallyParams)
+    {
+        await GetRootServiceProvider()
+            .ExecuteInjectScopedScrollingPagingAsync<TItem>(
+                maxExecutionCount,
+                async (IPlatformUnitOfWorkManager newScopeUnitOfWorkManager, IServiceProvider serviceProvider) =>
+                {
+                    using (var uow = newScopeUnitOfWorkManager.Begin(false))
+                    {
+                        var result = await serviceProvider.ExecuteInjectAsync<List<TItem>>(method, manuallyParams ?? []);
+
+                        await uow.CompleteAsync();
+
+                        return result;
+                    }
+                });
+    }
+
+    /// <inheritdoc cref="DependencyInjectionExtension.ExecuteInjectScopedPagingAsync(System.IServiceProvider,long,int,System.Delegate,object[])" />
+    public async Task ExecuteInjectScopedPagingAsync(
+        long maxItemCount,
+        int pageSize,
+        Delegate method,
+        params object[] manuallyParams)
+    {
+        await GetRootServiceProvider()
+            .ExecuteInjectScopedPagingAsync(
+                maxItemCount,
+                pageSize,
+                async (int skipCount, int pageSize, IPlatformUnitOfWorkManager newScopeUnitOfWorkManager, IServiceProvider serviceProvider) =>
+                {
+                    using (var uow = newScopeUnitOfWorkManager.Begin(false))
+                    {
+                        await serviceProvider.ExecuteInjectAsync(method, manuallyParams: new object[] { skipCount, pageSize }.Concat(manuallyParams ?? []).ToArray());
+
+                        await uow.CompleteAsync();
+                    }
+                });
+    }
 }
 
-public abstract class PlatformUnitOfWorkManager(Lazy<IPlatformCqrs> cqrs, IPlatformRootServiceProvider rootServiceProvider)
-    : IPlatformUnitOfWorkManager
+public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
 {
     protected readonly List<IPlatformUnitOfWork> CurrentUnitOfWorks = [];
 
@@ -127,13 +174,22 @@ public abstract class PlatformUnitOfWorkManager(Lazy<IPlatformCqrs> cqrs, IPlatf
         FreeCreatedUnitOfWorks = new(() => new ConcurrentDictionary<string, IPlatformUnitOfWork>(), true);
 
     protected readonly SemaphoreSlim RemoveAllInactiveUowLock = new(1, 1);
-    protected readonly IPlatformRootServiceProvider RootServiceProvider = rootServiceProvider;
+    protected readonly IPlatformRootServiceProvider RootServiceProvider;
+    private readonly Lazy<IPlatformCqrs> cqrsLazy;
+    private readonly IServiceProvider serviceProvider;
 
     private bool disposed;
     private bool disposing;
     private IPlatformUnitOfWork globalUow;
 
-    public IPlatformCqrs CurrentSameScopeCqrs => cqrs.Value;
+    protected PlatformUnitOfWorkManager(Lazy<IPlatformCqrs> cqrs, IPlatformRootServiceProvider rootServiceProvider, IServiceProvider serviceProvider)
+    {
+        this.serviceProvider = serviceProvider;
+        RootServiceProvider = rootServiceProvider;
+        cqrsLazy = cqrs;
+    }
+
+    public IPlatformCqrs CurrentSameScopeCqrs => cqrsLazy.Value;
 
     public abstract IPlatformUnitOfWork CreateNewUow(bool isUsingOnceTransientUow);
 
@@ -204,6 +260,16 @@ public abstract class PlatformUnitOfWorkManager(Lazy<IPlatformCqrs> cqrs, IPlatf
         if (suppressCurrentUow || CurrentUnitOfWorks.IsEmpty()) CurrentUnitOfWorks.Add(CreateNewUow(false));
 
         return CurrentUow();
+    }
+
+    public IServiceProvider CurrentScopeServiceProvider()
+    {
+        return serviceProvider;
+    }
+
+    public IPlatformRootServiceProvider GetRootServiceProvider()
+    {
+        return RootServiceProvider;
     }
 
     public TUnitOfWork CurrentActiveUowOfType<TUnitOfWork>() where TUnitOfWork : class, IPlatformUnitOfWork

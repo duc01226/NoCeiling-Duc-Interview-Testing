@@ -1239,7 +1239,7 @@ public static class DependencyInjectionExtension
     /// manuallyParams to override using based on param index position. <br />
     /// Example: method = (T1 param1, T2 param2); serviceProvider.ResolveMethodParameters(method, null, customParam2Value) equal to method(serviceProvider.GetService[T1](),customParam2Value)
     /// </summary>
-    public static object[] ResolveMethodParameters(this IServiceProvider serviceProvider, Delegate method, params object[] manuallyParams)
+    public static object[] ResolveMethodParameters(this IServiceProvider serviceProvider, Delegate method, object[] manuallyParams)
     {
         var parameters = method.Method.GetParameters()
             .Select(
@@ -1260,7 +1260,7 @@ public static class DependencyInjectionExtension
         return parameters;
     }
 
-    public static object[] ResolveMethodParameters(this IServiceScope scope, Delegate method, params object[] manuallyParams)
+    public static object[] ResolveMethodParameters(this IServiceScope scope, Delegate method, object[] manuallyParams)
     {
         return scope.ServiceProvider.ResolveMethodParameters(method, manuallyParams);
     }

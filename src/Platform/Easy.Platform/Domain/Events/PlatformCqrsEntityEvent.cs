@@ -223,7 +223,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         IPlatformRootServiceProvider rootServiceProvider,
         IPlatformUnitOfWork? mappedToDbContextUow,
         TEntity entity,
-        TEntity? existingEntity,
+        TEntity? existingOriginalEntity,
         PlatformCqrsEntityEventCrudAction crudAction,
         Action<PlatformCqrsEntityEvent> eventCustomConfig,
         Func<IDictionary<string, object>> requestContext,
@@ -235,7 +235,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
             rootServiceProvider,
             mappedToDbContextUow,
             () => new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(
-                @event => @event.ExistingEntityData = existingEntity),
+                @event => @event.ExistingEntityData = existingOriginalEntity),
             eventCustomConfig,
             requestContext,
             eventStackTrace,
@@ -285,8 +285,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                             entity,
                             entity,
                             PlatformCqrsEntityEventCrudAction.Deleted,
-                            eventCustomConfig: eventCustomConfig,
-                            requestContext: requestContext,
+                            eventCustomConfig,
+                            requestContext,
                             eventStackTrace,
                             cancellationToken);
                 });
@@ -316,8 +316,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                             entity,
                             null,
                             PlatformCqrsEntityEventCrudAction.Created,
-                            eventCustomConfig: eventCustomConfig,
-                            requestContext: requestContext,
+                            eventCustomConfig,
+                            requestContext,
                             eventStackTrace,
                             cancellationToken);
                 });
@@ -329,7 +329,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         IPlatformRootServiceProvider rootServiceProvider,
         IPlatformUnitOfWork unitOfWork,
         TEntity entity,
-        TEntity? existingEntity,
+        TEntity? existingOriginalEntity,
         Func<TEntity, Task<TResult>> updateEntityAction,
         bool dismissSendEvent,
         Action<PlatformCqrsEntityEvent> eventCustomConfig,
@@ -337,8 +337,8 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         string eventStackTrace,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        if (!dismissSendEvent && existingEntity != null)
-            entity.AutoAddFieldUpdatedEvent(existingEntity);
+        if (!dismissSendEvent && existingOriginalEntity != null)
+            entity.AutoAddFieldUpdatedEvent(existingOriginalEntity);
 
         var result = await updateEntityAction(entity)
             .ThenActionAsync(
@@ -349,10 +349,10 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                             rootServiceProvider,
                             unitOfWork,
                             entity,
-                            existingEntity,
+                            existingOriginalEntity,
                             PlatformCqrsEntityEventCrudAction.Updated,
-                            eventCustomConfig: eventCustomConfig,
-                            requestContext: requestContext,
+                            eventCustomConfig,
+                            requestContext,
                             eventStackTrace,
                             cancellationToken);
                 });
@@ -411,6 +411,9 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent, IPlatfo
 
     public new TEntity EntityData { get; set; }
 
+    /// <summary>
+    /// Existing entity data before update/delete. Only available for entity implement <see cref="IRowVersionEntity" /> or entity with attribute <see cref="TrackFieldUpdatedDomainEventAttribute" />
+    /// </summary>
     public new TEntity? ExistingEntityData { get; set; }
 
     public List<KeyValuePair<string, string>> DomainEvents { get; set; } = [];

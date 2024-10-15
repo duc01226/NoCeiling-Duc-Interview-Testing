@@ -586,10 +586,11 @@ public static partial class Util
             int retryCount = DefaultResilientRetryCount,
             Action<Exception> onBeforeThrowFinalExceptionFn = null,
             Action<Exception, TimeSpan, int, Context> onRetry = null,
+            List<Type> ignoreExceptionTypes = null,
             CancellationToken cancellationToken = default) where TException : Exception
         {
             return Policy
-                .Handle<TException>()
+                .Handle<TException>(ex => ignoreExceptionTypes == null || !ignoreExceptionTypes.Any(ignoreExType => ex.GetType().IsAssignableTo(ignoreExType)))
                 .WaitAndRetryAsync(
                     retryCount,
                     sleepDurationProvider ?? (retryAttempt => DefaultWaitIntervalSeconds.Seconds()),
@@ -625,6 +626,7 @@ public static partial class Util
             int retryCount = DefaultResilientRetryCount,
             Action<Exception> onBeforeThrowFinalExceptionFn = null,
             Action<Exception, TimeSpan, int, Context> onRetry = null,
+            List<Type> ignoreExceptionTypes = null,
             CancellationToken cancellationToken = default)
         {
             return WaitRetryThrowFinalExceptionAsync<T, Exception>(
@@ -633,6 +635,7 @@ public static partial class Util
                 retryCount,
                 onBeforeThrowFinalExceptionFn,
                 onRetry,
+                ignoreExceptionTypes,
                 cancellationToken);
         }
 

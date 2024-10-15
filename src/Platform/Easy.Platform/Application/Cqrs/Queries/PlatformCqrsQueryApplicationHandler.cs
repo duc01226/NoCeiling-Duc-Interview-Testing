@@ -5,8 +5,10 @@ using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Queries;
+using Easy.Platform.Common.Exceptions;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
+using Easy.Platform.Common.Validations.Exceptions;
 using Easy.Platform.Common.Validations.Extensions;
 using Easy.Platform.Infrastructures.Caching;
 using MediatR;
@@ -17,6 +19,7 @@ namespace Easy.Platform.Application.Cqrs.Queries;
 
 public interface IPlatformCqrsQueryApplicationHandler
 {
+    public static readonly List<Type> IgnoreFailedRetryExceptionTypes = [typeof(IPlatformValidationException), typeof(PlatformNotFoundException)];
     public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformCqrsQueryApplicationHandler)}");
 }
 
@@ -80,6 +83,7 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
                 () => DoExecuteHandleAsync(request, cancellationToken),
                 retryCount: RetryOnFailedTimes,
                 sleepDurationProvider: i => RetryOnFailedDelaySeconds.Seconds(),
+                ignoreExceptionTypes: IPlatformCqrsQueryApplicationHandler.IgnoreFailedRetryExceptionTypes,
                 cancellationToken: cancellationToken);
         return await DoExecuteHandleAsync(request, cancellationToken);
     }

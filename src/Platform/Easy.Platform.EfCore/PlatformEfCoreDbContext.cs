@@ -130,6 +130,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 .Select(p => p.Entity.As<IEntity>()?.GetId()?.ToString())
                 .Where(p => p != null)
                 .ForEach(id => MappedUnitOfWork?.RemoveCachedExistingOriginalEntityForTrackingCompareAfterUpdate(id));
+            ChangeTracker.Clear();
 
             throw new PlatformDomainRowVersionConflictException($"Save changes has conflicted version. {ex.Message}", ex);
         }
@@ -352,12 +353,12 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider))
-            return await DeleteManyAsync<TEntity, TPrimaryKey>(predicate: p => entityIds.Contains(p.Id), dismissSendEvent: true, eventCustomConfig, cancellationToken)
+            return await DeleteManyAsync<TEntity, TPrimaryKey>(p => entityIds.Contains(p.Id), true, eventCustomConfig, cancellationToken)
                 .Then(() => entityIds);
 
         var entities = await GetAllAsync(GetQuery<TEntity>().Where(p => entityIds.Contains(p.Id)), cancellationToken);
 
-        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent: false, eventCustomConfig, cancellationToken).Then(() => entityIds);
+        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, false, eventCustomConfig, cancellationToken).Then(() => entityIds);
     }
 
     public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
@@ -369,13 +370,13 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     {
         if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider))
             return await DeleteManyAsync<TEntity, TPrimaryKey>(
-                    predicate: p => entities.Select(e => e.Id).Contains(p.Id),
-                    dismissSendEvent: true,
+                    p => entities.Select(e => e.Id).Contains(p.Id),
+                    true,
                     eventCustomConfig,
                     cancellationToken)
                 .Then(_ => entities);
 
-        return await entities.SelectAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent: false, eventCustomConfig, cancellationToken))
+        return await entities.SelectAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, false, eventCustomConfig, cancellationToken))
             .ThenActionAsync(
                 entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Deleted, eventCustomConfig, cancellationToken));
     }
@@ -391,7 +392,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
         var entities = await GetAllAsync(GetQuery<TEntity>().Where(predicate), cancellationToken);
 
-        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent: false, eventCustomConfig, cancellationToken).Then(_ => entities.Count);
+        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, false, eventCustomConfig, cancellationToken).Then(_ => entities.Count);
     }
 
     public async Task<int> DeleteManyAsync<TEntity, TPrimaryKey>(
@@ -405,7 +406,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
         var entities = await GetAllAsync(queryBuilder(GetQuery<TEntity>()), cancellationToken);
 
-        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent: false, eventCustomConfig, cancellationToken).Then(_ => entities.Count);
+        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, false, eventCustomConfig, cancellationToken).Then(_ => entities.Count);
     }
 
     public async Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(
@@ -583,7 +584,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
-        TEntity existingEntity,
+        TEntity? existingEntity,
         bool dismissSendEvent,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
@@ -598,27 +599,28 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             var isEntityRowVersionEntityMissingConcurrencyUpdateToken = entity is IRowVersionEntity { ConcurrencyUpdateToken: null };
 
             if (existingEntity == null &&
-                ((!dismissSendEvent && entity.HasTrackValueUpdatedDomainEventAttribute()) || isEntityRowVersionEntityMissingConcurrencyUpdateToken))
+                !dismissSendEvent &&
+                PlatformCqrsEntityEvent.IsAnyEntityEventHandlerRegisteredForEntity<TEntity>(RootServiceProvider) &&
+                entity.HasTrackValueUpdatedDomainEventAttribute())
             {
-                var existingEntityPredicate = entity.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() != null
-                    ? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!
-                    : p => p.Id.Equals(entity.Id);
-
                 existingEntity = MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
                                  await GetQuery<TEntity>()
                                      .AsNoTracking()
-                                     .Where(existingEntityPredicate)
+                                     .Where(BuildExistingEntityPredicate())
                                      .FirstOrDefaultAsync(cancellationToken)
-                                     .EnsureFound($"Entity {typeof(TEntity).Name} with [Id:{entity.Id}] not found to update")
-                                     .ThenActionIf(
-                                         MappedUnitOfWork?.CreatedByUnitOfWorkManager.HasCurrentActiveUow() == true,
-                                         p => MappedUnitOfWork?.SetCachedExistingOriginalEntityForTrackingCompareAfterUpdate(p));
+                                     .EnsureFound($"Entity {typeof(TEntity).Name} with [Id:{entity.Id}] not found to update");
 
                 if (!existingEntity.Id.Equals(entity.Id)) entity.Id = existingEntity.Id;
             }
 
             if (isEntityRowVersionEntityMissingConcurrencyUpdateToken)
-                entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = existingEntity.As<IRowVersionEntity>().ConcurrencyUpdateToken;
+                entity.As<IRowVersionEntity>().ConcurrencyUpdateToken =
+                    existingEntity?.As<IRowVersionEntity>().ConcurrencyUpdateToken ??
+                    await GetQuery<TEntity>()
+                        .AsNoTracking()
+                        .Where(BuildExistingEntityPredicate())
+                        .Select(p => ((IRowVersionEntity)p).ConcurrencyUpdateToken)
+                        .FirstOrDefaultAsync(cancellationToken);
 
             // Run DetachLocalIfAny to prevent
             // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
@@ -664,6 +666,13 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             if (NotThreadSafeDbContextQueryLock.CurrentCount < ContextMaxConcurrentThreadLock)
                 NotThreadSafeDbContextQueryLock.Release();
             throw;
+        }
+
+        Expression<Func<TEntity, bool>> BuildExistingEntityPredicate()
+        {
+            return entity.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() != null
+                ? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!
+                : p => p.Id.Equals(entity.Id);
         }
     }
 

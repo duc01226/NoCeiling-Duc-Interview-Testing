@@ -82,7 +82,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
     /// <summary>
     /// The unit of work manager.
     /// </summary>
-    protected readonly IPlatformUnitOfWorkManager UowManager;
+    protected readonly IPlatformUnitOfWorkManager UnitOfWorkManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlatformApplicationMessageBusConsumer{TMessage}" /> class.
@@ -97,7 +97,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory)
     {
-        UowManager = uowManager;
+        UnitOfWorkManager = uowManager;
         ServiceProvider = serviceProvider;
         RootServiceProvider = rootServiceProvider;
         InboxBusMessageRepo = new Lazy<IPlatformInboxBusMessageRepository>(serviceProvider.GetService<IPlatformInboxBusMessageRepository>);
@@ -212,7 +212,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                     // If auto-opening a unit of work is enabled, handle the message within a unit of work.
                     if (AutoOpenUow)
                     {
-                        using (var uow = UowManager.Begin())
+                        using (var uow = UnitOfWorkManager.Begin())
                         {
                             await HandleLogicAsync(message, routingKey);
                             await uow.CompleteAsync();
@@ -224,8 +224,8 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                         await HandleLogicAsync(message, routingKey);
 
                         // If a unit of work was started elsewhere, complete it to ensure changes are saved.
-                        if (UowManager.HasCurrentActiveUow())
-                            await UowManager.CurrentActiveUow().CompleteAsync();
+                        if (UnitOfWorkManager.HasCurrentActiveUow())
+                            await UnitOfWorkManager.CurrentActiveUow().CompleteAsync();
                     }
                 }
                 finally
@@ -236,6 +236,6 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                 }
             },
             retryCount: MinRowVersionConflictRetryOnFailedTimes + RetryOnFailedTimes,
-            sleepDurationProvider: p => TimeSpan.Zero);
+            sleepDurationProvider: p => RetryOnFailedDelaySeconds.Seconds());
     }
 }

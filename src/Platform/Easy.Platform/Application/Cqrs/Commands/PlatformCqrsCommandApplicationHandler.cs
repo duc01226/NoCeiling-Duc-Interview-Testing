@@ -5,9 +5,12 @@ using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Cqrs.Commands;
 using Easy.Platform.Common.Cqrs.Events;
+using Easy.Platform.Common.Exceptions;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
+using Easy.Platform.Common.Validations.Exceptions;
 using Easy.Platform.Common.Validations.Extensions;
+using Easy.Platform.Domain.Exceptions;
 using Easy.Platform.Domain.UnitOfWork;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +20,9 @@ namespace Easy.Platform.Application.Cqrs.Commands;
 
 public interface IPlatformCqrsCommandApplicationHandler
 {
+    public static readonly List<Type> IgnoreFailedRetryExceptionTypes =
+        [typeof(IPlatformValidationException), typeof(PlatformNotFoundException), typeof(PlatformDomainRowVersionConflictException)];
+
     public static readonly ActivitySource ActivitySource = new($"{nameof(IPlatformCqrsCommandApplicationHandler)}");
 }
 
@@ -181,6 +187,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                 () => DoExecuteHandleAsync(request, cancellationToken),
                 retryCount: RetryOnFailedTimes,
                 sleepDurationProvider: i => RetryOnFailedDelaySeconds.Seconds(),
+                ignoreExceptionTypes: IPlatformCqrsCommandApplicationHandler.IgnoreFailedRetryExceptionTypes,
                 cancellationToken: cancellationToken);
         return await DoExecuteHandleAsync(request, cancellationToken);
     }

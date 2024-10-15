@@ -127,7 +127,12 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     protected bool NotNeedWaitHandlerExecutionFinishedImmediately(TEvent @event)
     {
-        return !@event.MustWaitHandlerExecutionFinishedImmediately(GetType()) && !MustWaitHandlerExecutionFinishedImmediately;
+        return !NeedWaitHandlerExecutionFinishedImmediately(@event);
+    }
+
+    protected bool NeedWaitHandlerExecutionFinishedImmediately(TEvent @event)
+    {
+        return @event.MustWaitHandlerExecutionFinishedImmediately(GetType()) || MustWaitHandlerExecutionFinishedImmediately;
     }
 
     /// <summary>

@@ -350,8 +350,8 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                     await HandleAsync(@event, cancellationToken);
                 }
             },
-            retryCount: MinRowVersionConflictRetryOnFailedTimes + RetryOnFailedTimes,
-            sleepDurationProvider: p => TimeSpan.Zero,
+            retryCount: NeedWaitHandlerExecutionFinishedImmediately(@event) ? RetryOnFailedTimes : MinRowVersionConflictRetryOnFailedTimes + RetryOnFailedTimes,
+            sleepDurationProvider: p => RetryOnFailedDelaySeconds.Seconds(),
             cancellationToken: cancellationToken);
     }
 

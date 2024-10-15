@@ -13,7 +13,7 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
     public PlatformDefaultPersistenceUnitOfWorkManager(
         Lazy<IPlatformCqrs> cqrs,
         IPlatformRootServiceProvider rootServiceProvider,
-        IServiceProvider serviceProvider) : base(cqrs, rootServiceProvider)
+        IServiceProvider serviceProvider) : base(cqrs, rootServiceProvider, serviceProvider)
     {
         ServiceProvider = serviceProvider;
     }
