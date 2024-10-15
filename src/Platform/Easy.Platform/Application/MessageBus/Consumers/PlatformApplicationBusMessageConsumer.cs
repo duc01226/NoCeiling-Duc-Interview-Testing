@@ -160,7 +160,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                 try
                 {
                     // Try to execute directly to improve performance. Then if failed execute use inbox to support retry failed message later.
-                    await HandleMessageDirectly(message, routingKey);
+                    await HandleMessageDirectly(message, routingKey, retryCount: 2);
                 }
                 catch (Exception)
                 {
@@ -199,7 +199,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
             allowHandleNewInboxMessageInBackground: AllowHandleNewInboxMessageInBackground);
     }
 
-    private async Task HandleMessageDirectly(TMessage message, string routingKey)
+    private async Task HandleMessageDirectly(TMessage message, string routingKey, int? retryCount = null)
     {
         await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync<PlatformDomainRowVersionConflictException>(
             async () =>
@@ -235,7 +235,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                         await Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
                 }
             },
-            retryCount: MinRowVersionConflictRetryOnFailedTimes + RetryOnFailedTimes,
+            retryCount: retryCount ?? MinRowVersionConflictRetryOnFailedTimes + RetryOnFailedTimes,
             sleepDurationProvider: p => RetryOnFailedDelaySeconds.Seconds());
     }
 }

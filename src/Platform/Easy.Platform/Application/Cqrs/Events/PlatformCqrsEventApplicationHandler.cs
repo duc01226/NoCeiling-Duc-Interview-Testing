@@ -267,7 +267,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                 // Try to execute directly once to enhance performance, if failed then try use inbox
                 try
                 {
-                    await RunHandleAsync(@event, cancellationToken);
+                    await RunHandleAsync(@event, cancellationToken, retryCount: 2);
                 }
                 catch (Exception)
                 {
@@ -313,7 +313,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         }
     }
 
-    protected async Task RunHandleAsync(TEvent @event, CancellationToken cancellationToken)
+    protected async Task RunHandleAsync(TEvent @event, CancellationToken cancellationToken, int? retryCount = null)
     {
         if (!await HandleWhen(@event)) return;
 
@@ -350,7 +350,10 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                     await HandleAsync(@event, cancellationToken);
                 }
             },
-            retryCount: NeedWaitHandlerExecutionFinishedImmediately(@event) ? RetryOnFailedTimes : MinRowVersionConflictRetryOnFailedTimes + RetryOnFailedTimes,
+            retryCount: retryCount ??
+                        (NeedWaitHandlerExecutionFinishedImmediately(@event)
+                            ? RetryOnFailedTimes
+                            : MinRowVersionConflictRetryOnFailedTimes + RetryOnFailedTimes),
             sleepDurationProvider: p => RetryOnFailedDelaySeconds.Seconds(),
             cancellationToken: cancellationToken);
     }
