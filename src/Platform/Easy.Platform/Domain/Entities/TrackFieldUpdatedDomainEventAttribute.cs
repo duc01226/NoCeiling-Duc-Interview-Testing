@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json.Serialization;
 using Easy.Platform.Common.Extensions;
@@ -24,6 +25,8 @@ public class TrackFieldUpdatedDomainEventAttribute : Attribute
 
 public static class AutoAddFieldUpdatedEventEntityExtensions
 {
+    public static readonly ConcurrentDictionary<Type, bool> TypeToHasTrackValueUpdatedDomainEventAttributeCachedResultDict = new();
+
     /// <summary>
     /// The AutoAddFieldUpdatedEvent method is an extension method for entities that implement the IEntity interface. The purpose of this method is to automatically track and add domain events for any changes made to the fields of an entity.
     /// <br />
@@ -66,6 +69,12 @@ public static class AutoAddFieldUpdatedEventEntityExtensions
     public static bool HasTrackValueUpdatedDomainEventAttribute<TEntity>(this TEntity entity) where TEntity : IEntity
     {
         return entity is ISupportDomainEventsEntity<TEntity> &&
-               typeof(TEntity).GetCustomAttribute(typeof(TrackFieldUpdatedDomainEventAttribute), true) != null;
+               (TypeToHasTrackValueUpdatedDomainEventAttributeCachedResultDict.GetOrAdd(entity.GetType(), CheckTypeHasTrackValueUpdatedDomainEventAttribute) ||
+                TypeToHasTrackValueUpdatedDomainEventAttributeCachedResultDict.GetOrAdd(typeof(TEntity), CheckTypeHasTrackValueUpdatedDomainEventAttribute));
+    }
+
+    private static bool CheckTypeHasTrackValueUpdatedDomainEventAttribute(Type type)
+    {
+        return type.GetCustomAttribute(typeof(TrackFieldUpdatedDomainEventAttribute), true) != null;
     }
 }
