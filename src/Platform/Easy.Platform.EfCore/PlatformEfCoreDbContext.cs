@@ -571,17 +571,17 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
                 var (existingToUpdateEntities, newEntities) = toUpsertEntityToExistingEntityPairs.WhereSplitResult(p => p.matchedExistingEntity != null);
 
-                await Util.TaskRunner.WhenAll(
-                    CreateManyAsync<TEntity, TPrimaryKey>(
-                        newEntities.Select(p => p!.toUpsertEntity).ToList(),
-                        dismissSendEvent,
-                        eventCustomConfig,
-                        cancellationToken),
-                    UpdateManyAsync<TEntity, TPrimaryKey>(
-                        existingToUpdateEntities.Select(p => p.toUpsertEntity).ToList(),
-                        dismissSendEvent,
-                        eventCustomConfig,
-                        cancellationToken));
+                // Ef core is not thread safe so that couldn't use when all
+                await CreateManyAsync<TEntity, TPrimaryKey>(
+                    newEntities.Select(p => p!.toUpsertEntity).ToList(),
+                    dismissSendEvent,
+                    eventCustomConfig,
+                    cancellationToken);
+                await UpdateManyAsync<TEntity, TPrimaryKey>(
+                    existingToUpdateEntities.Select(p => p.toUpsertEntity).ToList(),
+                    dismissSendEvent,
+                    eventCustomConfig,
+                    cancellationToken);
             }
         }
 
