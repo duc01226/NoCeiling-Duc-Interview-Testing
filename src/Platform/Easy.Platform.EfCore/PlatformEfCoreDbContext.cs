@@ -561,7 +561,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                     {
                         var matchedExistingEntity = existingEntities.FirstOrDefault(
                             existingEntity => customCheckExistingPredicateBuilder?.Invoke(toUpsertEntity).Compile()(existingEntity) ??
-                                              existingEntity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr().Compile()(toUpsertEntity));
+                                              toUpsertEntity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr().Compile()(existingEntity));
 
                         // Update to correct the id of toUpdateEntity to the matched existing entity Id
                         if (matchedExistingEntity != null) toUpsertEntity.Id = matchedExistingEntity.Id;
@@ -573,7 +573,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
                 // Ef core is not thread safe so that couldn't use when all
                 await CreateManyAsync<TEntity, TPrimaryKey>(
-                    newEntities.Select(p => p!.toUpsertEntity).ToList(),
+                    newEntities.Select(p => p.toUpsertEntity).ToList(),
                     dismissSendEvent,
                     eventCustomConfig,
                     cancellationToken);
