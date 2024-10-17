@@ -1,5 +1,5 @@
 using Easy.Platform.Application.Cqrs.Events;
-using Easy.Platform.Common.Validations.Exceptions.Extensions;
+using Easy.Platform.Common.Validations.Extensions;
 using MediatR;
 
 namespace Easy.Platform.Common.Cqrs.Commands;
@@ -20,7 +20,7 @@ public abstract class PlatformCqrsCommandHandler<TCommand, TResult>
 
     public virtual async Task<TResult> Handle(TCommand request, CancellationToken cancellationToken)
     {
-        request.Validate().WithValidationException().EnsureValid();
+        await ValidateRequestAsync(request, cancellationToken).EnsureValidAsync();
 
         var result = await ExecuteHandleAsync(request, cancellationToken);
 

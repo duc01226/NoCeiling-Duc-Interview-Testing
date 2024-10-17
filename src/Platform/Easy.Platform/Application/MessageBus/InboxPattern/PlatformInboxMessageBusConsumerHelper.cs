@@ -170,7 +170,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 handleInUow.OnSaveChangesCompletedActions.Add(
                     async () =>
                     {
-                        // Execute task in background thread
+                        // Execute task in background separated thread task
                         _ = ExecuteConsumerForNewInboxMessage(
                             rootServiceProvider,
                             consumerType,

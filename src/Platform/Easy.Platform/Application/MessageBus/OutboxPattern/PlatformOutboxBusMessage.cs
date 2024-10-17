@@ -163,7 +163,7 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
     public static string GetSubQueuePrefix(string messageId)
     {
         var buildIdSubQueueSeparatorIndex = messageId.IndexOf(BuildIdSubQueuePrefixSeparator, StringComparison.Ordinal);
-        var buildIdSeparatorIndex = messageId.IndexOf(BuildIdPrefixSeparator, StringComparison.Ordinal);
+        var buildIdSeparatorIndex = messageId.IndexOf(BuildIdPrefixSeparator, StringComparison.Ordinal).Pipe(p => p < 0 ? messageId.Length - 1 : p);
 
         var subQueuePrefixStartIndex = buildIdSubQueueSeparatorIndex + BuildIdSubQueuePrefixSeparator.Length;
 

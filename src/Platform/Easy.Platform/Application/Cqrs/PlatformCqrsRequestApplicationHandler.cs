@@ -2,7 +2,6 @@ using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.Validations;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.Cqrs;
@@ -70,31 +69,5 @@ public abstract class PlatformCqrsRequestApplicationHandler<TRequest> : Platform
         return new PlatformCqrsRequestAuditInfo(
             auditTrackId: Ulid.NewUlid().ToString(),
             auditRequestByUserId: RequestContextAccessor.Current.UserId());
-    }
-
-    /// <summary>
-    /// Override this function to implement additional asynchronous validation logic for the request.
-    /// </summary>
-    /// <param name="requestSelfValidation">The validation result of the request itself.</param>
-    /// <param name="cancellationToken">A <see cref="CancellationToken" /> that can be used to cancel the operation.</param>
-    /// <returns>The validated <see cref="PlatformValidationResult{TRequest}" />.</returns>
-    protected virtual Task<PlatformValidationResult<TRequest>> ValidateRequestAsync(
-        PlatformValidationResult<TRequest> requestSelfValidation,
-        CancellationToken cancellationToken)
-    {
-        return Task.FromResult(requestSelfValidation);
-    }
-
-    /// <summary>
-    /// Validates the CQRS request asynchronously.
-    /// </summary>
-    /// <param name="request">The CQRS request to validate.</param>
-    /// <param name="cancellationToken">A <see cref="CancellationToken" /> that can be used to cancel the operation.</param>
-    /// <returns>The validated <see cref="PlatformValidationResult{TRequest}" />.</returns>
-    protected virtual Task<PlatformValidationResult<TRequest>> ValidateRequestAsync(
-        TRequest request,
-        CancellationToken cancellationToken)
-    {
-        return ValidateRequestAsync(request.Validate().Of<TRequest>(), cancellationToken);
     }
 }

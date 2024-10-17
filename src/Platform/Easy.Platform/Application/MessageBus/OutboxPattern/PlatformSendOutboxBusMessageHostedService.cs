@@ -125,7 +125,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
     protected virtual async Task SendOutboxEventBusMessages(CancellationToken cancellationToken)
     {
         await ServiceProvider.ExecuteInjectScopedAsync(
-            async (IPlatformOutboxBusMessageRepository outboxBusMessageRepository, PlatformOutboxMessageBusProducerHelper outboxMessageBusProducerHelper) =>
+            async (IPlatformOutboxBusMessageRepository outboxBusMessageRepository) =>
             {
                 // Continue processing messages as long as there are messages to handle.
                 do
@@ -150,38 +150,31 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                                     messageIds => messageIds
                                         .Select(PlatformOutboxBusMessage.GetIdPrefix)
                                         .Where(p => !processedCanHandleMessageGroupedByTypeIdPrefixes.Contains(p))
+                                        .Distinct()
                                         .ToList());
 
                             // Process each message prefix in parallel.
                             await pagedCanHandleMessageGroupedByTypeIdPrefixes.ParallelAsync(
                                 async messageGroupedByTypeIdPrefix =>
                                 {
+                                    // (I)
+                                    // If there's no sub-queue prefix (hasSubQueuePrefix == false), process messages in parallel. => customPageSize is null (get many messages)
+                                    // Otherwise, process messages sequentially. (hasSubQueuePrefix == true) => customPageSize is one to allow process once at a time
+                                    var hasSubQueuePrefix = PlatformOutboxBusMessage.GetSubQueuePrefix(messageGroupedByTypeIdPrefix).IsNotNullOrEmpty();
+
                                     // Continue processing messages within the prefix as long as there are messages to handle.
                                     do
                                     {
                                         // Retrieve a batch of messages to handle for the current prefix.
                                         var toHandleMessages = await PopToHandleOutboxEventBusMessages(
                                             messageGroupedByTypeIdPrefix,
+                                            customPageSize: hasSubQueuePrefix == false ? null : 1, // (I)
                                             cancellationToken);
                                         if (toHandleMessages.IsEmpty()) break;
 
-                                        // Group the messages by sub-queue prefix.
-                                        var toHandleMessagesGroupedBySubQueueGroups = toHandleMessages
-                                            .GroupBy(p => PlatformOutboxBusMessage.GetSubQueuePrefix(p.Id) ?? "");
-
-                                        // Process each sub-queue group in parallel.
-                                        await toHandleMessagesGroupedBySubQueueGroups.ParallelAsync(
-                                            async toHandleMessagesGroupedBySubQueueGroup =>
-                                            {
-                                                // If there's no sub-queue prefix, process messages in parallel.
-                                                if (toHandleMessagesGroupedBySubQueueGroup.Key.IsNullOrEmpty())
-                                                    await toHandleMessagesGroupedBySubQueueGroup.ParallelAsync(
-                                                        HandleOutboxMessageAsync,
-                                                        OutboxConfig.MaxParallelProcessingMessagesCount);
-                                                // Otherwise, process messages sequentially.
-                                                else
-                                                    await toHandleMessagesGroupedBySubQueueGroup.ForEachAsync(HandleOutboxMessageAsync);
-                                            });
+                                        await toHandleMessages.ParallelAsync(
+                                            HandleOutboxMessageAsync,
+                                            OutboxConfig.MaxParallelProcessingMessagesCount);
                                     } while (true);
                                 },
                                 OutboxConfig.MaxParallelProcessingMessagesCount);
@@ -318,6 +311,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
     /// <returns>A list of outbox messages to handle.</returns>
     protected async Task<List<PlatformOutboxBusMessage>> PopToHandleOutboxEventBusMessages(
         string messageGroupedByTypeIdPrefix,
+        int? customPageSize,
         CancellationToken cancellationToken)
     {
         try
@@ -331,7 +325,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                     // Retrieve a batch of messages to handle.
                     var toHandleMessages = await outboxEventBusMessageRepo.GetAllAsync(
                         queryBuilder: query => CanHandleMessagesByTypeIdPrefixQueryBuilder(query, messageGroupedByTypeIdPrefix)
-                            .Take(OutboxConfig.MaxParallelProcessingMessagesCount),
+                            .Take(customPageSize ?? OutboxConfig.MaxParallelProcessingMessagesCount),
                         cancellationToken);
 
                     // If there are no messages or another instance is already processing messages with the same prefix, return an empty list.
@@ -367,7 +361,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                 conflictDomainException,
                 "Some other producer instance has been handling some outbox messages, which lead to row version conflict (support multi service instance running concurrently). This is as expected.");
 
-            return await PopToHandleOutboxEventBusMessages(messageGroupedByTypeIdPrefix, cancellationToken);
+            return await PopToHandleOutboxEventBusMessages(messageGroupedByTypeIdPrefix, customPageSize, cancellationToken);
         }
     }
 

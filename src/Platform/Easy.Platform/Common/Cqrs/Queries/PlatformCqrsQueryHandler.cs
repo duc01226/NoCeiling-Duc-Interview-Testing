@@ -1,4 +1,4 @@
-using Easy.Platform.Common.Validations.Exceptions.Extensions;
+using Easy.Platform.Common.Validations.Extensions;
 using MediatR;
 
 namespace Easy.Platform.Common.Cqrs.Queries;
@@ -16,7 +16,7 @@ public abstract class PlatformCqrsQueryHandler<TQuery, TResult>
 
     public virtual async Task<TResult> Handle(TQuery request, CancellationToken cancellationToken)
     {
-        request.Validate().WithValidationException().EnsureValid();
+        await ValidateRequestAsync(request, cancellationToken).EnsureValidAsync();
 
         var result = await HandleAsync(request, cancellationToken);
 

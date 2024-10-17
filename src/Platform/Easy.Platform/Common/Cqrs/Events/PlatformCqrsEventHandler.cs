@@ -59,7 +59,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
 
     protected bool IsDistributedTracingEnabled => isDistributedTracingEnabledLazy.Value;
 
-    public virtual double RetryOnFailedDelaySeconds { get; set; } = 1;
+    public virtual double RetryOnFailedDelaySeconds { get; set; } = Util.TaskRunner.DefaultResilientDelaySeconds;
 
     /// <summary>
     /// The MustWaitHandlerExecutionFinishedImmediately method is part of the IPlatformCqrsEvent interface and its implementation is in the PlatformCqrsEvent class. This method is used to determine whether the execution of a specific event handler should be waited for to finish immediately or not.
@@ -72,7 +72,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
     /// </summary>
     protected virtual bool MustWaitHandlerExecutionFinishedImmediately => false;
 
-    public virtual int RetryOnFailedTimes { get; set; } = 2;
+    public virtual int RetryOnFailedTimes { get; set; } = Util.TaskRunner.DefaultResilientRetryCount;
 
     public bool ForceCurrentInstanceHandleInCurrentThread { get; set; }
 

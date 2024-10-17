@@ -77,9 +77,9 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
     /// <summary>
     /// Gets the number of retry attempts after a failure.
     /// </summary>
-    public virtual int RetryOnFailedTimes { get; set; } = 2;
+    public virtual int RetryOnFailedTimes { get; set; } = Util.TaskRunner.DefaultResilientRetryCount;
 
-    public virtual double RetryOnFailedDelaySeconds { get; set; } = 1;
+    public virtual double RetryOnFailedDelaySeconds { get; set; } = Util.TaskRunner.DefaultResilientDelaySeconds;
 
     /// <summary>
     /// Gets a value indicating whether a unit of work should be automatically opened.

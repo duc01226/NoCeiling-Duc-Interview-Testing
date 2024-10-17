@@ -21,6 +21,7 @@ namespace Easy.Platform.Application.MessageBus.InboxPattern;
 public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHostingBackgroundService
 {
     private readonly SemaphoreSlim processMessageParallelLimitLock;
+    private DateTime? firstTimeProcessDate;
     private bool isFirstTimeProcess = true;
     private bool isProcessing;
 
@@ -107,6 +108,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
         if (!HasInboxEventBusMessageRepositoryRegistered() || isProcessing) return;
 
         isProcessing = true;
+        if (isFirstTimeProcess) firstTimeProcessDate = Clock.UtcNow;
 
         try
         {
@@ -179,38 +181,30 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                                     messageIds => messageIds
                                         .Select(PlatformInboxBusMessage.GetIdPrefix)
                                         .Where(p => !processedCanHandleMessageGroupedByConsumerIdPrefixes.Contains(p))
+                                        .Distinct()
                                         .ToList());
 
                             // Process each message prefix in parallel.
                             await pagedCanHandleMessageGroupedByConsumerIdPrefixes.ParallelAsync(
                                 async messageGroupedByConsumerIdPrefix =>
                                 {
+                                    // (I)
+                                    // If there's no sub-queue prefix (hasSubQueuePrefix == false), process messages in parallel. => customPageSize is null (get many messages)
+                                    // Otherwise, process messages sequentially. (hasSubQueuePrefix == true) => customPageSize is one to allow process once at a time
+                                    var hasSubQueuePrefix = PlatformInboxBusMessage.GetSubQueuePrefix(messageGroupedByConsumerIdPrefix).IsNotNullOrEmpty();
+
                                     // Continue processing messages within the prefix as long as there are messages to handle.
                                     do
                                     {
                                         // Retrieve a batch of messages to handle for the current prefix.
                                         var toHandleMessages = await PopToHandleInboxEventBusMessages(
                                             messageGroupedByConsumerIdPrefix,
+                                            customPageSize: hasSubQueuePrefix == false ? null : 1, // (I)
                                             cancellationToken);
                                         if (toHandleMessages.IsEmpty()) break;
 
-                                        // Group the messages by sub-queue prefix.
-                                        var toHandleMessagesGroupedBySubQueueGroups = toHandleMessages
-                                            .GroupBy(p => PlatformInboxBusMessage.GetSubQueuePrefix(p.Id) ?? "");
-
-                                        // Process each sub-queue group in parallel.
-                                        await toHandleMessagesGroupedBySubQueueGroups.ParallelAsync(
-                                            async toHandleMessagesGroupedBySubQueueGroup =>
-                                            {
-                                                // If there's no sub-queue prefix, process messages in parallel.
-                                                if (toHandleMessagesGroupedBySubQueueGroup.Key.IsNullOrEmpty())
-                                                    await toHandleMessagesGroupedBySubQueueGroup.ParallelAsync(
-                                                        p => HandleInboxMessageAsync(p, cancellationToken),
-                                                        InboxConfig.MaxParallelProcessingMessagesCount);
-                                                // Otherwise, process messages sequentially.
-                                                else
-                                                    await toHandleMessagesGroupedBySubQueueGroup.ForEachAsync(p => HandleInboxMessageAsync(p, cancellationToken));
-                                            },
+                                        await toHandleMessages.ParallelAsync(
+                                            p => HandleInboxMessageAsync(p, cancellationToken),
                                             InboxConfig.MaxParallelProcessingMessagesCount);
                                     } while (true);
                                 },
@@ -307,7 +301,9 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
             // Resolve the consumer instance and configure it for inbox message handling.
             var consumer = scope.ServiceProvider.GetService(consumerType)
                 .As<IPlatformApplicationMessageBusConsumer>()
-                .With(p => p.HandleExistingInboxMessage = toHandleInboxMessage);
+                .With(p => p.HandleExistingInboxMessage = toHandleInboxMessage)
+                .With(p => p.NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage = false)
+                .With(p => p.NoNeedCheckHandleWhen = true);
 
             // Determine the message type expected by the consumer.
             var consumerMessageType = PlatformMessageBusConsumer.GetConsumerMessageType(consumer.GetType());
@@ -381,6 +377,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
     /// <returns>A list of inbox messages to handle.</returns>
     protected async Task<List<PlatformInboxBusMessage>> PopToHandleInboxEventBusMessages(
         string messageGroupedByConsumerIdPrefix,
+        int? customPageSize,
         CancellationToken cancellationToken)
     {
         try
@@ -394,7 +391,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                     // Retrieve a batch of messages to handle.
                     var toHandleMessages = await inboxEventBusMessageRepo.GetAllAsync(
                         queryBuilder: query => CanHandleMessagesByConsumerIdPrefixQueryBuilder(query, messageGroupedByConsumerIdPrefix)
-                            .Take(InboxConfig.MaxParallelProcessingMessagesCount),
+                            .Take(customPageSize ?? InboxConfig.MaxParallelProcessingMessagesCount),
                         cancellationToken);
 
                     // If there are no messages or another instance is already processing messages with the same prefix, return an empty list.
@@ -431,7 +428,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                 conflictDomainException,
                 "Some other consumer instance has been handling some inbox messages (support multi service instance running concurrently), which lead to row version conflict. This is as expected.");
 
-            return await PopToHandleInboxEventBusMessages(messageGroupedByConsumerIdPrefix, cancellationToken);
+            return await PopToHandleInboxEventBusMessages(messageGroupedByConsumerIdPrefix, customPageSize, cancellationToken);
         }
     }
 
@@ -453,7 +450,8 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                 PlatformInboxBusMessage.CanHandleMessagesExpr(
                     ApplicationSettingContext.ApplicationName,
                     InboxConfig.MaxRetriedProcessCount,
-                    retryFailedMessageImmediately: isFirstTimeProcess))
+                    retryFailedMessageImmediately: isFirstTimeProcess,
+                    firstTimeProcessDate: firstTimeProcessDate))
             // Order messages by creation date.
             .OrderBy(p => p.CreatedDate);
     }

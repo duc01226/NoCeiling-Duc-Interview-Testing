@@ -48,15 +48,17 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
     public string? ConcurrencyUpdateToken { get; set; }
 
     public static Expression<Func<PlatformInboxBusMessage, bool>> CanHandleMessagesExpr(
-        string? forApplicationName,
+        string forApplicationName,
         int maxRetriedProcessCount,
-        bool retryFailedMessageImmediately = false)
+        bool retryFailedMessageImmediately = false,
+        DateTime? firstTimeProcessDate = null)
     {
         Expression<Func<PlatformInboxBusMessage, bool>> initialExpr =
             p => p.ConsumeStatus == ConsumeStatuses.New ||
-                 (p.ConsumeStatus == ConsumeStatuses.Failed && (retryFailedMessageImmediately || (p.RetriedProcessCount <= maxRetriedProcessCount &&
-                                                                                                  (p.NextRetryProcessAfter == null ||
-                                                                                                   p.NextRetryProcessAfter <= DateTime.UtcNow)))) ||
+                 (p.ConsumeStatus == ConsumeStatuses.Failed && ((retryFailedMessageImmediately && p.LastConsumeDate < firstTimeProcessDate) ||
+                                                                (p.RetriedProcessCount <= maxRetriedProcessCount &&
+                                                                 (p.NextRetryProcessAfter == null ||
+                                                                  p.NextRetryProcessAfter <= DateTime.UtcNow)))) ||
                  (p.ConsumeStatus == ConsumeStatuses.Processing &&
                   (p.LastProcessingPingDate == null ||
                    p.LastProcessingPingDate < Clock.UtcNow.AddSeconds(-CheckProcessingPingIntervalSeconds * MaxAllowedProcessingPingMisses)));
@@ -135,7 +137,7 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
     public static string GetSubQueuePrefix(string messageId)
     {
         var buildIdSubQueueSeparatorIndex = messageId.IndexOf(BuildIdSubQueuePrefixSeparator, StringComparison.Ordinal);
-        var buildIdSeparatorIndex = messageId.IndexOf(BuildIdPrefixSeparator, StringComparison.Ordinal);
+        var buildIdSeparatorIndex = messageId.IndexOf(BuildIdPrefixSeparator, StringComparison.Ordinal).Pipe(p => p < 0 ? messageId.Length - 1 : p);
 
         var subQueuePrefixStartIndex = buildIdSubQueueSeparatorIndex + BuildIdSubQueuePrefixSeparator.Length;
 

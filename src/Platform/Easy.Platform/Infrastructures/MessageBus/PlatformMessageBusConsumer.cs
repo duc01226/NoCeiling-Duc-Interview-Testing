@@ -8,6 +8,8 @@ namespace Easy.Platform.Infrastructures.MessageBus;
 
 public interface IPlatformMessageBusConsumer
 {
+    public bool NoNeedCheckHandleWhen { get; set; }
+
     /// <summary>
     /// Main Entry Handle Method
     /// </summary>
@@ -104,6 +106,8 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
 
     public abstract Task<bool> HandleWhen(object message, string routingKey);
 
+    public bool NoNeedCheckHandleWhen { get; set; }
+
     public virtual JsonSerializerOptions? CustomJsonSerializerOptions()
     {
         return null;
@@ -199,9 +203,9 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
 
     protected ILogger Logger => loggerLazy.Value;
 
-    public virtual int RetryOnFailedTimes { get; set; } = 2;
+    public virtual int RetryOnFailedTimes { get; set; } = Util.TaskRunner.DefaultResilientRetryCount;
 
-    public virtual double RetryOnFailedDelaySeconds { get; set; } = 1;
+    public virtual double RetryOnFailedDelaySeconds { get; set; } = Util.TaskRunner.DefaultResilientDelaySeconds;
 
     public override Task HandleAsync(object message, string routingKey)
     {
@@ -217,7 +221,7 @@ public abstract class PlatformMessageBusConsumer<TMessage> : PlatformMessageBusC
     {
         try
         {
-            if (!await HandleWhen(message, routingKey)) return;
+            if (!NoNeedCheckHandleWhen && !await HandleWhen(message, routingKey)) return;
 
             if (RetryOnFailedTimes > 0)
                 // Retry RetryOnFailedTimes to help resilient consumer. Sometime parallel, create/update concurrency could lead to error

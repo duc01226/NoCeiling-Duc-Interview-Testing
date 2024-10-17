@@ -15,6 +15,7 @@ public static partial class Util
         public const int DefaultWaitUntilMaxSeconds = 60;
         public const double DefaultWaitIntervalSeconds = 2;
         public const int DefaultResilientRetryCount = 3;
+        public const double DefaultResilientDelaySeconds = 1;
         public const int DefaultBackgroundResilientRetryCount = 20;
         public static readonly Func<int, TimeSpan> DefaultBackgroundRetryDelayProvider = retryAttempt => retryAttempt.Seconds();
 
@@ -1881,9 +1882,9 @@ public static partial class Util
                                     .Recover(ex => (default!, ex))
                                     .Then<ValueTuple<TResult, Exception?>, ValueTuple<int, TResult, Exception?>>(
                                         itemActionResult => (i, itemActionResult.Item1, itemActionResult.Item2)))));
-                var processingActionTasks = new Dictionary<int, Task<ValueTuple<int, TResult, Exception?>>>();
-                var processedActionTaskResults = new Dictionary<int, ValueTuple<TResult, Exception?>>();
-                var processedFailedActionExceptions = new List<Exception>();
+                var processingActionTasks = new ConcurrentDictionary<int, Task<ValueTuple<int, TResult, Exception?>>>();
+                var processedActionTaskResults = new ConcurrentDictionary<int, ValueTuple<TResult, Exception?>>();
+                var processedFailedActionExceptions = new ConcurrentBag<Exception>();
 
                 while (processedActionTaskResults.Count < itemsList.Count)
                 {
@@ -1897,27 +1898,28 @@ public static partial class Util
                             {
                                 var (nextProcessItemIndex, nextProcessAction) = queueItem;
 
-                                processingActionTasks.TryAdd(nextProcessItemIndex, nextProcessAction());
+                                var nextProcessActionTask = nextProcessAction()
+                                    .ContinueWith(
+                                        completedTask =>
+                                        {
+                                            var (nextProcessedItemIndex, nextProcessedActionResult, nextProcessedActionException) = completedTask.Result;
+
+                                            processedActionTaskResults.TryAdd(nextProcessedItemIndex, (nextProcessedActionResult, nextProcessedActionException));
+                                            processingActionTasks.Remove(nextProcessedItemIndex, out _);
+                                            if (nextProcessedActionException != null) processedFailedActionExceptions.Add(nextProcessedActionException);
+
+                                            return completedTask.Result;
+                                        });
+
+                                processingActionTasks.TryAdd(nextProcessItemIndex, nextProcessActionTask);
                             }
                         }
                     }
 
-                    await Task.WhenAny(processingActionTasks.Values);
-
-                    processingActionTasks
-                        .Where(p => p.Value.IsCompleted)
-                        .ForEach(
-                            completedTaskItem =>
-                            {
-                                var (nextProcessedItemIndex, nextProcessedActionResult, nextProcessedActionException) = completedTaskItem.Value.Result;
-
-                                processedActionTaskResults.TryAdd(nextProcessedItemIndex, (nextProcessedActionResult, nextProcessedActionException));
-                                processingActionTasks.Remove(nextProcessedItemIndex, out _);
-                                if (nextProcessedActionException != null) processedFailedActionExceptions.Add(nextProcessedActionException);
-                            });
+                    await Task.WhenAll(processingActionTasks.Values);
                 }
 
-                return processedFailedActionExceptions.Count == 0
+                return processedFailedActionExceptions.IsEmpty
                     ? processedActionTaskResults.OrderBy(p => p.Key).Select(p => p.Value.Item1).ToList()
                     : throw new AggregateException(processedFailedActionExceptions);
             }

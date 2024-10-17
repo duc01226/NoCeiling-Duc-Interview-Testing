@@ -51,9 +51,9 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     private readonly IPlatformApplicationRequestContextAccessor requestContextAccessor;
 
-    private double retryOnFailedDelaySeconds = 1;
-
-    private int retryOnFailedTimes = 2;
+    private double retryOnFailedDelaySeconds = Util.TaskRunner.DefaultResilientDelaySeconds;
+    private int retryOnFailedTimes = Util.TaskRunner.DefaultResilientRetryCount;
+    private bool? throwExceptionOnHandleFailed;
 
     public PlatformCqrsEventApplicationHandler(
         ILoggerFactory loggerFactory,
@@ -107,7 +107,11 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     /// </summary>
     public virtual bool EnableInboxEventBusMessage => true;
 
-    public override bool ThrowExceptionOnHandleFailed { get => IsCurrentInstanceCalledFromInboxBusMessageConsumer; set { } }
+    public override bool ThrowExceptionOnHandleFailed
+    {
+        get => throwExceptionOnHandleFailed ?? IsCurrentInstanceCalledFromInboxBusMessageConsumer;
+        set => throwExceptionOnHandleFailed = value;
+    }
 
     public override Task ExecuteHandleAsync(object @event, CancellationToken cancellationToken)
     {
@@ -229,7 +233,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                 eventSourceUow.OnSaveChangesCompletedActions.Add(
                     async () =>
                     {
-                        // Execute task in background thread
+                        // Execute task in background separated thread task
                         _ = ExecuteHandleInNewScopeAsync(@event, cancellationToken);
                     });
             else

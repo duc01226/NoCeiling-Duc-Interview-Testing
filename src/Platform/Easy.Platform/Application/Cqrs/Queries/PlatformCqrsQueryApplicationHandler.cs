@@ -66,9 +66,9 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
     /// <summary>
     /// Gets the number of retry attempts after a failure.
     /// </summary>
-    public virtual int RetryOnFailedTimes { get; set; } = 2;
+    public virtual int RetryOnFailedTimes { get; set; } = Util.TaskRunner.DefaultResilientRetryCount;
 
-    public virtual double RetryOnFailedDelaySeconds { get; set; } = 1;
+    public virtual double RetryOnFailedDelaySeconds { get; set; } = Util.TaskRunner.DefaultResilientDelaySeconds;
 
     /// <summary>
     /// Handles the specified CQRS query asynchronously.
