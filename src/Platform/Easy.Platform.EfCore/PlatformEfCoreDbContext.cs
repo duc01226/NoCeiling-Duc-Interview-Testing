@@ -368,15 +368,27 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
+        if (entities.Count == 0) return entities;
+
         if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider))
+        {
+            var deleteEntitiesPredicate = entities.FirstOrDefault()?.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() != null
+                ? entities
+                    .Select(
+                        entity => entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr())
+                    .Aggregate((currentExpr, nextExpr) => currentExpr.Or(nextExpr))
+                : p => entities.Select(e => e.Id).Contains(p.Id);
+
             return await DeleteManyAsync<TEntity, TPrimaryKey>(
-                    p => entities.Select(e => e.Id).Contains(p.Id),
+                    deleteEntitiesPredicate,
                     true,
                     eventCustomConfig,
                     cancellationToken)
                 .Then(_ => entities);
+        }
 
-        return await entities.SelectAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, false, eventCustomConfig, cancellationToken))
+        return await entities
+            .SelectAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, false, eventCustomConfig, cancellationToken))
             .ThenActionAsync(
                 entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Deleted, eventCustomConfig, cancellationToken));
     }

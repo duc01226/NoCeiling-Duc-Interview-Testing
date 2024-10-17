@@ -609,6 +609,55 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
 
         return await CreateAsync(entity, dismissSendEvent, eventCustomConfig, cancellationToken);
     }
+
+    /// <summary>
+    /// Replaces multiple entities in the data store by deleting existing entities
+    /// that match a given predicate and inserting or updating the new entities.
+    /// </summary>
+    /// <param name="replaceExistingEntitiesPredicate">The predicate to filter existing entities that should be replaced.</param>
+    /// <param name="replaceNewEntities">The list of new entities to insert or update in place of the existing entities.</param>
+    /// <param name="dismissSendEvent">Indicates whether to suppress the sending of entity events during the operation. Defaults to false.</param>
+    /// <param name="eventCustomConfig">An optional action to customize the entity event configuration.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the asynchronous operation.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The result is a tuple containing two lists:
+    /// <list type="bullet">
+    ///     <item>
+    ///         <description>A list of the entities that were inserted or updated.</description>
+    ///     </item>
+    ///     <item>
+    ///         <description>A list of the entities that were deleted.</description>
+    ///     </item>
+    /// </list>
+    /// </returns>
+    /// <remarks>
+    /// This method performs the following steps:
+    /// <list type="number">
+    ///     <item>Fetches the existing entities based on the provided predicate.</item>
+    ///     <item>Determines which entities to delete by comparing unique identifiers between the existing and new entities.</item>
+    ///     <item>Deletes the entities that do not match the new entities' identifiers.</item>
+    ///     <item>Inserts or updates the new entities in the data store.</item>
+    /// </list>
+    /// </remarks>
+    public async Task<(List<TEntity>, List<TEntity>)> ReplaceManyAsync(
+        Expression<Func<TEntity, bool>> replaceExistingEntitiesPredicate,
+        List<TEntity> replaceNewEntities,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+    {
+        var existingEntities = await GetAllAsync(replaceExistingEntitiesPredicate, cancellationToken);
+        var (toReplaceEntities, toReplaceEntityIds) = replaceNewEntities
+            .Pipe(p => (p, p.Select(x => x.As<IUniqueCompositeIdSupport>()?.UniqueCompositeId() ?? x.Id?.ToString()).ToHashSet()));
+
+        var toDeleteEntities = existingEntities.Where(p => !toReplaceEntityIds.Contains(p.As<IUniqueCompositeIdSupport>()?.UniqueCompositeId() ?? p.Id?.ToString()))
+            .ToList();
+
+        await DeleteManyAsync(toDeleteEntities, dismissSendEvent, eventCustomConfig, cancellationToken);
+        await CreateOrUpdateManyAsync(toReplaceEntities, dismissSendEvent, null, eventCustomConfig, cancellationToken);
+
+        return (toReplaceEntities, toDeleteEntities);
+    }
 }
 
 public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformRepository<TEntity, TPrimaryKey>
