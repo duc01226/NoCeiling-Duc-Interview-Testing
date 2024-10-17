@@ -386,7 +386,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
     {
         using (var immediatelyUow = UowManager().CreateNewUow(true))
         {
-            return await DeleteManyAsync(immediatelyUow, predicate, true, eventCustomConfig, cancellationToken);
+            return await DeleteManyAsync(immediatelyUow, predicate, dismissSendEvent, eventCustomConfig, cancellationToken);
         }
     }
 
