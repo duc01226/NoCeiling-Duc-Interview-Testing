@@ -388,7 +388,16 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider))
-            return await GetTable<TEntity>().Where(predicate).ExecuteDeleteAsync(cancellationToken);
+            try
+            {
+                await NotThreadSafeDbContextQueryLock.WaitAsync(cancellationToken);
+
+                return await GetTable<TEntity>().Where(predicate).ExecuteDeleteAsync(cancellationToken);
+            }
+            finally
+            {
+                NotThreadSafeDbContextQueryLock.Release();
+            }
 
         var entities = await GetAllAsync(GetQuery<TEntity>().Where(predicate), cancellationToken);
 
@@ -402,7 +411,16 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider))
-            return await queryBuilder(GetTable<TEntity>()).ExecuteDeleteAsync(cancellationToken);
+            try
+            {
+                await NotThreadSafeDbContextQueryLock.WaitAsync(cancellationToken);
+
+                return await queryBuilder(GetTable<TEntity>()).ExecuteDeleteAsync(cancellationToken);
+            }
+            finally
+            {
+                NotThreadSafeDbContextQueryLock.Release();
+            }
 
         var entities = await GetAllAsync(queryBuilder(GetQuery<TEntity>()), cancellationToken);
 
