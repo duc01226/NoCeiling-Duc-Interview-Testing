@@ -67,7 +67,7 @@ public interface IPlatformDbContext : IDisposable
                             retryCount: MigrationRetryCount);
                     });
             },
-            () => rootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType()));
+            loggerFactory: () => rootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType()));
     }
 
     public static void LogDataMigrationFailedError(ILogger logger, Exception ex, string migrationExecutionName)
@@ -229,7 +229,7 @@ public interface IPlatformDbContext : IDisposable
                             if (retryAttempt > 3) Logger.LogError(ex.BeautifyStackTrace(), "Upsert DataMigrationHistory LastProcessingPingTime failed");
                         });
             },
-            () => Logger,
+            loggerFactory: () => Logger,
             cancellationToken: CancellationToken.None);
     }
 

@@ -11,7 +11,7 @@ public static class RabbitMqIModelExtension
             // Only if the close reason is shutdown, the server might just shutdown temporarily, so we still try to keep the channel for retry connect later
             return channel.IsClosed && channel.CloseReason != null && channel.CloseReason.ReplyCode != RabbitMqCloseReasonCodes.ServerShutdown;
         }
-        catch (ObjectDisposedException e)
+        catch (ObjectDisposedException)
         {
             return true;
         }

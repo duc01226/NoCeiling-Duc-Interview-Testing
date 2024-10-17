@@ -2,10 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using IdentityServer4;
 using IdentityServer4.Configuration;
 using IdentityServer4.Events;
@@ -180,7 +176,7 @@ public class DeviceController : Controller
             Description = model?.Description,
 
             RememberConsent = model?.RememberConsent ?? true,
-            ScopesConsented = model?.ScopesConsented ?? Enumerable.Empty<string>(),
+            ScopesConsented = model?.ScopesConsented ?? [],
 
             ClientName = request.Client.ClientName ?? request.Client.ClientId,
             ClientUrl = request.Client.ClientUri,

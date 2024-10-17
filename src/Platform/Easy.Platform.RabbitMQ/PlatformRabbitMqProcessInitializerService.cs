@@ -532,7 +532,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                                 rabbitMqMessageArgs.DeliveryTag);
                     });
             },
-            () => Logger,
+            loggerFactory: () => Logger,
             cancellationToken: CancellationToken.None,
             logFullStackTraceBeforeBackgroundTask: false);
     }
@@ -797,7 +797,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                                             channelPool.GetChannelDoActionAndReturn(channel => DeclareQueueAndBindForConsumer(channel, queueName, exchange));
                                         },
                                         cancellationToken: currentStartProcessCancellationToken,
-                                        sleepDurationProvider: retryAttempt => 10.Seconds(),
+                                        sleepDurationProvider: retryAttempt => 5.Seconds(),
                                         retryCount: int.MaxValue);
                                 },
                                 loggerFactory: () => Logger,

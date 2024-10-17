@@ -204,7 +204,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                                 loggerFactory,
                                 cancellationToken);
                         },
-                        loggerFactory,
+                        loggerFactory: loggerFactory,
                         cancellationToken: CancellationToken.None);
                 else
                     await ExecuteConsumerForNewInboxMessage(
@@ -532,7 +532,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                             if (retryAttempt > 10) loggerFactory().LogError(ex.BeautifyStackTrace(), "Update PlatformInboxBusMessage LastProcessingPingTime failed");
                         });
             },
-            loggerFactory,
+            loggerFactory: loggerFactory,
             delayTimeSeconds: PlatformInboxBusMessage.CheckProcessingPingIntervalSeconds,
             cancellationToken: CancellationToken.None,
             logFullStackTraceBeforeBackgroundTask: false);

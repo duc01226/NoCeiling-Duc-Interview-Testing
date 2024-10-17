@@ -243,7 +243,7 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
                         cacheOptions,
                         token);
                 },
-                () => Logger,
+                loggerFactory: () => Logger,
                 cancellationToken: token,
                 logFullStackTraceBeforeBackgroundTask: false);
 

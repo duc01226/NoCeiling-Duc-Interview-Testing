@@ -50,15 +50,15 @@ public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, string, st
 
     public List<ExampleAddressValueObject> Addresses { get; set; } =
     [
-        new ExampleAddressValueObject
+        new()
         {
             Street = "Random default street"
         },
-        new ExampleAddressValueObject
+        new()
         {
             Street = "Random default streetAB"
         },
-        new ExampleAddressValueObject
+        new()
         {
             Street = "Random default streetCD"
         }
@@ -86,7 +86,7 @@ public class TextSnippetEntity : RootAuditedEntity<TextSnippetEntity, string, st
         return new PlatformCheckUniqueValidator<TextSnippetEntity>(
             targetItem: this,
             findOtherDuplicatedItemExpr: otherItem =>
-                !otherItem.Id.Equals(Id) && otherItem.SnippetText == SnippetText,
+                otherItem.Id != Id && otherItem.SnippetText == SnippetText,
             "SnippetText must be unique");
     }
 

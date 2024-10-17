@@ -5,6 +5,7 @@ using Easy.Platform.Common.Utils;
 using Easy.Platform.Common.Validations.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Common.Extensions;
 
@@ -1315,7 +1316,9 @@ public static class DependencyInjectionExtension
     {
         var parameters = scope.ResolveMethodParameters(method, manuallyParams);
 
-        method.DynamicInvoke(parameters);
+        var result = method.DynamicInvoke(parameters);
+
+        result?.As<Task>()?.Wait();
     }
 
     /// <inheritdoc cref="ExecuteInject(IServiceProvider,Delegate,object[])" />
@@ -1335,7 +1338,7 @@ public static class DependencyInjectionExtension
 
         var result = method.DynamicInvoke(parameters);
 
-        if (result.As<Task>() != null) await result.As<Task>();
+        if (result?.As<Task>() != null) await result.As<Task>();
     }
 
     /// <inheritdoc cref="ExecuteInject(IServiceProvider,Delegate,object[])" />
@@ -1354,7 +1357,7 @@ public static class DependencyInjectionExtension
 
         var result = method.DynamicInvoke(parameters);
 
-        if (result.As<Task<TResult>>() != null) return await result.As<Task<TResult>>();
+        if (result?.As<Task<TResult>>() != null) return await result.As<Task<TResult>>();
 
         return result.Cast<TResult>();
     }
@@ -1370,6 +1373,29 @@ public static class DependencyInjectionExtension
         }
     }
 
+    /// <summary>
+    /// Run method in new scope in background. Equivalent to: using(var scope = serviceProvider.CreateScope()) { method(scope); }
+    /// </summary>
+    public static void ExecuteScopedInBackground(
+        this IServiceProvider serviceProvider,
+        Action<IServiceScope> method,
+        int? retryCount = null,
+        Func<int, TimeSpan> retryDelayProvider = null,
+        Func<ILogger>? loggerFactory = null)
+    {
+        Util.TaskRunner.QueueActionInBackground(
+            () =>
+            {
+                using (var scope = serviceProvider.CreateScope())
+                {
+                    method(scope);
+                }
+            },
+            retryCount,
+            retryDelayProvider,
+            loggerFactory);
+    }
+
     /// <inheritdoc cref="ExecuteScoped" />
     public static TResult ExecuteScoped<TResult>(this IServiceProvider serviceProvider, Func<IServiceScope, TResult> method)
     {
@@ -1377,7 +1403,7 @@ public static class DependencyInjectionExtension
         {
             var result = method(scope);
 
-            result.As<Task>()?.WaitResult();
+            result?.As<Task>()?.Wait();
 
             return result;
         }
@@ -1390,6 +1416,27 @@ public static class DependencyInjectionExtension
         {
             await method(scope);
         }
+    }
+
+    /// <inheritdoc cref="ExecuteScopedInBackground" />
+    public static void ExecuteScopedInBackgroundAsync(
+        this IServiceProvider serviceProvider,
+        Func<IServiceScope, Task> method,
+        int? retryCount = null,
+        Func<int, TimeSpan>? retryDelayProvider = null,
+        Func<ILogger>? loggerFactory = null)
+    {
+        Util.TaskRunner.QueueActionInBackground(
+            async () =>
+            {
+                using (var scope = serviceProvider.CreateScope())
+                {
+                    await method(scope);
+                }
+            },
+            retryCount,
+            retryDelayProvider,
+            loggerFactory);
     }
 
     /// <inheritdoc cref="ExecuteScoped" />
@@ -1422,6 +1469,34 @@ public static class DependencyInjectionExtension
     public static Task ExecuteInjectScopedAsync(this IServiceProvider serviceProvider, Delegate method, params object[] manuallyParams)
     {
         return serviceProvider.ExecuteScopedAsync(scope => scope.ExecuteInjectAsync(method, manuallyParams));
+    }
+
+    /// <inheritdoc cref="ExecuteInjectScopedInBackground" />
+    public static void ExecuteInjectScopedInBackgroundAsync(
+        this IServiceProvider serviceProvider,
+        Delegate method,
+        int? retryCount = null,
+        Func<int, TimeSpan> retryDelayProvider = null,
+        Func<ILogger> loggerFactory = null,
+        object[] manuallyParams = null)
+    {
+        manuallyParams ??= [];
+
+        serviceProvider.ExecuteScopedInBackgroundAsync(scope => scope.ExecuteInjectAsync(method, manuallyParams), retryCount, retryDelayProvider, loggerFactory);
+    }
+
+    /// <inheritdoc cref="ExecuteInjectScopedInBackground" />
+    public static void ExecuteInjectScopedInBackground(
+        this IServiceProvider serviceProvider,
+        Delegate method,
+        int? retryCount = null,
+        Func<int, TimeSpan> retryDelayProvider = null,
+        Func<ILogger> loggerFactory = null,
+        object[] manuallyParams = null)
+    {
+        manuallyParams ??= [];
+
+        serviceProvider.ExecuteScopedInBackground(scope => scope.ExecuteInject(method, manuallyParams), retryCount, retryDelayProvider, loggerFactory);
     }
 
     /// <inheritdoc cref="ExecuteInjectScoped" />

@@ -309,7 +309,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                             if (retryAttempt > 10) loggerFactory().LogError(ex.BeautifyStackTrace(), "Update PlatformOutboxBusMessage LastProcessingPingTime failed");
                         });
             },
-            loggerFactory,
+            loggerFactory: loggerFactory,
             delayTimeSeconds: PlatformOutboxBusMessage.CheckProcessingPingIntervalSeconds,
             cancellationToken: CancellationToken.None,
             logFullStackTraceBeforeBackgroundTask: false);

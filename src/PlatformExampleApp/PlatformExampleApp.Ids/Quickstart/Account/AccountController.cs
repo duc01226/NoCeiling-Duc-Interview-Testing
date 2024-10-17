@@ -2,9 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using IdentityModel;
 using IdentityServer4;
 using IdentityServer4.Events;
@@ -258,13 +255,13 @@ public class AccountController : Controller
             };
 
             if (!local)
-                vm.ExternalProviders = new[]
-                {
+                vm.ExternalProviders =
+                [
                     new ExternalProvider
                     {
                         AuthenticationScheme = context.IdP
                     }
-                };
+                ];
 
             return vm;
         }

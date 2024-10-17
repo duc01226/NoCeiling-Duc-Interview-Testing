@@ -15,6 +15,8 @@ public static partial class Util
         public const int DefaultWaitUntilMaxSeconds = 60;
         public const double DefaultWaitIntervalSeconds = 2;
         public const int DefaultResilientRetryCount = 3;
+        public const int DefaultBackgroundResilientRetryCount = 20;
+        public static readonly Func<int, TimeSpan> DefaultBackgroundRetryDelayProvider = retryAttempt => retryAttempt.Seconds();
 
         /// <summary>
         /// A typical recommendation is to use a factor of 10-50 times the number of processor cores for I/O-bound tasks.
@@ -88,11 +90,16 @@ public static partial class Util
         /// </remarks>
         public static void QueueActionInBackground(
             Func<Task> action,
-            Func<ILogger> loggerFactory,
+            int? retryCount = null,
+            Func<int, TimeSpan> retryDelayProvider = null,
+            Func<ILogger>? loggerFactory = null,
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default,
             bool logFullStackTraceBeforeBackgroundTask = false)
         {
+            retryCount ??= DefaultBackgroundResilientRetryCount;
+            retryDelayProvider ??= DefaultBackgroundRetryDelayProvider;
+
             // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
             var fullStackTrace = logFullStackTraceBeforeBackgroundTask ? PlatformEnvironment.StackTrace() : null;
 
@@ -103,13 +110,27 @@ public static partial class Util
 
                     try
                     {
-                        await QueueDelayAsyncAction(_ => action(), delayTimeSeconds.Seconds(), cancellationToken);
+                        await QueueDelayAsyncAction(
+                            async _ =>
+                            {
+                                await WaitRetryThrowFinalExceptionAsync(
+                                    action,
+                                    retryDelayProvider,
+                                    retryCount.Value,
+                                    onRetry: (ex, span, retryAttempt, context) =>
+                                    {
+                                        loggerFactory?.Invoke().LogError(ex.BeautifyStackTrace(), "Run in background thread retry failed.");
+                                    },
+                                    cancellationToken: cancellationToken);
+                            },
+                            delayTimeSeconds.Seconds(),
+                            cancellationToken);
                     }
                     catch (Exception ex)
                     {
                         if (ex is TaskCanceledException) return;
 
-                        loggerFactory().LogError(ex.BeautifyStackTrace(), "Run in background thread failed.");
+                        loggerFactory?.Invoke().LogError(ex.BeautifyStackTrace(), "Run in background thread failed.");
                     }
                 },
                 cancellationToken);
@@ -128,11 +149,16 @@ public static partial class Util
         /// <typeparam name="TResult">The type of the result returned by the task.</typeparam>
         public static void QueueActionInBackground<TResult>(
             Func<Task<TResult>> action,
-            Func<ILogger> loggerFactory,
+            int? retryCount = null,
+            Func<int, TimeSpan> retryDelayProvider = null,
+            Func<ILogger>? loggerFactory = null,
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default,
             bool logFullStackTraceBeforeBackgroundTask = false)
         {
+            retryCount ??= DefaultBackgroundResilientRetryCount;
+            retryDelayProvider ??= DefaultBackgroundRetryDelayProvider;
+
             // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
             var fullStackTrace = logFullStackTraceBeforeBackgroundTask ? PlatformEnvironment.StackTrace() : null;
 
@@ -143,13 +169,27 @@ public static partial class Util
 
                     try
                     {
-                        await QueueDelayAsyncAction(_ => action(), delayTimeSeconds.Seconds(), cancellationToken);
+                        await QueueDelayAsyncAction(
+                            async _ =>
+                            {
+                                await WaitRetryThrowFinalExceptionAsync(
+                                    action,
+                                    retryDelayProvider,
+                                    retryCount.Value,
+                                    onRetry: (ex, span, retryAttempt, context) =>
+                                    {
+                                        loggerFactory?.Invoke().LogError(ex.BeautifyStackTrace(), "Run in background thread retry failed.");
+                                    },
+                                    cancellationToken: cancellationToken);
+                            },
+                            delayTimeSeconds.Seconds(),
+                            cancellationToken);
                     }
                     catch (Exception ex)
                     {
                         if (ex is TaskCanceledException) return;
 
-                        loggerFactory().LogError(ex.BeautifyStackTrace(), "Run in background thread failed.");
+                        loggerFactory?.Invoke().LogError(ex.BeautifyStackTrace(), "Run in background thread failed.");
                     }
                 },
                 cancellationToken);
@@ -168,11 +208,16 @@ public static partial class Util
         /// </remarks>
         public static void QueueActionInBackground(
             Action action,
-            Func<ILogger> loggerFactory,
+            int? retryCount = null,
+            Func<int, TimeSpan> retryDelayProvider = null,
+            Func<ILogger>? loggerFactory = null,
             int delayTimeSeconds = 0,
             CancellationToken cancellationToken = default,
             bool logFullStackTraceBeforeBackgroundTask = false)
         {
+            retryCount ??= DefaultBackgroundResilientRetryCount;
+            retryDelayProvider ??= DefaultBackgroundRetryDelayProvider;
+
             // Must use stack trace BEFORE Task.Run to run some new action in background. BECAUSE after call get data function, the stack trace get lost, only back to task.run.
             var fullStackTrace = logFullStackTraceBeforeBackgroundTask ? PlatformEnvironment.StackTrace() : null;
 
@@ -183,13 +228,26 @@ public static partial class Util
 
                     try
                     {
-                        await QueueDelayAction(action, delayTimeSeconds.Seconds(), cancellationToken);
+                        await QueueDelayAction(
+                            () =>
+                            {
+                                WaitRetryThrowFinalException(
+                                    action,
+                                    retryDelayProvider,
+                                    retryCount.Value,
+                                    onRetry: (ex, span, retryAttempt, context) =>
+                                    {
+                                        loggerFactory?.Invoke().LogError(ex.BeautifyStackTrace(), "Run in background thread retry failed.");
+                                    });
+                            },
+                            delayTimeSeconds.Seconds(),
+                            cancellationToken);
                     }
                     catch (Exception ex)
                     {
                         if (ex is TaskCanceledException) return;
 
-                        loggerFactory().LogError(ex.BeautifyStackTrace(), "Run in background thread failed.");
+                        loggerFactory?.Invoke().LogError(ex.BeautifyStackTrace(), "Run in background thread failed.");
                     }
                 },
                 cancellationToken);
@@ -244,7 +302,7 @@ public static partial class Util
         public static void QueueIntervalAsyncActionInBackground(
             Func<CancellationToken, Task> action,
             int intervalTimeInSeconds,
-            Func<ILogger> loggerFactory,
+            Func<ILogger>? loggerFactory,
             int? maximumIntervalExecutionCount = null,
             bool executeOnceImmediately = true,
             CancellationToken cancellationToken = default,
@@ -266,7 +324,7 @@ public static partial class Util
                     {
                         if (ex is TaskCanceledException) return;
 
-                        loggerFactory().LogError(ex.BeautifyStackTrace(), "Run in background thread failed.");
+                        loggerFactory?.Invoke().LogError(ex.BeautifyStackTrace(), "Run in background thread failed.");
                     }
                 },
                 cancellationToken);

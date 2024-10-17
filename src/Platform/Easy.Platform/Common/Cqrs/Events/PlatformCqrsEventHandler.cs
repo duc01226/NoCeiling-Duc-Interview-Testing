@@ -112,7 +112,7 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
                 NotNeedWaitHandlerExecutionFinishedImmediately(@event))
                 Util.TaskRunner.QueueActionInBackground(
                     async () => await ExecuteHandleInNewScopeAsync(@event, cancellationToken),
-                    () => LoggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}"),
+                    loggerFactory: () => LoggerFactory.CreateLogger(typeof(PlatformCqrsEventHandler<>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}"),
                     cancellationToken: default,
                     logFullStackTraceBeforeBackgroundTask: false);
             else

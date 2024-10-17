@@ -78,7 +78,7 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
 
                     Util.TaskRunner.QueueActionInBackground(
                         ExecuteOnStartUpRecurringBackgroundJobImmediately,
-                        () => Logger,
+                        loggerFactory: () => Logger,
                         logFullStackTraceBeforeBackgroundTask: false);
                 },
                 sleepDurationProvider: retryAttempt => 10.Seconds(),
