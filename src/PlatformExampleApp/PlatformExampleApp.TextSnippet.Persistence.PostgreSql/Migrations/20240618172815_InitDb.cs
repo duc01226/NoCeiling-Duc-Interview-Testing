@@ -142,7 +142,7 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
                 table: "TextSnippetEntity",
                 column: "SnippetText")
                 .Annotation("Npgsql:IndexMethod", "GIN")
-                .Annotation("Npgsql:IndexOperators", (string[]) ["gin_trgm_ops"])
+                .Annotation("Npgsql:IndexOperators", (string[])["gin_trgm_ops"])
                 .Annotation("Npgsql:TsVectorConfig", "english");
 
             migrationBuilder.CreateIndex(
