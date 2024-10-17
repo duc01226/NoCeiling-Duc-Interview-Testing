@@ -191,7 +191,9 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                                     // (I)
                                     // If there's no sub-queue prefix (hasSubQueuePrefix == false), process messages in parallel. => customPageSize is null (get many messages)
                                     // Otherwise, process messages sequentially. (hasSubQueuePrefix == true) => customPageSize is one to allow process once at a time
-                                    var hasSubQueuePrefix = PlatformInboxBusMessage.GetSubQueuePrefix(messageGroupedByConsumerIdPrefix).IsNotNullOrEmpty();
+                                    var hasSubQueuePrefix = PlatformInboxBusMessage
+                                        .GetSubQueuePrefix(messageGroupedByConsumerIdPrefix + PlatformInboxBusMessage.BuildIdPrefixSeparator)
+                                        .IsNotNullOrEmpty();
 
                                     // Continue processing messages within the prefix as long as there are messages to handle.
                                     do

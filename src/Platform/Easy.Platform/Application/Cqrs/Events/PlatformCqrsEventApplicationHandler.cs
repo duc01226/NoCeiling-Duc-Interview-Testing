@@ -86,8 +86,6 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
 
     public int RetryEventInboxBusMessageConsumerMaxCount { get; set; } = 3;
 
-    public virtual int MinRowVersionConflictRetryOnFailedTimes { get; set; } = Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
-
     public override int RetryOnFailedTimes
     {
         get => !HasInboxMessageSupport() && !MustWaitHandlerExecutionFinishedImmediately ? retryOnFailedTimes * 100 : retryOnFailedTimes;
@@ -354,10 +352,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                     await HandleAsync(@event, cancellationToken);
                 }
             },
-            retryCount: retryCount ??
-                        (NeedWaitHandlerExecutionFinishedImmediately(@event)
-                            ? RetryOnFailedTimes
-                            : MinRowVersionConflictRetryOnFailedTimes + RetryOnFailedTimes),
+            retryCount: retryCount ?? RetryOnFailedTimes,
             sleepDurationProvider: p => RetryOnFailedDelaySeconds.Seconds(),
             cancellationToken: cancellationToken);
     }

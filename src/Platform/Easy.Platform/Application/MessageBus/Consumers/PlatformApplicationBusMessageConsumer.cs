@@ -128,8 +128,6 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
 
     public bool AllowHandleNewInboxMessageInBackground { get; set; } = false;
 
-    public virtual int MinRowVersionConflictRetryOnFailedTimes { get; set; } = Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
-
     /// <inheritdoc />
     public bool NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage { get; set; } = true;
 
@@ -235,7 +233,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                         await Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
                 }
             },
-            retryCount: retryCount ?? MinRowVersionConflictRetryOnFailedTimes + RetryOnFailedTimes,
+            retryCount: retryCount ?? RetryOnFailedTimes,
             sleepDurationProvider: p => RetryOnFailedDelaySeconds.Seconds());
     }
 }
