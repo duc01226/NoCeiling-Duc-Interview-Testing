@@ -179,6 +179,11 @@ public static class PlatformInboxMessageBusConsumerHelper
                     inboxConfig,
                     cancellationToken);
             }
+            finally
+            {
+                if (applicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
+                    await Util.GarbageCollector.Collect(applicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
+            }
         else
             await DoProcessInboxForSaveAndTryConsumeNewInboxMessageAsync(
                 rootServiceProvider,
@@ -217,53 +222,34 @@ public static class PlatformInboxMessageBusConsumerHelper
         PlatformInboxConfig inboxConfig,
         CancellationToken cancellationToken) where TMessage : class, new()
     {
-        // Get or create the inbox message to process.
-        var (toProcessInboxMessage, _) =
-            await GetOrCreateToProcessInboxMessage(
-                consumerType,
-                inboxBusMessageRepository,
-                message,
-                forApplicationName,
-                routingKey,
-                subQueueMessageIdPrefix,
-                needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
-                applicationSettingContext,
-                inboxConfig,
-                cancellationToken);
-
-        if (toProcessInboxMessage != null)
+        try
         {
-            // If a unit of work is provided and it's not a pseudo transaction, execute the consumer within the unit of work.
-            if (handleInUow != null && !handleInUow.IsPseudoTransactionUow())
-            {
-                handleInUow.OnSaveChangesCompletedActions.Add(
-                    async () =>
-                    {
-                        // Execute task in background separated thread task
-                        _ = ExecuteConsumerForNewInboxMessage(
-                            rootServiceProvider,
-                            consumerType,
-                            message,
-                            toProcessInboxMessage,
-                            routingKey,
-                            autoDeleteProcessedMessage,
-                            retryProcessFailedMessageInSecondsUnit,
-                            loggerFactory,
-                            cancellationToken);
-                    });
-            }
-            else
-            {
-                // If there's an active unit of work, save changes to ensure the inbox message is persisted.
-                if (inboxBusMessageRepository.UowManager().TryGetCurrentActiveUow() != null)
-                    await inboxBusMessageRepository.UowManager().CurrentActiveUow().SaveChangesAsync(cancellationToken);
+            // Get or create the inbox message to process.
+            var (toProcessInboxMessage, _) =
+                await GetOrCreateToProcessInboxMessage(
+                    consumerType,
+                    inboxBusMessageRepository,
+                    message,
+                    forApplicationName,
+                    routingKey,
+                    subQueueMessageIdPrefix,
+                    needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
+                    applicationSettingContext,
+                    inboxConfig,
+                    cancellationToken);
 
-                if (allowHandleNewInboxMessageInBackground)
-                    Util.TaskRunner.QueueActionInBackground(
+            if (toProcessInboxMessage != null)
+            {
+                // If a unit of work is provided and it's not a pseudo transaction, execute the consumer within the unit of work.
+                if (handleInUow != null && !handleInUow.IsPseudoTransactionUow())
+                {
+                    handleInUow.OnSaveChangesCompletedActions.Add(
                         async () =>
                         {
-                            await ExecuteConsumerForNewInboxMessage(
+                            // Execute task in background separated thread task
+                            _ = ExecuteConsumerForNewInboxMessage(
                                 rootServiceProvider,
+                                applicationSettingContext,
                                 consumerType,
                                 message,
                                 toProcessInboxMessage,
@@ -272,21 +258,51 @@ public static class PlatformInboxMessageBusConsumerHelper
                                 retryProcessFailedMessageInSecondsUnit,
                                 loggerFactory,
                                 cancellationToken);
-                        },
-                        loggerFactory: loggerFactory,
-                        cancellationToken: CancellationToken.None);
+                        });
+                }
                 else
-                    await ExecuteConsumerForNewInboxMessage(
-                        rootServiceProvider,
-                        consumerType,
-                        message,
-                        toProcessInboxMessage,
-                        routingKey,
-                        autoDeleteProcessedMessage,
-                        retryProcessFailedMessageInSecondsUnit,
-                        loggerFactory,
-                        cancellationToken);
+                {
+                    // If there's an active unit of work, save changes to ensure the inbox message is persisted.
+                    if (inboxBusMessageRepository.UowManager().TryGetCurrentActiveUow() != null)
+                        await inboxBusMessageRepository.UowManager().CurrentActiveUow().SaveChangesAsync(cancellationToken);
+
+                    if (allowHandleNewInboxMessageInBackground)
+                        Util.TaskRunner.QueueActionInBackground(
+                            async () =>
+                            {
+                                await ExecuteConsumerForNewInboxMessage(
+                                    rootServiceProvider,
+                                    applicationSettingContext,
+                                    consumerType,
+                                    message,
+                                    toProcessInboxMessage,
+                                    routingKey,
+                                    autoDeleteProcessedMessage,
+                                    retryProcessFailedMessageInSecondsUnit,
+                                    loggerFactory,
+                                    cancellationToken);
+                            },
+                            loggerFactory: loggerFactory,
+                            cancellationToken: CancellationToken.None);
+                    else
+                        await ExecuteConsumerForNewInboxMessage(
+                            rootServiceProvider,
+                            applicationSettingContext,
+                            consumerType,
+                            message,
+                            toProcessInboxMessage,
+                            routingKey,
+                            autoDeleteProcessedMessage,
+                            retryProcessFailedMessageInSecondsUnit,
+                            loggerFactory,
+                            cancellationToken);
+                }
             }
+        }
+        finally
+        {
+            if (applicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
+                await Util.GarbageCollector.Collect(applicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
         }
     }
 
@@ -389,6 +405,7 @@ public static class PlatformInboxMessageBusConsumerHelper
     /// <returns>A <see cref="Task" /> representing the asynchronous operation.</returns>
     public static async Task ExecuteConsumerForNewInboxMessage<TMessage>(
         IPlatformRootServiceProvider rootServiceProvider,
+        IPlatformApplicationSettingContext applicationSettingContext,
         Type consumerType,
         TMessage message,
         PlatformInboxBusMessage newInboxMessage,
@@ -442,6 +459,11 @@ public static class PlatformInboxMessageBusConsumerHelper
                         loggerFactory,
                         consumerHasErrorAndShouldNeverRetry: true,
                         cancellationToken: cancellationToken);
+                }
+                finally
+                {
+                    if (applicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
+                        await Util.GarbageCollector.Collect(applicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
                 }
             });
     }
