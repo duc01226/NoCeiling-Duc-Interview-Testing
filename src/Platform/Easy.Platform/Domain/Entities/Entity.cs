@@ -24,6 +24,11 @@ public interface IEntity<TPrimaryKey> : IEntity
     /// Gets or sets the primary key.
     /// </summary>
     TPrimaryKey Id { get; set; }
+
+    public string GetUniqueId()
+    {
+        return this.As<IUniqueCompositeIdSupport>()?.UniqueCompositeId() ?? Id.ToString();
+    }
 }
 
 /// <summary>

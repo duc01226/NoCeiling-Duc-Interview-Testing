@@ -352,13 +352,16 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider))
+        if (entityIds.Count == 0) return entityIds;
+
+        if ((dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider)) &&
+            MappedUnitOfWork?.IsUsingOnceTransientUow == true)
             return await DeleteManyAsync<TEntity, TPrimaryKey>(p => entityIds.Contains(p.Id), true, eventCustomConfig, cancellationToken)
                 .Then(() => entityIds);
 
         var entities = await GetAllAsync(GetQuery<TEntity>().Where(p => entityIds.Contains(p.Id)), cancellationToken);
 
-        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, false, eventCustomConfig, cancellationToken).Then(() => entityIds);
+        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken).Then(() => entityIds);
     }
 
     public async Task<List<TEntity>> DeleteManyAsync<TEntity, TPrimaryKey>(
@@ -370,7 +373,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     {
         if (entities.Count == 0) return entities;
 
-        if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider))
+        if ((dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider)) &&
+            MappedUnitOfWork?.IsUsingOnceTransientUow == true)
         {
             var deleteEntitiesPredicate = entities.FirstOrDefault()?.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() != null
                 ? entities
@@ -381,14 +385,14 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
             return await DeleteManyAsync<TEntity, TPrimaryKey>(
                     deleteEntitiesPredicate,
-                    true,
+                    dismissSendEvent,
                     eventCustomConfig,
                     cancellationToken)
                 .Then(_ => entities);
         }
 
         return await entities
-            .SelectAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, false, eventCustomConfig, cancellationToken))
+            .SelectAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken))
             .ThenActionAsync(
                 entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Deleted, eventCustomConfig, cancellationToken));
     }
@@ -399,7 +403,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider))
+        if ((dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider)) &&
+            MappedUnitOfWork?.IsUsingOnceTransientUow == true)
             try
             {
                 await NotThreadSafeDbContextQueryLock.WaitAsync(cancellationToken);
@@ -413,7 +418,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
         var entities = await GetAllAsync(GetQuery<TEntity>().Where(predicate), cancellationToken);
 
-        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, false, eventCustomConfig, cancellationToken).Then(_ => entities.Count);
+        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken).Then(_ => entities.Count);
     }
 
     public async Task<int> DeleteManyAsync<TEntity, TPrimaryKey>(

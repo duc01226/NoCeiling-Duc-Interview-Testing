@@ -1048,6 +1048,12 @@ public static class ListExtension
         return list.Any(p => p.EqualsIgnoreCase(value));
     }
 
+    /// <inheritdoc cref="WhereSplitResult{T}(IEnumerable{T},Expression{Func{T,bool}})" />
+    public static ValueTuple<List<T>, List<T>> WhereSplitResult<T>(this IEnumerable<T> items, Expression<Func<T, bool>> predicate)
+    {
+        return WhereSplitResult(items.ToList(), predicate.Compile());
+    }
+
     /// <summary>
     /// Splits the input list into two separate lists based on a given predicate.
     /// </summary>
@@ -1067,11 +1073,10 @@ public static class ListExtension
     ///     </item>
     /// </list>
     /// </returns>
-    public static ValueTuple<List<T>, List<T>> WhereSplitResult<T>(this IEnumerable<T> list, Expression<Func<T, bool>> predicate)
+    public static ValueTuple<List<T>, List<T>> WhereSplitResult<T>(this ICollection<T> list, Func<T, bool> predicateFn)
     {
         var matchItems = new List<T>();
         var notMatchItems = new List<T>();
-        var predicateFn = predicate.Compile();
 
         foreach (var item in list)
             if (predicateFn(item)) matchItems.Add(item);
