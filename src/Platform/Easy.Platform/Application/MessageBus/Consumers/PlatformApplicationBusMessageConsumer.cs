@@ -49,6 +49,7 @@ public interface IPlatformApplicationMessageBusConsumer : IPlatformMessageBusCon
 public interface IPlatformApplicationMessageBusConsumer<in TMessage> : IPlatformMessageBusConsumer<TMessage>, IPlatformApplicationMessageBusConsumer
     where TMessage : class, new()
 {
+    public Task HandleMessageDirectly(TMessage message, string routingKey, int? retryCount = null);
 }
 
 /// <summary>
@@ -152,52 +153,13 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
     {
         // If the inbox pattern is enabled and allowed, handle the message using the inbox pattern.
         if (InboxBusMessageRepo != null && AllowUseInboxMessage && !IsHandlingLogicForInboxMessage)
-        {
-            // if message can handle parallel without check in order sub queue then can try to execute immediately
-            if (message.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix().IsNullOrEmpty() == true)
-                try
-                {
-                    // Try to execute directly to improve performance. Then if failed execute use inbox to support retry failed message later.
-                    await HandleMessageDirectly(message, routingKey, retryCount: 2);
-                }
-                catch (Exception)
-                {
-                    await HandleExecutingInboxConsumerAsync(message, routingKey);
-                }
-            else
-                await HandleExecutingInboxConsumerAsync(message, routingKey);
-        }
+            await HandleExecutingInboxConsumerAsync(message, routingKey);
         // Otherwise, handle the message directly.
         else
-        {
             await HandleMessageDirectly(message, routingKey);
-        }
     }
 
-    private async Task HandleExecutingInboxConsumerAsync(TMessage message, string routingKey)
-    {
-        await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
-            RootServiceProvider,
-            ServiceProvider,
-            consumerType: GetType(),
-            inboxBusMessageRepository: InboxBusMessageRepo.Value,
-            inboxConfig: InboxConfig,
-            applicationSettingContext: ApplicationSettingContext,
-            message: message,
-            forApplicationName: ApplicationSettingContext.ApplicationName,
-            routingKey: routingKey,
-            loggerFactory: CreateLogger,
-            retryProcessFailedMessageInSecondsUnit: InboxConfig.RetryProcessFailedMessageInSecondsUnit,
-            handleExistingInboxMessage: HandleExistingInboxMessage,
-            handleExistingInboxMessageConsumerInstance: this,
-            subQueueMessageIdPrefix: message.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix(),
-            autoDeleteProcessedMessageImmediately: AutoDeleteProcessedInboxEventMessageImmediately,
-            needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage: NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage,
-            handleInUow: null,
-            allowHandleNewInboxMessageInBackground: AllowHandleNewInboxMessageInBackground);
-    }
-
-    private async Task HandleMessageDirectly(TMessage message, string routingKey, int? retryCount = null)
+    public async Task HandleMessageDirectly(TMessage message, string routingKey, int? retryCount = null)
     {
         await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync<PlatformDomainRowVersionConflictException>(
             async () =>
@@ -235,5 +197,28 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
             },
             retryCount: retryCount ?? RetryOnFailedTimes,
             sleepDurationProvider: p => RetryOnFailedDelaySeconds.Seconds());
+    }
+
+    private async Task HandleExecutingInboxConsumerAsync(TMessage message, string routingKey)
+    {
+        await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
+            RootServiceProvider,
+            ServiceProvider,
+            consumerType: GetType(),
+            inboxBusMessageRepository: InboxBusMessageRepo.Value,
+            inboxConfig: InboxConfig,
+            applicationSettingContext: ApplicationSettingContext,
+            message: message,
+            forApplicationName: ApplicationSettingContext.ApplicationName,
+            routingKey: routingKey,
+            loggerFactory: CreateLogger,
+            retryProcessFailedMessageInSecondsUnit: InboxConfig.RetryProcessFailedMessageInSecondsUnit,
+            handleExistingInboxMessage: HandleExistingInboxMessage,
+            handleExistingInboxMessageConsumerInstance: this,
+            subQueueMessageIdPrefix: message.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix(),
+            autoDeleteProcessedMessageImmediately: AutoDeleteProcessedInboxEventMessageImmediately,
+            needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage: NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage,
+            handleInUow: null,
+            allowHandleNewInboxMessageInBackground: AllowHandleNewInboxMessageInBackground);
     }
 }

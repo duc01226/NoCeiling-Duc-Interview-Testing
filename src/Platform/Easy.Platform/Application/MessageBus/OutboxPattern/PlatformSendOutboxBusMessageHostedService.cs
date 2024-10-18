@@ -18,7 +18,8 @@ namespace Easy.Platform.Application.MessageBus.OutboxPattern;
 /// </summary>
 public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHostingBackgroundService
 {
-    private bool isProcessing;
+    private readonly SemaphoreSlim maxIntervalProcessTriggeredLock;
+    private readonly SemaphoreSlim processMessageParallelLimitLock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlatformSendOutboxBusMessageHostedService" /> class.
@@ -38,6 +39,9 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
         ApplicationSettingContext = applicationSettingContext;
         OutboxConfig = outboxConfig;
         RootServiceProvider = rootServiceProvider;
+
+        processMessageParallelLimitLock = new SemaphoreSlim(OutboxConfig.MaxParallelProcessingMessagesCount, OutboxConfig.MaxParallelProcessingMessagesCount);
+        maxIntervalProcessTriggeredLock = new SemaphoreSlim(OutboxConfig.MaxParallelProcessingMessagesCount, OutboxConfig.MaxParallelProcessingMessagesCount);
     }
 
     /// <summary>
@@ -80,41 +84,51 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
         await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformPersistenceModule), Logger, $"process {GetType().Name}");
 
         // If the outbox message repository is not registered or processing is already in progress, skip processing.
-        if (!HasOutboxEventBusMessageRepositoryRegistered() || isProcessing) return;
+        if (!HasOutboxEventBusMessageRepositoryRegistered()) return;
 
-        isProcessing = true;
+        Util.TaskRunner.QueueActionInBackground(
+            async () =>
+            {
+                if (processMessageParallelLimitLock.CurrentCount == 0 || maxIntervalProcessTriggeredLock.CurrentCount == 0)
+                    return;
 
-        try
-        {
-            // Retry sending outbox messages in case of transient errors, such as database connection issues.
-            await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                () => SendOutboxEventBusMessages(cancellationToken),
-                retryAttempt => OutboxConfig.ProcessSendMessageRetryDelaySeconds.Seconds(),
-                retryCount: OutboxConfig.ProcessSendMessageRetryCount,
-                onRetry: (ex, timeSpan, currentRetry, ctx) =>
+                try
                 {
-                    // Log an error if the retry count exceeds a certain threshold.
-                    if (currentRetry >= OutboxConfig.MinimumRetrySendOutboxMessageTimesToLogError)
-                        Logger.LogError(
-                            "Retry SendOutboxEventBusMessages {CurrentRetry} time(s) failed: {Error}. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
-                            currentRetry,
-                            ex.Message,
-                            ApplicationSettingContext.ApplicationName,
-                            ApplicationSettingContext.ApplicationAssembly.FullName);
-                },
-                cancellationToken: cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(
-                ex.BeautifyStackTrace(),
-                "SendOutboxEventBusMessages failed. [[Error:{Error}]]. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
-                ex.Message,
-                ApplicationSettingContext.ApplicationName,
-                ApplicationSettingContext.ApplicationAssembly.FullName);
-        }
+                    await maxIntervalProcessTriggeredLock.WaitAsync(cancellationToken);
 
-        isProcessing = false;
+                    // Retry sending outbox messages in case of transient errors, such as database connection issues.
+                    await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                        () => SendOutboxEventBusMessages(cancellationToken),
+                        retryAttempt => OutboxConfig.ProcessSendMessageRetryDelaySeconds.Seconds(),
+                        retryCount: OutboxConfig.ProcessSendMessageRetryCount,
+                        onRetry: (ex, timeSpan, currentRetry, ctx) =>
+                        {
+                            // Log an error if the retry count exceeds a certain threshold.
+                            if (currentRetry >= OutboxConfig.MinimumRetrySendOutboxMessageTimesToLogError)
+                                Logger.LogError(
+                                    "Retry SendOutboxEventBusMessages {CurrentRetry} time(s) failed: {Error}. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
+                                    currentRetry,
+                                    ex.Message,
+                                    ApplicationSettingContext.ApplicationName,
+                                    ApplicationSettingContext.ApplicationAssembly.FullName);
+                        },
+                        cancellationToken: cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(
+                        ex.BeautifyStackTrace(),
+                        "SendOutboxEventBusMessages failed. [[Error:{Error}]]. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
+                        ex.Message,
+                        ApplicationSettingContext.ApplicationName,
+                        ApplicationSettingContext.ApplicationAssembly.FullName);
+                }
+                finally
+                {
+                    maxIntervalProcessTriggeredLock.Release();
+                }
+            },
+            cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -130,26 +144,24 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                 // Continue processing messages as long as there are messages to handle.
                 do
                 {
-                    // Keep track of processed message prefixes to avoid duplicate processing.
-                    var processedCanHandleMessageGroupedByTypeIdPrefixes = new HashSet<string>();
-
                     // Use a pager to process messages in batches.
-                    await Util.Pager.ExecutePagingAsync(
-                        async (skipCount, pageSize) =>
+                    await Util.Pager.ExecuteScrollingPagingAsync(
+                        async () =>
                         {
+                            if (processMessageParallelLimitLock.CurrentCount == 0)
+                                return [];
+
                             // Retrieve a page of message IDs that are eligible for processing.
                             var pagedCanHandleMessageGroupedByTypeIdPrefixes = await outboxBusMessageRepository.GetAllAsync(
                                     queryBuilder: query => query
                                         .Where(PlatformOutboxBusMessage.CanHandleMessagesExpr())
                                         .OrderBy(p => p.CreatedDate)
-                                        .Skip(skipCount)
-                                        .Take(pageSize)
+                                        .Take(OutboxConfig.GetCanHandleMessageGroupedByTypeIdPrefixesPageSize)
                                         .Select(p => p.Id),
                                     cancellationToken: cancellationToken)
                                 .Then(
                                     messageIds => messageIds
                                         .Select(PlatformOutboxBusMessage.GetIdPrefix)
-                                        .Where(p => !processedCanHandleMessageGroupedByTypeIdPrefixes.Contains(p))
                                         .Distinct()
                                         .ToList());
 
@@ -181,32 +193,37 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                                 },
                                 OutboxConfig.MaxParallelProcessingMessagesCount);
 
-                            // Add the processed prefixes to the set to avoid duplicate processing.
-                            pagedCanHandleMessageGroupedByTypeIdPrefixes.ForEach(p => processedCanHandleMessageGroupedByTypeIdPrefixes.Add(p));
+                            return pagedCanHandleMessageGroupedByTypeIdPrefixes;
                         },
-                        // Determine the maximum number of messages to process.
-                        await outboxBusMessageRepository.CountAsync(
+                        maxExecutionCount: await outboxBusMessageRepository.CountAsync(
                             queryBuilder: query => query
                                 .Where(PlatformOutboxBusMessage.CanHandleMessagesExpr()),
                             cancellationToken: cancellationToken),
-                        // Set the page size for retrieving message prefixes.
-                        OutboxConfig.GetCanHandleMessageGroupedByTypeIdPrefixesPageSize,
                         cancellationToken: cancellationToken);
 
                     // Continue processing as long as there are messages to handle.
-                } while (await AnyCanHandleOutboxBusMessages(null, outboxBusMessageRepository));
+                } while (await AnyCanHandleOutboxBusMessages(null, outboxBusMessageRepository) && processMessageParallelLimitLock.CurrentCount > 0);
             });
 
         // Local function to handle a single outbox message.
         async Task HandleOutboxMessageAsync(PlatformOutboxBusMessage toHandleOutboxMessage)
         {
-            using (var scope = ServiceProvider.CreateScope())
+            try
             {
-                await SendMessageToBusAsync(
-                    scope,
-                    toHandleOutboxMessage,
-                    OutboxConfig.RetryProcessFailedMessageInSecondsUnit,
-                    cancellationToken);
+                await processMessageParallelLimitLock.WaitAsync(cancellationToken);
+
+                using (var scope = ServiceProvider.CreateScope())
+                {
+                    await SendMessageToBusAsync(
+                        scope,
+                        toHandleOutboxMessage,
+                        OutboxConfig.RetryProcessFailedMessageInSecondsUnit,
+                        cancellationToken);
+                }
+            }
+            finally
+            {
+                processMessageParallelLimitLock.Release();
             }
         }
     }

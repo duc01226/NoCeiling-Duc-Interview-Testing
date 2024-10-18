@@ -41,7 +41,7 @@ public class PlatformInboxConfig
 
     public int ProcessClearMessageRetryCount { get; set; } = 5;
 
-    public int GetCanHandleMessageGroupedByConsumerIdPrefixesPageSize { get; set; } = 10000;
+    public int GetCanHandleMessageGroupedByConsumerIdPrefixesPageSize { get; set; } = 100000;
 
     public int ProcessConsumeMessageRetryCount { get; set; } = DefaultProcessConsumeMessageRetryCount;
 

@@ -20,10 +20,10 @@ namespace Easy.Platform.Application.MessageBus.InboxPattern;
 /// </summary>
 public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHostingBackgroundService
 {
+    private readonly SemaphoreSlim maxIntervalProcessTriggeredLock;
     private readonly SemaphoreSlim processMessageParallelLimitLock;
     private DateTime? firstTimeProcessDate;
     private bool isFirstTimeProcess = true;
-    private bool isProcessing;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlatformConsumeInboxBusMessageHostedService" /> class.
@@ -51,6 +51,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
             .ToDictionary(PlatformInboxBusMessage.GetConsumerByValue);
 
         processMessageParallelLimitLock = new SemaphoreSlim(InboxConfig.MaxParallelProcessingMessagesCount, InboxConfig.MaxParallelProcessingMessagesCount);
+        maxIntervalProcessTriggeredLock = new SemaphoreSlim(InboxConfig.MaxParallelProcessingMessagesCount, InboxConfig.MaxParallelProcessingMessagesCount);
     }
 
     /// <summary>
@@ -105,43 +106,52 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
         await IPlatformModule.WaitAllModulesInitiatedAsync(ServiceProvider, typeof(IPlatformPersistenceModule), Logger, $"process {GetType().Name}");
 
         // If the inbox message repository is not registered or processing is already in progress, skip processing.
-        if (!HasInboxEventBusMessageRepositoryRegistered() || isProcessing) return;
+        if (!HasInboxEventBusMessageRepositoryRegistered()) return;
 
-        isProcessing = true;
-        if (isFirstTimeProcess) firstTimeProcessDate = Clock.UtcNow;
+        // Queue action in background so that other interval could try get new available messages to process when there is some slow message is processing cause new message could not be checked
+        Util.TaskRunner.QueueActionInBackground(
+            async () =>
+            {
+                if (processMessageParallelLimitLock.CurrentCount == 0 || maxIntervalProcessTriggeredLock.CurrentCount == 0)
+                    return;
 
-        try
-        {
-            // Retry consuming inbox messages in case of transient errors, such as database connection issues.
-            await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-                () => ConsumeInboxEventBusMessages(cancellationToken),
-                retryAttempt => InboxConfig.ProcessConsumeMessageRetryDelaySeconds.Seconds(),
-                retryCount: InboxConfig.ProcessConsumeMessageRetryCount,
-                onRetry: (ex, timeSpan, currentRetry, ctx) =>
+                try
                 {
-                    // Log an error if the retry count exceeds a certain threshold.
-                    if (currentRetry >= InboxConfig.MinimumRetryConsumeInboxMessageTimesToLogError)
-                        Logger.LogError(
-                            "Retry ConsumeInboxEventBusMessages {CurrentRetry} time(s) failed: {Error}. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
-                            currentRetry,
-                            ex.Message,
-                            ApplicationSettingContext.ApplicationName,
-                            ApplicationSettingContext.ApplicationAssembly.FullName);
-                },
-                cancellationToken: cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(
-                ex.BeautifyStackTrace(),
-                "ConsumeInboxEventBusMessages failed: {Error}. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
-                ex.Message,
-                ApplicationSettingContext.ApplicationName,
-                ApplicationSettingContext.ApplicationAssembly.FullName);
-        }
+                    await maxIntervalProcessTriggeredLock.WaitAsync(cancellationToken);
 
-        isProcessing = false;
-        isFirstTimeProcess = false;
+                    // Retry consuming inbox messages in case of transient errors, such as database connection issues.
+                    await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                        () => ConsumeInboxEventBusMessages(cancellationToken),
+                        retryAttempt => InboxConfig.ProcessConsumeMessageRetryDelaySeconds.Seconds(),
+                        retryCount: InboxConfig.ProcessConsumeMessageRetryCount,
+                        onRetry: (ex, timeSpan, currentRetry, ctx) =>
+                        {
+                            // Log an error if the retry count exceeds a certain threshold.
+                            if (currentRetry >= InboxConfig.MinimumRetryConsumeInboxMessageTimesToLogError)
+                                Logger.LogError(
+                                    "Retry ConsumeInboxEventBusMessages {CurrentRetry} time(s) failed: {Error}. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
+                                    currentRetry,
+                                    ex.Message,
+                                    ApplicationSettingContext.ApplicationName,
+                                    ApplicationSettingContext.ApplicationAssembly.FullName);
+                        },
+                        cancellationToken: cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(
+                        ex.BeautifyStackTrace(),
+                        "ConsumeInboxEventBusMessages failed: {Error}. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
+                        ex.Message,
+                        ApplicationSettingContext.ApplicationName,
+                        ApplicationSettingContext.ApplicationAssembly.FullName);
+                }
+                finally
+                {
+                    maxIntervalProcessTriggeredLock.Release();
+                }
+            },
+            cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -151,19 +161,27 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
     /// <returns>A <see cref="Task" /> representing the asynchronous operation.</returns>
     protected virtual async Task ConsumeInboxEventBusMessages(CancellationToken cancellationToken)
     {
+        var isThisConsumeIsFirstTimeProcess = isFirstTimeProcess;
+
+        if (isFirstTimeProcess)
+        {
+            firstTimeProcessDate = Clock.UtcNow;
+            isFirstTimeProcess = false;
+        }
+
         await ServiceProvider.ExecuteInjectScopedAsync(
             async (IPlatformInboxBusMessageRepository inboxBusMessageRepository) =>
             {
                 // Continue processing messages as long as there are messages to handle.
                 do
                 {
-                    // Keep track of processed message prefixes to avoid duplicate processing.
-                    var processedCanHandleMessageGroupedByConsumerIdPrefixes = new HashSet<string>();
-
                     // Use a pager to process messages in batches.
-                    await Util.Pager.ExecutePagingAsync(
-                        async (skipCount, pageSize) =>
+                    await Util.Pager.ExecuteScrollingPagingAsync(
+                        async () =>
                         {
+                            if (processMessageParallelLimitLock.CurrentCount == 0)
+                                return [];
+
                             // Retrieve a page of message IDs that are eligible for processing.
                             var pagedCanHandleMessageGroupedByConsumerIdPrefixes = await inboxBusMessageRepository.GetAllAsync(
                                     queryBuilder: query => query
@@ -171,16 +189,14 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                                             PlatformInboxBusMessage.CanHandleMessagesExpr(
                                                 ApplicationSettingContext.ApplicationName,
                                                 InboxConfig.MaxRetriedProcessCount,
-                                                retryFailedMessageImmediately: isFirstTimeProcess))
+                                                retryFailedMessageImmediately: isThisConsumeIsFirstTimeProcess))
                                         .OrderBy(p => p.CreatedDate)
-                                        .Skip(skipCount)
-                                        .Take(pageSize)
+                                        .Take(InboxConfig.GetCanHandleMessageGroupedByConsumerIdPrefixesPageSize)
                                         .Select(p => p.Id),
                                     cancellationToken: cancellationToken)
                                 .Then(
                                     messageIds => messageIds
                                         .Select(PlatformInboxBusMessage.GetIdPrefix)
-                                        .Where(p => !processedCanHandleMessageGroupedByConsumerIdPrefixes.Contains(p))
                                         .Distinct()
                                         .ToList());
 
@@ -212,24 +228,22 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                                 },
                                 InboxConfig.MaxParallelProcessingMessagesCount);
 
-                            // Add the processed prefixes to the set to avoid duplicate processing.
-                            pagedCanHandleMessageGroupedByConsumerIdPrefixes.ForEach(p => processedCanHandleMessageGroupedByConsumerIdPrefixes.Add(p));
+                            isThisConsumeIsFirstTimeProcess = false;
+
+                            return pagedCanHandleMessageGroupedByConsumerIdPrefixes;
                         },
-                        // Determine the maximum number of messages to process.
-                        maxItemCount: await inboxBusMessageRepository.CountAsync(
+                        maxExecutionCount: await inboxBusMessageRepository.CountAsync(
                             queryBuilder: query => query
                                 .Where(
                                     PlatformInboxBusMessage.CanHandleMessagesExpr(
                                         ApplicationSettingContext.ApplicationName,
                                         InboxConfig.MaxRetriedProcessCount,
-                                        retryFailedMessageImmediately: isFirstTimeProcess)),
+                                        retryFailedMessageImmediately: isThisConsumeIsFirstTimeProcess)),
                             cancellationToken: cancellationToken),
-                        // Set the page size for retrieving message prefixes.
-                        pageSize: InboxConfig.GetCanHandleMessageGroupedByConsumerIdPrefixesPageSize,
                         cancellationToken: cancellationToken);
 
                     // Continue processing as long as there are messages to handle.
-                } while (await AnyCanHandleInboxBusMessages(null, inboxBusMessageRepository));
+                } while (await AnyCanHandleInboxBusMessages(null, inboxBusMessageRepository) && processMessageParallelLimitLock.CurrentCount > 0);
             });
     }
 

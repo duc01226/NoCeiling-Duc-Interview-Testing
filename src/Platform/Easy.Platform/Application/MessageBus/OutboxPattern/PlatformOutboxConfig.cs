@@ -46,7 +46,7 @@ public class PlatformOutboxConfig
 
     public int ProcessClearMessageRetryCount { get; set; } = 5;
 
-    public int GetCanHandleMessageGroupedByTypeIdPrefixesPageSize { get; set; } = 10000;
+    public int GetCanHandleMessageGroupedByTypeIdPrefixesPageSize { get; set; } = 100000;
 
     public int ProcessSendMessageRetryCount { get; set; } = DefaultProcessSendMessageRetryCount;
 
@@ -54,9 +54,9 @@ public class PlatformOutboxConfig
 
     public bool LogIntervalProcessInformation { get; set; }
 
-    public int CheckToProcessTriggerIntervalTimeSeconds { get; set; } = 15;
+    public int CheckToProcessTriggerIntervalTimeSeconds { get; set; } = 10;
 
     public int MinimumRetrySendOutboxMessageTimesToLogError { get; set; } = DefaultProcessSendMessageRetryCount * 8 / 10;
 
-    public int MaxParallelProcessingMessagesCount { get; set; } = Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
+    public int MaxParallelProcessingMessagesCount { get; set; } = Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent * 2;
 }

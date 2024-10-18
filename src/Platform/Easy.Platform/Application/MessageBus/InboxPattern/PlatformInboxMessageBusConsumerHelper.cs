@@ -94,6 +94,7 @@ public static class PlatformInboxMessageBusConsumerHelper
             await SaveAndTryConsumeNewInboxMessageAsync(
                 rootServiceProvider,
                 consumerType,
+                handleExistingInboxMessageConsumerInstance,
                 inboxBusMessageRepository,
                 applicationSettingContext,
                 message,
@@ -116,6 +117,7 @@ public static class PlatformInboxMessageBusConsumerHelper
     /// <typeparam name="TMessage">The type of the message being consumed.</typeparam>
     /// <param name="rootServiceProvider">The root service provider.</param>
     /// <param name="consumerType">The type of the consumer handling the message.</param>
+    /// <param name="handleExistingInboxMessageConsumerInstance">handleExistingInboxMessageConsumerInstance</param>
     /// <param name="inboxBusMessageRepository">The repository for accessing inbox messages.</param>
     /// <param name="applicationSettingContext">applicationSettingContext</param>
     /// <param name="message">The message being consumed.</param>
@@ -128,9 +130,76 @@ public static class PlatformInboxMessageBusConsumerHelper
     /// <param name="subQueueMessageIdPrefix">A prefix for the message ID, used for sub-queueing.</param>
     /// <param name="retryProcessFailedMessageInSecondsUnit">The time unit in seconds for retrying failed message processing.</param>
     /// <param name="allowHandleNewInboxMessageInBackground">allowHandleNewInboxMessageInBackground</param>
+    /// <param name="inboxConfig"></param>
     /// <param name="cancellationToken">A <see cref="CancellationToken" /> that can be used to cancel the operation.</param>
     /// <returns>A <see cref="Task" /> representing the asynchronous operation.</returns>
     private static async Task SaveAndTryConsumeNewInboxMessageAsync<TMessage>(
+        IPlatformRootServiceProvider rootServiceProvider,
+        Type consumerType,
+        IPlatformApplicationMessageBusConsumer<TMessage> handleExistingInboxMessageConsumerInstance,
+        IPlatformInboxBusMessageRepository inboxBusMessageRepository,
+        IPlatformApplicationSettingContext applicationSettingContext,
+        TMessage message,
+        string forApplicationName,
+        string routingKey,
+        Func<ILogger> loggerFactory,
+        IPlatformUnitOfWork handleInUow,
+        bool autoDeleteProcessedMessage,
+        bool needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
+        string subQueueMessageIdPrefix,
+        double retryProcessFailedMessageInSecondsUnit,
+        bool allowHandleNewInboxMessageInBackground,
+        PlatformInboxConfig inboxConfig,
+        CancellationToken cancellationToken) where TMessage : class, new()
+    {
+        // if message can handle parallel without check in order sub queue then can try to execute immediately
+        if (message.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix().IsNullOrEmpty() == true)
+            try
+            {
+                // Try to execute directly to improve performance. Then if failed execute use inbox to support retry failed message later.
+                await handleExistingInboxMessageConsumerInstance.HandleMessageDirectly(message, routingKey, retryCount: 2);
+            }
+            catch (Exception)
+            {
+                await DoProcessInboxForSaveAndTryConsumeNewInboxMessageAsync(
+                    rootServiceProvider,
+                    consumerType,
+                    inboxBusMessageRepository,
+                    applicationSettingContext,
+                    message,
+                    forApplicationName,
+                    routingKey,
+                    loggerFactory,
+                    handleInUow,
+                    autoDeleteProcessedMessage,
+                    needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
+                    subQueueMessageIdPrefix,
+                    retryProcessFailedMessageInSecondsUnit,
+                    allowHandleNewInboxMessageInBackground,
+                    inboxConfig,
+                    cancellationToken);
+            }
+        else
+            await DoProcessInboxForSaveAndTryConsumeNewInboxMessageAsync(
+                rootServiceProvider,
+                consumerType,
+                inboxBusMessageRepository,
+                applicationSettingContext,
+                message,
+                forApplicationName,
+                routingKey,
+                loggerFactory,
+                handleInUow,
+                autoDeleteProcessedMessage,
+                needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
+                subQueueMessageIdPrefix,
+                retryProcessFailedMessageInSecondsUnit,
+                allowHandleNewInboxMessageInBackground,
+                inboxConfig,
+                cancellationToken);
+    }
+
+    private static async Task DoProcessInboxForSaveAndTryConsumeNewInboxMessageAsync<TMessage>(
         IPlatformRootServiceProvider rootServiceProvider,
         Type consumerType,
         IPlatformInboxBusMessageRepository inboxBusMessageRepository,
