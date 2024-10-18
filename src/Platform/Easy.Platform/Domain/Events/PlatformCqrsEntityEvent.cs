@@ -234,8 +234,9 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         await SendEvent<PlatformCqrsEntityEvent<TEntity>>(
             rootServiceProvider,
             mappedToDbContextUow,
-            () => new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).With(
-                @event => @event.ExistingEntityData = existingOriginalEntity),
+            () => new PlatformCqrsEntityEvent<TEntity>(entity, crudAction).WithIf(
+                entity.As<IEntity>().HasTrackValueUpdatedDomainEventAttribute(),
+                @event => @event.ExistingOriginalEntityData = existingOriginalEntity),
             eventCustomConfig,
             requestContext,
             eventStackTrace,
@@ -412,9 +413,9 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent, IPlatfo
     public new TEntity EntityData { get; set; }
 
     /// <summary>
-    /// Existing entity data before update/delete. Only available for entity implement <see cref="IRowVersionEntity" /> or entity with attribute <see cref="TrackFieldUpdatedDomainEventAttribute" />
+    /// Existing entity data before update/delete. Only available for entity with attribute <see cref="TrackFieldUpdatedDomainEventAttribute" />
     /// </summary>
-    public new TEntity? ExistingEntityData { get; set; }
+    public TEntity? ExistingOriginalEntityData { get; set; }
 
     public List<KeyValuePair<string, string>> DomainEvents { get; set; } = [];
 

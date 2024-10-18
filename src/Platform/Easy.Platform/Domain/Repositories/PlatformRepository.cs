@@ -135,15 +135,10 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
     public void SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate<TResult>(TResult result, IPlatformUnitOfWork uow)
     {
-        var isAnyKindsOfEventHandlerRegisteredForEntity = PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider);
-
-        if (isAnyKindsOfEventHandlerRegisteredForEntity)
-        {
-            if (result is TEntity resultSingleEntity)
-                uow.SetCachedExistingOriginalEntity(resultSingleEntity);
-            else if (result is ICollection<TEntity> resultMultipleEntities && resultMultipleEntities.Any())
-                resultMultipleEntities.ForEach(p => uow.SetCachedExistingOriginalEntity(p));
-        }
+        if (result is TEntity resultSingleEntity)
+            uow.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(resultSingleEntity);
+        else if (result is ICollection<TEntity> resultMultipleEntities && resultMultipleEntities.Any())
+            resultMultipleEntities.ForEach(p => uow.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p));
     }
 
     public Task<List<TEntity>> GetAllAsync(
@@ -298,6 +293,14 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     public abstract Task<TEntity> CreateOrUpdateAsync(
         IPlatformUnitOfWork uow,
         TEntity entity,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default);
+
+    public abstract Task<TEntity> CreateOrUpdateAsync(
+        IPlatformUnitOfWork uow,
+        TEntity entity,
+        TEntity? existingEntity,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);

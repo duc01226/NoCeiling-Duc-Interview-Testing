@@ -307,6 +307,17 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
+        return await CreateOrUpdateAsync(uow, entity, existingEntity: null, dismissSendEvent, eventCustomConfig, cancellationToken);
+    }
+
+    public override async Task<TEntity> CreateOrUpdateAsync(
+        IPlatformUnitOfWork uow,
+        TEntity entity,
+        TEntity? existingEntity,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
+        CancellationToken cancellationToken = default)
+    {
         return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
             async () =>
             {
@@ -317,12 +328,14 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                         activity?.AddTag("Entity", entity.ToFormattedJson());
 
                         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-                            uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken),
+                            uow => GetUowDbContext(uow)
+                                .CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, existingEntity, null, dismissSendEvent, eventCustomConfig, cancellationToken),
                             uow);
                     }
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-                    uow => GetUowDbContext(uow).CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken),
+                    uow => GetUowDbContext(uow)
+                        .CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, existingEntity, null, dismissSendEvent, eventCustomConfig, cancellationToken),
                     uow);
             },
             cancellationToken: cancellationToken);

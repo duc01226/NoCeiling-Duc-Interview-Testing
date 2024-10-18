@@ -48,7 +48,7 @@ internal sealed class DemoUsingFieldUpdatedDomainEventOnSnippetTextEntityEventHa
                     snippetTextPropUpdatedEvent.NewValue);
 
         if (@event.HasAnyFieldUpdatedEvents(p => p.Address, p => p.AddressStrings, p => p.Addresses) &&
-            SomeCustomBuildMessageResult(@event.ExistingEntityData).IsValuesDifferent(SomeCustomBuildMessageResult(@event.EntityData)))
+            SomeCustomBuildMessageResult(@event.ExistingOriginalEntityData).IsValuesDifferent(SomeCustomBuildMessageResult(@event.EntityData)))
             CreateGlobalLogger()
                 .LogInformation(
                     "TextSnippetEntity Id:'{Id}' FullText Address Info updated",

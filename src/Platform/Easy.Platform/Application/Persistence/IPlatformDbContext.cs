@@ -470,6 +470,14 @@ public interface IPlatformDbContext : IDisposable
         Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
+    public Task<TEntity> CreateOrUpdateAsync<TEntity, TPrimaryKey>(
+        TEntity entity,
+        TEntity? existingEntity,
+        Expression<Func<TEntity, bool>>? customCheckExistingPredicate = null,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
+
     /// <summary>
     /// CreateOrUpdateManyAsync. <br />
     /// Example for customCheckExistingPredicate: createOrUpdateEntity => existingEntity => existingEntity.XXX == createOrUpdateEntity.XXX

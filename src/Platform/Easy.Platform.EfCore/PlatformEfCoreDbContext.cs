@@ -501,19 +501,30 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
+        return await CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, customCheckExistingPredicate, dismissSendEvent, eventCustomConfig, cancellationToken);
+    }
+
+    public async Task<TEntity> CreateOrUpdateAsync<TEntity, TPrimaryKey>(
+        TEntity entity,
+        TEntity? existingEntity,
+        Expression<Func<TEntity, bool>>? customCheckExistingPredicate = null,
+        bool dismissSendEvent = false,
+        Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
+        CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
         var existingEntityPredicate = customCheckExistingPredicate != null ||
                                       entity.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() != null
             ? customCheckExistingPredicate ?? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!
             : p => p.Id.Equals(entity.Id);
 
-        var existingEntity = MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
-                             await GetQuery<TEntity>()
-                                 .AsNoTracking()
-                                 .Where(existingEntityPredicate)
-                                 .FirstOrDefaultAsync(cancellationToken)
-                                 .ThenActionIf(
-                                     p => p != null && MappedUnitOfWork?.CreatedByUnitOfWorkManager.HasCurrentActiveUow() == true,
-                                     p => MappedUnitOfWork?.SetCachedExistingOriginalEntity(p));
+        existingEntity ??= MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
+                           await GetQuery<TEntity>()
+                               .AsNoTracking()
+                               .Where(existingEntityPredicate)
+                               .FirstOrDefaultAsync(cancellationToken)
+                               .ThenActionIf(
+                                   p => p != null,
+                                   p => MappedUnitOfWork?.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p));
 
         if (existingEntity != null)
             return await UpdateAsync<TEntity, TPrimaryKey>(
@@ -554,8 +565,12 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             if (customCheckExistingPredicateBuilder == null &&
                 entities.FirstOrDefault()?.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() == null)
             {
-                var existingEntityIds = await existingEntitiesQuery.Select(p => p.Id).ToListAsync(cancellationToken).Then(items => items.ToHashSet());
-                var (existingEntities, newEntities) = entities.WhereSplitResult(p => existingEntityIds.Contains(p.Id));
+                var existingEntityIds = await existingEntitiesQuery.ToListAsync(cancellationToken)
+                    .Then(
+                        items => items
+                            .PipeAction(items => items.ForEach(p => MappedUnitOfWork?.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p)))
+                            .Pipe(existingEntities => existingEntities.Select(p => p.Id).ToHashSet()));
+                var (toUpdateEntities, newEntities) = entities.WhereSplitResult(p => existingEntityIds.Contains(p.Id));
 
                 // Ef core is not thread safe so that couldn't use when all
                 await CreateManyAsync<TEntity, TPrimaryKey>(
@@ -564,14 +579,17 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                     eventCustomConfig,
                     cancellationToken);
                 await UpdateManyAsync<TEntity, TPrimaryKey>(
-                    existingEntities,
+                    toUpdateEntities,
                     dismissSendEvent,
                     eventCustomConfig,
                     cancellationToken);
             }
             else
             {
-                var existingEntities = await existingEntitiesQuery.ToListAsync(cancellationToken);
+                var existingEntities = await existingEntitiesQuery.ToListAsync(cancellationToken)
+                    .Then(
+                        items => items
+                            .PipeAction(items => items.ForEach(p => MappedUnitOfWork?.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p))));
 
                 var toUpsertEntityToExistingEntityPairs = entities.Select(
                     toUpsertEntity =>
@@ -639,7 +657,10 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                                      .AsNoTracking()
                                      .Where(BuildExistingEntityPredicate())
                                      .FirstOrDefaultAsync(cancellationToken)
-                                     .EnsureFound($"Entity {typeof(TEntity).Name} with [Id:{entity.Id}] not found to update");
+                                     .EnsureFound($"Entity {typeof(TEntity).Name} with [Id:{entity.Id}] not found to update")
+                                     .ThenActionIf(
+                                         p => p != null,
+                                         p => MappedUnitOfWork?.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p));
 
                 if (!existingEntity.Id.Equals(entity.Id)) entity.Id = existingEntity.Id;
             }

@@ -5,6 +5,7 @@ using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Entities;
+using Easy.Platform.Domain.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -141,8 +142,8 @@ public interface IPlatformUnitOfWork : IDisposable
     /// This method is used to cache an entity, so it can be retrieved later without querying the database again.
     /// It helps in improving performance by reducing the number of database calls.
     /// </remarks>
-    public TEntity SetCachedExistingOriginalEntity<TEntity>(TEntity existingEntity, Type runtimeEntityType = null)
-        where TEntity : class, IEntity;
+    public TEntity SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(TEntity existingEntity, Type runtimeEntityType = null)
+        where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public void RemoveCachedExistingOriginalEntity(string existingEntityId);
 
@@ -201,6 +202,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 
     protected PlatformUnitOfWork(IPlatformRootServiceProvider rootServiceProvider)
     {
+        RootServiceProvider = rootServiceProvider;
         LoggerFactory = rootServiceProvider.GetRequiredService<ILoggerFactory>();
     }
 
@@ -210,6 +212,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     protected SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(ContextMaxConcurrentThreadLock, ContextMaxConcurrentThreadLock);
     protected ILoggerFactory LoggerFactory { get; }
     protected ConcurrentDictionary<string, object> CachedExistingOriginalEntities { get; } = new();
+    protected IPlatformRootServiceProvider RootServiceProvider { get; set; }
 
     public string Id { get; set; } = Ulid.NewUlid().ToString();
 
@@ -304,11 +307,15 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
         return cachedExistingOriginalEntity.As<TEntity>();
     }
 
-    public virtual TEntity SetCachedExistingOriginalEntity<TEntity>(TEntity existingEntity, Type runtimeEntityType = null)
-        where TEntity : class, IEntity
+    public virtual TEntity SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(TEntity existingEntity, Type runtimeEntityType = null)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var castedRuntimeTypeExistingEntity = (runtimeEntityType != null ? Convert.ChangeType(existingEntity, runtimeEntityType) : existingEntity)
-            .PipeIf(p => p.As<IEntity>().HasTrackValueUpdatedDomainEventAttribute(), p => p.DeepClone());
+            .Pipe(
+                p => p.As<IEntity>().HasTrackValueUpdatedDomainEventAttribute() &&
+                     PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider)
+                    ? p.DeepClone()
+                    : p);
 
         CachedExistingOriginalEntities.AddOrUpdate(
             existingEntity.GetId().ToString(),
