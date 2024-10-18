@@ -51,7 +51,7 @@ public class PlatformInboxConfig
 
     public bool LogIntervalProcessInformation { get; set; }
 
-    public int CheckToProcessTriggerIntervalTimeSeconds { get; set; } = 5;
+    public int CheckToProcessTriggerIntervalTimeSeconds { get; set; } = 10;
 
     public int MaxParallelProcessingMessagesCount { get; set; } = Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
 
