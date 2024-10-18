@@ -34,6 +34,12 @@ public interface IPlatformApplicationSettingContext
     {
         return IgnoreRequestContextKeys ?? DefaultIgnoreRequestContextKeys;
     }
+
+    public async Task ProcessAutoGarbageCollect()
+    {
+        if (AutoGarbageCollectPerProcessRequestOrBusMessage)
+            await Util.GarbageCollector.Collect(AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
+    }
 }
 
 public class PlatformApplicationSettingContext : IPlatformApplicationSettingContext

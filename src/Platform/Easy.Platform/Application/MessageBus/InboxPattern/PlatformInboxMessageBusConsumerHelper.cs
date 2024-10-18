@@ -181,8 +181,7 @@ public static class PlatformInboxMessageBusConsumerHelper
             }
             finally
             {
-                if (applicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
-                    await Util.GarbageCollector.Collect(applicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
+                await applicationSettingContext.ProcessAutoGarbageCollect();
             }
         else
             await DoProcessInboxForSaveAndTryConsumeNewInboxMessageAsync(
@@ -301,8 +300,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         }
         finally
         {
-            if (applicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
-                await Util.GarbageCollector.Collect(applicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
+            await applicationSettingContext.ProcessAutoGarbageCollect();
         }
     }
 
@@ -462,8 +460,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 }
                 finally
                 {
-                    if (applicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
-                        await Util.GarbageCollector.Collect(applicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
+                    await applicationSettingContext.ProcessAutoGarbageCollect();
                 }
             });
     }

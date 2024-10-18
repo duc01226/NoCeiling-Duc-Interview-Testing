@@ -191,8 +191,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                 finally
                 {
                     // If garbage collection is enabled, perform garbage collection.
-                    if (ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
-                        await Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
+                    await ApplicationSettingContext.ProcessAutoGarbageCollect();
                 }
             },
             retryCount: retryCount ?? RetryOnFailedTimes,

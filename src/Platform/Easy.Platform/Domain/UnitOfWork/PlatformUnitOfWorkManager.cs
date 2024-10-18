@@ -1,9 +1,11 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using Easy.Platform.Application;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Easy.Platform.Domain.UnitOfWork;
 
@@ -132,13 +134,20 @@ public interface IPlatformUnitOfWorkManager : IDisposable
                 maxExecutionCount,
                 async (IPlatformUnitOfWorkManager newScopeUnitOfWorkManager, IServiceProvider serviceProvider) =>
                 {
-                    using (var uow = newScopeUnitOfWorkManager.Begin(false))
+                    try
                     {
-                        var result = await serviceProvider.ExecuteInjectAsync<List<TItem>>(method, manuallyParams ?? []);
+                        using (var uow = newScopeUnitOfWorkManager.Begin(false))
+                        {
+                            var result = await serviceProvider.ExecuteInjectAsync<List<TItem>>(method, manuallyParams ?? []);
 
-                        await uow.CompleteAsync();
+                            await uow.CompleteAsync();
 
-                        return result;
+                            return result;
+                        }
+                    }
+                    finally
+                    {
+                        await GetRootServiceProvider().GetService<IPlatformApplicationSettingContext>().ProcessAutoGarbageCollect();
                     }
                 });
     }
@@ -156,11 +165,18 @@ public interface IPlatformUnitOfWorkManager : IDisposable
                 pageSize,
                 async (int skipCount, int pageSize, IPlatformUnitOfWorkManager newScopeUnitOfWorkManager, IServiceProvider serviceProvider) =>
                 {
-                    using (var uow = newScopeUnitOfWorkManager.Begin(false))
+                    try
                     {
-                        await serviceProvider.ExecuteInjectAsync(method, manuallyParams: new object[] { skipCount, pageSize }.Concat(manuallyParams ?? []).ToArray());
+                        using (var uow = newScopeUnitOfWorkManager.Begin(false))
+                        {
+                            await serviceProvider.ExecuteInjectAsync(method, manuallyParams: new object[] { skipCount, pageSize }.Concat(manuallyParams ?? []).ToArray());
 
-                        await uow.CompleteAsync();
+                            await uow.CompleteAsync();
+                        }
+                    }
+                    finally
+                    {
+                        await GetRootServiceProvider().GetService<IPlatformApplicationSettingContext>().ProcessAutoGarbageCollect();
                     }
                 });
     }

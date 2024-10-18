@@ -310,8 +310,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         }
         finally
         {
-            if (ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessage)
-                await Util.GarbageCollector.Collect(ApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
+            await ApplicationSettingContext.ProcessAutoGarbageCollect();
         }
     }
 
