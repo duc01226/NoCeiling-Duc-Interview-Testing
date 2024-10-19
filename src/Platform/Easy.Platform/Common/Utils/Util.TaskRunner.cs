@@ -1977,6 +1977,8 @@ public static partial class Util
                     isExecuting = true;
 
                     await lockObj.WaitAsync();
+                    if (minNextExecutionStartTime != null && minNextExecutionStartTime > DateTime.UtcNow)
+                        return;
 
                     await action();
 
