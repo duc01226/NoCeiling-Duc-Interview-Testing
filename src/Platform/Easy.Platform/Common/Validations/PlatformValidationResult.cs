@@ -523,7 +523,8 @@ public class PlatformValidationResult<TValue> : ValidationResult
     /// </summary>
     public List<PlatformValidationError> AggregateErrors()
     {
-        return Util.ListBuilder.New(StandaloneRootValidation().Errors.ToArray())
+        return StandaloneRootValidation()
+            .Errors
             .Concat(
                 LogicalAndValidationsChain.SelectMany(
                     andValidationChainItem => Util.TaskRunner.CatchException(

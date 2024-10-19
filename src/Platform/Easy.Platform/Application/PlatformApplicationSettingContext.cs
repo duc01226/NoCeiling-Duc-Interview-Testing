@@ -35,10 +35,11 @@ public interface IPlatformApplicationSettingContext
         return IgnoreRequestContextKeys ?? DefaultIgnoreRequestContextKeys;
     }
 
-    public async Task ProcessAutoGarbageCollect()
+    public void ProcessAutoGarbageCollect()
     {
         if (AutoGarbageCollectPerProcessRequestOrBusMessage)
-            await Util.GarbageCollector.Collect(AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
+            // Schedule clean memory in background
+            _ = Util.GarbageCollector.Collect(AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
     }
 }
 

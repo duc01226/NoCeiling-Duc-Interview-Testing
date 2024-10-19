@@ -1942,7 +1942,7 @@ public static partial class Util
             private readonly SemaphoreSlim lockObj = new(1, 1);
             private bool disposed;
             private volatile bool isExecuting;
-            private DateTime? lastExecutionTime;
+            private DateTime? minNextExecutionStartTime;
 
             public Throttler(TimeSpan throttleWindow)
             {
@@ -1962,7 +1962,8 @@ public static partial class Util
             /// </summary>
             public async Task ThrottleExecute(Func<Task> action)
             {
-                if (isExecuting || (lastExecutionTime != null && lastExecutionTime.Value.Add(ThrottleWindow) < DateTime.UtcNow) || lockObj.CurrentCount == 0) return;
+                if (isExecuting || lockObj.CurrentCount == 0 || (minNextExecutionStartTime != null && minNextExecutionStartTime > DateTime.UtcNow))
+                    return;
 
                 try
                 {
@@ -1972,7 +1973,7 @@ public static partial class Util
 
                     await action();
 
-                    lastExecutionTime = DateTime.UtcNow;
+                    minNextExecutionStartTime = DateTime.UtcNow.Add(ThrottleWindow);
                 }
                 finally
                 {

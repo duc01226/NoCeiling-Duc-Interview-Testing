@@ -1560,7 +1560,7 @@ public static class DependencyInjectionExtension
             {
                 await serviceProvider.ExecuteInjectScopedAsync(
                     method,
-                    manuallyParams: Util.ListBuilder.NewArray<object>(skipCount, pageSize).Concat(manuallyParams).ToArray());
+                    manuallyParams: new object[] { skipCount, pageSize }.Concat(manuallyParams).ToArray());
             },
             maxItemCount: maxItemCount,
             pageSize: pageSize,

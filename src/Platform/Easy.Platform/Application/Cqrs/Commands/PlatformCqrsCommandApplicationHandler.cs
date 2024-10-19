@@ -140,7 +140,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
         }
         finally
         {
-            await ApplicationSettingContext.ProcessAutoGarbageCollect();
+            ApplicationSettingContext.ProcessAutoGarbageCollect();
         }
     }
 

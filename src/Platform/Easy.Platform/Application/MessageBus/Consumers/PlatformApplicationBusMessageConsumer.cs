@@ -191,7 +191,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                 finally
                 {
                     // If garbage collection is enabled, perform garbage collection.
-                    await ApplicationSettingContext.ProcessAutoGarbageCollect();
+                    ApplicationSettingContext.ProcessAutoGarbageCollect();
                 }
             },
             retryCount: retryCount ?? RetryOnFailedTimes,

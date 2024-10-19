@@ -201,7 +201,7 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
         var userClaimsTypeKeys = useHttpContext?.User.Claims.Select(p => p.Type) ?? [];
         var requestHeadersKeys = useHttpContext?.Request.Headers.Select(p => p.Key) ?? [];
 
-        return Util.ListBuilder.New(PlatformApplicationCommonRequestContextKeys.RequestIdContextKey)
+        return new[] { PlatformApplicationCommonRequestContextKeys.RequestIdContextKey }
             .Concat(manuallySetValueItemsDicKeys)
             .Concat(userClaimsTypeKeys)
             .Concat(requestHeadersKeys)

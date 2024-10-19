@@ -327,7 +327,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
                     return includeDeepChildModules
                         ? dependModule.AllDependencyChildModules(useServiceCollection).ConcatSingle(dependModule)
-                        : Util.ListBuilder.New(dependModule);
+                        : [dependModule];
                 })
             .Flatten()
             .ToList();
@@ -459,7 +459,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
     public List<string> CommonTracingSources()
     {
-        return Util.ListBuilder.New(IPlatformCqrsEventHandler.ActivitySource.Name, PlatformIntervalHostingBackgroundService.ActivitySource.Name);
+        return [IPlatformCqrsEventHandler.ActivitySource.Name, PlatformIntervalHostingBackgroundService.ActivitySource.Name];
     }
 
     public ILogger CreateLogger(ILoggerFactory loggerFactory)

@@ -21,8 +21,7 @@ public abstract class PlatformRedisCacheModule : PlatformCachingModule
 
     public override string[] TracingSources()
     {
-        return Util.ListBuilder.NewArray(
-            IPlatformCacheRepository.ActivitySource.Name);
+        return [IPlatformCacheRepository.ActivitySource.Name];
     }
 
     protected override IPlatformDistributedCacheRepository DistributedCacheRepositoryProvider(

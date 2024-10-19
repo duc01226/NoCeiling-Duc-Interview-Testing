@@ -147,7 +147,7 @@ public interface IPlatformUnitOfWorkManager : IDisposable
                     }
                     finally
                     {
-                        await GetRootServiceProvider().GetService<IPlatformApplicationSettingContext>().ProcessAutoGarbageCollect();
+                        GetRootServiceProvider().GetService<IPlatformApplicationSettingContext>().ProcessAutoGarbageCollect();
                     }
                 });
     }
@@ -176,7 +176,7 @@ public interface IPlatformUnitOfWorkManager : IDisposable
                     }
                     finally
                     {
-                        await GetRootServiceProvider().GetService<IPlatformApplicationSettingContext>().ProcessAutoGarbageCollect();
+                        GetRootServiceProvider().GetService<IPlatformApplicationSettingContext>().ProcessAutoGarbageCollect();
                     }
                 });
     }

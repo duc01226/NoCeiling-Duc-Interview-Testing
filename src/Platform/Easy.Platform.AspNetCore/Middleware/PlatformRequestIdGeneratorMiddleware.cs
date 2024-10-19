@@ -47,7 +47,7 @@ public class PlatformRequestIdGeneratorMiddleware : PlatformMiddleware
                 if (!context.Response.Headers.ContainsKey(PlatformAspnetConstant.CommonHttpHeaderNames.RequestId))
                     context.Response.Headers.Append(
                         PlatformAspnetConstant.CommonHttpHeaderNames.RequestId,
-                        Util.ListBuilder.NewArray(context.TraceIdentifier));
+                        new[] { context.TraceIdentifier });
                 return Task.CompletedTask;
             });
 

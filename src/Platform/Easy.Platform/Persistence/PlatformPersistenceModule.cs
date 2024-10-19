@@ -73,10 +73,12 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
 
     public override string[] TracingSources()
     {
-        return Util.ListBuilder.NewArray(
+        return
+        [
             IPlatformRepository.ActivitySource.Name,
             IPlatformUnitOfWork.ActivitySource.Name,
-            IPlatformUnitOfWorkManager.ActivitySource.Name);
+            IPlatformUnitOfWorkManager.ActivitySource.Name
+        ];
     }
 
     /// <summary>

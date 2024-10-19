@@ -277,7 +277,7 @@ public static class ObjectGeneralExtension
 
     public static List<T> BoxedInList<T>(this T obj)
     {
-        return Util.ListBuilder.New(obj);
+        return [obj];
     }
 
     public static string ToJson<T>(this T obj, bool forceUseRuntimeType = false)

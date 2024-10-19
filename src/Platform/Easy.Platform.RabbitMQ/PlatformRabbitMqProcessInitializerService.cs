@@ -116,9 +116,12 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         this.inboxBusMessageCleanerHostedService = inboxBusMessageCleanerHostedService;
         this.rootServiceProvider = rootServiceProvider;
         Logger = loggerFactory.CreateLogger(GetType());
+        IsDistributedTracingEnabled = rootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled == true;
 
         processMessageParallelLimitLock = new SemaphoreSlim(this.options.MaxConcurrentProcessing, this.options.MaxConcurrentProcessing);
     }
+
+    public bool IsDistributedTracingEnabled { get; }
 
     /// <summary>
     /// Gets the logger for this service.
@@ -398,6 +401,10 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
 
             AckMessage(channel, rabbitMqMessage, isReject: true);
         }
+        finally
+        {
+            rootServiceProvider.GetService<IPlatformApplicationSettingContext>().ProcessAutoGarbageCollect();
+        }
     }
 
     /// <summary>
@@ -418,6 +425,14 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         {
             await processMessageParallelLimitLock.WaitAsync(currentStartProcessCancellationToken);
 
+            // Extract tracing context from the message properties.
+            var parentContext = IsDistributedTracingEnabled
+                ? TracingActivityPropagator.Extract(
+                    default,
+                    rabbitMqMessageArgs.BasicProperties,
+                    ExtractTraceContextFromBasicProperties)
+                : default;
+
             // Execute each consumer in parallel.
             await canProcessConsumerTypeToBusMessagePairs
                 .ParallelAsync(
@@ -425,27 +440,16 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                     {
                         if (cancellationToken.IsCancellationRequested) return;
 
-                        // Extract tracing context from the message properties.
-                        var parentContext = TracingActivityPropagator.Extract(
-                            default,
-                            rabbitMqMessageArgs.BasicProperties,
-                            ExtractTraceContextFromBasicProperties);
-
-                        // Create a new activity for tracing this consumer execution.
-                        using (var activity = ActivitySource.StartActivity(
-                            $"MessageBus.{nameof(ExecuteConsumer)}",
-                            ActivityKind.Consumer,
-                            parentContext.ActivityContext))
-                        {
-                            using (var scope = rootServiceProvider.CreateScope())
+                        if (IsDistributedTracingEnabled)
+                            // Create a new activity for tracing this consumer execution.
+                            using (var activity = ActivitySource.StartActivity(
+                                $"MessageBus.{nameof(ExecuteConsumer)}",
+                                ActivityKind.Consumer,
+                                parentContext.ActivityContext))
                             {
-                                // Resolve the consumer instance from the service provider.
-                                var consumer = scope.ServiceProvider.GetService(consumerTypeBusMessagePair.Key).Cast<IPlatformMessageBusConsumer>();
-
-                                if (consumer != null)
-                                    await ExecuteConsumer(rabbitMqMessageArgs, consumerTypeBusMessagePair.Value, consumer, activity);
+                                await RunExecuteConsumer(consumerTypeBusMessagePair, activity);
                             }
-                        }
+                        else await RunExecuteConsumer(consumerTypeBusMessagePair, null);
                     });
 
             // Acknowledge the message after successful processing by all consumers.
@@ -467,6 +471,20 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         finally
         {
             processMessageParallelLimitLock.Release();
+
+            rootServiceProvider.GetService<IPlatformApplicationSettingContext>().ProcessAutoGarbageCollect();
+        }
+
+        async Task RunExecuteConsumer(KeyValuePair<Type, object> consumerTypeBusMessagePair, Activity? traceActivity)
+        {
+            using (var scope = rootServiceProvider.CreateScope())
+            {
+                // Resolve the consumer instance from the service provider.
+                var consumer = scope.ServiceProvider.GetService(consumerTypeBusMessagePair.Key).Cast<IPlatformMessageBusConsumer>();
+
+                if (consumer != null)
+                    await ExecuteConsumer(rabbitMqMessageArgs, consumerTypeBusMessagePair.Value, consumer, traceActivity);
+            }
         }
     }
 

@@ -9,16 +9,6 @@ public static partial class Util
             return values.ToList();
         }
 
-        public static HashSet<T> NewHashSet<T>(params T[] values)
-        {
-            return values.ToHashSet();
-        }
-
-        public static T[] NewArray<T>(params T[] values)
-        {
-            return values;
-        }
-
         public static List<KeyValuePair<TKey, TValue>> New<TKey, TValue>(params ValueTuple<TKey, TValue>[] items)
         {
             return items.Select(p => new KeyValuePair<TKey, TValue>(p.Item1, p.Item2)).ToList();

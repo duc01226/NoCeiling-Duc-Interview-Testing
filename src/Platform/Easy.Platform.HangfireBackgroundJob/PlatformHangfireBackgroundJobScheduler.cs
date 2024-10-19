@@ -312,10 +312,10 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
             var executeMethod = jobExecutor.GetType()
                 .GetMethod(
                     nameof(IPlatformBackgroundJobExecutor.Execute),
-                    Util.ListBuilder.NewArray(jobExecutorParamType));
+                    [jobExecutorParamType]);
             executeMethod!.Invoke(
                 jobExecutor,
-                Util.ListBuilder.NewArray(jobExecutorParam));
+                [jobExecutorParam]);
         }
         else
         {

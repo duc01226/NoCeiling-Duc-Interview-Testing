@@ -211,11 +211,13 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
 
     public override string[] TracingSources()
     {
-        return Util.ListBuilder.NewArray(
+        return
+        [
             IPlatformCqrsCommandApplicationHandler.ActivitySource.Name,
             IPlatformCqrsQueryApplicationHandler.ActivitySource.Name,
             IPlatformApplicationBackgroundJobExecutor.ActivitySource.Name,
-            IPlatformDbContext.ActivitySource.Name);
+            IPlatformDbContext.ActivitySource.Name
+        ];
     }
 
     /// <summary>

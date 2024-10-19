@@ -136,7 +136,7 @@ public class PlatformRedisDistributedCacheRepository : PlatformCacheRepository, 
 
         if (globalMatchedKeys.Any())
         {
-            var clonedMatchedKeys = Util.ListBuilder.New(globalMatchedKeys.ToArray());
+            var clonedMatchedKeys = globalMatchedKeys.ToArray();
 
             clonedMatchedKeys.ForEach(
                 matchedKey =>

@@ -181,7 +181,7 @@ public static class PlatformInboxMessageBusConsumerHelper
             }
             finally
             {
-                await applicationSettingContext.ProcessAutoGarbageCollect();
+                applicationSettingContext.ProcessAutoGarbageCollect();
             }
         else
             await DoProcessInboxForSaveAndTryConsumeNewInboxMessageAsync(
@@ -300,7 +300,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         }
         finally
         {
-            await applicationSettingContext.ProcessAutoGarbageCollect();
+            applicationSettingContext.ProcessAutoGarbageCollect();
         }
     }
 
@@ -460,7 +460,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 }
                 finally
                 {
-                    await applicationSettingContext.ProcessAutoGarbageCollect();
+                    applicationSettingContext.ProcessAutoGarbageCollect();
                 }
             });
     }

@@ -134,7 +134,7 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
         }
         finally
         {
-            await ApplicationSettingContext.ProcessAutoGarbageCollect();
+            ApplicationSettingContext.ProcessAutoGarbageCollect();
         }
     }
 

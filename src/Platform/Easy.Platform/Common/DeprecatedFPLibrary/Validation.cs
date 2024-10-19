@@ -1,5 +1,4 @@
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Common.Utils;
 using Easy.Platform.Common.Validations;
 
 namespace Easy.Platform.Common.DeprecatedFPLibrary;
@@ -266,7 +265,7 @@ public readonly struct Validation<T>
 
     public static implicit operator Validation<T>(Error error)
     {
-        return new Validation<T>(Util.ListBuilder.NewArray(error));
+        return new Validation<T>([error]);
     }
 
     public static implicit operator Validation<T>(Validation.Invalid left)

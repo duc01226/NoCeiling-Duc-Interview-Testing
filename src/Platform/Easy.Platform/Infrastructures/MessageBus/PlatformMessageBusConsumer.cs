@@ -136,12 +136,6 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
         IPlatformMessageBusConfig messageBusConfig,
         ILogger? logger = null)
     {
-        logger?.LogDebug(
-            "[MessageBus] Start invoking consumer. Name: {ConsumerName}. RoutingKey: {RoutingKey}. TrackingId: {TrackingId}",
-            consumer.GetType().FullName,
-            routingKey,
-            busMessage.As<IPlatformTrackableBusMessage>()?.TrackingId ?? "n/a");
-
         if (messageBusConfig.EnableLogConsumerProcessTime && !consumer.DisableSlowProcessWarning())
             await Util.TaskRunner.ProfileExecutionAsync(
                 asyncTask: () => DoInvokeConsumer(consumer, busMessage, routingKey),
@@ -161,16 +155,7 @@ public abstract class PlatformMessageBusConsumer : IPlatformMessageBusConsumer
                             busMessage.ToJson());
                 });
         else
-            await DoInvokeConsumer(
-                consumer,
-                busMessage,
-                routingKey);
-
-        logger?.LogDebug(
-            "[MessageBus] Finished invoking consumer. Name: {ConsumerName}. RoutingKey: {RoutingKey}. TrackingId: {TrackingId}",
-            consumer.GetType().FullName,
-            routingKey,
-            busMessage.As<IPlatformTrackableBusMessage>()?.TrackingId ?? "n/a");
+            await DoInvokeConsumer(consumer, busMessage, routingKey);
     }
 
     private static async Task DoInvokeConsumer(

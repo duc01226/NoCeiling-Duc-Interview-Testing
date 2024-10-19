@@ -85,7 +85,7 @@ public class PlatformMemoryCacheRepository : PlatformCacheRepository, IPlatformM
 
         if (globalMatchedKeys.Any())
         {
-            var clonedMatchedKeys = Util.ListBuilder.New(globalMatchedKeys.ToArray());
+            var clonedMatchedKeys = globalMatchedKeys.ToArray();
 
             clonedMatchedKeys.ForEach(
                 matchedKey =>
