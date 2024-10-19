@@ -7,7 +7,7 @@ namespace Easy.Platform.Application.HostingBackgroundServices;
 
 internal sealed class PlatformAutoClearMemoryHostingBackgroundService : PlatformIntervalHostingBackgroundService
 {
-    public const int DefaultProcessTriggerIntervalTimeSeconds = 10;
+    public const int DefaultProcessTriggerIntervalTimeSeconds = 5;
 
     public PlatformAutoClearMemoryHostingBackgroundService(
         IServiceProvider serviceProvider,

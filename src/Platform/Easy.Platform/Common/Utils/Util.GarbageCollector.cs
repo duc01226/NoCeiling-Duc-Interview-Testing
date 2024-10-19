@@ -26,29 +26,26 @@ public static partial class Util
 
         private static async Task DoCollect(bool collectAggressively)
         {
-            // Force garbage collection
-            /*
-             * This method forces garbage collection to occur.
-             * It does not guarantee immediate reclamation of all unused objects,
-             * but it schedules a garbage collection to happen as soon as possible.
-             * It can be called with no arguments, which triggers a full blocking garbage collection of all generations,
-             * or with a specific generation parameter to target a specific generation.
-             */
-            GC.Collect();
+            if (collectAggressively)
+            {
+                GC.Collect(0, GCCollectionMode.Forced, true, true); // Generation 0, blocking, compacting LOH
+                GC.WaitForPendingFinalizers(); // Wait for all finalizers to finish
+                GC.Collect(0, GCCollectionMode.Forced, true, true); // Run GC again to ensure complete cleanup
 
-            // Wait for finalizers to complete
-            /*
-             *Finalization is the process of cleaning up unmanaged resources associated with an object before it is reclaimed by the garbage collector.
-             * Objects with finalizers are placed on a finalization queue when they become eligible for garbage collection.
-             * This method blocks the calling thread until all objects in the finalization queue have been finalized.
-             * It's often used in conjunction with GC.Collect() to ensure that finalization has completed before continuing.
-             */
-            GC.WaitForPendingFinalizers();
+                GC.Collect(1, GCCollectionMode.Forced, true, true); // Generation 1, blocking, compacting LOH
+                GC.WaitForPendingFinalizers(); // Wait for all finalizers to finish
+                GC.Collect(1, GCCollectionMode.Forced, true, true); // Run GC again to ensure complete cleanup
 
-            // Run again after WaitForPendingFinalizers to ensure clean memory
-            GC.Collect();
-
-            if (collectAggressively) GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true);
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true); // MaxGeneration, blocking, compacting LOH
+                GC.WaitForPendingFinalizers(); // Wait for all finalizers to finish
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true, true); // Run GC again to ensure complete cleanup
+            }
+            else
+            {
+                GC.Collect(0, GCCollectionMode.Forced, true, true); // Generation 0, blocking, compacting LOH
+                GC.WaitForPendingFinalizers(); // Wait for all finalizers to finish
+                GC.Collect(0, GCCollectionMode.Forced, true, true); // Run GC again to ensure complete cleanup
+            }
 
             // Wait for full garbage collection to complete
             /*

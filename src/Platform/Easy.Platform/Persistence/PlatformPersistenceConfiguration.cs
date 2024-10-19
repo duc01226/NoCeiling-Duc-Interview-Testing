@@ -1,3 +1,5 @@
+using Easy.Platform.Common.Utils;
+
 namespace Easy.Platform.Persistence;
 
 public interface IPlatformPersistenceConfiguration
@@ -31,9 +33,9 @@ public struct PlatformPersistenceConfigurationPooledDbContextOptions
     public bool Enabled { get; set; } = true;
 
     /// <summary>
-    /// Sets the maximum number of instances retained by the pool. Defaults to 500.
+    /// Sets the maximum number of instances retained by the pool.
     /// </summary>
-    public int PoolSize { get; set; } = 500;
+    public int PoolSize { get; set; } = Math.Min(Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio, 100);
 
     public bool UsePooledDbContextForUsingOnceTransientUowOnly { get; set; }
 }

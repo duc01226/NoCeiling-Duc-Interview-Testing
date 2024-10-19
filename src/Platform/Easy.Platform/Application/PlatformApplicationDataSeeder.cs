@@ -55,7 +55,7 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
         loggerLazy = new Lazy<ILogger>(() => loggerFactory.CreateLogger(GetType()));
     }
 
-    public static int DefaultSeedingMinimumDummyItemsCount => PlatformEnvironment.IsDevelopment ? 100 : 10000;
+    public static int DefaultSeedingMinimumDummyItemsCount => PlatformEnvironment.IsDevelopment ? 10 : 1000;
 
     /// <summary>
     /// Default value is SeedingMinimumDummyItemsCount; <br />

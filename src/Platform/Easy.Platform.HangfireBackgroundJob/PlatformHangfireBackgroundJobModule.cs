@@ -83,27 +83,39 @@ public abstract class PlatformHangfireBackgroundJobModule : PlatformBackgroundJo
 
             case PlatformHangfireBackgroundJobStorageType.Sql:
             {
-                var options = UseSqlServerStorageOptions();
-                configuration.UseSqlServerStorage(
-                    () => new SqlConnection(options.ConnectionString),
-                    options.StorageOptions);
+                Util.TaskRunner.WaitRetryThrowFinalException(
+                    () =>
+                    {
+                        var options = UseSqlServerStorageOptions();
+                        configuration.UseSqlServerStorage(
+                            () => new SqlConnection(options.ConnectionString),
+                            options.StorageOptions);
+                    });
                 break;
             }
 
             case PlatformHangfireBackgroundJobStorageType.Mongo:
             {
-                var options = UseMongoStorageOptions();
-                configuration.UseMongoStorage(
-                    options.ConnectionString,
-                    options.DatabaseName,
-                    options.StorageOptions);
+                Util.TaskRunner.WaitRetryThrowFinalException(
+                    () =>
+                    {
+                        var options = UseMongoStorageOptions();
+                        configuration.UseMongoStorage(
+                            options.ConnectionString,
+                            options.DatabaseName,
+                            options.StorageOptions);
+                    });
                 break;
             }
 
             case PlatformHangfireBackgroundJobStorageType.PostgreSql:
             {
-                var options = UsePostgreSqlStorageOptions();
-                configuration.UsePostgreSqlStorage(opts => opts.UseNpgsqlConnection(options.ConnectionString), options.StorageOptions);
+                Util.TaskRunner.WaitRetryThrowFinalException(
+                    () =>
+                    {
+                        var options = UsePostgreSqlStorageOptions();
+                        configuration.UsePostgreSqlStorage(opts => opts.UseNpgsqlConnection(options.ConnectionString), options.StorageOptions);
+                    });
                 break;
             }
 

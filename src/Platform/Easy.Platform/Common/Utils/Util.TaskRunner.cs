@@ -14,6 +14,7 @@ public static partial class Util
     {
         public const int DefaultWaitUntilMaxSeconds = 60;
         public const double DefaultWaitIntervalSeconds = 2;
+        public const double DefaultSlowWaitIntervalSeconds = 5;
         public const int DefaultResilientRetryCount = 3;
         public const double DefaultResilientDelaySeconds = 1;
         public const int DefaultBackgroundResilientRetryCount = 20;
