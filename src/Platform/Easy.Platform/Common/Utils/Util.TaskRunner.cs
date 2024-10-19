@@ -1932,7 +1932,7 @@ public static partial class Util
             }
             finally
             {
-                if (itemsList.Count >= maxDegreeOfParallelism) GarbageCollector.Collect();
+                GarbageCollector.Collect();
             }
         }
 
