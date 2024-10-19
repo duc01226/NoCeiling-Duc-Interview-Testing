@@ -71,7 +71,7 @@ ENV DOTNET_GCConserveMemory=7
 # make the production environment running in Linux container closer to the Windows environment
 ENV MALLOC_ARENA_MAX=2
 ENV MALLOC_TRIM_THRESHOLD_=85000
-ENV DOTNET_gcServer=1
+# ENV DOTNET_gcServer=1
 ENV DOTNET_GCHeapHardLimitPercent="0x5a"
 ENV DOTNET_GCHeapAffinitizeRanges="0-3"
 
