@@ -10,21 +10,24 @@ public static partial class Util
         public const int DefaultCollectGarbageMemoryThrottleSeconds = 2;
         private static readonly ConcurrentDictionary<double, TaskRunner.Throttler> CollectGarbageMemoryThrottlerDict = new();
 
-        public static async Task Collect(double throttleSeconds = DefaultCollectGarbageMemoryThrottleSeconds, bool collectAggressively = false)
+        public static void Collect(double throttleSeconds = DefaultCollectGarbageMemoryThrottleSeconds, bool collectAggressively = false)
         {
             if (throttleSeconds <= 0)
             {
-                await DoCollect(collectAggressively);
+                DoCollect(collectAggressively);
             }
             else
             {
                 var throttleTime = SetupCollectGarbageMemoryThrottlerDict(throttleSeconds);
 
-                await CollectGarbageMemoryThrottlerDict[throttleTime].ThrottleExecute(() => DoCollect(collectAggressively));
+                // Delay a bit to ensure caller function collect memory has been returned
+                _ = CollectGarbageMemoryThrottlerDict[throttleTime]
+                    .ThrottleExecute(
+                        () => Task.Delay(100).ThenAction(() => DoCollect(collectAggressively)));
             }
         }
 
-        private static async Task DoCollect(bool collectAggressively)
+        private static void DoCollect(bool collectAggressively)
         {
             if (collectAggressively)
             {

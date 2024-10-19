@@ -147,7 +147,7 @@ public static class RetryPolicyExtension
                     }
                     finally
                     {
-                        await Util.GarbageCollector.Collect();
+                        Util.GarbageCollector.Collect();
                     }
                 },
                 cancellationToken);
@@ -189,7 +189,7 @@ public static class RetryPolicyExtension
                     }
                     finally
                     {
-                        await Util.GarbageCollector.Collect();
+                        Util.GarbageCollector.Collect();
                     }
                 },
                 cancellationToken);

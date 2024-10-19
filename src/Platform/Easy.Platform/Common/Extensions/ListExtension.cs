@@ -907,6 +907,25 @@ public static class ListExtension
             .PipeIf(maxResultCount >= 0, e => e.Take(maxResultCount!.Value));
     }
 
+    public static IEnumerable<IEnumerable<T>> PagedGroups<T>(this IEnumerable<T> query, int pageSize)
+    {
+        var page = new List<T>(pageSize);
+
+        foreach (var item in query)
+        {
+            page.Add(item);
+
+            if (page.Count == pageSize)
+            {
+                yield return page;
+                page = new List<T>(pageSize); // Reset the page for the next group
+            }
+        }
+
+        // Yield any remaining items in the last page
+        if (page.Count > 0) yield return page;
+    }
+
     /// <summary>
     /// Determines whether all elements of a sequence satisfy a condition.
     /// </summary>

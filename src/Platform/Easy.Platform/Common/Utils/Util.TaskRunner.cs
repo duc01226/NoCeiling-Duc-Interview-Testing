@@ -730,7 +730,7 @@ public static partial class Util
                         }
                         finally
                         {
-                            await GarbageCollector.Collect();
+                            GarbageCollector.Collect();
                         }
                     },
                     cancellationToken);
@@ -768,7 +768,7 @@ public static partial class Util
                         }
                         finally
                         {
-                            await GarbageCollector.Collect();
+                            GarbageCollector.Collect();
                         }
                     },
                     cancellationToken);
@@ -1886,6 +1886,7 @@ public static partial class Util
                 var processingActionTasks = new ConcurrentDictionary<int, Task<ValueTuple<int, TResult, Exception?>>>();
                 var processedActionTaskResults = new ConcurrentDictionary<int, ValueTuple<TResult, Exception?>>();
                 var processedFailedActionExceptions = new ConcurrentBag<Exception>();
+                var gcExecutedCount = 0;
 
                 while (processedActionTaskResults.Count < itemsList.Count)
                 {
@@ -1908,6 +1909,11 @@ public static partial class Util
                                             processedActionTaskResults.TryAdd(nextProcessedItemIndex, (nextProcessedActionResult, nextProcessedActionException));
                                             processingActionTasks.Remove(nextProcessedItemIndex, out _);
                                             if (nextProcessedActionException != null) processedFailedActionExceptions.Add(nextProcessedActionException);
+                                            if (processedActionTaskResults.Count / maxDegreeOfParallelism > gcExecutedCount)
+                                            {
+                                                GarbageCollector.Collect();
+                                                gcExecutedCount++;
+                                            }
 
                                             return completedTask.Result;
                                         });
@@ -1926,7 +1932,7 @@ public static partial class Util
             }
             finally
             {
-                if (itemsList.Count >= maxDegreeOfParallelism) await GarbageCollector.Collect();
+                if (itemsList.Count >= maxDegreeOfParallelism) GarbageCollector.Collect();
             }
         }
 

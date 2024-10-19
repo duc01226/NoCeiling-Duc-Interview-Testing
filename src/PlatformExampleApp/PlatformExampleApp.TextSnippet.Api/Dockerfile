@@ -69,11 +69,11 @@ ENV DOTNET_GCHighMemPercent=50
 ENV DOTNET_GCConserveMemory=7
 # https://github.com/dotnet/runtime/issues/49317#issuecomment-1719158573
 # make the production environment running in Linux container closer to the Windows environment
-ENV MALLOC_ARENA_MAX=2
-ENV MALLOC_TRIM_THRESHOLD_=85000
+# ENV MALLOC_ARENA_MAX=2
+# ENV MALLOC_TRIM_THRESHOLD_=85000
 # ENV DOTNET_gcServer=1
-ENV DOTNET_GCHeapHardLimitPercent="0x5a"
-ENV DOTNET_GCHeapAffinitizeRanges="0-3"
+# ENV DOTNET_GCHeapHardLimitPercent="0x5a"
+# ENV DOTNET_GCHeapAffinitizeRanges="0-3"
 
 # Config Pyroscope Dotnet Profiler
 COPY --from=pyroscope/pyroscope-dotnet:0.8.14-glibc /Pyroscope.Profiler.Native.so ./Pyroscope.Profiler.Native.so

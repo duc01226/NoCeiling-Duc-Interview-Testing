@@ -38,8 +38,7 @@ public interface IPlatformApplicationSettingContext
     public void ProcessAutoGarbageCollect()
     {
         if (AutoGarbageCollectPerProcessRequestOrBusMessage)
-            // Schedule clean memory in background
-            _ = Util.GarbageCollector.Collect(AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
+            Util.GarbageCollector.Collect(AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds);
     }
 }
 

@@ -187,7 +187,7 @@ public interface IPlatformDbContext : IDisposable
         finally
         {
             migrationExecution.Dispose();
-            await Util.GarbageCollector.Collect(0);
+            Util.GarbageCollector.Collect(0);
         }
     }
 
