@@ -63,8 +63,8 @@ RUN apt-get update && apt-get install -y curl
 WORKDIR /app
 COPY --from=publish /app .
 
-# hexadecimal value. 4B equal to 75 (mean 75%)
-ENV DOTNET_GCHighMemPercent=4B
+# hexadecimal value. 50 equal to 80 (mean 80%)
+ENV DOTNET_GCHighMemPercent=50
 # https://learn.microsoft.com/en-us/dotnet/core/runtime-config/garbage-collector#conserve-memory
 ENV DOTNET_GCConserveMemory=7
 # https://github.com/dotnet/runtime/issues/49317#issuecomment-1719158573
