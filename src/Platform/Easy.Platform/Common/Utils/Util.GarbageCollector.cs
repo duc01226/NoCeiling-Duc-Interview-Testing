@@ -7,7 +7,7 @@ public static partial class Util
 {
     public static class GarbageCollector
     {
-        public const int DefaultCollectGarbageMemoryThrottleSeconds = 2;
+        public const int DefaultCollectGarbageMemoryThrottleSeconds = 3;
         private static readonly ConcurrentDictionary<double, TaskRunner.Throttler> CollectGarbageMemoryThrottlerDict = new();
 
         public static void Collect(double throttleSeconds = DefaultCollectGarbageMemoryThrottleSeconds, bool collectAggressively = false)
