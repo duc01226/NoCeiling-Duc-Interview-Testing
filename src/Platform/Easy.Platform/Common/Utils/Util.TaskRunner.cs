@@ -724,14 +724,7 @@ public static partial class Util
                 .ExecuteAndCaptureAsync(
                     async ct =>
                     {
-                        try
-                        {
-                            await executeFunc(ct);
-                        }
-                        finally
-                        {
-                            GarbageCollector.Collect();
-                        }
+                        await executeFunc(ct);
                     },
                     cancellationToken);
         }
@@ -762,14 +755,7 @@ public static partial class Util
                 .ExecuteAndCaptureAsync(
                     async ct =>
                     {
-                        try
-                        {
-                            return await executeFunc();
-                        }
-                        finally
-                        {
-                            GarbageCollector.Collect();
-                        }
+                        return await executeFunc();
                     },
                     cancellationToken);
         }
@@ -1864,76 +1850,63 @@ public static partial class Util
             var maxDegreeOfParallelism = maxConcurrent ?? DefaultParallelIoTaskMaxConcurrent;
             var itemsList = items.As<IList<T>>() ?? items.ToList();
 
-            try
+            if (itemsList.Count == 0)
+                return [];
+            if (itemsList.Count == 1)
+                return [await action(itemsList.First(), 0)];
+            if (itemsList.Count <= maxDegreeOfParallelism)
+                return await Task.WhenAll(itemsList.Select((p, i) => action(p, i))).Then(results => results.ToList());
+
+            // Handle parallelism with limit maxDegreeOfParallelism
+            var actionQueue = new Queue<(int, Func<Task<(int, TResult, Exception?)>>)>(
+                itemsList
+                    .Select<T, ValueTuple<int, Func<Task<ValueTuple<int, TResult, Exception?>>>>>(
+                        (item, i) => (i,
+                            () => action(item, i)
+                                .Then<TResult, ValueTuple<TResult, Exception?>>(p => (p, null))
+                                .Recover(ex => (default!, ex))
+                                .Then<ValueTuple<TResult, Exception?>, ValueTuple<int, TResult, Exception?>>(
+                                    itemActionResult => (i, itemActionResult.Item1, itemActionResult.Item2)))));
+            var processingActionTasks = new ConcurrentDictionary<int, Task<ValueTuple<int, TResult, Exception?>>>();
+            var processedActionTaskResults = new ConcurrentDictionary<int, ValueTuple<TResult, Exception?>>();
+            var processedFailedActionExceptions = new ConcurrentBag<Exception>();
+
+            while (processedActionTaskResults.Count < itemsList.Count)
             {
-                if (itemsList.Count == 0)
-                    return [];
-                if (itemsList.Count == 1)
-                    return [await action(itemsList.First(), 0)];
-                if (itemsList.Count <= maxDegreeOfParallelism)
-                    return await Task.WhenAll(itemsList.Select((p, i) => action(p, i))).Then(results => results.ToList());
-
-                // Handle parallelism with limit maxDegreeOfParallelism
-                var actionQueue = new Queue<(int, Func<Task<(int, TResult, Exception?)>>)>(
-                    itemsList
-                        .Select<T, ValueTuple<int, Func<Task<ValueTuple<int, TResult, Exception?>>>>>(
-                            (item, i) => (i,
-                                () => action(item, i)
-                                    .Then<TResult, ValueTuple<TResult, Exception?>>(p => (p, null))
-                                    .Recover(ex => (default!, ex))
-                                    .Then<ValueTuple<TResult, Exception?>, ValueTuple<int, TResult, Exception?>>(
-                                        itemActionResult => (i, itemActionResult.Item1, itemActionResult.Item2)))));
-                var processingActionTasks = new ConcurrentDictionary<int, Task<ValueTuple<int, TResult, Exception?>>>();
-                var processedActionTaskResults = new ConcurrentDictionary<int, ValueTuple<TResult, Exception?>>();
-                var processedFailedActionExceptions = new ConcurrentBag<Exception>();
-                var gcExecutedCount = 0;
-
-                while (processedActionTaskResults.Count < itemsList.Count)
+                while (processingActionTasks.Count < maxDegreeOfParallelism && actionQueue.Count > 0)
                 {
-                    while (processingActionTasks.Count < maxDegreeOfParallelism && actionQueue.Count > 0)
+                    var numberOfToAddItemsToMaxParallelism = maxDegreeOfParallelism - processingActionTasks.Count;
+
+                    for (var i = 0; i < numberOfToAddItemsToMaxParallelism; i++)
                     {
-                        var numberOfToAddItemsToMaxParallelism = maxDegreeOfParallelism - processingActionTasks.Count;
-
-                        for (var i = 0; i < numberOfToAddItemsToMaxParallelism; i++)
+                        if (actionQueue.TryDequeue(out var queueItem))
                         {
-                            if (actionQueue.TryDequeue(out var queueItem))
-                            {
-                                var (nextProcessItemIndex, nextProcessAction) = queueItem;
+                            var (nextProcessItemIndex, nextProcessAction) = queueItem;
 
-                                var nextProcessActionTask = nextProcessAction()
-                                    .ContinueWith(
-                                        completedTask =>
-                                        {
-                                            var (nextProcessedItemIndex, nextProcessedActionResult, nextProcessedActionException) = completedTask.Result;
+                            var nextProcessActionTask = nextProcessAction()
+                                .ContinueWith(
+                                    completedTask =>
+                                    {
+                                        var (nextProcessedItemIndex, nextProcessedActionResult, nextProcessedActionException) = completedTask.Result;
 
-                                            processedActionTaskResults.TryAdd(nextProcessedItemIndex, (nextProcessedActionResult, nextProcessedActionException));
-                                            processingActionTasks.Remove(nextProcessedItemIndex, out _);
-                                            if (nextProcessedActionException != null) processedFailedActionExceptions.Add(nextProcessedActionException);
-                                            if (processedActionTaskResults.Count / maxDegreeOfParallelism > gcExecutedCount)
-                                            {
-                                                GarbageCollector.Collect();
-                                                gcExecutedCount++;
-                                            }
+                                        processedActionTaskResults.TryAdd(nextProcessedItemIndex, (nextProcessedActionResult, nextProcessedActionException));
+                                        processingActionTasks.Remove(nextProcessedItemIndex, out _);
+                                        if (nextProcessedActionException != null) processedFailedActionExceptions.Add(nextProcessedActionException);
 
-                                            return completedTask.Result;
-                                        });
+                                        return completedTask.Result;
+                                    });
 
-                                processingActionTasks.TryAdd(nextProcessItemIndex, nextProcessActionTask);
-                            }
+                            processingActionTasks.TryAdd(nextProcessItemIndex, nextProcessActionTask);
                         }
                     }
-
-                    await Task.WhenAll(processingActionTasks.Values);
                 }
 
-                return processedFailedActionExceptions.IsEmpty
-                    ? processedActionTaskResults.OrderBy(p => p.Key).Select(p => p.Value.Item1).ToList()
-                    : throw new AggregateException(processedFailedActionExceptions);
+                await Task.WhenAll(processingActionTasks.Values);
             }
-            finally
-            {
-                GarbageCollector.Collect();
-            }
+
+            return processedFailedActionExceptions.IsEmpty
+                ? processedActionTaskResults.OrderBy(p => p.Key).Select(p => p.Value.Item1).ToList()
+                : throw new AggregateException(processedFailedActionExceptions);
         }
 
         /// <summary>

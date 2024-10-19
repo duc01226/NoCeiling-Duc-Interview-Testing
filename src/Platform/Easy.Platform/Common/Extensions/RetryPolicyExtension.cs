@@ -1,4 +1,3 @@
-using Easy.Platform.Common.Utils;
 using Polly.Retry;
 
 namespace Easy.Platform.Common.Extensions;
@@ -141,14 +140,7 @@ public static class RetryPolicyExtension
             await retryPolicy.ExecuteAsync(
                 async _ =>
                 {
-                    try
-                    {
-                        await action();
-                    }
-                    finally
-                    {
-                        Util.GarbageCollector.Collect();
-                    }
+                    await action();
                 },
                 cancellationToken);
         }
@@ -183,14 +175,7 @@ public static class RetryPolicyExtension
             return await retryPolicy.ExecuteAsync(
                 async _ =>
                 {
-                    try
-                    {
-                        return await action();
-                    }
-                    finally
-                    {
-                        Util.GarbageCollector.Collect();
-                    }
+                    return await action();
                 },
                 cancellationToken);
         }

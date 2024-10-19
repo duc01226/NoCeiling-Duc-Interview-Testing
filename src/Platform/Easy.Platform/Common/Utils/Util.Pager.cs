@@ -34,11 +34,7 @@ public static partial class Util
                 await executeFn(currentSkipItemsCount, pageSize);
                 currentSkipItemsCount += pageSize;
 
-                if (currentSkipItemsCount < maxItemCount && pageDelayTime.HasValue)
-                {
-                    if (currentSkipItemsCount > pageSize) GarbageCollector.Collect();
-                    await Task.Delay(pageDelayTime.Value, cancellationToken);
-                }
+                if (currentSkipItemsCount < maxItemCount && pageDelayTime.HasValue) await Task.Delay(pageDelayTime.Value, cancellationToken);
             } while (currentSkipItemsCount < maxItemCount);
         }
 
@@ -71,11 +67,7 @@ public static partial class Util
                 result.Add(pagedResult);
                 currentSkipItemsCount += pageSize;
 
-                if (currentSkipItemsCount < maxItemCount && pageDelayTime.HasValue)
-                {
-                    if (currentSkipItemsCount > pageSize) GarbageCollector.Collect();
-                    await Task.Delay(pageDelayTime.Value, cancellationToken);
-                }
+                if (currentSkipItemsCount < maxItemCount && pageDelayTime.HasValue) await Task.Delay(pageDelayTime.Value, cancellationToken);
             } while (currentSkipItemsCount < maxItemCount);
 
             return result;
@@ -123,8 +115,6 @@ public static partial class Util
 
                 executionItemsResult = await executeFn();
                 totalExecutionCount += 1;
-
-                if (totalExecutionCount > 2) GarbageCollector.Collect();
             }
         }
     }

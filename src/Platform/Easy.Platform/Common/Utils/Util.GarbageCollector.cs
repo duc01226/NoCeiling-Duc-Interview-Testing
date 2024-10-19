@@ -45,18 +45,10 @@ public static partial class Util
             }
             else
             {
-                GC.Collect(0, GCCollectionMode.Forced, true, true); // Generation 0, blocking, compacting LOH
+                GC.Collect(0, GCCollectionMode.Optimized, true, true); // Generation 0, blocking, compacting LOH
                 GC.WaitForPendingFinalizers(); // Wait for all finalizers to finish
-                GC.Collect(0, GCCollectionMode.Forced, true, true); // Run GC again to ensure complete cleanup
+                GC.Collect(0, GCCollectionMode.Optimized, true, true); // Run GC again to ensure complete cleanup
             }
-
-            // Wait for full garbage collection to complete
-            /*
-             * This method blocks the calling thread until a full garbage collection (including all generations) has completed.
-             * It waits until all background garbage collection threads have finished their work.
-             * This is useful when you want to ensure that all garbage collection activity has ceased before proceeding.
-             */
-            GC.WaitForFullGCComplete();
         }
 
         private static double SetupCollectGarbageMemoryThrottlerDict(double throttleSeconds)

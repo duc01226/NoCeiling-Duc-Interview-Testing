@@ -59,7 +59,7 @@ public class PlatformApplicationSettingContext : IPlatformApplicationSettingCont
         set => applicationAssembly = value;
     }
 
-    public bool AutoGarbageCollectPerProcessRequestOrBusMessage { get; set; } = true;
+    public bool AutoGarbageCollectPerProcessRequestOrBusMessage { get; set; }
 
     /// <summary>
     /// <inheritdoc cref="IPlatformApplicationSettingContext.AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds" /> <br />
