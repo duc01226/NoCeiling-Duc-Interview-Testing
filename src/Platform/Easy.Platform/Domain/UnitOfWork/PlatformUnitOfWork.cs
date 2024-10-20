@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
@@ -20,12 +19,7 @@ public interface IPlatformUnitOfWork : IDisposable
     /// </summary>
     public string Id { get; set; }
 
-    /// <summary>
-    /// By default a uow usually present a db context, then the InnerUnitOfWorks is empty. <br />
-    /// Some application could use multiple db in one service, which then the current uow could be a aggregation uow of multiple db context uow. <br />
-    /// Then the InnerUnitOfWorks will hold list of all uow present all db context
-    /// </summary>
-    public List<IPlatformUnitOfWork> InnerUnitOfWorks { get; }
+    public IServiceScope AssociatedServiceScope { get; set; }
 
     /// <summary>
     /// Indicate it's created by UnitOfWorkManager
@@ -61,6 +55,13 @@ public interface IPlatformUnitOfWork : IDisposable
     /// Each action is a function that takes a PlatformUnitOfWorkFailedArgs object and returns a Task.
     /// </summary>
     public List<Func<PlatformUnitOfWorkFailedArgs, Task>> OnSaveChangesFailedActions { get; set; }
+
+    /// <summary>
+    /// By default a uow usually present a db context, then the GetInnerUowOfType always return null. <br />
+    /// Some application could use multiple db in one service, which then the current uow could be a aggregation uow of multiple db context uow. <br />
+    /// Then the GetInnerUowOfType will hold list of all uow present all db context and return uow of the given type
+    /// </summary>
+    public T? GetInnerUowOfType<T>() where T : class, IPlatformUnitOfWork;
 
     /// <summary>
     /// Completes this unit of work.
@@ -163,27 +164,13 @@ public interface IPlatformUnitOfWork : IDisposable
     /// </remarks>
     public TUnitOfWork UowOfType<TUnitOfWork>() where TUnitOfWork : class, IPlatformUnitOfWork
     {
-        return this.As<TUnitOfWork>() ?? InnerUnitOfWorks.FirstOrDefaultUowOfType<TUnitOfWork>();
+        return this.As<TUnitOfWork>() ?? GetInnerUowOfType<TUnitOfWork>();
     }
 
     /// <summary>
     /// Get itself or inner uow which is has Id equal uowId.
     /// </summary>
-    [return: MaybeNull]
-    public IPlatformUnitOfWork UowOfId(string uowId)
-    {
-        if (Id == uowId) return this;
-
-        for (var i = InnerUnitOfWorks.Count - 1; i >= 0; i--)
-        {
-            if (InnerUnitOfWorks[i].Id == uowId) return InnerUnitOfWorks[i];
-
-            var innerUow = InnerUnitOfWorks[i].UowOfId(uowId);
-            if (innerUow != null) return innerUow;
-        }
-
-        return null;
-    }
+    public IPlatformUnitOfWork? UowOfId(string uowId);
 }
 
 public class PlatformUnitOfWorkFailedArgs
@@ -199,6 +186,8 @@ public class PlatformUnitOfWorkFailedArgs
 public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 {
     private const int ContextMaxConcurrentThreadLock = 1;
+    protected ConcurrentDictionary<string, IPlatformUnitOfWork> CachedInnerUowByIds = new();
+    protected ConcurrentDictionary<Type, IPlatformUnitOfWork> CachedInnerUows = new();
 
     protected PlatformUnitOfWork(IPlatformRootServiceProvider rootServiceProvider)
     {
@@ -214,6 +203,11 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     protected ConcurrentDictionary<string, object> CachedExistingOriginalEntities { get; } = new();
     protected IPlatformRootServiceProvider RootServiceProvider { get; set; }
 
+    /// <summary>
+    /// Store associatedServiceScope to destroy it when uow is create, using and destroy
+    /// </summary>
+    public IServiceScope AssociatedServiceScope { get; set; }
+
     public string Id { get; set; } = Ulid.NewUlid().ToString();
 
     public bool IsUsingOnceTransientUow { get; set; }
@@ -224,14 +218,13 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     public List<Func<Task>> OnDisposedActions { get; set; } = [];
     public List<Func<Task>> OnUowCompletedActions { get; set; } = [];
     public List<Func<PlatformUnitOfWorkFailedArgs, Task>> OnSaveChangesFailedActions { get; set; } = [];
-    public List<IPlatformUnitOfWork> InnerUnitOfWorks { get; protected set; } = [];
     public IPlatformUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
 
     public virtual async Task CompleteAsync(CancellationToken cancellationToken = default)
     {
         if (Completed) return;
 
-        await InnerUnitOfWorks.Where(p => p.IsActive()).ParallelAsync(p => p.CompleteAsync(cancellationToken));
+        await CachedInnerUows.Values.Where(p => p.IsActive()).ParallelAsync(p => p.CompleteAsync(cancellationToken));
 
         await SaveChangesAsync(cancellationToken);
 
@@ -279,7 +272,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 
         try
         {
-            await InnerUnitOfWorks.Where(p => p.IsActive()).ParallelAsync(p => p.SaveChangesAsync(cancellationToken));
+            await CachedInnerUows.Values.Where(p => p.IsActive()).ParallelAsync(p => p.SaveChangesAsync(cancellationToken));
 
             await InternalSaveChangesAsync(cancellationToken);
 
@@ -333,6 +326,27 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     public void ClearCachedExistingOriginalEntity()
     {
         CachedExistingOriginalEntities.Clear();
+    }
+
+    public IPlatformUnitOfWork? UowOfId(string uowId)
+    {
+        return uowId.IsNotNullOrEmpty() ? null : CachedInnerUowByIds.GetValueOrDefault(uowId);
+    }
+
+    public T GetInnerUowOfType<T>() where T : class, IPlatformUnitOfWork
+    {
+        return CachedInnerUows.GetOrAdd(
+            typeof(T),
+            _ =>
+            {
+                var uow = AssociatedServiceScope.ServiceProvider.GetRequiredService<T>()
+                    .With(w => w.CreatedByUnitOfWorkManager = CreatedByUnitOfWorkManager)
+                    .With(w => w.ParentUnitOfWork = this);
+
+                CachedInnerUowByIds.TryAdd(uow.Id, uow);
+
+                return uow;
+            }) as T;
     }
 
     protected abstract Task InternalSaveChangesAsync(CancellationToken cancellationToken);

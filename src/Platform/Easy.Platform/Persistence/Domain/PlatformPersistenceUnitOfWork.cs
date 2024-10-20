@@ -15,22 +15,22 @@ public interface IPlatformPersistenceUnitOfWork<out TDbContext> : IPlatformUnitO
 public abstract class PlatformPersistenceUnitOfWork<TDbContext> : PlatformUnitOfWork, IPlatformPersistenceUnitOfWork<TDbContext>
     where TDbContext : IPlatformDbContext
 {
-    private Lazy<TDbContext> lazyDbContext;
+    protected Lazy<TDbContext> LazyDbContext;
 
     public PlatformPersistenceUnitOfWork(IPlatformRootServiceProvider rootServiceProvider, IServiceProvider serviceProvider) : base(rootServiceProvider)
     {
         ServiceProvider = serviceProvider;
-        lazyDbContext = new Lazy<TDbContext>(
+        LazyDbContext = new Lazy<TDbContext>(
             () => DbContextFactory(serviceProvider).With(dbContext => dbContext.MappedUnitOfWork = this),
             LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
     protected IServiceProvider ServiceProvider { get; }
-    public TDbContext DbContext => lazyDbContext.Value;
+    public TDbContext DbContext => LazyDbContext.Value;
 
     protected override async Task InternalSaveChangesAsync(CancellationToken cancellationToken)
     {
-        if (lazyDbContext.IsValueCreated)
+        if (LazyDbContext.IsValueCreated)
             await DbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -44,17 +44,22 @@ public abstract class PlatformPersistenceUnitOfWork<TDbContext> : PlatformUnitOf
             // Release managed resources
             if (disposing)
             {
-                if (lazyDbContext.IsValueCreated)
+                if (ShouldDisposeDbContext())
                 {
                     BeforeDisposeDbContext(DbContext);
                     DbContext?.Dispose();
                 }
 
-                lazyDbContext = null;
+                LazyDbContext = null;
             }
 
             Disposed = true;
         }
+    }
+
+    protected virtual bool ShouldDisposeDbContext()
+    {
+        return LazyDbContext?.IsValueCreated == true;
     }
 
     protected virtual void BeforeDisposeDbContext(TDbContext dbContext)

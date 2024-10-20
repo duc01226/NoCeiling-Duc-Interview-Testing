@@ -69,4 +69,10 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
         if (CanUsePooledDbContext())
             dbContext.As<DbContext>().ChangeTracker.Clear();
     }
+
+    protected override bool ShouldDisposeDbContext()
+    {
+        // Override and do not dispose db context if db-context is managed by pooledDbContextFactory
+        return LazyDbContext?.IsValueCreated == true && !CanUsePooledDbContext();
+    }
 }

@@ -26,16 +26,14 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
         // So that we can begin/destroy uow separately
         var newScope = ServiceProvider.CreateScope();
 
-        var uow = new PlatformAggregatedPersistenceUnitOfWork(
-                RootServiceProvider,
-                newScope.ServiceProvider.GetServices<IPlatformUnitOfWork>()
-                    .Select(
-                        p => p
-                            .With(w => w.CreatedByUnitOfWorkManager = this)
-                            .With(w => w.IsUsingOnceTransientUow = isUsingOnceTransientUow))
-                    .ToList(),
-                associatedServiceScope: newScope)
-            .With(uow => uow.CreatedByUnitOfWorkManager = this);
+        var uow = new PlatformAggregatedPersistenceUnitOfWork(RootServiceProvider)
+            .With(
+                p =>
+                {
+                    p.AssociatedServiceScope = newScope;
+                    p.IsUsingOnceTransientUow = isUsingOnceTransientUow;
+                    p.CreatedByUnitOfWorkManager = this;
+                });
 
         uow.OnUowCompletedActions.Add(() => Task.Run(() => uow.CreatedByUnitOfWorkManager.RemoveAllInactiveUow()));
         uow.OnDisposedActions.Add(() => Task.Run(() => uow.CreatedByUnitOfWorkManager.RemoveAllInactiveUow()));

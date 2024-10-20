@@ -31,4 +31,10 @@ public class PlatformMongoDbPersistenceUnitOfWork<TDbContext>
     {
         return true;
     }
+
+    protected override bool ShouldDisposeDbContext()
+    {
+        // Override and do not dispose db context because mongodb db context is singleton
+        return false;
+    }
 }

@@ -1,7 +1,6 @@
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Easy.Platform.Persistence.Domain;
 
@@ -18,56 +17,44 @@ public interface IPlatformAggregatedPersistenceUnitOfWork : IPlatformUnitOfWork
 /// </summary>
 public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlatformAggregatedPersistenceUnitOfWork
 {
-    /// <summary>
-    /// Store associatedServiceScope to destroy it when uow is create, using and destroy
-    /// </summary>
-    private IServiceScope associatedServiceScope;
-
     public PlatformAggregatedPersistenceUnitOfWork(
-        IPlatformRootServiceProvider rootServiceProvider,
-        List<IPlatformUnitOfWork> innerUnitOfWorks,
-        IServiceScope associatedServiceScope) : base(rootServiceProvider)
+        IPlatformRootServiceProvider rootServiceProvider) : base(rootServiceProvider)
     {
-        InnerUnitOfWorks = innerUnitOfWorks?
-                               .Select(innerUow => innerUow.With(w => w.ParentUnitOfWork = this))
-                               .ToList() ??
-                           [];
-        this.associatedServiceScope = associatedServiceScope;
     }
 
     public override bool IsPseudoTransactionUow()
     {
-        return InnerUnitOfWorks.All(p => p.IsPseudoTransactionUow());
+        return CachedInnerUows.Values.All(p => p.IsPseudoTransactionUow());
     }
 
     public override bool MustKeepUowForQuery()
     {
-        return InnerUnitOfWorks.Any(p => p.MustKeepUowForQuery());
+        return CachedInnerUows.Values.Any(p => p.MustKeepUowForQuery());
     }
 
     public override bool DoesSupportParallelQuery()
     {
-        return InnerUnitOfWorks.All(p => p.DoesSupportParallelQuery());
+        return CachedInnerUows.Values.All(p => p.DoesSupportParallelQuery());
     }
 
     public bool IsPseudoTransactionUow<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork
     {
-        return InnerUnitOfWorks.FirstOrDefault(p => p.Equals(uow))?.IsPseudoTransactionUow() == true;
+        return CachedInnerUowByIds.GetValueOrDefault(uow.Id)?.IsPseudoTransactionUow() == true;
     }
 
     public bool MustKeepUowForQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork
     {
-        return InnerUnitOfWorks.FirstOrDefault(p => p.Equals(uow))?.MustKeepUowForQuery() == true;
+        return CachedInnerUowByIds.GetValueOrDefault(uow.Id)?.MustKeepUowForQuery() == true;
     }
 
     public bool DoesSupportParallelQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork
     {
-        return InnerUnitOfWorks.FirstOrDefault(p => p.Equals(uow))?.DoesSupportParallelQuery() == true;
+        return CachedInnerUowByIds.GetValueOrDefault(uow.Id)?.DoesSupportParallelQuery() == true;
     }
 
     public override bool IsActive()
     {
-        return base.IsActive() && InnerUnitOfWorks.Any(p => p.IsActive());
+        return base.IsActive() && CachedInnerUows.Values.Any(p => p.IsActive());
     }
 
     protected override Task InternalSaveChangesAsync(CancellationToken cancellationToken)
@@ -84,11 +71,11 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
             // Release managed resources
             if (disposing)
             {
-                InnerUnitOfWorks.ForEach(p => p.Dispose());
-                InnerUnitOfWorks.Clear();
+                CachedInnerUows.Values.ForEach(p => p.Dispose());
+                CachedInnerUows.Clear();
 
-                associatedServiceScope?.Dispose();
-                associatedServiceScope = null;
+                AssociatedServiceScope?.Dispose();
+                AssociatedServiceScope = null;
             }
 
             Disposed = true;
