@@ -71,8 +71,7 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
                     .MongoClient.GetDatabase(sp.GetRequiredService<IOptions<PlatformMongoOptions<TDbContext>>>().Value.Database)),
             ServiceLifeTime.Singleton);
 
-        serviceCollection.Register<PlatformMongoDbContext<TDbContext>, TDbContext>(ServiceLifeTime.Singleton);
-        serviceCollection.RegisterAllForImplementation<TDbContext>(ServiceLifeTime.Singleton);
+        serviceCollection.Register<PlatformMongoDbContext<TDbContext>, TDbContext>();
 
         if (!ForCrossDbMigrationOnly) RegisterMongoDbUow(serviceCollection);
 
