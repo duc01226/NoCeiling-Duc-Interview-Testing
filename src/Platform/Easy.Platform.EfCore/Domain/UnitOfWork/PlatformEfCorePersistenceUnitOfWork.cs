@@ -72,7 +72,6 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
 
     protected override bool ShouldDisposeDbContext()
     {
-        // Override and do not dispose db context if db-context is managed by pooledDbContextFactory
-        return LazyDbContext?.IsValueCreated == true && !CanUsePooledDbContext();
+        return LazyDbContext?.IsValueCreated == true;
     }
 }
