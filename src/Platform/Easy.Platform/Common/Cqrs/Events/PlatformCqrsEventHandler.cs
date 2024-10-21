@@ -48,16 +48,14 @@ public abstract class PlatformCqrsEventHandler<TEvent> : IPlatformCqrsEventHandl
     protected readonly ILoggerFactory LoggerFactory;
     protected readonly IPlatformRootServiceProvider RootServiceProvider;
 
-    private readonly Lazy<bool> isDistributedTracingEnabledLazy;
-
     protected PlatformCqrsEventHandler(ILoggerFactory loggerFactory, IPlatformRootServiceProvider rootServiceProvider)
     {
         LoggerFactory = loggerFactory;
         RootServiceProvider = rootServiceProvider;
-        isDistributedTracingEnabledLazy = new Lazy<bool>(() => rootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled == true);
+        IsDistributedTracingEnabled = rootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled == true;
     }
 
-    protected bool IsDistributedTracingEnabled => isDistributedTracingEnabledLazy.Value;
+    protected bool IsDistributedTracingEnabled { get; set; }
 
     public virtual double RetryOnFailedDelaySeconds { get; set; } = Util.TaskRunner.DefaultResilientDelaySeconds;
 

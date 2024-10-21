@@ -16,25 +16,24 @@ public interface IPlatformPersistenceUnitOfWork<out TDbContext> : IPlatformUnitO
 public abstract class PlatformPersistenceUnitOfWork<TDbContext> : PlatformUnitOfWork, IPlatformPersistenceUnitOfWork<TDbContext>
     where TDbContext : IPlatformDbContext
 {
-    protected Lazy<TDbContext> LazyDbContext;
-
     public PlatformPersistenceUnitOfWork(
         IPlatformRootServiceProvider rootServiceProvider,
         ILoggerFactory loggerFactory,
         IServiceProvider serviceProvider) : base(rootServiceProvider, loggerFactory)
     {
         ServiceProvider = serviceProvider;
-        LazyDbContext = new Lazy<TDbContext>(
-            () => DbContextFactory(serviceProvider).With(dbContext => dbContext.MappedUnitOfWork = this),
-            LazyThreadSafetyMode.ExecutionAndPublication);
+        DbContextLazy = new Lazy<TDbContext>(
+            () => DbContextFactory(serviceProvider).With(dbContext => dbContext.MappedUnitOfWork = this));
     }
 
     protected IServiceProvider ServiceProvider { get; }
-    public TDbContext DbContext => LazyDbContext.Value;
+    protected Lazy<TDbContext> DbContextLazy { get; }
+
+    public TDbContext DbContext => DbContextLazy.Value;
 
     protected override async Task InternalSaveChangesAsync(CancellationToken cancellationToken)
     {
-        if (LazyDbContext.IsValueCreated)
+        if (DbContextLazy.IsValueCreated)
             await DbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -46,15 +45,10 @@ public abstract class PlatformPersistenceUnitOfWork<TDbContext> : PlatformUnitOf
             base.Dispose(disposing);
 
             // Release managed resources
-            if (disposing)
+            if (disposing && ShouldDisposeDbContext())
             {
-                if (ShouldDisposeDbContext())
-                {
-                    BeforeDisposeDbContext(DbContext);
-                    DbContext?.Dispose();
-                }
-
-                LazyDbContext = null;
+                BeforeDisposeDbContext(DbContext);
+                DbContext?.Dispose();
             }
 
             Disposed = true;
@@ -63,7 +57,7 @@ public abstract class PlatformPersistenceUnitOfWork<TDbContext> : PlatformUnitOf
 
     protected virtual bool ShouldDisposeDbContext()
     {
-        return LazyDbContext?.IsValueCreated == true;
+        return DbContextLazy.IsValueCreated;
     }
 
     protected virtual void BeforeDisposeDbContext(TDbContext dbContext)

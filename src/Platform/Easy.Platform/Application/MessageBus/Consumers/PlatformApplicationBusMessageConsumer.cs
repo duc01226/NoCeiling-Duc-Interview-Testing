@@ -61,31 +61,6 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
     where TMessage : class, new()
 {
     /// <summary>
-    /// A lazy-initialized instance of the inbox bus message repository.
-    /// </summary>
-    protected readonly Lazy<IPlatformInboxBusMessageRepository> InboxBusMessageRepo;
-
-    /// <summary>
-    /// The configuration for the inbox pattern.
-    /// </summary>
-    protected readonly PlatformInboxConfig InboxConfig;
-
-    /// <summary>
-    /// The root service provider.
-    /// </summary>
-    protected readonly IPlatformRootServiceProvider RootServiceProvider;
-
-    /// <summary>
-    /// The service provider for the current scope.
-    /// </summary>
-    protected readonly IServiceProvider ServiceProvider;
-
-    /// <summary>
-    /// The unit of work manager.
-    /// </summary>
-    protected readonly IPlatformUnitOfWorkManager UnitOfWorkManager;
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="PlatformApplicationMessageBusConsumer{TMessage}" /> class.
     /// </summary>
     /// <param name="loggerFactory">A factory for creating loggers.</param>
@@ -101,11 +76,22 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
         UnitOfWorkManager = uowManager;
         ServiceProvider = serviceProvider;
         RootServiceProvider = rootServiceProvider;
-        InboxBusMessageRepo = new Lazy<IPlatformInboxBusMessageRepository>(serviceProvider.GetService<IPlatformInboxBusMessageRepository>);
+        InboxBusMessageRepo = serviceProvider.GetService<IPlatformInboxBusMessageRepository>();
         InboxConfig = serviceProvider.GetRequiredService<PlatformInboxConfig>();
         RequestContextAccessor = ServiceProvider.GetRequiredService<IPlatformApplicationRequestContextAccessor>();
         ApplicationSettingContext = rootServiceProvider.GetRequiredService<IPlatformApplicationSettingContext>();
     }
+
+    protected PlatformApplicationMessageBusConsumer(ILoggerFactory loggerFactory, IPlatformInboxBusMessageRepository inboxBusMessageRepo) : base(loggerFactory)
+    {
+        InboxBusMessageRepo = inboxBusMessageRepo;
+    }
+
+    protected IPlatformInboxBusMessageRepository InboxBusMessageRepo { get; }
+    protected PlatformInboxConfig InboxConfig { get; }
+    protected IPlatformRootServiceProvider RootServiceProvider { get; }
+    protected IServiceProvider ServiceProvider { get; }
+    protected IPlatformUnitOfWorkManager UnitOfWorkManager { get; }
 
     /// <summary>
     /// Gets a value indicating whether to automatically open a unit of work when handling a message.
@@ -204,7 +190,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
             RootServiceProvider,
             ServiceProvider,
             consumerType: GetType(),
-            inboxBusMessageRepository: InboxBusMessageRepo.Value,
+            inboxBusMessageRepository: InboxBusMessageRepo,
             inboxConfig: InboxConfig,
             applicationSettingContext: ApplicationSettingContext,
             message: message,

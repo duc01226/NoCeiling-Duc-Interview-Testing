@@ -19,7 +19,6 @@ namespace Easy.Platform.AspNetCore.ExceptionHandling;
 /// </summary>
 public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
 {
-    private readonly IPlatformApplicationSettingContext applicationSettingContext;
     private readonly Lazy<ILogger> loggerLazy;
 
     public PlatformGlobalExceptionHandlerMiddleware(
@@ -31,10 +30,11 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
     {
         loggerLazy = new Lazy<ILogger>(() => loggerFactory.CreateLogger<PlatformGlobalExceptionHandlerMiddleware>());
         RequestContextAccessor = requestContextAccessor;
-        this.applicationSettingContext = applicationSettingContext;
+        ApplicationSettingContext = applicationSettingContext;
         Configuration = configuration;
     }
 
+    protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
     protected IConfiguration Configuration { get; }
     protected ILogger Logger => loggerLazy.Value;
     protected IPlatformApplicationRequestContextAccessor RequestContextAccessor { get; }
@@ -103,7 +103,7 @@ public class PlatformGlobalExceptionHandlerMiddleware : PlatformMiddleware
                         exception.BeautifyStackTrace(),
                         "[UnexpectedRequestError] There is an unexpected exception during the processing of the request. RequestId: {RequestId}. RequestContext: {RequestContext}",
                         context.TraceIdentifier,
-                        RequestContextAccessor.Current.GetAllKeyValues(applicationSettingContext.GetIgnoreRequestContextKeys()).ToJson());
+                        RequestContextAccessor.Current.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()).ToJson());
 
                     return new PlatformAspNetMvcErrorResponse(
                         PlatformAspNetMvcErrorInfo.FromUnknownException(exception, DeveloperExceptionEnabled),

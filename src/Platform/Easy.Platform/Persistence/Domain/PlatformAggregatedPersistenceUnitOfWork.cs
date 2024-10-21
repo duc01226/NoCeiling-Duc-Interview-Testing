@@ -25,32 +25,32 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
 
     public override bool IsPseudoTransactionUow()
     {
-        return CachedInnerUows.Value.Values.All(p => p.IsPseudoTransactionUow());
+        return CachedInnerUows.Values.All(p => p.IsPseudoTransactionUow());
     }
 
     public override bool MustKeepUowForQuery()
     {
-        return CachedInnerUows.Value.Values.Any(p => p.MustKeepUowForQuery());
+        return CachedInnerUows.Values.Any(p => p.MustKeepUowForQuery());
     }
 
     public override bool DoesSupportParallelQuery()
     {
-        return CachedInnerUows.Value.Values.All(p => p.DoesSupportParallelQuery());
+        return CachedInnerUows.Values.All(p => p.DoesSupportParallelQuery());
     }
 
     public bool IsPseudoTransactionUow<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork
     {
-        return CachedInnerUowByIds.Value.GetValueOrDefault(uow.Id)?.IsPseudoTransactionUow() == true;
+        return CachedInnerUowByIds.GetValueOrDefault(uow.Id)?.IsPseudoTransactionUow() == true;
     }
 
     public bool MustKeepUowForQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork
     {
-        return CachedInnerUowByIds.Value.GetValueOrDefault(uow.Id)?.MustKeepUowForQuery() == true;
+        return CachedInnerUowByIds.GetValueOrDefault(uow.Id)?.MustKeepUowForQuery() == true;
     }
 
     public bool DoesSupportParallelQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork
     {
-        return CachedInnerUowByIds.Value.GetValueOrDefault(uow.Id)?.DoesSupportParallelQuery() == true;
+        return CachedInnerUowByIds.GetValueOrDefault(uow.Id)?.DoesSupportParallelQuery() == true;
     }
 
     protected override Task InternalSaveChangesAsync(CancellationToken cancellationToken)
