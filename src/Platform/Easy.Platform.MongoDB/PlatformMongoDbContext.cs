@@ -367,8 +367,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider))
-            return await DeleteManyAsync<TEntity, TPrimaryKey>(p => entityIds.Contains(p.Id), true, eventCustomConfig, cancellationToken)
-                .Then(() => entityIds);
+            return await DeleteManyAsync<TEntity, TPrimaryKey>(p => entityIds.Contains(p.Id), true, eventCustomConfig, cancellationToken).Then(() => entityIds);
 
         var entities = await GetAllAsync(GetQuery<TEntity>().Where(p => entityIds.Contains(p.Id)), cancellationToken);
 

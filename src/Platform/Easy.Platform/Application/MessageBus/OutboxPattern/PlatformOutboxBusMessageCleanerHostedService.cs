@@ -113,20 +113,13 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
             await ServiceProvider.ExecuteInjectScopedAsync(
                 async (IPlatformOutboxBusMessageRepository outboxEventBusMessageRepo) =>
                 {
-                    var toDeleteMessageIds = await outboxEventBusMessageRepo.GetAllAsync(
+                    await outboxEventBusMessageRepo.DeleteManyAsync(
                         queryBuilder: query => query
                             .Where(p => p.SendStatus == PlatformOutboxBusMessage.SendStatuses.Processed)
                             .OrderByDescending(p => p.CreatedDate)
-                            .Skip(OutboxConfig.MaxStoreProcessedMessageCount)
-                            .Select(p => p.Id),
-                        cancellationToken);
-
-                    if (toDeleteMessageIds.Count > 0)
-                        await outboxEventBusMessageRepo.DeleteManyAsync(
-                            predicate: p => toDeleteMessageIds.Contains(p.Id),
-                            dismissSendEvent: true,
-                            eventCustomConfig: null,
-                            cancellationToken);
+                            .Skip(OutboxConfig.MaxStoreProcessedMessageCount),
+                        dismissSendEvent: true,
+                        cancellationToken: cancellationToken);
                 });
 
             Logger.LogDebug(
