@@ -7,13 +7,6 @@ public interface IPlatformPersistenceConfiguration
     public bool ForCrossDbMigrationOnly { get; set; }
 
     public PlatformPersistenceConfigurationBadQueryWarningConfig BadQueryWarning { get; set; }
-
-    /// <summary>
-    /// Default is null.
-    /// Return True to determine that the uow should not be disposed, must be kept for data has been query from it.
-    /// Activate this is not optimized for the memory
-    /// </summary>
-    public bool? MustKeepUowForQuery { get; set; }
 }
 
 public interface IPlatformPersistenceConfiguration<TDbContext> : IPlatformPersistenceConfiguration
@@ -42,9 +35,8 @@ public struct PlatformPersistenceConfigurationPooledDbContextOptions
 
 public class PlatformPersistenceConfiguration : IPlatformPersistenceConfiguration
 {
-    public bool ForCrossDbMigrationOnly { get; set; }
-
     public virtual bool? MustKeepUowForQuery { get; set; }
+    public bool ForCrossDbMigrationOnly { get; set; }
 
     public PlatformPersistenceConfigurationBadQueryWarningConfig BadQueryWarning { get; set; } = new();
 }

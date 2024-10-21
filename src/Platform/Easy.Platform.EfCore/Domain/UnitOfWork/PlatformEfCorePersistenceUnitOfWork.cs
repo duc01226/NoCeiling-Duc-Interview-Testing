@@ -39,10 +39,7 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
 
     public override bool MustKeepUowForQuery()
     {
-        if (PersistenceConfiguration.MustKeepUowForQuery == null)
-            return DbContextOptions.IsUsingLazyLoadingProxy();
-
-        return PersistenceConfiguration.MustKeepUowForQuery == true;
+        return DbContextOptions.IsUsingLazyLoadingProxy();
     }
 
     public override bool DoesSupportParallelQuery()
@@ -68,10 +65,5 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
     {
         if (CanUsePooledDbContext())
             dbContext.As<DbContext>().ChangeTracker.Clear();
-    }
-
-    protected override bool ShouldDisposeDbContext()
-    {
-        return LazyDbContext?.IsValueCreated == true;
     }
 }

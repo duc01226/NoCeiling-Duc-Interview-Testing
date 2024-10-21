@@ -19,7 +19,7 @@ public interface IPlatformUnitOfWork : IDisposable
     /// </summary>
     public string Id { get; set; }
 
-    public IServiceScope AssociatedServiceScope { get; set; }
+    public IServiceScope? AssociatedServiceScope { get; set; }
 
     /// <summary>
     /// Indicate it's created by UnitOfWorkManager
@@ -206,7 +206,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     /// <summary>
     /// Store associatedServiceScope to destroy it when uow is create, using and destroy
     /// </summary>
-    public IServiceScope AssociatedServiceScope { get; set; }
+    public IServiceScope? AssociatedServiceScope { get; set; }
 
     public string Id { get; set; } = Ulid.NewUlid().ToString();
 
@@ -335,6 +335,8 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 
     public T GetInnerUowOfType<T>() where T : class, IPlatformUnitOfWork
     {
+        if (AssociatedServiceScope == null) return ParentUnitOfWork?.UowOfType<T>();
+
         return CachedInnerUows.GetOrAdd(
             typeof(T),
             _ =>
@@ -343,7 +345,8 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
                     .With(w => w.CreatedByUnitOfWorkManager = CreatedByUnitOfWorkManager)
                     .With(w => w.ParentUnitOfWork = this);
 
-                CachedInnerUowByIds.TryAdd(uow.Id, uow);
+                if (uow != null)
+                    CachedInnerUowByIds.TryAdd(uow.Id, uow);
 
                 return uow;
             }) as T;
