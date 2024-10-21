@@ -35,7 +35,6 @@ public struct PlatformPersistenceConfigurationPooledDbContextOptions
 
 public class PlatformPersistenceConfiguration : IPlatformPersistenceConfiguration
 {
-    public virtual bool? MustKeepUowForQuery { get; set; }
     public bool ForCrossDbMigrationOnly { get; set; }
 
     public PlatformPersistenceConfigurationBadQueryWarningConfig BadQueryWarning { get; set; } = new();

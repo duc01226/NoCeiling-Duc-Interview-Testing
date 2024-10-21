@@ -1,5 +1,4 @@
 using Easy.Platform.Common;
-using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 
 namespace Easy.Platform.Persistence.Domain;
@@ -52,33 +51,8 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
         return CachedInnerUowByIds.GetValueOrDefault(uow.Id)?.DoesSupportParallelQuery() == true;
     }
 
-    public override bool IsActive()
-    {
-        return base.IsActive() && CachedInnerUows.Values.Any(p => p.IsActive());
-    }
-
     protected override Task InternalSaveChangesAsync(CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (!Disposed)
-        {
-            base.Dispose(disposing);
-
-            // Release managed resources
-            if (disposing)
-            {
-                CachedInnerUows.Values.ForEach(p => p.Dispose());
-                CachedInnerUows.Clear();
-
-                AssociatedServiceScope?.Dispose();
-                AssociatedServiceScope = null;
-            }
-
-            Disposed = true;
-        }
     }
 }

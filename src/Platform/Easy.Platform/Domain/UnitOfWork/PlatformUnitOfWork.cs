@@ -235,7 +235,8 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 
     public virtual bool IsActive()
     {
-        return !Completed && !Disposed;
+        return !Completed && !Disposed &&
+               (CachedInnerUows.IsEmpty || CachedInnerUows.Values.Any(p => p.IsActive()));
     }
 
     public abstract bool IsPseudoTransactionUow();
@@ -369,6 +370,15 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
             {
                 NotThreadSafeDbContextQueryLock.Dispose();
                 CachedExistingOriginalEntities.Clear();
+
+                CachedInnerUows.Values.ForEach(p => p.Dispose());
+                CachedInnerUows.Clear();
+                CachedInnerUowByIds.Clear();
+                AssociatedServiceScope?.Dispose();
+
+                AssociatedServiceScope = null;
+                CachedInnerUows = null;
+                CachedInnerUowByIds = null;
             }
 
             // Release unmanaged resources
