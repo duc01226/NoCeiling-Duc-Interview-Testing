@@ -3,6 +3,7 @@ using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Persistence.Domain;
 
@@ -17,7 +18,10 @@ public abstract class PlatformPersistenceUnitOfWork<TDbContext> : PlatformUnitOf
 {
     protected Lazy<TDbContext> LazyDbContext;
 
-    public PlatformPersistenceUnitOfWork(IPlatformRootServiceProvider rootServiceProvider, IServiceProvider serviceProvider) : base(rootServiceProvider)
+    public PlatformPersistenceUnitOfWork(
+        IPlatformRootServiceProvider rootServiceProvider,
+        ILoggerFactory loggerFactory,
+        IServiceProvider serviceProvider) : base(rootServiceProvider, loggerFactory)
     {
         ServiceProvider = serviceProvider;
         LazyDbContext = new Lazy<TDbContext>(

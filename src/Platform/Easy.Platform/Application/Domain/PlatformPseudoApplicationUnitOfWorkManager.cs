@@ -2,6 +2,8 @@ using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.Domain;
 
@@ -16,7 +18,7 @@ internal sealed class PlatformPseudoApplicationUnitOfWorkManager : PlatformUnitO
 
     public override IPlatformUnitOfWork CreateNewUow(bool isUsingOnceTransientUow)
     {
-        return new PlatformPseudoApplicationUnitOfWork(RootServiceProvider)
+        return new PlatformPseudoApplicationUnitOfWork(RootServiceProvider, RootServiceProvider.GetService<ILoggerFactory>())
             .With(uow => uow.CreatedByUnitOfWorkManager = this)
             .With(uow => uow.IsUsingOnceTransientUow = isUsingOnceTransientUow);
     }
@@ -24,7 +26,9 @@ internal sealed class PlatformPseudoApplicationUnitOfWorkManager : PlatformUnitO
 
 internal sealed class PlatformPseudoApplicationUnitOfWork : PlatformUnitOfWork
 {
-    public PlatformPseudoApplicationUnitOfWork(IPlatformRootServiceProvider rootServiceProvider) : base(rootServiceProvider)
+    public PlatformPseudoApplicationUnitOfWork(
+        IPlatformRootServiceProvider rootServiceProvider,
+        ILoggerFactory loggerFactory) : base(rootServiceProvider, loggerFactory)
     {
     }
 

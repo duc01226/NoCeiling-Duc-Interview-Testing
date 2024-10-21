@@ -180,6 +180,30 @@ public interface IPlatformUnitOfWorkManager : IDisposable
                     }
                 });
     }
+
+    public async Task ExecuteInjectScopedAsync(
+        Delegate method,
+        params object[] manuallyParams)
+    {
+        await GetRootServiceProvider()
+            .ExecuteInjectScopedAsync(
+                async (IPlatformUnitOfWorkManager newScopeUnitOfWorkManager, IServiceProvider serviceProvider) =>
+                {
+                    try
+                    {
+                        using (var uow = newScopeUnitOfWorkManager.Begin(false))
+                        {
+                            await serviceProvider.ExecuteInjectAsync(method, manuallyParams);
+
+                            await uow.CompleteAsync();
+                        }
+                    }
+                    finally
+                    {
+                        GetRootServiceProvider().GetService<IPlatformApplicationSettingContext>().ProcessAutoGarbageCollect();
+                    }
+                });
+    }
 }
 
 public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager

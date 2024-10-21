@@ -4,6 +4,7 @@ using Easy.Platform.Persistence.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.EfCore.Domain.UnitOfWork;
 
@@ -19,9 +20,10 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
 
     public PlatformEfCorePersistenceUnitOfWork(
         IPlatformRootServiceProvider rootServiceProvider,
+        ILoggerFactory loggerFactory,
         IServiceProvider serviceProvider,
         PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
-        DbContextOptions<TDbContext> dbContextOptions) : base(rootServiceProvider, serviceProvider)
+        DbContextOptions<TDbContext> dbContextOptions) : base(rootServiceProvider, loggerFactory, serviceProvider)
     {
         PersistenceConfiguration = persistenceConfiguration;
         DbContextOptions = dbContextOptions;

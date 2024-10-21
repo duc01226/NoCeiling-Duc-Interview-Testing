@@ -161,13 +161,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
     /// <returns>A <see cref="Task" /> representing the asynchronous operation.</returns>
     protected virtual async Task ConsumeInboxEventBusMessages(CancellationToken cancellationToken)
     {
-        var isThisConsumeIsFirstTimeProcess = isFirstTimeProcess;
-
-        if (isFirstTimeProcess)
-        {
-            firstTimeProcessDate = Clock.UtcNow;
-            isFirstTimeProcess = false;
-        }
+        if (isFirstTimeProcess) firstTimeProcessDate = Clock.UtcNow;
 
         await ServiceProvider.ExecuteInjectScopedAsync(
             async (IPlatformInboxBusMessageRepository inboxBusMessageRepository) =>
@@ -189,7 +183,8 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                                             PlatformInboxBusMessage.CanHandleMessagesExpr(
                                                 ApplicationSettingContext.ApplicationName,
                                                 InboxConfig.MaxRetriedProcessCount,
-                                                retryFailedMessageImmediately: isThisConsumeIsFirstTimeProcess))
+                                                firstTimeProcessDate: firstTimeProcessDate,
+                                                retryFailedMessageImmediately: isFirstTimeProcess))
                                         .OrderBy(p => p.CreatedDate)
                                         .Take(InboxConfig.GetCanHandleMessageGroupedByConsumerIdPrefixesPageSize)
                                         .Select(p => p.Id),
@@ -228,7 +223,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                                 },
                                 InboxConfig.MaxParallelProcessingMessagesCount);
 
-                            isThisConsumeIsFirstTimeProcess = false;
+                            isFirstTimeProcess = false;
 
                             return pagedCanHandleMessageGroupedByConsumerIdPrefixes;
                         },
@@ -238,7 +233,8 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                                     PlatformInboxBusMessage.CanHandleMessagesExpr(
                                         ApplicationSettingContext.ApplicationName,
                                         InboxConfig.MaxRetriedProcessCount,
-                                        retryFailedMessageImmediately: isThisConsumeIsFirstTimeProcess)),
+                                        firstTimeProcessDate: firstTimeProcessDate,
+                                        retryFailedMessageImmediately: isFirstTimeProcess)),
                             cancellationToken: cancellationToken),
                         cancellationToken: cancellationToken);
 
@@ -402,7 +398,8 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                 async (IPlatformInboxBusMessageRepository inboxEventBusMessageRepo) =>
                 {
                     // Check if there are any messages to handle for the given prefix.
-                    if (!await AnyCanHandleInboxBusMessages(messageGroupedByConsumerIdPrefix, inboxEventBusMessageRepo)) return [];
+                    if (!await AnyCanHandleInboxBusMessages(messageGroupedByConsumerIdPrefix, inboxEventBusMessageRepo))
+                        return [];
 
                     // Retrieve a batch of messages to handle.
                     var toHandleMessages = await inboxEventBusMessageRepo.GetAllAsync(

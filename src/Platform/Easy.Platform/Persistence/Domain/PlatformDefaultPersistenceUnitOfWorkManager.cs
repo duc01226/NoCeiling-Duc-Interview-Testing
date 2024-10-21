@@ -3,6 +3,7 @@ using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Persistence.Domain;
 
@@ -26,7 +27,7 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
         // So that we can begin/destroy uow separately
         var newScope = ServiceProvider.CreateScope();
 
-        var uow = new PlatformAggregatedPersistenceUnitOfWork(RootServiceProvider)
+        var uow = new PlatformAggregatedPersistenceUnitOfWork(RootServiceProvider, RootServiceProvider.GetService<ILoggerFactory>())
             .With(
                 p =>
                 {

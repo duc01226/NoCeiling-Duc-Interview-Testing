@@ -1,5 +1,6 @@
 using Easy.Platform.Common;
 using Easy.Platform.Persistence.Domain;
+using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.MongoDB.Domain.UnitOfWork;
 
@@ -11,8 +12,12 @@ public interface IPlatformMongoDbPersistenceUnitOfWork<out TDbContext> : IPlatfo
 public class PlatformMongoDbPersistenceUnitOfWork<TDbContext>
     : PlatformPersistenceUnitOfWork<TDbContext>, IPlatformMongoDbPersistenceUnitOfWork<TDbContext> where TDbContext : PlatformMongoDbContext<TDbContext>
 {
-    public PlatformMongoDbPersistenceUnitOfWork(IPlatformRootServiceProvider rootServiceProvider, IServiceProvider serviceProvider) : base(
+    public PlatformMongoDbPersistenceUnitOfWork(
+        IPlatformRootServiceProvider rootServiceProvider,
+        ILoggerFactory loggerFactory,
+        IServiceProvider serviceProvider) : base(
         rootServiceProvider,
+        loggerFactory,
         serviceProvider)
     {
     }
