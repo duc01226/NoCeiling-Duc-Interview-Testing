@@ -37,24 +37,24 @@ public interface IPlatformUnitOfWork : IDisposable
     /// Gets or sets a list of actions to be executed upon the completion of the UnitOfWork save changes.
     /// Each action in the list is a function returning a Task, allowing for asynchronous operations.
     /// </summary>
-    public List<Func<Task>> OnSaveChangesCompletedActions { get; set; }
+    public ConcurrentBag<Func<Task>> OnSaveChangesCompletedActions { get; set; }
 
     /// <summary>
     /// Gets or sets the list of actions to be executed when the unit of work is disposed.
     /// Each action in the list is a function returning a Task, allowing for asynchronous operations.
     /// </summary>
-    public List<Func<Task>> OnDisposedActions { get; set; }
+    public ConcurrentBag<Func<Task>> OnDisposedActions { get; set; }
 
     /// <summary>
     /// Gets or sets the list of actions to be executed when the unit of work is completed.
     /// </summary>
-    public List<Func<Task>> OnUowCompletedActions { get; set; }
+    public ConcurrentBag<Func<Task>> OnUowCompletedActions { get; set; }
 
     /// <summary>
     /// Gets or sets the list of actions to be executed when the unit of work save changes fails.
     /// Each action is a function that takes a PlatformUnitOfWorkFailedArgs object and returns a Task.
     /// </summary>
-    public List<Func<PlatformUnitOfWorkFailedArgs, Task>> OnSaveChangesFailedActions { get; set; }
+    public ConcurrentBag<Func<PlatformUnitOfWorkFailedArgs, Task>> OnSaveChangesFailedActions { get; set; }
 
     /// <summary>
     /// By default a uow usually present a db context, then the GetInnerUowOfType always return null. <br />
@@ -220,10 +220,10 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 
     public IPlatformUnitOfWork? ParentUnitOfWork { get; set; }
 
-    public List<Func<Task>> OnSaveChangesCompletedActions { get; set; } = [];
-    public List<Func<Task>> OnDisposedActions { get; set; } = [];
-    public List<Func<Task>> OnUowCompletedActions { get; set; } = [];
-    public List<Func<PlatformUnitOfWorkFailedArgs, Task>> OnSaveChangesFailedActions { get; set; } = [];
+    public ConcurrentBag<Func<Task>> OnSaveChangesCompletedActions { get; set; } = [];
+    public ConcurrentBag<Func<Task>> OnDisposedActions { get; set; } = [];
+    public ConcurrentBag<Func<Task>> OnUowCompletedActions { get; set; } = [];
+    public ConcurrentBag<Func<PlatformUnitOfWorkFailedArgs, Task>> OnSaveChangesFailedActions { get; set; } = [];
     public IPlatformUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
 
     public virtual async Task CompleteAsync(CancellationToken cancellationToken = default)
