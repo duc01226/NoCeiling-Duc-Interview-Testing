@@ -1,9 +1,9 @@
-using Easy.Platform.Common.HostingBackgroundServices;
+using Easy.Platform.Application.HostingBackgroundServices;
 using Microsoft.Extensions.Logging;
 
 namespace PlatformExampleApp.TextSnippet.Application.HostingBackgroundServices;
 
-internal sealed class ExampleHostingBackgroundService : PlatformIntervalHostingBackgroundService
+internal sealed class ExampleHostingBackgroundService : PlatformApplicationIntervalHostingBackgroundService
 {
     public ExampleHostingBackgroundService(IServiceProvider serviceProvider, ILoggerFactory loggerFactory) : base(serviceProvider, loggerFactory)
     {

@@ -18,15 +18,13 @@ public abstract class PlatformPersistenceUnitOfWork<TDbContext> : PlatformUnitOf
 {
     public PlatformPersistenceUnitOfWork(
         IPlatformRootServiceProvider rootServiceProvider,
-        ILoggerFactory loggerFactory,
-        IServiceProvider serviceProvider) : base(rootServiceProvider, loggerFactory)
+        IServiceProvider serviceProvider,
+        ILoggerFactory loggerFactory) : base(rootServiceProvider, serviceProvider, loggerFactory)
     {
-        ServiceProvider = serviceProvider;
         DbContextLazy = new Lazy<TDbContext>(
             () => DbContextFactory(serviceProvider).With(dbContext => dbContext.MappedUnitOfWork = this));
     }
 
-    protected IServiceProvider ServiceProvider { get; }
     protected Lazy<TDbContext> DbContextLazy { get; }
 
     public TDbContext DbContext => DbContextLazy.Value;

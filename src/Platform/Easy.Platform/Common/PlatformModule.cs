@@ -351,20 +351,21 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
     /// <summary>
     /// Initializes the performance profiling settings for the platform module.
     /// </summary>
-    protected Task InitPerformanceProfiling()
+    protected async Task InitPerformanceProfiling()
     {
-        if (!IsRootModule) return Task.CompletedTask;
+        if (!IsRootModule) return;
 
         var config = ConfigPerformanceProfiling();
 
-        Logger.LogInformation("[PlatformModule] InitPerformanceProfiling. Config:{Config}", config.ToFormattedJson());
+        if (config.Enabled == true)
+        {
+            Logger.LogInformation("[PlatformModule] InitPerformanceProfiling. Config:{Config}", config.ToFormattedJson());
 
-        Profiler.Instance.SetCPUTrackingEnabled(config.Enabled == true && (config.CPUTrackingEnabled ?? true));
-        Profiler.Instance.SetAllocationTrackingEnabled(config.Enabled == true && (config.AllocationTrackingEnabled ?? true));
-        Profiler.Instance.SetContentionTrackingEnabled(config.Enabled == true && (config.ContentionTrackingEnabled ?? false));
-        Profiler.Instance.SetExceptionTrackingEnabled(config.Enabled == true && (config.ExceptionTrackingEnabled ?? false));
-
-        return Task.CompletedTask;
+            Profiler.Instance.SetCPUTrackingEnabled(config.Enabled == true && (config.CPUTrackingEnabled ?? true));
+            Profiler.Instance.SetAllocationTrackingEnabled(config.Enabled == true && (config.AllocationTrackingEnabled ?? true));
+            Profiler.Instance.SetContentionTrackingEnabled(config.Enabled == true && (config.ContentionTrackingEnabled ?? false));
+            Profiler.Instance.SetExceptionTrackingEnabled(config.Enabled == true && (config.ExceptionTrackingEnabled ?? false));
+        }
     }
 
     /// <summary>
@@ -464,7 +465,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
     public ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
-        return loggerFactory.CreateLogger(typeof(PlatformModule).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}");
+        return loggerFactory.CreateLogger(GetType());
     }
 
     protected static void ExecuteRegisterByAssemblyOnlyOnce(Action<Assembly> action, List<Assembly> assemblies, string actionName)
@@ -580,8 +581,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
                 {
                     serviceCollection.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
 
-                    serviceCollection.Register<IPlatformCqrs, PlatformCqrs>();
-                    serviceCollection.Register(sp => new Lazy<IPlatformCqrs>(sp.GetRequiredService<IPlatformCqrs>));
+                    serviceCollection.Register<IPlatformCqrs, PlatformCqrs>(ServiceLifeTime.Scoped, supportLazyInject: true);
                     serviceCollection.RegisterAllSelfImplementationFromType(typeof(IPipelineBehavior<,>), assembly);
                 },
                 GetServicesRegisterScanAssemblies(),

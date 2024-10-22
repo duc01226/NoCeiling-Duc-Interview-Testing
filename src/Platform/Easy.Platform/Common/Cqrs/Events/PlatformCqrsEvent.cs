@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Text.Json.Serialization;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.RequestContext;
@@ -22,7 +21,7 @@ public interface IPlatformCqrsEvent : INotification
     /// <summary>
     /// This is used to store the context of the request which generate the event, for example the CurrentRequestContext
     /// </summary>
-    ConcurrentDictionary<string, object> RequestContext { get; set; }
+    Dictionary<string, object> RequestContext { get; set; }
 
     /// <summary>
     /// Add handler type fullname If you want to force wait handler execution immediately successfully to continue. By default, handlers for entity event executing
@@ -84,8 +83,6 @@ public interface IPlatformCqrsEvent : INotification
 
 public abstract class PlatformCqrsEvent : IPlatformCqrsEvent
 {
-    private readonly object initRequestContextLock = new();
-
     public Dictionary<string, object> AdditionalMetadata { get; set; } = [];
 
     public string AuditTrackId { get; set; } = Ulid.NewUlid().ToString();
@@ -110,7 +107,7 @@ public abstract class PlatformCqrsEvent : IPlatformCqrsEvent
     /// <summary>
     /// This is used to store the context of the request which generate the event, for example the CurrentRequestContext
     /// </summary>
-    public ConcurrentDictionary<string, object> RequestContext { get; set; }
+    public Dictionary<string, object> RequestContext { get; set; } = [];
 
     /// <summary>
     /// Add handler type fullname If you want to force wait handler execution immediately successfully to continue. By default, handlers for entity event executing
@@ -151,8 +148,6 @@ public abstract class PlatformCqrsEvent : IPlatformCqrsEvent
 
     public PlatformCqrsEvent SetRequestContextValues(IDictionary<string, object> values)
     {
-        InitRequestContext();
-
         values.ForEach(p => RequestContext.Upsert(p.Key, p.Value));
 
         return this;
@@ -160,19 +155,8 @@ public abstract class PlatformCqrsEvent : IPlatformCqrsEvent
 
     public PlatformCqrsEvent SetRequestContextValue<TValue>(string key, TValue value)
     {
-        InitRequestContext().Upsert(key, value);
+        RequestContext.Upsert(key, value);
 
         return this;
-    }
-
-    private ConcurrentDictionary<string, object> InitRequestContext()
-    {
-        if (RequestContext == null)
-            lock (initRequestContextLock)
-            {
-                RequestContext = new ConcurrentDictionary<string, object>();
-            }
-
-        return RequestContext;
     }
 }

@@ -18,10 +18,6 @@ internal sealed class DemoSendFreeFormatEventBusMessageCommandEventBusConsumer
 
     public override Task HandleLogicAsync(DemoSendFreeFormatEventBusMessage message, string routingKey)
     {
-        // Example for sync data event update event data entity value not changed
-        // if (message.ForceSyncNoCheckDiff == true)
-        //    RequestContextAccessor.Current.Upsert(PlatformCqrsEntityEvent.RequestContextForceSyncDataNoCheckUpdateDataIsDifferentKey, true);
-
         Logger.LogInformation(
             "Message {Message} by {TargetName} has been handled",
             nameof(DemoSendFreeFormatEventBusMessage),

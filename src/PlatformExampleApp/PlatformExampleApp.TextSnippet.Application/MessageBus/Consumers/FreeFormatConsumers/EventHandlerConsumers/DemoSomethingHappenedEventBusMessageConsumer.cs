@@ -26,10 +26,6 @@ internal sealed class DemoSomethingHappenedEventBusMessageConsumer : PlatformApp
 
     public override Task HandleLogicAsync(DemoSomethingHappenedEventBusMessage message, string routingKey)
     {
-        // Example for sync data event update event data entity value not changed
-        // if (message.ForceSyncNoCheckDiff == true)
-        //    RequestContextAccessor.Current.Upsert(PlatformCqrsEntityEvent.RequestContextForceSyncDataNoCheckUpdateDataIsDifferentKey, true);
-
         throw new NotImplementedException();
     }
 }

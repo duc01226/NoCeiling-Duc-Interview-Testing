@@ -37,15 +37,20 @@ public interface IPlatformBackgroundJobExecutor<in TParam> : IPlatformBackground
 /// </summary>
 public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroundJobExecutor<TParam> where TParam : class
 {
-    protected readonly ILogger Logger;
+    private readonly Lazy<ILogger> loggerLazy;
 
     public PlatformBackgroundJobExecutor(ILoggerFactory loggerFactory, IPlatformRootServiceProvider rootServiceProvider)
     {
         RootServiceProvider = rootServiceProvider;
-        Logger = loggerFactory.CreateLogger(typeof(PlatformBackgroundJobExecutor).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}");
+        LoggerFactory = loggerFactory;
+        loggerLazy = new Lazy<ILogger>(() => LoggerFactory.CreateLogger(typeof(PlatformBackgroundJobExecutor).GetNameOrGenericTypeName() + $"-{GetType().Name}"));
     }
 
+    protected ILogger Logger => loggerLazy.Value;
+
     protected IPlatformRootServiceProvider RootServiceProvider { get; }
+
+    protected ILoggerFactory LoggerFactory { get; }
 
     /// <summary>
     /// Config the time in milliseconds to log warning if the process job time is over ProcessWarningTimeMilliseconds.
@@ -61,7 +66,8 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
         {
             if (SlowProcessWarningTimeMilliseconds() > 0)
             {
-                Logger.LogInformation("BackgroundJobExecutor invoking background job {GetTypeFullName} STARTED", GetType().FullName);
+                if (LogDebugInformation())
+                    Logger.LogInformation("BackgroundJobExecutor invoking background job {GetTypeFullName} STARTED", GetType().FullName);
 
                 Util.TaskRunner
                     .ProfileExecutionAsync(
@@ -77,7 +83,7 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
                                     GetType().FullName,
                                     SlowProcessWarningTimeMilliseconds(),
                                     logMessage);
-                            else
+                            else if (LogDebugInformation())
                                 Logger.LogInformation(
                                     "BackgroundJobExecutor invoking background job {GetTypeFullName} FINISHED. {LogMessage}",
                                     GetType().FullName,
@@ -87,11 +93,13 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
             }
             else
             {
-                Logger.LogInformation("BackgroundJobExecutor invoking background job {GetTypeFullName} STARTED", GetType().FullName);
+                if (LogDebugInformation())
+                    Logger.LogInformation("BackgroundJobExecutor invoking background job {GetTypeFullName} STARTED", GetType().FullName);
 
                 InternalExecuteAsync(param).WaitResult();
 
-                Logger.LogInformation("BackgroundJobExecutor invoking background job {GetTypeFullName} FINISHED", GetType().FullName);
+                if (LogDebugInformation())
+                    Logger.LogInformation("BackgroundJobExecutor invoking background job {GetTypeFullName} FINISHED", GetType().FullName);
             }
         }
         catch (Exception e)
@@ -104,6 +112,11 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
     public virtual void Execute()
     {
         Execute(null);
+    }
+
+    public virtual bool LogDebugInformation()
+    {
+        return true;
     }
 
     public abstract Task ProcessAsync(TParam param);

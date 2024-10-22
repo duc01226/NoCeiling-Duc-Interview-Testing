@@ -3,6 +3,7 @@ using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.Infrastructures.BackgroundJob;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application.BackgroundJob;
@@ -15,6 +16,7 @@ public interface IPlatformApplicationBackgroundJobExecutor
 public abstract class PlatformApplicationBackgroundJobExecutor<TParam> : PlatformBackgroundJobExecutor<TParam>, IPlatformApplicationBackgroundJobExecutor
     where TParam : class
 {
+    protected readonly IPlatformApplicationSettingContext ApplicationSettingContext;
     protected readonly IPlatformUnitOfWorkManager UnitOfWorkManager;
 
     public PlatformApplicationBackgroundJobExecutor(
@@ -23,9 +25,15 @@ public abstract class PlatformApplicationBackgroundJobExecutor<TParam> : Platfor
         IPlatformRootServiceProvider rootServiceProvider) : base(loggerFactory, rootServiceProvider)
     {
         UnitOfWorkManager = unitOfWorkManager;
+        ApplicationSettingContext = rootServiceProvider.GetRequiredService<IPlatformApplicationSettingContext>();
     }
 
     public virtual bool AutoOpenUow => true;
+
+    public override bool LogDebugInformation()
+    {
+        return ApplicationSettingContext.IsDebugInformationMode;
+    }
 
     protected override async Task InternalExecuteAsync(TParam param)
     {
@@ -34,7 +42,8 @@ public abstract class PlatformApplicationBackgroundJobExecutor<TParam> : Platfor
             activity?.SetTag("Type", GetType().FullName);
             activity?.SetTag("Param", param?.ToFormattedJson());
 
-            Logger.LogInformation("[PlatformApplicationBackgroundJobExecutor] {BackgroundJobName} STARTED", GetType().Name);
+            if (ApplicationSettingContext.IsDebugInformationMode)
+                Logger.LogInformation("{Type} {Method} STARTED", GetType().FullName, nameof(InternalExecuteAsync));
 
             if (AutoOpenUow)
                 using (var uow = UnitOfWorkManager.Begin())
@@ -46,7 +55,8 @@ public abstract class PlatformApplicationBackgroundJobExecutor<TParam> : Platfor
             else
                 await ProcessAsync(param);
 
-            Logger.LogInformation("[PlatformApplicationBackgroundJobExecutor] {BackgroundJobName} FINISHED", GetType().Name);
+            if (ApplicationSettingContext.IsDebugInformationMode)
+                Logger.LogInformation("{Type} {Method} STARTED", GetType().FullName, nameof(InternalExecuteAsync));
         }
     }
 }

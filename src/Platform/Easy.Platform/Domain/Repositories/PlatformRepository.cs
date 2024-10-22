@@ -13,10 +13,12 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     where TEntity : class, IEntity<TPrimaryKey>, new()
     where TUow : class, IPlatformUnitOfWork
 {
+    private readonly Lazy<IPlatformCqrs> cqrsLazy;
+
     public PlatformRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IServiceProvider serviceProvider)
     {
         UnitOfWorkManager = unitOfWorkManager;
-        Cqrs = serviceProvider.GetRequiredService<IPlatformCqrs>();
+        cqrsLazy = serviceProvider.GetRequiredService<Lazy<IPlatformCqrs>>();
         ServiceProvider = serviceProvider;
         RootServiceProvider = serviceProvider.GetRequiredService<IPlatformRootServiceProvider>();
         IsDistributedTracingEnabled = serviceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled == true;
@@ -25,7 +27,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     protected IPlatformRootServiceProvider RootServiceProvider { get; }
     protected virtual bool IsDistributedTracingEnabled { get; }
     public IPlatformUnitOfWorkManager UnitOfWorkManager { get; }
-    protected IPlatformCqrs Cqrs { get; }
+    protected IPlatformCqrs Cqrs => cqrsLazy.Value;
     protected IServiceProvider ServiceProvider { get; }
 
     public IPlatformUnitOfWork CurrentActiveUow()

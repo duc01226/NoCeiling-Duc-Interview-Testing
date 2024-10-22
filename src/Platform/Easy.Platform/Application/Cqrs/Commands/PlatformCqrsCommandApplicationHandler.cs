@@ -107,7 +107,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                         onException: ex =>
                         {
                             if (!ex.IsPlatformLogicException())
-                                LoggerFactory.CreateLogger(typeof(PlatformCqrsCommandApplicationHandler<>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}")
+                                LoggerFactory.CreateLogger(typeof(PlatformCqrsCommandApplicationHandler<>).GetNameOrGenericTypeName() + $"-{GetType().Name}")
                                     .LogError(
                                         ex.BeautifyStackTrace(),
                                         "[{Tag1}] Command:{RequestName} has error {Error}. AuditTrackId:{AuditTrackId}. Request:{Request}. RequestContext:{RequestContext}",
@@ -118,7 +118,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                                         request.ToJson(),
                                         RequestContext.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()).ToJson());
                             else
-                                LoggerFactory.CreateLogger(typeof(PlatformCqrsCommandApplicationHandler<>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}")
+                                LoggerFactory.CreateLogger(typeof(PlatformCqrsCommandApplicationHandler<>).GetNameOrGenericTypeName() + $"-{GetType().Name}")
                                     .LogWarning(
                                         "[{Tag1}] Command:{RequestName} has error {Error}. AuditTrackId:{AuditTrackId}. Request:{Request}.",
                                         "LogicErrorWarning",
@@ -152,6 +152,9 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
     /// <returns>The result of handling the CQRS command.</returns>
     protected async Task<TResult> HandleWithTracing(TCommand request, Func<Task<TResult>> handleFunc)
     {
+        if (ApplicationSettingContext.IsDebugInformationMode)
+            Logger.LogInformation("{Type} {Method} STARTED", GetType().FullName, nameof(Handle));
+
         if (IsDistributedTracingEnabled)
             using (var activity =
                 IPlatformCqrsCommandApplicationHandler.ActivitySource.StartActivity($"CommandApplicationHandler.{nameof(Handle)}"))
@@ -162,7 +165,12 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                 return await handleFunc();
             }
 
-        return await handleFunc();
+        var result = await handleFunc();
+
+        if (ApplicationSettingContext.IsDebugInformationMode)
+            Logger.LogInformation("{Type} {Method} STARTED", GetType().FullName, nameof(Handle));
+
+        return result;
     }
 
     /// <summary>

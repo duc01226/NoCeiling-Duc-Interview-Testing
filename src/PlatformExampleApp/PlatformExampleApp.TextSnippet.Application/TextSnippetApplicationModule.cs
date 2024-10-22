@@ -2,6 +2,7 @@ using Easy.Platform.Application;
 using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using PlatformExampleApp.TextSnippet.Domain;
 
 namespace PlatformExampleApp.TextSnippet.Application;
@@ -36,10 +37,12 @@ public class TextSnippetApplicationModule : PlatformApplicationModule
     protected override PlatformApplicationSettingContext DefaultApplicationSettingContextFactory(
         IServiceProvider serviceProvider)
     {
-        return new PlatformApplicationSettingContext
+        return new PlatformApplicationSettingContext(serviceProvider)
         {
             ApplicationName = TextSnippetApplicationConstants.ApplicationName,
-            ApplicationAssembly = Assembly
+            ApplicationAssembly = Assembly,
+            IsDebugInformationMode = serviceProvider.GetRequiredService<IConfiguration>()
+                .GetValue<bool?>(PlatformApplicationSettingContext.DefaultIsDebugInformationModeConfigurationKey) == true
         };
     }
 

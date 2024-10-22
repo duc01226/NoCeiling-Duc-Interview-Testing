@@ -14,11 +14,11 @@ public class PlatformMongoDbPersistenceUnitOfWork<TDbContext>
 {
     public PlatformMongoDbPersistenceUnitOfWork(
         IPlatformRootServiceProvider rootServiceProvider,
-        ILoggerFactory loggerFactory,
-        IServiceProvider serviceProvider) : base(
+        IServiceProvider serviceProvider,
+        ILoggerFactory loggerFactory) : base(
         rootServiceProvider,
-        loggerFactory,
-        serviceProvider)
+        serviceProvider,
+        loggerFactory)
     {
     }
 

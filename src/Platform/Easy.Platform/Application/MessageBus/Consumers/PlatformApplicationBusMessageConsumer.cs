@@ -82,11 +82,6 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
         ApplicationSettingContext = rootServiceProvider.GetRequiredService<IPlatformApplicationSettingContext>();
     }
 
-    protected PlatformApplicationMessageBusConsumer(ILoggerFactory loggerFactory, IPlatformInboxBusMessageRepository inboxBusMessageRepo) : base(loggerFactory)
-    {
-        InboxBusMessageRepo = inboxBusMessageRepo;
-    }
-
     protected IPlatformInboxBusMessageRepository InboxBusMessageRepo { get; }
     protected PlatformInboxConfig InboxConfig { get; }
     protected IPlatformRootServiceProvider RootServiceProvider { get; }
@@ -147,6 +142,9 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
 
     public async Task HandleMessageDirectly(TMessage message, string routingKey, int? retryCount = null)
     {
+        if (ApplicationSettingContext.IsDebugInformationMode)
+            Logger.LogInformation("{Type} {Method} STARTED", GetType().FullName, nameof(HandleMessageDirectly));
+
         await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync<PlatformDomainRowVersionConflictException>(
             async () =>
             {
@@ -182,13 +180,16 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
             },
             retryCount: retryCount ?? RetryOnFailedTimes,
             sleepDurationProvider: p => RetryOnFailedDelaySeconds.Seconds());
+
+        if (ApplicationSettingContext.IsDebugInformationMode)
+            Logger.LogInformation("{Type} {Method} FINISHED", GetType().FullName, nameof(HandleMessageDirectly));
     }
 
     private async Task HandleExecutingInboxConsumerAsync(TMessage message, string routingKey)
     {
         await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
             RootServiceProvider,
-            ServiceProvider,
+            currentScopeServiceProvider: ServiceProvider,
             consumerType: GetType(),
             inboxBusMessageRepository: InboxBusMessageRepo,
             inboxConfig: InboxConfig,
@@ -199,7 +200,7 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
             loggerFactory: CreateLogger,
             retryProcessFailedMessageInSecondsUnit: InboxConfig.RetryProcessFailedMessageInSecondsUnit,
             handleExistingInboxMessage: HandleExistingInboxMessage,
-            handleExistingInboxMessageConsumerInstance: this,
+            currentScopeConsumerInstance: this,
             subQueueMessageIdPrefix: message.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix(),
             autoDeleteProcessedMessageImmediately: AutoDeleteProcessedInboxEventMessageImmediately,
             needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage: NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage,

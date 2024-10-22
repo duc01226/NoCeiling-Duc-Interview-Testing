@@ -46,7 +46,7 @@ public abstract class PlatformCqrsRequestApplicationHandler<TRequest> : Platform
         LoggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
         RootServiceProvider = rootServiceProvider ?? throw new ArgumentNullException(nameof(rootServiceProvider));
         loggerLazy = new Lazy<ILogger>(
-            () => loggerFactory.CreateLogger(typeof(PlatformCqrsRequestApplicationHandler<>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}"));
+            () => loggerFactory.CreateLogger(typeof(PlatformCqrsRequestApplicationHandler<>).GetNameOrGenericTypeName() + $"-{GetType().Name}"));
     }
 
     /// <summary>

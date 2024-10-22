@@ -30,7 +30,7 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
         ChannelPool = channelPool;
         ExchangeProvider = exchangeProvider;
         Options = options;
-        Logger = new Lazy<ILogger>(() => loggerFactory.CreateLogger(typeof(IPlatformMessageBusProducer).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}"));
+        Logger = new Lazy<ILogger>(() => loggerFactory.CreateLogger(typeof(PlatformRabbitMqMessageBusProducer).GetNameOrGenericTypeName() + $"-{GetType().Name}"));
     }
 
     public async Task<TMessage> SendAsync<TMessage>(

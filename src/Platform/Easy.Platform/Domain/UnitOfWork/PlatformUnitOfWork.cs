@@ -19,7 +19,7 @@ public interface IPlatformUnitOfWork : IDisposable
     /// </summary>
     public string Id { get; set; }
 
-    public IServiceScope? AssociatedServiceScope { get; set; }
+    public IServiceScope? AssociatedToDisposeWithServiceScope { get; set; }
 
     /// <summary>
     /// Indicate it's created by UnitOfWorkManager
@@ -185,29 +185,34 @@ public class PlatformUnitOfWorkFailedArgs
 
 public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 {
-    private const int ContextMaxConcurrentThreadLock = 1;
+    public const int ContextMaxConcurrentThreadLock = 1;
 
-    protected PlatformUnitOfWork(IPlatformRootServiceProvider rootServiceProvider, ILoggerFactory loggerFactory)
+    private readonly Lazy<ConcurrentDictionary<string, object>?> freeCreatedUnitOfWorksLazy = new(() => new ConcurrentDictionary<string, object>());
+
+    protected PlatformUnitOfWork(IPlatformRootServiceProvider rootServiceProvider, IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
     {
         RootServiceProvider = rootServiceProvider;
         LoggerFactory = loggerFactory;
+        ServiceProvider = serviceProvider;
     }
 
     public bool Completed { get; protected set; }
     public bool Disposed { get; protected set; }
 
-    protected SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(ContextMaxConcurrentThreadLock, ContextMaxConcurrentThreadLock);
+    protected virtual SemaphoreSlim? NotThreadSafeDbContextQueryLock { get; } = null;
     protected ILoggerFactory LoggerFactory { get; }
-    protected ConcurrentDictionary<string, object> CachedExistingOriginalEntities { get; set; } = new();
-    protected ConcurrentDictionary<string, IPlatformUnitOfWork> CachedInnerUowByIds { get; set; } = new();
-    protected ConcurrentDictionary<Type, IPlatformUnitOfWork> CachedInnerUows { get; set; } = new();
+    protected virtual ConcurrentDictionary<string, object>? CachedExistingOriginalEntities => freeCreatedUnitOfWorksLazy.Value;
+    protected virtual ConcurrentDictionary<string, IPlatformUnitOfWork>? CachedInnerUowByIds { get; } = null;
+    protected virtual ConcurrentDictionary<Type, IPlatformUnitOfWork>? CachedInnerUows { get; } = null;
 
-    protected IPlatformRootServiceProvider RootServiceProvider { get; set; }
+    protected IPlatformRootServiceProvider RootServiceProvider { get; }
+
+    protected IServiceProvider ServiceProvider { get; }
 
     /// <summary>
     /// Store associatedServiceScope to destroy it when uow is create, using and destroy
     /// </summary>
-    public IServiceScope? AssociatedServiceScope { get; set; }
+    public IServiceScope? AssociatedToDisposeWithServiceScope { get; set; }
 
     public string Id { get; set; } = Ulid.NewUlid().ToString();
 
@@ -225,7 +230,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     {
         if (Completed) return;
 
-        await CachedInnerUows.Values.Where(p => p.IsActive()).ParallelAsync(p => p.CompleteAsync(cancellationToken));
+        if (CachedInnerUows != null) await CachedInnerUows.Values.Where(p => p.IsActive()).ParallelAsync(p => p.CompleteAsync(cancellationToken));
 
         await SaveChangesAsync(cancellationToken);
 
@@ -237,7 +242,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     public virtual bool IsActive()
     {
         return !Completed && !Disposed &&
-               (CachedInnerUows.IsEmpty || CachedInnerUows.Values.Any(p => p.IsActive()));
+               (CachedInnerUows == null || CachedInnerUows.IsEmpty || CachedInnerUows.Values.Any(p => p.IsActive()));
     }
 
     public abstract bool IsPseudoTransactionUow();
@@ -246,14 +251,14 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 
     public abstract bool DoesSupportParallelQuery();
 
-    public Task LockAsync()
+    public async Task LockAsync()
     {
-        return NotThreadSafeDbContextQueryLock.WaitAsync();
+        if (NotThreadSafeDbContextQueryLock != null) await NotThreadSafeDbContextQueryLock.WaitAsync();
     }
 
     public void ReleaseLock()
     {
-        if (NotThreadSafeDbContextQueryLock.CurrentCount < ContextMaxConcurrentThreadLock)
+        if (NotThreadSafeDbContextQueryLock is { CurrentCount: < ContextMaxConcurrentThreadLock })
             NotThreadSafeDbContextQueryLock.Release();
     }
 
@@ -274,13 +279,13 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 
         try
         {
-            await CachedInnerUows.Values.Where(p => p.IsActive()).ParallelAsync(p => p.SaveChangesAsync(cancellationToken));
+            if (CachedInnerUows != null) await CachedInnerUows.Values.Where(p => p.IsActive()).ParallelAsync(p => p.SaveChangesAsync(cancellationToken));
 
             await InternalSaveChangesAsync(cancellationToken);
 
             await InvokeOnSaveChangesCompletedActions();
 
-            CachedExistingOriginalEntities.Clear();
+            CachedExistingOriginalEntities?.Clear();
         }
         catch (Exception ex)
         {
@@ -294,7 +299,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 
     public TEntity? GetCachedExistingOriginalEntity<TEntity>(string entityId) where TEntity : class, IEntity
     {
-        if (entityId == null) return null;
+        if (entityId == null || CachedExistingOriginalEntities == null) return null;
 
         if (!CachedExistingOriginalEntities.TryGetValue(entityId, out var cachedExistingOriginalEntity))
             return ParentUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entityId);
@@ -305,29 +310,32 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     public virtual TEntity SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(TEntity existingEntity, Type runtimeEntityType = null)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        var castedRuntimeTypeExistingEntity = (runtimeEntityType != null ? Convert.ChangeType(existingEntity, runtimeEntityType) : existingEntity)
-            .Pipe(
-                p => p.As<IEntity>().HasTrackValueUpdatedDomainEventAttribute() &&
-                     PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider)
-                    ? p.DeepClone()
-                    : p);
+        if (CachedExistingOriginalEntities != null)
+        {
+            var castedRuntimeTypeExistingEntity = (runtimeEntityType != null ? Convert.ChangeType(existingEntity, runtimeEntityType) : existingEntity)
+                .Pipe(
+                    p => p.As<IEntity>().HasTrackValueUpdatedDomainEventAttribute() &&
+                         PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider)
+                        ? p.DeepClone()
+                        : p);
 
-        CachedExistingOriginalEntities.AddOrUpdate(
-            existingEntity.GetId().ToString(),
-            castedRuntimeTypeExistingEntity,
-            (key, oldItem) => castedRuntimeTypeExistingEntity);
+            CachedExistingOriginalEntities.AddOrUpdate(
+                existingEntity.GetId().ToString(),
+                castedRuntimeTypeExistingEntity,
+                (key, oldItem) => castedRuntimeTypeExistingEntity);
+        }
 
         return existingEntity;
     }
 
     public void RemoveCachedExistingOriginalEntity(string existingEntityId)
     {
-        CachedExistingOriginalEntities.TryRemove(existingEntityId, out _);
+        CachedExistingOriginalEntities?.TryRemove(existingEntityId, out _);
     }
 
     public void ClearCachedExistingOriginalEntity()
     {
-        CachedExistingOriginalEntities.Clear();
+        CachedExistingOriginalEntities?.Clear();
     }
 
     public IPlatformUnitOfWork? UowOfId(string uowId)
@@ -335,34 +343,30 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
         if (uowId == Id)
             return this;
 
-        return uowId != null ? CachedInnerUowByIds.GetValueOrDefault(uowId) : null;
+        return uowId != null ? CachedInnerUowByIds?.GetValueOrDefault(uowId) : null;
     }
 
     public T GetInnerUowOfType<T>() where T : class, IPlatformUnitOfWork
     {
-        if (AssociatedServiceScope == null) return ParentUnitOfWork?.UowOfType<T>();
+        if (CachedInnerUows == null) return ParentUnitOfWork?.UowOfType<T>();
 
-        return CachedInnerUows.GetOrAdd(
+        return CachedInnerUows?.GetOrAdd(
             typeof(T),
             _ =>
             {
-                var uow = AssociatedServiceScope.ServiceProvider.GetRequiredService<T>()
+                var uow = ServiceProvider.GetRequiredService<T>()
                     .With(w => w.CreatedByUnitOfWorkManager = CreatedByUnitOfWorkManager)
-                    .With(w => w.ParentUnitOfWork = this);
+                    .With(w => w.ParentUnitOfWork = this)
+                    .With(w => w.IsUsingOnceTransientUow = IsUsingOnceTransientUow);
 
                 if (uow != null)
-                    CachedInnerUowByIds.TryAdd(uow.Id, uow);
+                    CachedInnerUowByIds?.TryAdd(uow.Id, uow);
 
                 return uow;
             }) as T;
     }
 
     protected abstract Task InternalSaveChangesAsync(CancellationToken cancellationToken);
-
-    ~PlatformUnitOfWork()
-    {
-        Dispose(false);
-    }
 
     // Protected implementation of Dispose pattern.
     protected virtual void Dispose(bool disposing)
@@ -372,13 +376,13 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
             // Release managed resources
             if (disposing)
             {
-                NotThreadSafeDbContextQueryLock.Dispose();
-                AssociatedServiceScope?.Dispose();
-                CachedExistingOriginalEntities.Clear();
+                NotThreadSafeDbContextQueryLock?.Dispose();
+                AssociatedToDisposeWithServiceScope?.Dispose();
+                CachedExistingOriginalEntities?.Clear();
 
-                CachedInnerUows.Values.ForEach(p => p.Dispose());
-                CachedInnerUows.Clear();
-                CachedInnerUowByIds.Clear();
+                CachedInnerUows?.Values.ForEach(p => p.Dispose());
+                CachedInnerUows?.Clear();
+                CachedInnerUowByIds?.Clear();
             }
 
             // Release unmanaged resources

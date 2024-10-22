@@ -208,25 +208,29 @@ public interface IPlatformUnitOfWorkManager : IDisposable
 
 public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
 {
-    private readonly IServiceProvider serviceProvider;
+    private readonly Lazy<IPlatformCqrs> currentSameScopeCqrsLazy;
+
+    private readonly Lazy<ConcurrentDictionary<string, IPlatformUnitOfWork>> freeCreatedUnitOfWorksLazy =
+        new(() => new ConcurrentDictionary<string, IPlatformUnitOfWork>());
 
     private bool disposed;
     private bool disposing;
     private IPlatformUnitOfWork? globalUow;
 
-    protected PlatformUnitOfWorkManager(IPlatformCqrs cqrs, IPlatformRootServiceProvider rootServiceProvider, IServiceProvider serviceProvider)
+    protected PlatformUnitOfWorkManager(Lazy<IPlatformCqrs> cqrs, IPlatformRootServiceProvider rootServiceProvider, IServiceProvider serviceProvider)
     {
-        this.serviceProvider = serviceProvider;
+        ServiceProvider = serviceProvider;
         RootServiceProvider = rootServiceProvider;
-        CurrentSameScopeCqrs = cqrs;
+        currentSameScopeCqrsLazy = cqrs;
     }
 
     protected List<IPlatformUnitOfWork> CurrentUnitOfWorks { get; } = [];
-    protected ConcurrentDictionary<string, IPlatformUnitOfWork> FreeCreatedUnitOfWorks { get; } = new();
+    protected ConcurrentDictionary<string, IPlatformUnitOfWork> FreeCreatedUnitOfWorks => freeCreatedUnitOfWorksLazy.Value;
     protected SemaphoreSlim RemoveAllInactiveUowLock { get; } = new(1, 1);
     protected IPlatformRootServiceProvider RootServiceProvider { get; }
+    protected IServiceProvider ServiceProvider { get; }
 
-    public IPlatformCqrs CurrentSameScopeCqrs { get; }
+    public IPlatformCqrs CurrentSameScopeCqrs => currentSameScopeCqrsLazy.Value;
 
     public abstract IPlatformUnitOfWork CreateNewUow(bool isUsingOnceTransientUow);
 
@@ -301,7 +305,7 @@ public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
 
     public IServiceProvider CurrentScopeServiceProvider()
     {
-        return serviceProvider;
+        return ServiceProvider;
     }
 
     public IPlatformRootServiceProvider GetRootServiceProvider()

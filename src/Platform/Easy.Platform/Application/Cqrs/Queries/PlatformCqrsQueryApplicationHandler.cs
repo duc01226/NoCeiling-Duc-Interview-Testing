@@ -108,7 +108,7 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
                         onException: ex =>
                         {
                             if (!ex.IsPlatformLogicException())
-                                LoggerFactory.CreateLogger(typeof(PlatformCqrsQueryApplicationHandler<,>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}")
+                                LoggerFactory.CreateLogger(typeof(PlatformCqrsQueryApplicationHandler<,>).GetNameOrGenericTypeName() + $"-{GetType().Name}")
                                     .LogError(
                                         ex.BeautifyStackTrace(),
                                         "[{Tag1}] Query:{RequestName} has error {Error}. AuditTrackId:{AuditTrackId}. Request:{Request}. RequestContext:{RequestContext}",
@@ -119,7 +119,7 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
                                         request.ToJson(),
                                         RequestContext.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()).ToJson());
                             else
-                                LoggerFactory.CreateLogger(typeof(PlatformCqrsQueryApplicationHandler<,>).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}")
+                                LoggerFactory.CreateLogger(typeof(PlatformCqrsQueryApplicationHandler<,>).GetNameOrGenericTypeName() + $"-{GetType().Name}")
                                     .LogWarning(
                                         "[{Tag1}] Query:{RequestName} has error {Error}. AuditTrackId:{AuditTrackId}. Request:{Request}.",
                                         "LogicErrorWarning",
@@ -146,6 +146,9 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
     /// <returns>The result of handling the CQRS query.</returns>
     protected async Task<TResult> HandleWithTracing(TQuery request, Func<Task<TResult>> handleFunc)
     {
+        if (ApplicationSettingContext.IsDebugInformationMode)
+            Logger.LogInformation("{Type} {Method} STARTED", GetType().FullName, nameof(Handle));
+
         if (IsDistributedTracingEnabled)
             using (var activity =
                 IPlatformCqrsCommandApplicationHandler.ActivitySource.StartActivity($"QueryApplicationHandler.{nameof(Handle)}"))
@@ -156,7 +159,12 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
                 return await handleFunc();
             }
 
-        return await handleFunc();
+        var result = await handleFunc();
+
+        if (ApplicationSettingContext.IsDebugInformationMode)
+            Logger.LogInformation("{Type} {Method} STARTED", GetType().FullName, nameof(Handle));
+
+        return result;
     }
 
     /// <summary>

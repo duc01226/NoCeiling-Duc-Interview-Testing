@@ -10,7 +10,7 @@ namespace Easy.Platform.Application.Domain;
 internal sealed class PlatformPseudoApplicationUnitOfWorkManager : PlatformUnitOfWorkManager
 {
     public PlatformPseudoApplicationUnitOfWorkManager(
-        IPlatformCqrs cqrs,
+        Lazy<IPlatformCqrs> cqrs,
         IPlatformRootServiceProvider rootServiceProvider,
         IServiceProvider serviceProvider) : base(cqrs, rootServiceProvider, serviceProvider)
     {
@@ -18,7 +18,7 @@ internal sealed class PlatformPseudoApplicationUnitOfWorkManager : PlatformUnitO
 
     public override IPlatformUnitOfWork CreateNewUow(bool isUsingOnceTransientUow)
     {
-        return new PlatformPseudoApplicationUnitOfWork(RootServiceProvider, RootServiceProvider.GetService<ILoggerFactory>())
+        return new PlatformPseudoApplicationUnitOfWork(RootServiceProvider, ServiceProvider, ServiceProvider.GetService<ILoggerFactory>())
             .With(uow => uow.CreatedByUnitOfWorkManager = this)
             .With(uow => uow.IsUsingOnceTransientUow = isUsingOnceTransientUow);
     }
@@ -28,7 +28,8 @@ internal sealed class PlatformPseudoApplicationUnitOfWork : PlatformUnitOfWork
 {
     public PlatformPseudoApplicationUnitOfWork(
         IPlatformRootServiceProvider rootServiceProvider,
-        ILoggerFactory loggerFactory) : base(rootServiceProvider, loggerFactory)
+        IServiceProvider serviceProvider,
+        ILoggerFactory loggerFactory) : base(rootServiceProvider, serviceProvider, loggerFactory)
     {
     }
 

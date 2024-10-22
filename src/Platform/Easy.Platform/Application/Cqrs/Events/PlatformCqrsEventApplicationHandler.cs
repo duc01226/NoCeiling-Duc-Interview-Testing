@@ -318,6 +318,9 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
     {
         if (!await HandleWhen(@event)) return;
 
+        if (ApplicationSettingContext.IsDebugInformationMode)
+            Logger.Value.LogInformation("{Type} {Method} STARTED", GetType().FullName, nameof(RunHandleAsync));
+
         await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync<PlatformDomainRowVersionConflictException>(
             async () =>
             {
@@ -354,6 +357,9 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
             retryCount: retryCount ?? RetryOnFailedTimes,
             sleepDurationProvider: p => RetryOnFailedDelaySeconds.Seconds(),
             cancellationToken: cancellationToken);
+
+        if (ApplicationSettingContext.IsDebugInformationMode)
+            Logger.Value.LogInformation("{Type} {Method} FINISHED", GetType().FullName, nameof(RunHandleAsync));
     }
 
     protected bool HasInboxMessageSupport()
@@ -376,7 +382,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
             async () => await PlatformInboxMessageBusConsumerHelper.HandleExecutingInboxConsumerAsync(
                 rootServiceProvider: RootServiceProvider,
-                serviceProvider: serviceProvider,
+                currentScopeServiceProvider: serviceProvider,
                 consumerType: typeof(PlatformCqrsEventInboxBusMessageConsumer),
                 inboxBusMessageRepository: inboxMessageRepository,
                 inboxConfig: inboxConfig,
@@ -387,7 +393,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                 loggerFactory: CreateGlobalLogger,
                 retryProcessFailedMessageInSecondsUnit: PlatformInboxBusMessage.DefaultRetryProcessFailedMessageInSecondsUnit,
                 handleExistingInboxMessage: null,
-                handleExistingInboxMessageConsumerInstance: null,
+                currentScopeConsumerInstance: null,
                 handleInUow: eventSourceUow,
                 autoDeleteProcessedMessageImmediately: AutoDeleteProcessedInboxEventMessage &&
                                                        RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.Enabled != true,

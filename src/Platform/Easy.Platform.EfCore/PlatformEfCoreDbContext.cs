@@ -238,7 +238,10 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return entities.SelectAsync(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken))
+        return entities
+            .ParallelAsync(
+                entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
+                IPlatformDbContext.DefaultPageSize)
             .ThenActionIfAsync(
                 !dismissSendEvent,
                 entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Created, eventCustomConfig, cancellationToken));
@@ -288,7 +291,10 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return await entities.SelectAsync(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken))
+        return await entities
+            .ParallelAsync(
+                entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
+                IPlatformDbContext.DefaultPageSize)
             .ThenActionIfAsync(
                 !dismissSendEvent,
                 entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Updated, eventCustomConfig, cancellationToken));
@@ -390,7 +396,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         }
 
         return await entities
-            .SelectAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, false, eventCustomConfig, cancellationToken))
+            .ParallelAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, false, eventCustomConfig, cancellationToken), IPlatformDbContext.DefaultPageSize)
             .ThenActionAsync(
                 entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Deleted, eventCustomConfig, cancellationToken));
     }
@@ -627,7 +633,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     public ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
-        return loggerFactory.CreateLogger(typeof(IPlatformDbContext).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}");
+        return loggerFactory.CreateLogger(typeof(PlatformEfCoreDbContext<>).GetNameOrGenericTypeName() + $"-{GetType().Name}");
     }
 
     public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(

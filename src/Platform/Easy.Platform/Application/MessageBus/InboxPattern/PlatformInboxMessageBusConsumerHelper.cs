@@ -33,7 +33,7 @@ public static class PlatformInboxMessageBusConsumerHelper
     /// </summary>
     /// <typeparam name="TMessage">The type of the message being consumed.</typeparam>
     /// <param name="rootServiceProvider">The root service provider.</param>
-    /// <param name="serviceProvider">The service provider for the current scope.</param>
+    /// <param name="currentScopeServiceProvider">The service provider for the current scope.</param>
     /// <param name="consumerType">The type of the consumer handling the message.</param>
     /// <param name="inboxBusMessageRepository">The repository for accessing inbox messages.</param>
     /// <param name="inboxConfig">The configuration for the inbox pattern.</param>
@@ -44,7 +44,7 @@ public static class PlatformInboxMessageBusConsumerHelper
     /// <param name="loggerFactory">A factory for creating loggers.</param>
     /// <param name="retryProcessFailedMessageInSecondsUnit">The time unit in seconds for retrying failed message processing.</param>
     /// <param name="handleExistingInboxMessage">An existing inbox message to handle, if applicable.</param>
-    /// <param name="handleExistingInboxMessageConsumerInstance">The consumer instance to use for handling an existing inbox message.</param>
+    /// <param name="currentScopeConsumerInstance">The consumer instance to use for handling an existing inbox message.</param>
     /// <param name="handleInUow">The unit of work to use for handling the message.</param>
     /// <param name="subQueueMessageIdPrefix">A prefix for the message ID, used for sub-queueing.</param>
     /// <param name="autoDeleteProcessedMessageImmediately">Indicates whether processed messages should be deleted immediately.</param>
@@ -54,7 +54,7 @@ public static class PlatformInboxMessageBusConsumerHelper
     /// <returns>A <see cref="Task" /> representing the asynchronous operation.</returns>
     public static async Task HandleExecutingInboxConsumerAsync<TMessage>(
         IPlatformRootServiceProvider rootServiceProvider,
-        IServiceProvider serviceProvider,
+        IServiceProvider currentScopeServiceProvider,
         Type consumerType,
         IPlatformInboxBusMessageRepository inboxBusMessageRepository,
         PlatformInboxConfig inboxConfig,
@@ -65,8 +65,8 @@ public static class PlatformInboxMessageBusConsumerHelper
         Func<ILogger> loggerFactory,
         double retryProcessFailedMessageInSecondsUnit,
         PlatformInboxBusMessage handleExistingInboxMessage,
-        IPlatformApplicationMessageBusConsumer<TMessage> handleExistingInboxMessageConsumerInstance,
-        IPlatformUnitOfWork handleInUow,
+        IPlatformApplicationMessageBusConsumer<TMessage> currentScopeConsumerInstance,
+        IPlatformUnitOfWork? handleInUow,
         string subQueueMessageIdPrefix,
         bool autoDeleteProcessedMessageImmediately = false,
         bool needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage = true,
@@ -79,8 +79,8 @@ public static class PlatformInboxMessageBusConsumerHelper
             handleExistingInboxMessage.ConsumeStatus != PlatformInboxBusMessage.ConsumeStatuses.Ignored)
             await HandleConsumerLogicDirectlyForExistingInboxMessage(
                 handleExistingInboxMessage,
-                handleExistingInboxMessageConsumerInstance,
-                serviceProvider,
+                currentScopeConsumerInstance,
+                currentScopeServiceProvider,
                 inboxBusMessageRepository,
                 message,
                 routingKey,
@@ -93,8 +93,9 @@ public static class PlatformInboxMessageBusConsumerHelper
         else if (handleExistingInboxMessage == null)
             await SaveAndTryConsumeNewInboxMessageAsync(
                 rootServiceProvider,
+                currentScopeServiceProvider,
                 consumerType,
-                handleExistingInboxMessageConsumerInstance,
+                currentScopeConsumerInstance,
                 inboxBusMessageRepository,
                 applicationSettingContext,
                 message,
@@ -117,7 +118,7 @@ public static class PlatformInboxMessageBusConsumerHelper
     /// <typeparam name="TMessage">The type of the message being consumed.</typeparam>
     /// <param name="rootServiceProvider">The root service provider.</param>
     /// <param name="consumerType">The type of the consumer handling the message.</param>
-    /// <param name="handleExistingInboxMessageConsumerInstance">handleExistingInboxMessageConsumerInstance</param>
+    /// <param name="currentScopeConsumerInstance">currentScopeConsumerInstance</param>
     /// <param name="inboxBusMessageRepository">The repository for accessing inbox messages.</param>
     /// <param name="applicationSettingContext">applicationSettingContext</param>
     /// <param name="message">The message being consumed.</param>
@@ -135,15 +136,16 @@ public static class PlatformInboxMessageBusConsumerHelper
     /// <returns>A <see cref="Task" /> representing the asynchronous operation.</returns>
     private static async Task SaveAndTryConsumeNewInboxMessageAsync<TMessage>(
         IPlatformRootServiceProvider rootServiceProvider,
+        IServiceProvider currentScopeServiceProvider,
         Type consumerType,
-        IPlatformApplicationMessageBusConsumer<TMessage> handleExistingInboxMessageConsumerInstance,
+        IPlatformApplicationMessageBusConsumer<TMessage> currentScopeConsumerInstance,
         IPlatformInboxBusMessageRepository inboxBusMessageRepository,
         IPlatformApplicationSettingContext applicationSettingContext,
         TMessage message,
         string forApplicationName,
         string routingKey,
         Func<ILogger> loggerFactory,
-        IPlatformUnitOfWork handleInUow,
+        IPlatformUnitOfWork? handleInUow,
         bool autoDeleteProcessedMessage,
         bool needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
         string subQueueMessageIdPrefix,
@@ -157,13 +159,15 @@ public static class PlatformInboxMessageBusConsumerHelper
             try
             {
                 // Try to execute directly to improve performance. Then if failed execute use inbox to support retry failed message later.
-                await handleExistingInboxMessageConsumerInstance.HandleMessageDirectly(message, routingKey, retryCount: 2);
+                await currentScopeConsumerInstance.HandleMessageDirectly(message, routingKey, retryCount: 2);
             }
             catch (Exception)
             {
                 await DoProcessInboxForSaveAndTryConsumeNewInboxMessageAsync(
                     rootServiceProvider,
+                    currentScopeServiceProvider,
                     consumerType,
+                    currentScopeConsumerInstance,
                     inboxBusMessageRepository,
                     applicationSettingContext,
                     message,
@@ -186,7 +190,9 @@ public static class PlatformInboxMessageBusConsumerHelper
         else
             await DoProcessInboxForSaveAndTryConsumeNewInboxMessageAsync(
                 rootServiceProvider,
+                currentScopeServiceProvider,
                 consumerType,
+                currentScopeConsumerInstance,
                 inboxBusMessageRepository,
                 applicationSettingContext,
                 message,
@@ -205,14 +211,16 @@ public static class PlatformInboxMessageBusConsumerHelper
 
     private static async Task DoProcessInboxForSaveAndTryConsumeNewInboxMessageAsync<TMessage>(
         IPlatformRootServiceProvider rootServiceProvider,
+        IServiceProvider currentScopeServiceProvider,
         Type consumerType,
+        IPlatformApplicationMessageBusConsumer<TMessage> currentScopeConsumerInstance,
         IPlatformInboxBusMessageRepository inboxBusMessageRepository,
         IPlatformApplicationSettingContext applicationSettingContext,
         TMessage message,
         string forApplicationName,
         string routingKey,
         Func<ILogger> loggerFactory,
-        IPlatformUnitOfWork handleInUow,
+        IPlatformUnitOfWork? handleInUow,
         bool autoDeleteProcessedMessage,
         bool needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
         string subQueueMessageIdPrefix,
@@ -248,8 +256,10 @@ public static class PlatformInboxMessageBusConsumerHelper
                             // Execute task in background separated thread task
                             _ = ExecuteConsumerForNewInboxMessage(
                                 rootServiceProvider,
+                                currentScopeServiceProvider: null,
                                 applicationSettingContext,
                                 consumerType,
+                                currentScopeConsumerInstance: null,
                                 message,
                                 toProcessInboxMessage,
                                 routingKey,
@@ -271,8 +281,10 @@ public static class PlatformInboxMessageBusConsumerHelper
                             {
                                 await ExecuteConsumerForNewInboxMessage(
                                     rootServiceProvider,
+                                    currentScopeServiceProvider: null,
                                     applicationSettingContext,
                                     consumerType,
+                                    currentScopeConsumerInstance: null,
                                     message,
                                     toProcessInboxMessage,
                                     routingKey,
@@ -286,8 +298,10 @@ public static class PlatformInboxMessageBusConsumerHelper
                     else
                         await ExecuteConsumerForNewInboxMessage(
                             rootServiceProvider,
+                            currentScopeServiceProvider,
                             applicationSettingContext,
                             consumerType,
+                            currentScopeConsumerInstance,
                             message,
                             toProcessInboxMessage,
                             routingKey,
@@ -393,6 +407,7 @@ public static class PlatformInboxMessageBusConsumerHelper
     /// <typeparam name="TMessage">The type of the message being consumed.</typeparam>
     /// <param name="rootServiceProvider">The root service provider.</param>
     /// <param name="consumerType">The type of the consumer handling the message.</param>
+    /// <param name="currentScopeConsumerInstance">currentScopeConsumerInstance</param>
     /// <param name="message">The message being consumed.</param>
     /// <param name="newInboxMessage">The new inbox message to process.</param>
     /// <param name="routingKey">The routing key of the message.</param>
@@ -403,8 +418,10 @@ public static class PlatformInboxMessageBusConsumerHelper
     /// <returns>A <see cref="Task" /> representing the asynchronous operation.</returns>
     public static async Task ExecuteConsumerForNewInboxMessage<TMessage>(
         IPlatformRootServiceProvider rootServiceProvider,
+        IServiceProvider currentScopeServiceProvider,
         IPlatformApplicationSettingContext applicationSettingContext,
         Type consumerType,
+        IPlatformApplicationMessageBusConsumer<TMessage>? currentScopeConsumerInstance,
         TMessage message,
         PlatformInboxBusMessage newInboxMessage,
         string routingKey,
@@ -413,40 +430,35 @@ public static class PlatformInboxMessageBusConsumerHelper
         Func<ILogger> loggerFactory,
         CancellationToken cancellationToken) where TMessage : class, new()
     {
-        await rootServiceProvider.ExecuteInjectScopedAsync(
-            async (IServiceProvider serviceProvider) =>
+        if (currentScopeConsumerInstance == null)
+            await rootServiceProvider.ExecuteInjectScopedAsync(
+                async (IServiceProvider serviceProvider) =>
+                {
+                    // Resolve new scope consumer instance
+                    var consumer = serviceProvider.GetService(consumerType).Cast<IPlatformApplicationMessageBusConsumer<TMessage>>();
+
+                    await ExecuteConsumeHandleAsync(consumer, serviceProvider);
+                });
+        else
+            await ExecuteConsumeHandleAsync(currentScopeConsumerInstance, currentScopeServiceProvider);
+
+        async Task ExecuteConsumeHandleAsync(IPlatformApplicationMessageBusConsumer<TMessage> consumer, IServiceProvider serviceProvider)
+        {
+            try
             {
+                // Configure it for inbox message handling.
+                consumer = consumer
+                    .With(p => p.HandleExistingInboxMessage = newInboxMessage)
+                    .With(p => p.NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage = false)
+                    .With(p => p.AutoDeleteProcessedInboxEventMessageImmediately = autoDeleteProcessedMessage);
+
                 try
                 {
-                    // Resolve the consumer instance and configure it for inbox message handling.
-                    var consumer = serviceProvider.GetService(consumerType)
-                        .Cast<IPlatformApplicationMessageBusConsumer<TMessage>>()
-                        .With(uow => uow.HandleExistingInboxMessage = newInboxMessage)
-                        .With(uow => uow.NeedToCheckAnySameConsumerOtherPreviousNotProcessedInboxMessage = false)
-                        .With(uow => uow.AutoDeleteProcessedInboxEventMessageImmediately = autoDeleteProcessedMessage);
-
-                    try
-                    {
-                        await consumer.HandleAsync(message, routingKey);
-                    }
-                    catch (Exception ex)
-                    {
-                        // If an error occurs during consumer execution, update the inbox message as failed.
-                        await UpdateExistingInboxFailedMessageAsync(
-                            serviceProvider,
-                            newInboxMessage,
-                            message,
-                            consumerType,
-                            ex,
-                            retryProcessFailedMessageInSecondsUnit,
-                            loggerFactory,
-                            consumerHasErrorAndShouldNeverRetry: consumer.HasErrorAndShouldNeverRetry,
-                            cancellationToken: cancellationToken);
-                    }
+                    await consumer.HandleAsync(message, routingKey);
                 }
                 catch (Exception ex)
                 {
-                    // If an error occurs during consumer resolve, update the inbox message as ignored, never retry.
+                    // If an error occurs during consumer execution, update the inbox message as failed.
                     await UpdateExistingInboxFailedMessageAsync(
                         serviceProvider,
                         newInboxMessage,
@@ -455,14 +467,29 @@ public static class PlatformInboxMessageBusConsumerHelper
                         ex,
                         retryProcessFailedMessageInSecondsUnit,
                         loggerFactory,
-                        consumerHasErrorAndShouldNeverRetry: true,
+                        consumerHasErrorAndShouldNeverRetry: consumer.HasErrorAndShouldNeverRetry,
                         cancellationToken: cancellationToken);
                 }
-                finally
-                {
-                    applicationSettingContext.ProcessAutoGarbageCollect();
-                }
-            });
+            }
+            catch (Exception ex)
+            {
+                // If an error occurs during consumer resolve, update the inbox message as ignored, never retry.
+                await UpdateExistingInboxFailedMessageAsync(
+                    serviceProvider,
+                    newInboxMessage,
+                    message,
+                    consumerType,
+                    ex,
+                    retryProcessFailedMessageInSecondsUnit,
+                    loggerFactory,
+                    consumerHasErrorAndShouldNeverRetry: true,
+                    cancellationToken: cancellationToken);
+            }
+            finally
+            {
+                applicationSettingContext.ProcessAutoGarbageCollect();
+            }
+        }
     }
 
     /// <summary>

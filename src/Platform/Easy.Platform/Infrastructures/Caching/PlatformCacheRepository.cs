@@ -164,7 +164,7 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
     {
         ServiceProvider = serviceProvider;
         loggerLazy = new Lazy<ILogger>(
-            () => loggerFactory.CreateLogger(typeof(PlatformCacheRepository).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}"));
+            () => loggerFactory.CreateLogger(typeof(PlatformCacheRepository).GetNameOrGenericTypeName() + $"-{GetType().Name}"));
         CacheSettings = cacheSettings;
     }
 

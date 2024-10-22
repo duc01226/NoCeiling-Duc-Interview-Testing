@@ -1,4 +1,3 @@
-using Easy.Platform.Common.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -96,7 +95,7 @@ public abstract class PlatformHostingBackgroundService : IHostedService, IDispos
 
             if (ProcessStarted) return Task.CompletedTask;
 
-            Logger.LogInformation("HostedService {TargetName} Start STARTED", GetType().Name);
+            Logger.LogInformation("[PlatformHostingBackgroundService] {TargetName} STARTED", GetType().Name);
 
             // Create linked token to allow cancelling executing task from provided token
             StoppingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -106,7 +105,7 @@ public abstract class PlatformHostingBackgroundService : IHostedService, IDispos
 
             ProcessStarted = true;
 
-            Logger.LogInformation("HostedService {TargetName} Start FINISHED", GetType().Name);
+            Logger.LogInformation("[PlatformHostingBackgroundService] {TargetName} FINISHED", GetType().Name);
 
             // If the task is completed then return it, this will bubble cancellation and failure to the caller
             if (ExecuteTask.IsCompleted) return ExecuteTask;
@@ -143,7 +142,7 @@ public abstract class PlatformHostingBackgroundService : IHostedService, IDispos
 
             ProcessStopped = true;
 
-            Logger.LogInformation("Process of {TargetName} Stopped", GetType().Name);
+            Logger.LogInformation("[PlatformHostingBackgroundService] Process of {TargetName} Stopped", GetType().Name);
         }
         finally
         {
@@ -189,7 +188,7 @@ public abstract class PlatformHostingBackgroundService : IHostedService, IDispos
     /// <returns>The created logger instance.</returns>
     public ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
-        return loggerFactory.CreateLogger(typeof(PlatformHostingBackgroundService).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}");
+        return loggerFactory.CreateLogger(GetType());
     }
 
     /// <summary>

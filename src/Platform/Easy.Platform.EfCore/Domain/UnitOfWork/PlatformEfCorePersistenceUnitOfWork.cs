@@ -23,12 +23,14 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
         ILoggerFactory loggerFactory,
         IServiceProvider serviceProvider,
         PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
-        DbContextOptions<TDbContext> dbContextOptions) : base(rootServiceProvider, loggerFactory, serviceProvider)
+        DbContextOptions<TDbContext> dbContextOptions) : base(rootServiceProvider, serviceProvider, loggerFactory)
     {
         PersistenceConfiguration = persistenceConfiguration;
         DbContextOptions = dbContextOptions;
         pooledDbContextFactory = serviceProvider.GetService<PooledDbContextFactory<TDbContext>>();
     }
+
+    protected override SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(ContextMaxConcurrentThreadLock, ContextMaxConcurrentThreadLock);
 
     protected IPlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration { get; }
 

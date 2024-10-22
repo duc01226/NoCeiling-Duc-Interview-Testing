@@ -286,7 +286,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
     protected virtual PlatformApplicationSettingContext DefaultApplicationSettingContextFactory(
         IServiceProvider serviceProvider)
     {
-        return new PlatformApplicationSettingContext
+        return new PlatformApplicationSettingContext(serviceProvider)
         {
             ApplicationName = Assembly.GetName().Name,
             ApplicationAssembly = Assembly

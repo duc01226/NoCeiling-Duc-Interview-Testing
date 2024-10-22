@@ -260,14 +260,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return Util.Pager.ExecutePagingAsync(
-                (skipCount, pageSize) => entities.Skip(skipCount)
-                    .Take(pageSize)
-                    .SelectAsync(entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken)),
-                entities.Count,
-                IPlatformDbContext.DefaultPageSize,
-                cancellationToken: cancellationToken)
-            .Then(result => result.SelectMany(p => p).ToList())
+        return entities
+            .ParallelAsync(
+                entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
+                IPlatformDbContext.DefaultPageSize)
             .ThenActionIfAsync(
                 !dismissSendEvent,
                 entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Created, eventCustomConfig, cancellationToken));
@@ -308,15 +304,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return Util.Pager.ExecutePagingAsync(
-                (skipCount, pageSize) => entities
-                    .Skip(skipCount)
-                    .Take(pageSize)
-                    .ParallelAsync(entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken)),
-                entities.Count,
-                IPlatformDbContext.DefaultPageSize,
-                cancellationToken: cancellationToken)
-            .Then(result => result.SelectMany(p => p).ToList())
+        return entities
+            .ParallelAsync(
+                entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
+                IPlatformDbContext.DefaultPageSize)
             .ThenActionIfAsync(
                 !dismissSendEvent,
                 entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Updated, eventCustomConfig, cancellationToken));
@@ -582,7 +573,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     public ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
-        return loggerFactory.CreateLogger(typeof(IPlatformDbContext).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}");
+        return loggerFactory.CreateLogger(typeof(PlatformMongoDbContext<>).GetNameOrGenericTypeName() + $"-{GetType().Name}");
     }
 
     public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(

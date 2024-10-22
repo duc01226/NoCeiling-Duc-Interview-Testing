@@ -2,6 +2,7 @@ using Easy.Platform.Common;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.UnitOfWork;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Application;
@@ -53,6 +54,7 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
         LoggerFactory = loggerFactory;
         RootServiceProvider = rootServiceProvider;
         loggerLazy = new Lazy<ILogger>(() => loggerFactory.CreateLogger(GetType()));
+        ApplicationSettingContext = serviceProvider.GetRequiredService<IPlatformApplicationSettingContext>();
     }
 
     public static int DefaultSeedingMinimumDummyItemsCount => PlatformEnvironment.IsDevelopment ? 10 : 1000;
@@ -67,6 +69,9 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
     public static int DefaultActiveDelaySeedingInBackgroundBySeconds => 5;
     public static int DefaultDelayRetryCheckSeedDataBySeconds => 5;
     public static int DefaultMaxWaitSeedDataBySyncMessagesBySeconds => 3600;
+
+    protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
+
     protected ILogger Logger => loggerLazy.Value;
 
     /// <summary>
@@ -77,6 +82,9 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
 
     public virtual async Task SeedData(bool isReplaceNewSeedData = false)
     {
+        if (ApplicationSettingContext.IsDebugInformationMode)
+            Logger.LogInformation("{Type} {Method} STARTED", GetType().FullName, nameof(SeedData));
+
         await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
             async () =>
             {
@@ -89,6 +97,9 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
                 else
                     await InternalSeedData(isReplaceNewSeedData);
             });
+
+        if (ApplicationSettingContext.IsDebugInformationMode)
+            Logger.LogInformation("{Type} {Method} FINISHED", GetType().FullName, nameof(SeedData));
     }
 
     public virtual int SeedOrder => 0;

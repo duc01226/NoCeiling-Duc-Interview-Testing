@@ -9,14 +9,11 @@ namespace Easy.Platform.Persistence.Domain;
 
 public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkManager
 {
-    protected readonly IServiceProvider ServiceProvider;
-
     public PlatformDefaultPersistenceUnitOfWorkManager(
-        IPlatformCqrs cqrs,
+        Lazy<IPlatformCqrs> cqrs,
         IPlatformRootServiceProvider rootServiceProvider,
         IServiceProvider serviceProvider) : base(cqrs, rootServiceProvider, serviceProvider)
     {
-        ServiceProvider = serviceProvider;
     }
 
     public override IPlatformUnitOfWork CreateNewUow(bool isUsingOnceTransientUow)
@@ -27,11 +24,11 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
         // So that we can begin/destroy uow separately
         var newScope = ServiceProvider.CreateScope();
 
-        var uow = new PlatformAggregatedPersistenceUnitOfWork(RootServiceProvider, RootServiceProvider.GetService<ILoggerFactory>())
+        var uow = new PlatformAggregatedPersistenceUnitOfWork(RootServiceProvider, newScope.ServiceProvider, newScope.ServiceProvider.GetService<ILoggerFactory>())
             .With(
                 p =>
                 {
-                    p.AssociatedServiceScope = newScope;
+                    p.AssociatedToDisposeWithServiceScope = newScope;
                     p.IsUsingOnceTransientUow = isUsingOnceTransientUow;
                     p.CreatedByUnitOfWorkManager = this;
                 });

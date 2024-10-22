@@ -699,6 +699,6 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
     protected ILogger CreateLogger()
     {
         return rootServiceProvider.GetRequiredService<ILoggerFactory>()
-            .CreateLogger(typeof(PlatformOutboxMessageBusProducerHelper).GetFullNameOrGenericTypeFullName() + $"-{GetType().Name}");
+            .CreateLogger(typeof(PlatformOutboxMessageBusProducerHelper).GetNameOrGenericTypeName() + $"-{GetType().Name}");
     }
 }

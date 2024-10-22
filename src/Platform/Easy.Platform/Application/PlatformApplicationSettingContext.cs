@@ -1,5 +1,7 @@
 using System.Reflection;
 using Easy.Platform.Common.Utils;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Easy.Platform.Application;
 
@@ -28,6 +30,11 @@ public interface IPlatformApplicationSettingContext
     public HashSet<string>? IgnoreRequestContextKeys { get; set; }
 
     /// <summary>
+    /// When true, system will log more detailed information log so that we can debug easier
+    /// </summary>
+    public bool IsDebugInformationMode { get; set; }
+
+    /// <summary>
     /// Return <see cref="IgnoreRequestContextKeys" /> or <see cref="DefaultIgnoreRequestContextKeys" /> if <see cref="IgnoreRequestContextKeys" /> is null
     /// </summary>
     public HashSet<string> GetIgnoreRequestContextKeys()
@@ -44,8 +51,15 @@ public interface IPlatformApplicationSettingContext
 
 public class PlatformApplicationSettingContext : IPlatformApplicationSettingContext
 {
+    public const string DefaultIsDebugInformationModeConfigurationKey = "IsDebugInformationMode";
+
     private Assembly applicationAssembly;
     private string applicationName;
+
+    public PlatformApplicationSettingContext(IServiceProvider serviceProvider)
+    {
+        IsDebugInformationMode = serviceProvider.GetRequiredService<IConfiguration>().GetValue<bool?>(DefaultIsDebugInformationModeConfigurationKey) == true;
+    }
 
     public string ApplicationName
     {
@@ -68,4 +82,6 @@ public class PlatformApplicationSettingContext : IPlatformApplicationSettingCont
     public double AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds { get; set; } = Util.GarbageCollector.DefaultCollectGarbageMemoryThrottleSeconds;
 
     public HashSet<string>? IgnoreRequestContextKeys { get; set; } = IPlatformApplicationSettingContext.DefaultIgnoreRequestContextKeys;
+
+    public bool IsDebugInformationMode { get; set; }
 }
