@@ -410,7 +410,7 @@ public static class ListExtension
     /// </summary>
     /// <param name="items">The collection of items to perform the action on.</param>
     /// <param name="action">The asynchronous action to perform on each item. The action takes two parameters: the item and its index in the collection.</param>
-    /// <param name="maxConcurrent">The maximum number of concurrent operations. Defaults to <see cref="Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent" />.</param>
+    /// <param name="maxConcurrent">The maximum number of concurrent operations. Defaults to <see cref="Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio" />.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <remarks>
     /// This method uses the <see cref="Parallel" /> class to execute the action in parallel.
@@ -512,7 +512,7 @@ public static class ListExtension
     /// <typeparam name="T">The type of the items in the collection.</typeparam>
     /// <param name="items">The collection of items to perform the action on.</param>
     /// <param name="action">The asynchronous action to perform on each item.</param>
-    /// <param name="maxConcurrent">The maximum number of concurrent operations. Defaults to <see cref="Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent" />.</param>
+    /// <param name="maxConcurrent">The maximum number of concurrent operations. Defaults to <see cref="Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio" />.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <remarks>
     /// This method uses the <see cref="Parallel" /> class to execute the action in parallel.

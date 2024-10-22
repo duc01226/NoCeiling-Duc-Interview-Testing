@@ -949,7 +949,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        pageSize ??= Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
+        pageSize ??= Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio;
 
         if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(GetRootServiceProvider()))
             await DeleteManyAsync(predicate, dismissSendEvent, eventCustomConfig, cancellationToken);
@@ -993,7 +993,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        pageSize ??= Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
+        pageSize ??= Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio;
 
         await Util.Pager.ExecutePagingAsync(
             async (skipCount, pageSize) =>
@@ -1036,7 +1036,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        pageSize ??= Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
+        pageSize ??= Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio;
 
         await Util.Pager.ExecuteScrollingPagingAsync(
             async () =>

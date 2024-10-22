@@ -26,7 +26,7 @@ public static partial class Util
         /// Total time per I/O task (I/O + CPU): 50 ms (I/O) + 10 ms (CPU) = 60 ms
         /// Max parallel tasks per core: PostgreSQL: 60ms/10ms(CPU processing time) = 6 tasks/core; MongoDB: 80ms/10ms = 8 tasks/core
         /// </summary>
-        public static int DefaultNumberOfParallelIoTasksPerCpuRatio { get; set; } = 15;
+        public static int DefaultNumberOfParallelIoTasksPerCpuRatio { get; set; } = 10;
 
         public static int DefaultNumberOfParallelComputeTasksPerCpuRatio { get; set; } = 2;
 
@@ -1843,11 +1843,11 @@ public static partial class Util
         /// <typeparam name="TResult">The type of the result returned by the provided function.</typeparam>
         /// <param name="items">The enumerable of items to process.</param>
         /// <param name="action">The asynchronous function to execute for each item. This function takes an item and its index as parameters and returns a task that represents the operation.</param>
-        /// <param name="maxConcurrent">The maximum number of concurrent operations. Default value is <see cref="DefaultParallelIoTaskMaxConcurrent" />.</param>
+        /// <param name="maxConcurrent">The maximum number of concurrent operations. Default value is <see cref="DefaultNumberOfParallelIoTasksPerCpuRatio" />.</param>
         /// <returns>A task that represents the operation. The result of the task is a list of results returned by the provided function.</returns>
         public static async Task<List<TResult>> ParallelAsync<TResult, T>(IEnumerable<T> items, Func<T, int, Task<TResult>> action, int? maxConcurrent)
         {
-            var maxDegreeOfParallelism = maxConcurrent ?? DefaultParallelIoTaskMaxConcurrent;
+            var maxDegreeOfParallelism = maxConcurrent ?? DefaultNumberOfParallelIoTasksPerCpuRatio;
             var itemsList = items.As<IList<T>>() ?? items.ToList();
 
             if (itemsList.Count == 0)

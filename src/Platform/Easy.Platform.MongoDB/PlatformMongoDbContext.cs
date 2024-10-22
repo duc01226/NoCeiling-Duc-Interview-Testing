@@ -79,7 +79,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     public virtual string DataMigrationHistoryCollectionName => "MigrationHistory";
 
-    public virtual int ParallelIoTaskMaxConcurrent => Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
+    public virtual int ParallelIoTaskMaxConcurrent => Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio;
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryCollection.AsQueryable();
 
