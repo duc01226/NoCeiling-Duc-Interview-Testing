@@ -188,11 +188,6 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
     public bool IsRootModule => IPlatformModule.CheckIsRootModule(this);
 
-    /// <summary>
-    /// Higher Priority value mean the module init will be executed before lower Priority value in the same level module dependencies
-    /// <br />
-    /// Default is 10. For the default priority should be: PersistenceModule => InfrastructureModule => Others Module
-    /// </summary>
     public virtual int ExecuteInitPriority => DefaultExecuteInitPriority;
 
     public IServiceCollection ServiceCollection { get; private set; }

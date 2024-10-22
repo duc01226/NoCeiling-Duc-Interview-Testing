@@ -79,6 +79,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     public virtual string DataMigrationHistoryCollectionName => "MigrationHistory";
 
+    public virtual int ParallelIoTaskMaxConcurrent => Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
+
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryCollection.AsQueryable();
 
     public async Task UpsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity, CancellationToken cancellationToken = default)
@@ -263,7 +265,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         return entities
             .ParallelAsync(
                 entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
-                IPlatformDbContext.DefaultPageSize)
+                ParallelIoTaskMaxConcurrent)
             .ThenActionIfAsync(
                 !dismissSendEvent,
                 entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Created, eventCustomConfig, cancellationToken));
@@ -307,7 +309,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         return entities
             .ParallelAsync(
                 entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
-                IPlatformDbContext.DefaultPageSize)
+                ParallelIoTaskMaxConcurrent)
             .ThenActionIfAsync(
                 !dismissSendEvent,
                 entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Updated, eventCustomConfig, cancellationToken));

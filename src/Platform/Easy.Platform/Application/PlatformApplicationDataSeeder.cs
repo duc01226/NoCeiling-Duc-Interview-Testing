@@ -33,6 +33,10 @@ public interface IPlatformApplicationDataSeeder
 /// </summary>
 public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSeeder
 {
+    public const int DefaultActiveDelaySeedingInBackgroundBySeconds = 5;
+    public const int DefaultDelayRetryCheckSeedDataBySeconds = 5;
+    public const int DefaultMaxWaitSeedDataBySyncMessagesBySeconds = 3600;
+
     protected readonly IConfiguration Configuration;
     protected readonly ILoggerFactory LoggerFactory;
     protected readonly IPlatformRootServiceProvider RootServiceProvider;
@@ -65,10 +69,6 @@ public abstract class PlatformApplicationDataSeeder : IPlatformApplicationDataSe
     /// Could update it to change the configuration key.
     /// </summary>
     public static string SeedingMinimumDummyItemsCountConfigurationKey { get; set; } = "SeedingMinimumDummyItemsCount";
-
-    public static int DefaultActiveDelaySeedingInBackgroundBySeconds => 5;
-    public static int DefaultDelayRetryCheckSeedDataBySeconds => 5;
-    public static int DefaultMaxWaitSeedDataBySyncMessagesBySeconds => 3600;
 
     protected IPlatformApplicationSettingContext ApplicationSettingContext { get; }
 

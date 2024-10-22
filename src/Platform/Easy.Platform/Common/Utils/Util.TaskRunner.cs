@@ -1901,7 +1901,8 @@ public static partial class Util
                     }
                 }
 
-                await Task.WhenAll(processingActionTasks.Values);
+                // To list to clone the values to prevent values items list count change when use in when any
+                await Task.WhenAny(processingActionTasks.Values.ToList());
             }
 
             return processedFailedActionExceptions.IsEmpty

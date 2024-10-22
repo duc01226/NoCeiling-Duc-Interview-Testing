@@ -95,7 +95,7 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                     serviceScope.ServiceProvider
                         .GetServices<IPlatformApplicationDataSeeder>()
                         .DistinctBy(p => p.GetType())
-                        .Where(p => p.DelaySeedingInBackgroundBySeconds == 0)
+                        .Where(p => p.DelaySeedingInBackgroundBySeconds <= 0)
                         .GroupBy(p => p.SeedOrder)
                         .OrderBy(p => p.Key)
                         .ToList());

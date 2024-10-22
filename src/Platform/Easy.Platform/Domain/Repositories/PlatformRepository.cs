@@ -467,7 +467,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
         var currentActiveUow = UnitOfWorkManager.CurrentActiveUow();
 
-        var result = await ExecuteUowThreadSafe(currentActiveUow, uow => ExecuteReadData(uow, readDataFn, loadRelatedEntities));
+        var result = await ExecuteUowReadQueryThreadSafe(currentActiveUow, uow => ExecuteReadData(uow, readDataFn, loadRelatedEntities));
 
         // If there is opening uow, may get data for update => set cached original entities for track update
         SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate(result, currentActiveUow);
@@ -475,9 +475,8 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         return result;
     }
 
-    protected async Task<TResult> ExecuteUowThreadSafe<TResult>(IPlatformUnitOfWork uow, Func<IPlatformUnitOfWork, Task<TResult>> executeFn)
+    protected async Task<TResult> ExecuteUowReadQueryThreadSafe<TResult>(IPlatformUnitOfWork uow, Func<IPlatformUnitOfWork, Task<TResult>> executeFn)
     {
-        // Do retry if the uow do not support parallel query so that if there's other uow running query in parallel, it could retry get data again to have chance to make it work
         if (uow.UowOfType<TUow>().DoesSupportParallelQuery() == false)
             try
             {

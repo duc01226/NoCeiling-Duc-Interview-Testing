@@ -67,7 +67,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     protected IPlatformApplicationRequestContextAccessor RequestContextAccessor => lazyRequestContextAccessor.Value;
 
-    protected SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(ContextMaxConcurrentThreadLock, ContextMaxConcurrentThreadLock);
+    protected SemaphoreSlim ContextThreadSafeLock { get; } = new(ContextMaxConcurrentThreadLock, ContextMaxConcurrentThreadLock);
 
     public IPlatformUnitOfWork? MappedUnitOfWork { get; set; }
 
@@ -239,9 +239,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         return entities
-            .ParallelAsync(
-                entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
-                IPlatformDbContext.DefaultPageSize)
+            .SelectAsync(
+                entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken))
             .ThenActionIfAsync(
                 !dismissSendEvent,
                 entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Created, eventCustomConfig, cancellationToken));
@@ -262,7 +261,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     {
         try
         {
-            await NotThreadSafeDbContextQueryLock.WaitAsync(cancellationToken);
+            await ContextThreadSafeLock.WaitAsync(cancellationToken);
 
             // Run DetachLocalIfAny to prevent
             // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
@@ -272,14 +271,14 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 .Update(toBeUpdatedEntity)
                 .Entity;
 
-            NotThreadSafeDbContextQueryLock.Release();
+            ContextThreadSafeLock.Release();
 
             return result;
         }
         catch
         {
-            if (NotThreadSafeDbContextQueryLock.CurrentCount < ContextMaxConcurrentThreadLock)
-                NotThreadSafeDbContextQueryLock.Release();
+            if (ContextThreadSafeLock.CurrentCount < ContextMaxConcurrentThreadLock)
+                ContextThreadSafeLock.Release();
             throw;
         }
     }
@@ -292,9 +291,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         return await entities
-            .ParallelAsync(
-                entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
-                IPlatformDbContext.DefaultPageSize)
+            .SelectAsync(
+                entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken))
             .ThenActionIfAsync(
                 !dismissSendEvent,
                 entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Updated, eventCustomConfig, cancellationToken));
@@ -321,7 +319,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     {
         try
         {
-            await NotThreadSafeDbContextQueryLock.WaitAsync(cancellationToken);
+            await ContextThreadSafeLock.WaitAsync(cancellationToken);
 
             DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(entity);
 
@@ -333,7 +331,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 {
                     GetTable<TEntity>().Remove(entity);
 
-                    NotThreadSafeDbContextQueryLock.Release();
+                    ContextThreadSafeLock.Release();
 
                     return Task.FromResult(entity);
                 },
@@ -345,8 +343,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         }
         catch (Exception)
         {
-            if (NotThreadSafeDbContextQueryLock.CurrentCount < ContextMaxConcurrentThreadLock)
-                NotThreadSafeDbContextQueryLock.Release();
+            if (ContextThreadSafeLock.CurrentCount < ContextMaxConcurrentThreadLock)
+                ContextThreadSafeLock.Release();
             throw;
         }
     }
@@ -396,7 +394,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         }
 
         return await entities
-            .ParallelAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, false, eventCustomConfig, cancellationToken), IPlatformDbContext.DefaultPageSize)
+            .SelectAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, false, eventCustomConfig, cancellationToken))
             .ThenActionAsync(
                 entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Deleted, eventCustomConfig, cancellationToken));
     }
@@ -410,13 +408,13 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider))
             try
             {
-                await NotThreadSafeDbContextQueryLock.WaitAsync(cancellationToken);
+                await ContextThreadSafeLock.WaitAsync(cancellationToken);
 
                 return await GetTable<TEntity>().Where(predicate).ExecuteDeleteAsync(cancellationToken);
             }
             finally
             {
-                NotThreadSafeDbContextQueryLock.Release();
+                ContextThreadSafeLock.Release();
             }
 
         var entities = await GetAllAsync(GetQuery<TEntity>().Where(predicate), cancellationToken);
@@ -433,13 +431,13 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider))
             try
             {
-                await NotThreadSafeDbContextQueryLock.WaitAsync(cancellationToken);
+                await ContextThreadSafeLock.WaitAsync(cancellationToken);
 
                 return await queryBuilder(GetTable<TEntity>()).ExecuteDeleteAsync(cancellationToken);
             }
             finally
             {
-                NotThreadSafeDbContextQueryLock.Release();
+                ContextThreadSafeLock.Release();
             }
 
         var entities = await GetAllAsync(queryBuilder(GetQuery<TEntity>()), cancellationToken);
@@ -456,7 +454,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     {
         try
         {
-            await NotThreadSafeDbContextQueryLock.WaitAsync(cancellationToken);
+            await ContextThreadSafeLock.WaitAsync(cancellationToken);
 
             var toBeCreatedEntity = entity
                 .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
@@ -477,7 +475,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 {
                     var result = GetTable<TEntity>().AddAsync(toBeCreatedEntity, cancellationToken).AsTask().Then(_ => toBeCreatedEntity);
 
-                    NotThreadSafeDbContextQueryLock.Release();
+                    ContextThreadSafeLock.Release();
 
                     return result;
                 },
@@ -491,8 +489,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         }
         catch (Exception)
         {
-            if (NotThreadSafeDbContextQueryLock.CurrentCount < ContextMaxConcurrentThreadLock)
-                NotThreadSafeDbContextQueryLock.Release();
+            if (ContextThreadSafeLock.CurrentCount < ContextMaxConcurrentThreadLock)
+                ContextThreadSafeLock.Release();
             throw;
         }
     }
@@ -646,7 +644,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     {
         try
         {
-            await NotThreadSafeDbContextQueryLock.WaitAsync(cancellationToken);
+            await ContextThreadSafeLock.WaitAsync(cancellationToken);
 
             var isEntityRowVersionEntityMissingConcurrencyUpdateToken = entity is IRowVersionEntity { ConcurrencyUpdateToken: null };
 
@@ -704,7 +702,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                             entity is IRowVersionEntity,
                             p => p.As<IRowVersionEntity>().With(rowVersionEntity => rowVersionEntity.ConcurrencyUpdateToken = Ulid.NewUlid().ToString()).As<TEntity>());
 
-                    NotThreadSafeDbContextQueryLock.Release();
+                    ContextThreadSafeLock.Release();
 
                     return Task.FromResult(result);
                 },
@@ -718,8 +716,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         }
         catch
         {
-            if (NotThreadSafeDbContextQueryLock.CurrentCount < ContextMaxConcurrentThreadLock)
-                NotThreadSafeDbContextQueryLock.Release();
+            if (ContextThreadSafeLock.CurrentCount < ContextMaxConcurrentThreadLock)
+                ContextThreadSafeLock.Release();
             throw;
         }
 
