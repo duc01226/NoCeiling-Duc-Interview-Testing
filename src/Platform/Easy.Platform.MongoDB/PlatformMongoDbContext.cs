@@ -255,20 +255,61 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         GC.SuppressFinalize(this);
     }
 
-    public Task<List<TEntity>> CreateManyAsync<TEntity, TPrimaryKey>(
+    public async Task<List<TEntity>> CreateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return entities
-            .ParallelAsync(
-                entity => CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
-                ParallelIoTaskMaxConcurrent)
-            .ThenActionIfAsync(
-                !dismissSendEvent,
-                entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Created, eventCustomConfig, cancellationToken));
+        if (entities.IsEmpty()) return entities;
+
+        return await entities
+            .PagedGroups(ParallelIoTaskMaxConcurrent)
+            .SelectAsync(
+                async entities =>
+                {
+                    var toBeCreatedEntities = entities
+                        .SelectList(
+                            entity => entity.PipeIf(
+                                    entity.IsAuditedUserEntity(),
+                                    p => p.As<IUserAuditedEntity>()
+                                        .SetCreatedBy(RequestContextAccessor.Current.UserId(entity.GetAuditedUserIdType()))
+                                        .As<TEntity>())
+                                .WithIf(
+                                    entity is IRowVersionEntity { ConcurrencyUpdateToken: null },
+                                    entity => entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = Ulid.NewUlid().ToString()));
+
+                    var bulkCreateOps = toBeCreatedEntities
+                        .Select(toBeCreatedEntity => new InsertOneModel<TEntity>(toBeCreatedEntity))
+                        .ToList();
+
+                    await GetTable<TEntity>().BulkWriteAsync(bulkCreateOps, new BulkWriteOptions { IsOrdered = false }, cancellationToken);
+
+                    if (!dismissSendEvent)
+                    {
+                        await toBeCreatedEntities.ParallelAsync(
+                            toBeCreatedEntity => PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
+                                RootServiceProvider,
+                                MappedUnitOfWork,
+                                toBeCreatedEntity,
+                                entity => Task.FromResult(entity),
+                                false,
+                                eventCustomConfig,
+                                () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
+                                PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, false),
+                                cancellationToken));
+
+                        await SendBulkEntitiesEvent<TEntity, TPrimaryKey>(
+                            toBeCreatedEntities,
+                            PlatformCqrsEntityEventCrudAction.Created,
+                            eventCustomConfig,
+                            cancellationToken);
+                    }
+
+                    return toBeCreatedEntities;
+                })
+            .Then(itemsPagedGroups => itemsPagedGroups.Flatten().ToList());
     }
 
     public Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
@@ -299,20 +340,170 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         return entity;
     }
 
-    public Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
+    public async Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return entities
-            .ParallelAsync(
-                entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
-                ParallelIoTaskMaxConcurrent)
-            .ThenActionIfAsync(
-                !dismissSendEvent,
-                entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Updated, eventCustomConfig, cancellationToken));
+        if (entities.IsEmpty()) return entities;
+
+        return await entities
+            .PagedGroups(ParallelIoTaskMaxConcurrent)
+            .SelectAsync(
+                async entities =>
+                {
+                    var toBeUpdatedItems = await entities.ParallelAsync(
+                        async entity =>
+                        {
+                            var isEntityRowVersionEntityMissingConcurrencyUpdateToken = entity is IRowVersionEntity { ConcurrencyUpdateToken: null };
+                            TEntity existingEntity = null;
+
+                            if (!dismissSendEvent &&
+                                PlatformCqrsEntityEvent.IsAnyEntityEventHandlerRegisteredForEntity<TEntity>(RootServiceProvider) &&
+                                entity.HasTrackValueUpdatedDomainEventAttribute())
+                            {
+                                existingEntity = MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
+                                                 await GetQuery<TEntity>()
+                                                     .Where(BuildExistingEntityPredicate(entity))
+                                                     .FirstOrDefaultAsync(cancellationToken)
+                                                     .EnsureFound($"Entity {typeof(TEntity).Name} with [Id:{entity.Id}] not found to update")
+                                                     .ThenActionIf(
+                                                         p => p != null,
+                                                         p => MappedUnitOfWork?.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p));
+
+                                if (!existingEntity.Id.Equals(entity.Id)) entity.Id = existingEntity.Id;
+                            }
+
+                            if (isEntityRowVersionEntityMissingConcurrencyUpdateToken)
+                                entity.As<IRowVersionEntity>().ConcurrencyUpdateToken =
+                                    existingEntity?.As<IRowVersionEntity>().ConcurrencyUpdateToken ??
+                                    await GetQuery<TEntity>()
+                                        .Where(BuildExistingEntityPredicate(entity))
+                                        .Select(p => ((IRowVersionEntity)p).ConcurrencyUpdateToken)
+                                        .FirstOrDefaultAsync(cancellationToken);
+
+                            var toBeUpdatedEntity = entity
+                                .PipeIf(
+                                    entity is IDateAuditedEntity,
+                                    p => p.As<IDateAuditedEntity>().With(auditedEntity => auditedEntity.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
+                                .PipeIf(
+                                    entity.IsAuditedUserEntity(),
+                                    p => p.As<IUserAuditedEntity>()
+                                        .SetLastUpdatedBy(RequestContextAccessor.Current.UserId(entity.GetAuditedUserIdType()))
+                                        .As<TEntity>());
+                            string? currentInMemoryConcurrencyUpdateToken = null;
+
+                            if (toBeUpdatedEntity is IRowVersionEntity toBeUpdatedRowVersionEntity)
+                            {
+                                currentInMemoryConcurrencyUpdateToken = toBeUpdatedRowVersionEntity.ConcurrencyUpdateToken;
+                                var newUpdateConcurrencyUpdateToken = Ulid.NewUlid().ToString();
+
+                                toBeUpdatedRowVersionEntity.ConcurrencyUpdateToken = newUpdateConcurrencyUpdateToken;
+                            }
+
+                            var bulkUpdateOp = new ReplaceOneModel<TEntity>(
+                                Builders<TEntity>.Filter.Pipe(
+                                    filterBuilder => currentInMemoryConcurrencyUpdateToken != null
+                                        ? filterBuilder.Where(
+                                            p => p.Id.Equals(toBeUpdatedEntity.Id) &&
+                                                 (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
+                                                  ((IRowVersionEntity)p).ConcurrencyUpdateToken == "" ||
+                                                  ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken))
+                                        : filterBuilder.Where(p => p.Id.Equals(toBeUpdatedEntity.Id))),
+                                toBeUpdatedEntity)
+                            {
+                                IsUpsert = false
+                            };
+
+                            return (toBeUpdatedEntity, bulkUpdateOp, existingEntity, currentInMemoryConcurrencyUpdateToken);
+                        });
+
+                    await GetTable<TEntity>()
+                        .BulkWriteAsync(toBeUpdatedItems.SelectList(p => p.bulkUpdateOp), new BulkWriteOptions { IsOrdered = false }, cancellationToken)
+                        .ThenActionAsync(
+                            async result =>
+                            {
+                                if (result.MatchedCount != toBeUpdatedItems.Count)
+                                {
+                                    var toBeUpdatedEntityIds = toBeUpdatedItems.Select(p => p.toBeUpdatedEntity.Id).ToHashSet();
+
+                                    if (toBeUpdatedItems.First().toBeUpdatedEntity is IRowVersionEntity)
+                                    {
+                                        var existingEntityIdToConcurrencyUpdateTokenDict = await GetQuery<TEntity>()
+                                            .Where(p => toBeUpdatedEntityIds.Contains(p.Id))
+                                            .Select(p => new { p.Id, ((IRowVersionEntity)p).ConcurrencyUpdateToken })
+                                            .ToListAsync(cancellationToken)
+                                            .Then(items => items.ToDictionary(p => p.Id, p => p.ConcurrencyUpdateToken));
+
+                                        toBeUpdatedItems
+                                            .ForEach(
+                                                p =>
+                                                {
+                                                    if (!existingEntityIdToConcurrencyUpdateTokenDict.TryGetValue(
+                                                        p.toBeUpdatedEntity.Id,
+                                                        out var existingEntityConcurrencyToken))
+                                                        throw new PlatformDomainEntityNotFoundException<TEntity>(p.toBeUpdatedEntity.Id.ToString());
+                                                    if (existingEntityConcurrencyToken != p.currentInMemoryConcurrencyUpdateToken)
+                                                        throw new PlatformDomainRowVersionConflictException(
+                                                            $"Update {typeof(TEntity).Name} with Id:{p.toBeUpdatedEntity.Id} has conflicted version.");
+                                                });
+                                    }
+
+                                    var existingEntityIds = await GetQuery<TEntity>()
+                                        .Where(p => toBeUpdatedEntityIds.Contains(p.Id))
+                                        .Select(p => p.Id)
+                                        .ToListAsync(cancellationToken)
+                                        .Then(p => p.ToHashSet());
+
+                                    toBeUpdatedEntityIds
+                                        .ForEach(
+                                            toBeUpdatedEntityId =>
+                                            {
+                                                if (!existingEntityIds.Contains(toBeUpdatedEntityId))
+                                                    throw new PlatformDomainEntityNotFoundException<TEntity>(toBeUpdatedEntityId.ToString());
+                                            });
+                                }
+                            });
+
+                    if (!dismissSendEvent)
+                    {
+                        await toBeUpdatedItems.ParallelAsync(
+                            toBeUpdatedItem => PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, TEntity>(
+                                RootServiceProvider,
+                                MappedUnitOfWork,
+                                toBeUpdatedItem.toBeUpdatedEntity,
+                                toBeUpdatedItem.existingEntity ??
+                                MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(toBeUpdatedItem.toBeUpdatedEntity.Id.ToString()),
+                                entity => Task.FromResult(entity),
+                                false,
+                                eventCustomConfig,
+                                () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
+                                PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, false),
+                                cancellationToken));
+                        await SendBulkEntitiesEvent<TEntity, TPrimaryKey>(
+                            toBeUpdatedItems.SelectList(p => p.toBeUpdatedEntity),
+                            PlatformCqrsEntityEventCrudAction.Updated,
+                            eventCustomConfig,
+                            cancellationToken);
+                    }
+
+                    return toBeUpdatedItems.SelectList(
+                        p =>
+                        {
+                            MappedUnitOfWork?.RemoveCachedExistingOriginalEntity(p.toBeUpdatedEntity.Id.ToString());
+                            return p.toBeUpdatedEntity;
+                        });
+                })
+            .Then(pagedItemsGroups => pagedItemsGroups.Flatten().ToList());
+
+        Expression<Func<TEntity, bool>> BuildExistingEntityPredicate(TEntity entity)
+        {
+            return entity.As<IUniqueCompositeIdSupport<TEntity>>()?.FindByUniqueCompositeIdExpr() != null
+                ? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!
+                : p => p.Id.Equals(entity.Id);
+        }
     }
 
     public async Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
