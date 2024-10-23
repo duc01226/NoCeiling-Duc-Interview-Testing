@@ -423,15 +423,7 @@ public static class ListExtension
         Func<T, int, Task> action,
         int? maxConcurrent = null)
     {
-        await ParallelAsync(
-            items,
-            async (item, index) =>
-            {
-                await action(item, index);
-
-                return ValueTuple.Create();
-            },
-            maxConcurrent);
+        await Util.TaskRunner.ParallelAsync(items, action, maxConcurrent);
     }
 
     /// <inheritdoc cref="Util.TaskRunner.ParallelAsync{TResult,T}" />

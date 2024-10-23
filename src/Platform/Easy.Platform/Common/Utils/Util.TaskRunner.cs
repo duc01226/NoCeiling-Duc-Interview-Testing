@@ -1864,6 +1864,32 @@ public static partial class Util
         }
 
         /// <summary>
+        /// Executes a provided asynchronous function in parallel for each item in the given enumerable.
+        /// </summary>
+        /// <typeparam name="T">The type of the items in the enumerable.</typeparam>
+        /// <typeparam name="TResult">The type of the result returned by the provided function.</typeparam>
+        /// <param name="items">The enumerable of items to process.</param>
+        /// <param name="action">The asynchronous function to execute for each item. This function takes an item and its index as parameters and returns a task that represents the operation.</param>
+        /// <param name="maxConcurrent">The maximum number of concurrent operations. Default value is <see cref="DefaultNumberOfParallelIoTasksPerCpuRatio" />.</param>
+        /// <returns>A task that represents the operation.</returns>
+        public static async Task ParallelAsync<T>(IEnumerable<T> items, Func<T, int, Task> action, int? maxConcurrent)
+        {
+            var maxDegreeOfParallelism = maxConcurrent ?? DefaultNumberOfParallelIoTasksPerCpuRatio;
+            var itemsList = items.As<IList<T>>() ?? items.ToList();
+
+            if (itemsList.Count == 0)
+                return;
+            if (itemsList.Count == 1)
+                await action(itemsList.First(), 0);
+            if (itemsList.Count <= maxDegreeOfParallelism)
+                await Task.WhenAll(itemsList.Select((p, i) => action(p, i)));
+
+            await itemsList
+                .PagedGroups(maxDegreeOfParallelism)
+                .ForEachAsync(pagedItems => Task.WhenAll(pagedItems.Select((p, i) => action(p, i))));
+        }
+
+        /// <summary>
         /// Provides a mechanism to throttle the execution of tasks.
         /// </summary>
         /// <remarks>

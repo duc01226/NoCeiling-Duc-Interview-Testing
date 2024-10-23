@@ -188,7 +188,7 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
                result.GetType().IsAssignableToGenericType(typeof(IAsyncEnumerable<>));
     }
 
-    protected override void HandleDisposeUsingOnceTimeContextLogic<TResult>(
+    protected override void HandleDisposeUsingOnceTransientUowLogic<TResult>(
         IPlatformUnitOfWork uow,
         Expression<Func<TEntity, object>>[] loadRelatedEntities,
         TResult result)

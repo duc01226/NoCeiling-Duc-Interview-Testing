@@ -145,7 +145,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         return await source.AnyAsync(cancellationToken);
     }
 
-    protected override void HandleDisposeUsingOnceTimeContextLogic<TResult>(
+    protected override void HandleDisposeUsingOnceTransientUowLogic<TResult>(
         IPlatformUnitOfWork uow,
         Expression<Func<TEntity, object>>[] loadRelatedEntities,
         TResult result)

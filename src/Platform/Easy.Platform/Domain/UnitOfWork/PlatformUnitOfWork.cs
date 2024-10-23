@@ -203,7 +203,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     protected ILoggerFactory LoggerFactory { get; }
     protected virtual ConcurrentDictionary<string, object>? CachedExistingOriginalEntities => cachedExistingOriginalEntitiesLazy.Value;
     protected virtual ConcurrentDictionary<string, IPlatformUnitOfWork>? CachedInnerUowByIds { get; } = null;
-    protected virtual ConcurrentDictionary<Type, IPlatformUnitOfWork>? CachedInnerUows { get; } = null;
+    protected virtual ConcurrentDictionary<Type, IPlatformUnitOfWork>? CachedInnerUowByTypes { get; } = null;
 
     protected IPlatformRootServiceProvider RootServiceProvider { get; }
 
@@ -230,7 +230,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     {
         if (Completed) return;
 
-        if (CachedInnerUows != null) await CachedInnerUows.Values.Where(p => p.IsActive()).ParallelAsync(p => p.CompleteAsync(cancellationToken));
+        if (CachedInnerUowByTypes != null) await CachedInnerUowByTypes.Values.Where(p => p.IsActive()).ParallelAsync(p => p.CompleteAsync(cancellationToken));
 
         await SaveChangesAsync(cancellationToken);
 
@@ -242,7 +242,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     public virtual bool IsActive()
     {
         return !Completed && !Disposed &&
-               (CachedInnerUows == null || CachedInnerUows.IsEmpty || CachedInnerUows.Values.Any(p => p.IsActive()));
+               (CachedInnerUowByTypes == null || CachedInnerUowByTypes.IsEmpty || CachedInnerUowByTypes.Values.Any(p => p.IsActive()));
     }
 
     public abstract bool IsPseudoTransactionUow();
@@ -279,7 +279,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 
         try
         {
-            if (CachedInnerUows != null) await CachedInnerUows.Values.Where(p => p.IsActive()).ParallelAsync(p => p.SaveChangesAsync(cancellationToken));
+            if (CachedInnerUowByTypes != null) await CachedInnerUowByTypes.Values.Where(p => p.IsActive()).ParallelAsync(p => p.SaveChangesAsync(cancellationToken));
 
             await InternalSaveChangesAsync(cancellationToken);
 
@@ -348,9 +348,9 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 
     public T GetInnerUowOfType<T>() where T : class, IPlatformUnitOfWork
     {
-        if (CachedInnerUows == null) return ParentUnitOfWork?.UowOfType<T>();
+        if (CachedInnerUowByTypes == null) return ParentUnitOfWork?.UowOfType<T>();
 
-        return CachedInnerUows?.GetOrAdd(
+        return CachedInnerUowByTypes?.GetOrAdd(
             typeof(T),
             _ =>
             {
@@ -377,12 +377,17 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
             if (disposing)
             {
                 NotThreadSafeDbContextQueryLock?.Dispose();
-                AssociatedToDisposeWithServiceScope?.Dispose();
                 CachedExistingOriginalEntities?.Clear();
 
-                CachedInnerUows?.Values.ForEach(p => p.Dispose());
-                CachedInnerUows?.Clear();
+                CachedInnerUowByTypes?.Values.ForEach(p => p.Dispose());
+                CachedInnerUowByTypes?.Clear();
                 CachedInnerUowByIds?.Clear();
+                if (cachedExistingOriginalEntitiesLazy.IsValueCreated)
+                    cachedExistingOriginalEntitiesLazy.Value.Clear();
+
+                OnSaveChangesCompletedActions.Clear();
+                OnUowCompletedActions.Clear();
+                OnSaveChangesFailedActions.Clear();
             }
 
             // Release unmanaged resources
@@ -396,6 +401,8 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
                         ex => LoggerFactory.CreateLogger(GetType()).LogError(ex.BeautifyStackTrace(), "Invoke DisposedActions error.")))
                 .Wait();
             OnDisposedActions.Clear();
+
+            AssociatedToDisposeWithServiceScope?.Dispose();
         }
     }
 

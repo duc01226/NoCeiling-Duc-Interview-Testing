@@ -439,7 +439,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
-    protected abstract void HandleDisposeUsingOnceTimeContextLogic<TResult>(
+    protected abstract void HandleDisposeUsingOnceTransientUowLogic<TResult>(
         IPlatformUnitOfWork uow,
         Expression<Func<TEntity, object>>[] loadRelatedEntities,
         TResult result);
@@ -461,7 +461,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
             }
             finally
             {
-                HandleDisposeUsingOnceTimeContextLogic(useOnceTransientUow, loadRelatedEntities, useOnceTransientUowResult);
+                HandleDisposeUsingOnceTransientUowLogic(useOnceTransientUow, loadRelatedEntities, useOnceTransientUowResult);
             }
         }
 

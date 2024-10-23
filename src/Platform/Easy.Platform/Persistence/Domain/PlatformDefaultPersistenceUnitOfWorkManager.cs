@@ -24,7 +24,10 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
         // So that we can begin/destroy uow separately
         var newScope = ServiceProvider.CreateScope();
 
-        var uow = new PlatformAggregatedPersistenceUnitOfWork(RootServiceProvider, newScope.ServiceProvider, newScope.ServiceProvider.GetService<ILoggerFactory>())
+        var uow = new PlatformAggregatedPersistenceUnitOfWork(
+                RootServiceProvider,
+                newScope.ServiceProvider,
+                newScope.ServiceProvider.GetService<ILoggerFactory>())
             .With(
                 p =>
                 {
@@ -33,10 +36,24 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
                     p.CreatedByUnitOfWorkManager = this;
                 });
 
-        uow.OnUowCompletedActions.Add(() => Task.Run(() => uow.CreatedByUnitOfWorkManager.RemoveAllInactiveUow()));
-        uow.OnDisposedActions.Add(() => Task.Run(() => uow.CreatedByUnitOfWorkManager.RemoveAllInactiveUow()));
-
-        FreeCreatedUnitOfWorks.TryAdd(uow.Id, uow);
+        if (isUsingOnceTransientUow)
+        {
+            FreeCreatedUnitOfWorks.TryAdd(uow.Id, uow);
+            uow.OnUowCompletedActions.Add(
+                () => Task.Run(
+                    () =>
+                    {
+                        FreeCreatedUnitOfWorks.TryRemove(uow.Id, out _);
+                        CompletedUows.TryAdd(uow.Id, uow);
+                    }));
+            uow.OnDisposedActions.Add(
+                () => Task.Run(
+                    () =>
+                    {
+                        FreeCreatedUnitOfWorks.TryRemove(uow.Id, out _);
+                        CompletedUows.TryRemove(uow.Id, out _);
+                    }));
+        }
 
         return uow;
     }
