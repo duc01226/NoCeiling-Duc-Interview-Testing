@@ -610,16 +610,40 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
+        var totalCount = await CountAsync(queryBuilder(GetQuery<TEntity>()), cancellationToken);
+
         if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider))
         {
-            var ids = await GetAllAsync<TEntity, TPrimaryKey>(query => queryBuilder(query).Select(p => p.Id), cancellationToken);
+            await Util.Pager.ExecuteScrollingPagingAsync(
+                async () =>
+                {
+                    var ids = await GetAllAsync<TEntity, TPrimaryKey>(
+                        query => queryBuilder(query).Take(ParallelIoTaskMaxConcurrent).Select(p => p.Id),
+                        cancellationToken);
 
-            return (int)await GetTable<TEntity>().DeleteManyAsync(p => ids.Contains(p.Id), null, cancellationToken).Then(p => p.DeletedCount);
+                    await GetTable<TEntity>().DeleteManyAsync(p => ids.Contains(p.Id), null, cancellationToken).Then(p => p.DeletedCount);
+
+                    return ids;
+                },
+                maxExecutionCount: totalCount / ParallelIoTaskMaxConcurrent,
+                cancellationToken: cancellationToken);
+
+            return totalCount;
         }
 
-        var entities = await GetAllAsync(queryBuilder(GetQuery<TEntity>()), cancellationToken);
+        await Util.Pager.ExecuteScrollingPagingAsync(
+            async () =>
+            {
+                var entities = await GetAllAsync(queryBuilder(GetQuery<TEntity>()).Take(ParallelIoTaskMaxConcurrent), cancellationToken);
 
-        return await DeleteManyAsync<TEntity, TPrimaryKey>(entities, false, eventCustomConfig, cancellationToken).Then(_ => entities.Count);
+                await DeleteManyAsync<TEntity, TPrimaryKey>(entities, false, eventCustomConfig, cancellationToken).Then(_ => entities.Count);
+
+                return entities;
+            },
+            maxExecutionCount: totalCount / ParallelIoTaskMaxConcurrent,
+            cancellationToken: cancellationToken);
+
+        return totalCount;
     }
 
     public Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(
