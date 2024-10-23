@@ -528,20 +528,25 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         return await PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TEntity>(
-            RootServiceProvider,
-            MappedUnitOfWork,
-            entity,
-            async entity =>
-            {
-                await GetTable<TEntity>().DeleteOneAsync(p => p.Id.Equals(entity.Id), null, cancellationToken);
+                RootServiceProvider,
+                MappedUnitOfWork,
+                entity,
+                async entity =>
+                {
+                    await GetTable<TEntity>().DeleteOneAsync(p => p.Id.Equals(entity.Id), null, cancellationToken);
 
-                return entity;
-            },
-            dismissSendEvent,
-            eventCustomConfig,
-            () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
-            PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
-            cancellationToken);
+                    return entity;
+                },
+                dismissSendEvent,
+                eventCustomConfig,
+                () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
+                PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
+                cancellationToken)
+            .ThenAction(
+                entity =>
+                {
+                    MappedUnitOfWork?.RemoveCachedExistingOriginalEntity(entity.Id.ToString());
+                });
     }
 
     public async Task<List<TPrimaryKey>> DeleteManyAsync<TEntity, TPrimaryKey>(
@@ -581,13 +586,24 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                     true,
                     eventCustomConfig,
                     cancellationToken)
-                .Then(_ => entities);
+                .Then(
+                    _ =>
+                    {
+                        entities.ForEach(p => MappedUnitOfWork?.RemoveCachedExistingOriginalEntity(p.Id.ToString()));
+                        return entities;
+                    });
         }
 
         return await entities
             .ParallelAsync(entity => DeleteAsync<TEntity, TPrimaryKey>(entity, false, eventCustomConfig, cancellationToken))
             .ThenActionAsync(
-                entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Deleted, eventCustomConfig, cancellationToken));
+                entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Deleted, eventCustomConfig, cancellationToken))
+            .Then(
+                entities =>
+                {
+                    entities.ForEach(p => MappedUnitOfWork?.RemoveCachedExistingOriginalEntity(p.Id.ToString()));
+                    return entities;
+                });
     }
 
     public async Task<int> DeleteManyAsync<TEntity, TPrimaryKey>(

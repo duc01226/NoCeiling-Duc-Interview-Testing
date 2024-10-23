@@ -187,7 +187,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 {
     public const int ContextMaxConcurrentThreadLock = 1;
 
-    private readonly Lazy<ConcurrentDictionary<string, object>?> freeCreatedUnitOfWorksLazy = new(() => new ConcurrentDictionary<string, object>());
+    private readonly Lazy<ConcurrentDictionary<string, object>> cachedExistingOriginalEntitiesLazy = new(() => new ConcurrentDictionary<string, object>());
 
     protected PlatformUnitOfWork(IPlatformRootServiceProvider rootServiceProvider, IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
     {
@@ -201,7 +201,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 
     protected virtual SemaphoreSlim? NotThreadSafeDbContextQueryLock { get; } = null;
     protected ILoggerFactory LoggerFactory { get; }
-    protected virtual ConcurrentDictionary<string, object>? CachedExistingOriginalEntities => freeCreatedUnitOfWorksLazy.Value;
+    protected virtual ConcurrentDictionary<string, object>? CachedExistingOriginalEntities => cachedExistingOriginalEntitiesLazy.Value;
     protected virtual ConcurrentDictionary<string, IPlatformUnitOfWork>? CachedInnerUowByIds { get; } = null;
     protected virtual ConcurrentDictionary<Type, IPlatformUnitOfWork>? CachedInnerUows { get; } = null;
 
