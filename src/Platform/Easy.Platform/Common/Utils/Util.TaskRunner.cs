@@ -1857,57 +1857,10 @@ public static partial class Util
             if (itemsList.Count <= maxDegreeOfParallelism)
                 return await Task.WhenAll(itemsList.Select((p, i) => action(p, i))).Then(results => results.ToList());
 
-            // Handle parallelism with limit maxDegreeOfParallelism
-            var actionQueue = new Queue<(int, Func<Task<(int, TResult, Exception?)>>)>(
-                itemsList
-                    .Select<T, ValueTuple<int, Func<Task<ValueTuple<int, TResult, Exception?>>>>>(
-                        (item, i) => (i,
-                            () => action(item, i)
-                                .Then<TResult, ValueTuple<TResult, Exception?>>(p => (p, null))
-                                .Recover(ex => (default!, ex))
-                                .Then<ValueTuple<TResult, Exception?>, ValueTuple<int, TResult, Exception?>>(
-                                    itemActionResult => (i, itemActionResult.Item1, itemActionResult.Item2)))));
-            var processingActionTasks = new ConcurrentDictionary<int, Task<ValueTuple<int, TResult, Exception?>>>();
-            var processedActionTaskResults = new ConcurrentDictionary<int, ValueTuple<TResult, Exception?>>();
-            var processedFailedActionExceptions = new ConcurrentBag<Exception>();
-
-            while (processedActionTaskResults.Count < itemsList.Count)
-            {
-                while (processingActionTasks.Count < maxDegreeOfParallelism && actionQueue.Count > 0)
-                {
-                    var numberOfToAddItemsToMaxParallelism = maxDegreeOfParallelism - processingActionTasks.Count;
-
-                    for (var i = 0; i < numberOfToAddItemsToMaxParallelism; i++)
-                    {
-                        if (actionQueue.TryDequeue(out var queueItem))
-                        {
-                            var (nextProcessItemIndex, nextProcessAction) = queueItem;
-
-                            var nextProcessActionTask = nextProcessAction()
-                                .ContinueWith(
-                                    completedTask =>
-                                    {
-                                        var (nextProcessedItemIndex, nextProcessedActionResult, nextProcessedActionException) = completedTask.Result;
-
-                                        processedActionTaskResults.TryAdd(nextProcessedItemIndex, (nextProcessedActionResult, nextProcessedActionException));
-                                        processingActionTasks.Remove(nextProcessedItemIndex, out _);
-                                        if (nextProcessedActionException != null) processedFailedActionExceptions.Add(nextProcessedActionException);
-
-                                        return completedTask.Result;
-                                    });
-
-                            processingActionTasks.TryAdd(nextProcessItemIndex, nextProcessActionTask);
-                        }
-                    }
-                }
-
-                var processingTasks = processingActionTasks.Values;
-                if (processingTasks.Count > 0) await Task.WhenAny(processingTasks);
-            }
-
-            return processedFailedActionExceptions.IsEmpty
-                ? processedActionTaskResults.OrderBy(p => p.Key).Select(p => p.Value.Item1).ToList()
-                : throw new AggregateException(processedFailedActionExceptions);
+            return await itemsList
+                .PagedGroups(maxDegreeOfParallelism)
+                .SelectAsync(pagedItems => Task.WhenAll(pagedItems.Select((p, i) => action(p, i))).Then(results => results.ToList()))
+                .Then(pagedItemGroups => pagedItemGroups.Flatten().ToList());
         }
 
         /// <summary>
