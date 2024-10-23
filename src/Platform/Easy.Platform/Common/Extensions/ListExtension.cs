@@ -907,7 +907,7 @@ public static class ListExtension
             .PipeIf(maxResultCount >= 0, e => e.Take(maxResultCount!.Value));
     }
 
-    public static IEnumerable<IEnumerable<T>> PagedGroups<T>(this IEnumerable<T> query, int pageSize)
+    public static IEnumerable<List<T>> PagedGroups<T>(this IEnumerable<T> query, int pageSize)
     {
         var page = new List<T>(pageSize);
 
