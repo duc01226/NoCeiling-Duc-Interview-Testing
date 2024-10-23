@@ -149,21 +149,13 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
                 await ServiceProvider.ExecuteInjectScopedAsync(
                     async (IPlatformOutboxBusMessageRepository outboxEventBusMessageRepo) =>
                     {
-                        var toDeleteMessageIds = await outboxEventBusMessageRepo.GetAllAsync(
-                            queryBuilder: query => query
-                                .Where(
-                                    PlatformOutboxBusMessage.ToCleanExpiredMessagesExpr(
-                                        OutboxConfig.DeleteProcessedMessageInSeconds,
-                                        OutboxConfig.DeleteExpiredIgnoredMessageInSeconds))
-                                .Select(p => p.Id),
+                        await outboxEventBusMessageRepo.DeleteManyAsync(
+                            PlatformOutboxBusMessage.ToCleanExpiredMessagesExpr(
+                                OutboxConfig.DeleteProcessedMessageInSeconds,
+                                OutboxConfig.DeleteExpiredIgnoredMessageInSeconds),
+                            dismissSendEvent: true,
+                            eventCustomConfig: null,
                             cancellationToken);
-
-                        if (toDeleteMessageIds.Count > 0)
-                            await outboxEventBusMessageRepo.DeleteManyAsync(
-                                predicate: p => toDeleteMessageIds.Contains(p.Id),
-                                dismissSendEvent: true,
-                                eventCustomConfig: null,
-                                cancellationToken);
                     });
 
                 Logger.LogDebug("ProcessCleanMessageByExpiredTime success. Number of deleted messages: {ToCleanMessageCount}", toCleanMessageCount);

@@ -33,9 +33,9 @@ public class PlatformInboxConfig
     public double DeleteExpiredIgnoredMessageInSeconds { get; set; } = TimeSpan.FromDays(365).TotalSeconds;
 
     /// <summary>
-    /// Default number messages is processed to be Deleted/Ignored in batch. Default is 100;
+    /// Default number messages is processed to be Deleted/Ignored in batch. Default is DefaultNumberOfParallelIoTasksPerCpuRatio;
     /// </summary>
-    public int NumberOfDeleteMessagesBatch { get; set; } = Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent / 2;
+    public int NumberOfDeleteMessagesBatch { get; set; } = Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio;
 
     public double MessageCleanerTriggerIntervalInMinutes { get; set; } = 1;
 
