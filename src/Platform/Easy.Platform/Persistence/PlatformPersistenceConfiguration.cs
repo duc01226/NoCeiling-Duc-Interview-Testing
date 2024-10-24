@@ -28,7 +28,7 @@ public struct PlatformPersistenceConfigurationPooledDbContextOptions
     /// <summary>
     /// Sets the maximum number of instances retained by the pool.
     /// </summary>
-    public int PoolSize { get; set; } = Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio * 2;
+    public int PoolSize { get; set; } = Math.Max(Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent, 100);
 
     public bool UsePooledDbContextForUsingOnceTransientUowOnly { get; set; }
 }
