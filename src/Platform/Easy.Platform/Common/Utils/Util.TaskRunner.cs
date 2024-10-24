@@ -1879,14 +1879,15 @@ public static partial class Util
 
             if (itemsList.Count == 0)
                 return;
+
             if (itemsList.Count == 1)
                 await action(itemsList.First(), 0);
-            if (itemsList.Count <= maxDegreeOfParallelism)
+            else if (itemsList.Count <= maxDegreeOfParallelism)
                 await Task.WhenAll(itemsList.Select((p, i) => action(p, i)));
-
-            await itemsList
-                .PagedGroups(maxDegreeOfParallelism)
-                .ForEachAsync(pagedItems => Task.WhenAll(pagedItems.Select((p, i) => action(p, i))));
+            else
+                await itemsList
+                    .PagedGroups(maxDegreeOfParallelism)
+                    .ForEachAsync(pagedItems => Task.WhenAll(pagedItems.Select((p, i) => action(p, i))));
         }
 
         /// <summary>
