@@ -232,7 +232,12 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                     async () =>
                     {
                         // Execute task in background separated thread task
-                        _ = ExecuteHandleInNewScopeAsync(@event, cancellationToken);
+                        Util.TaskRunner.QueueActionInBackground(
+                            async () =>
+                            {
+                                await ExecuteHandleInNewScopeAsync(@event, cancellationToken);
+                            },
+                            cancellationToken: cancellationToken);
                     });
             else
                 await base.DoHandle(@event, cancellationToken);

@@ -20,6 +20,9 @@ public static partial class Util
         public const int DefaultBackgroundResilientRetryCount = 20;
         public static readonly Func<int, TimeSpan> DefaultBackgroundRetryDelayProvider = retryAttempt => retryAttempt.Seconds();
 
+        public static readonly Lazy<SemaphoreSlim> BackgroundActionQueueLimitLock =
+            new(() => new SemaphoreSlim(GetDefaultParallelIoTaskMaxConcurrent(), GetDefaultParallelIoTaskMaxConcurrent()));
+
         /// <summary>
         /// A typical recommendation is to use a factor of 10-50 times the number of processor cores for I/O-bound tasks.
         /// Example: Assume: 50 ms average latency for PostgreSQL queries; 70 ms average latency for MongoDB queries; 10 ms CPU processing time per query;
@@ -30,13 +33,17 @@ public static partial class Util
 
         public static int DefaultNumberOfParallelComputeTasksPerCpuRatio { get; set; } = 2;
 
-        public static int DefaultParallelIoTaskMaxConcurrent { get; set; } =
-            (Environment.ProcessorCount * DefaultNumberOfParallelIoTasksPerCpuRatio)
-            .PipeIf(PlatformEnvironment.IsDevelopment, p => Math.Min(p, DefaultNumberOfParallelIoTasksPerCpuRatio * 2));
+        public static int DefaultParallelIoTaskMaxConcurrent { get; set; } = GetDefaultParallelIoTaskMaxConcurrent();
 
         public static int DefaultParallelComputeTaskMaxConcurrent { get; set; } =
             (Environment.ProcessorCount * DefaultNumberOfParallelComputeTasksPerCpuRatio)
             .PipeIf(PlatformEnvironment.IsDevelopment, p => Math.Min(p, DefaultNumberOfParallelComputeTasksPerCpuRatio * 2));
+
+        public static int GetDefaultParallelIoTaskMaxConcurrent()
+        {
+            return (Environment.ProcessorCount * DefaultNumberOfParallelIoTasksPerCpuRatio)
+                .PipeIf(PlatformEnvironment.IsDevelopment, p => Math.Min(p, DefaultNumberOfParallelIoTasksPerCpuRatio * 2));
+        }
 
         /// <summary>
         /// Execute an action after a given of time.
@@ -48,6 +55,7 @@ public static partial class Util
         {
             if (delayTime > TimeSpan.Zero)
                 await Task.Delay(delayTime, cancellationToken);
+
             await action(cancellationToken);
         }
 
@@ -110,13 +118,27 @@ public static partial class Util
                 {
                     PlatformLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
 
+                    async Task LimitLockAction()
+                    {
+                        try
+                        {
+                            await BackgroundActionQueueLimitLock.Value.WaitAsync(cancellationToken);
+
+                            await action();
+                        }
+                        finally
+                        {
+                            BackgroundActionQueueLimitLock.Value.TryRelease();
+                        }
+                    }
+
                     try
                     {
                         await QueueDelayAsyncAction(
                             async _ =>
                             {
                                 await WaitRetryThrowFinalExceptionAsync(
-                                    action,
+                                    LimitLockAction,
                                     retryDelayProvider,
                                     retryCount.Value,
                                     onRetry: (ex, span, retryAttempt, context) =>
@@ -169,13 +191,27 @@ public static partial class Util
                 {
                     PlatformLogger.BackgroundThreadFullStackTraceContextAccessor.Current = fullStackTrace;
 
+                    async Task<TResult> LimitLockAction()
+                    {
+                        try
+                        {
+                            await BackgroundActionQueueLimitLock.Value.WaitAsync(cancellationToken);
+
+                            return await action();
+                        }
+                        finally
+                        {
+                            BackgroundActionQueueLimitLock.Value.TryRelease();
+                        }
+                    }
+
                     try
                     {
                         await QueueDelayAsyncAction(
                             async _ =>
                             {
                                 await WaitRetryThrowFinalExceptionAsync(
-                                    action,
+                                    LimitLockAction,
                                     retryDelayProvider,
                                     retryCount.Value,
                                     onRetry: (ex, span, retryAttempt, context) =>

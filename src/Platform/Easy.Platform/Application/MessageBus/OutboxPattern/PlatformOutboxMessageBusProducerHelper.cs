@@ -606,14 +606,19 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         {
                             // Try to process sending the outbox message immediately after the unit of work completes.
                             // Execute task in background separated thread task
-                            _ = SendExistingOutboxMessageInNewScopeAsync(
-                                toProcessOutboxMessage,
-                                message,
-                                routingKey,
-                                retryProcessFailedMessageInSecondsUnit,
-                                needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
-                                cancellationToken,
-                                logger);
+                            Util.TaskRunner.QueueActionInBackground(
+                                async () =>
+                                {
+                                    await SendExistingOutboxMessageInNewScopeAsync(
+                                        toProcessOutboxMessage,
+                                        message,
+                                        routingKey,
+                                        retryProcessFailedMessageInSecondsUnit,
+                                        needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
+                                        cancellationToken,
+                                        logger);
+                                },
+                                cancellationToken: cancellationToken);
                         });
                 }
             }

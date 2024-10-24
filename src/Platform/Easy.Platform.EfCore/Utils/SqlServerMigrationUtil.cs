@@ -103,10 +103,42 @@ public static class SqlServerMigrationUtil
             true);
     }
 
+    public static void CreateIndexIfNotExists(MigrationBuilder migrationBuilder, string tableName, params string[] cols)
+    {
+        var indexName = $"IX_{tableName}_{string.Join("_", cols)}";
+        var createIndexSql = @$"
+        IF NOT EXISTS (SELECT 1 
+                       FROM sys.indexes 
+                       WHERE name = '{indexName}' 
+                       AND object_id = OBJECT_ID('[dbo].[{tableName}]'))
+        BEGIN
+            CREATE NONCLUSTERED INDEX [{indexName}] 
+            ON [dbo].[{tableName}] ({string.Join(", ", cols.Select(col => $"[{col}] ASC"))})
+        END";
+
+        migrationBuilder.Sql(createIndexSql, true);
+    }
+
     public static void CreateUniqueIndex(MigrationBuilder migrationBuilder, string tableName, params string[] cols)
     {
         migrationBuilder.Sql(
             @$"CREATE UNIQUE NONCLUSTERED INDEX [IX_{tableName}_{cols.JoinToString("_")}] ON [dbo].[{tableName}] ({cols.Select(col => $"[{col}] ASC").JoinToString(",")})",
             true);
+    }
+
+    public static void CreateUniqueIndexIfNotExists(MigrationBuilder migrationBuilder, string tableName, params string[] cols)
+    {
+        var indexName = $"IX_{tableName}_{string.Join("_", cols)}";
+        var createUniqueIndexSql = @$"
+        IF NOT EXISTS (SELECT 1 
+                       FROM sys.indexes 
+                       WHERE name = '{indexName}' 
+                       AND object_id = OBJECT_ID('[dbo].[{tableName}]'))
+        BEGIN
+            CREATE UNIQUE NONCLUSTERED INDEX [{indexName}] 
+            ON [dbo].[{tableName}] ({string.Join(", ", cols.Select(col => $"[{col}] ASC"))})
+        END";
+
+        migrationBuilder.Sql(createUniqueIndexSql, true);
     }
 }

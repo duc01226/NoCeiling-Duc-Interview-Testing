@@ -254,19 +254,24 @@ public static class PlatformInboxMessageBusConsumerHelper
                         async () =>
                         {
                             // Execute task in background separated thread task
-                            _ = ExecuteConsumerForNewInboxMessage(
-                                rootServiceProvider,
-                                currentScopeServiceProvider: null,
-                                applicationSettingContext,
-                                consumerType,
-                                currentScopeConsumerInstance: null,
-                                message,
-                                toProcessInboxMessage,
-                                routingKey,
-                                autoDeleteProcessedMessage,
-                                retryProcessFailedMessageInSecondsUnit,
-                                loggerFactory,
-                                cancellationToken);
+                            Util.TaskRunner.QueueActionInBackground(
+                                async () =>
+                                {
+                                    await ExecuteConsumerForNewInboxMessage(
+                                        rootServiceProvider,
+                                        currentScopeServiceProvider: null,
+                                        applicationSettingContext,
+                                        consumerType,
+                                        currentScopeConsumerInstance: null,
+                                        message,
+                                        toProcessInboxMessage,
+                                        routingKey,
+                                        autoDeleteProcessedMessage,
+                                        retryProcessFailedMessageInSecondsUnit,
+                                        loggerFactory,
+                                        cancellationToken);
+                                },
+                                cancellationToken: cancellationToken);
                         });
                 }
                 else
