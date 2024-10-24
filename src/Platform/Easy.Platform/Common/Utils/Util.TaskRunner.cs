@@ -26,7 +26,7 @@ public static partial class Util
         /// Total time per I/O task (I/O + CPU): 50 ms (I/O) + 10 ms (CPU) = 60 ms
         /// Max parallel tasks per core: PostgreSQL: 60ms/10ms(CPU processing time) = 6 tasks/core; MongoDB: 80ms/10ms = 8 tasks/core
         /// </summary>
-        public static int DefaultNumberOfParallelIoTasksPerCpuRatio { get; set; } = 10;
+        public static int DefaultNumberOfParallelIoTasksPerCpuRatio { get; set; } = 20;
 
         public static int DefaultNumberOfParallelComputeTasksPerCpuRatio { get; set; } = 2;
 

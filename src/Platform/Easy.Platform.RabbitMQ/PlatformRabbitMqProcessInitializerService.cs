@@ -235,6 +235,8 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         {
             await connectConsumersToQueuesLock.WaitAsync(currentStartProcessCancellationToken);
 
+            if (usedChannels.Any() && usedChannels.All(p => p.IsOpen)) return;
+
             if (usedChannels.Any())
             {
                 usedChannels.ForEach(
