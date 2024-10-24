@@ -119,6 +119,6 @@ public class PlatformCqrs : IPlatformCqrs
         IEnumerable<PlatformCqrsEvent> cqrsEvents,
         CancellationToken cancellationToken = default)
     {
-        return cqrsEvents.ForEachAsync(cqrsEvent => mediator.Publish(cqrsEvent, cancellationToken));
+        return cqrsEvents.ParallelAsync(cqrsEvent => mediator.Publish(cqrsEvent, cancellationToken));
     }
 }
