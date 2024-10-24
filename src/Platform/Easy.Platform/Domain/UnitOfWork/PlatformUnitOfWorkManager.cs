@@ -45,6 +45,14 @@ public interface IPlatformUnitOfWorkManager : IDisposable
     /// </summary>
     public IPlatformUnitOfWork CurrentActiveUow();
 
+    public async Task TryCurrentActiveUowSaveChangesAsync()
+    {
+        var currentActiveUow = TryGetCurrentActiveUow();
+
+        if (currentActiveUow != null)
+            await currentActiveUow.SaveChangesAsync();
+    }
+
     /// <summary>
     /// Gets currently latest or created active unit of work has id equal uowId.
     /// <exception cref="Exception">Throw exception if there is not active unit of work.</exception>
@@ -113,6 +121,25 @@ public interface IPlatformUnitOfWorkManager : IDisposable
     /// In these classes, the Begin method is used to start a unit of work, after which various operations are performed. Once all operations are completed, the unit of work is completed by calling the CompleteAsync method on the unit of work instance. This ensures that all operations within the unit of work are executed as a single transaction.
     /// </remarks>
     public IPlatformUnitOfWork Begin(bool suppressCurrentUow = true);
+
+    public async Task ExecuteUowTask(Func<Task> taskFn)
+    {
+        var currentActiveUow = TryGetCurrentActiveUow();
+
+        if (currentActiveUow != null)
+        {
+            await taskFn();
+            await currentActiveUow.SaveChangesAsync();
+        }
+        else
+        {
+            using (var uow = Begin())
+            {
+                await taskFn();
+                await uow.CompleteAsync();
+            }
+        }
+    }
 
     IServiceProvider CurrentScopeServiceProvider();
 

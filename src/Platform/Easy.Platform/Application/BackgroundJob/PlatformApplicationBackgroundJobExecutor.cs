@@ -46,14 +46,15 @@ public abstract class PlatformApplicationBackgroundJobExecutor<TParam> : Platfor
                 Logger.LogInformation("{Type} {Method} STARTED", GetType().FullName, nameof(InternalExecuteAsync));
 
             if (AutoOpenUow)
-                using (var uow = UnitOfWorkManager.Begin())
-                {
-                    await ProcessAsync(param);
-
-                    await uow.CompleteAsync();
-                }
+            {
+                await UnitOfWorkManager.ExecuteUowTask(() => ProcessAsync(param));
+            }
             else
+            {
                 await ProcessAsync(param);
+
+                await UnitOfWorkManager.TryCurrentActiveUowSaveChangesAsync();
+            }
 
             if (ApplicationSettingContext.IsDebugInformationMode)
                 Logger.LogInformation("{Type} {Method} STARTED", GetType().FullName, nameof(InternalExecuteAsync));

@@ -582,8 +582,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 if (canSendMessageDirectlyWithoutWaitUowTransaction)
                 {
                     // If there's an active unit of work, save changes to ensure the outbox message is persisted.
-                    if (outboxBusMessageRepository.UowManager().TryGetCurrentActiveUow() != null)
-                        await outboxBusMessageRepository.UowManager().CurrentActiveUow().SaveChangesAsync(cancellationToken);
+                    await outboxBusMessageRepository.UowManager().TryCurrentActiveUowSaveChangesAsync();
 
                     Util.TaskRunner.QueueActionInBackground(
                         async () => await rootServiceProvider.ExecuteInjectScopedAsync(

@@ -156,20 +156,13 @@ public abstract class PlatformApplicationMessageBusConsumer<TMessage> : Platform
                     // If auto-opening a unit of work is enabled, handle the message within a unit of work.
                     if (AutoOpenUow)
                     {
-                        using (var uow = UnitOfWorkManager.Begin())
-                        {
-                            await HandleLogicAsync(message, routingKey);
-                            await uow.CompleteAsync();
-                        }
+                        await UnitOfWorkManager.ExecuteUowTask(() => HandleLogicAsync(message, routingKey));
                     }
-                    // Otherwise, handle the message without a unit of work.
                     else
                     {
                         await HandleLogicAsync(message, routingKey);
 
-                        // If a unit of work was started elsewhere, complete it to ensure changes are saved.
-                        if (UnitOfWorkManager.HasCurrentActiveUow())
-                            await UnitOfWorkManager.CurrentActiveUow().CompleteAsync();
+                        await UnitOfWorkManager.TryCurrentActiveUowSaveChangesAsync();
                     }
                 }
                 finally

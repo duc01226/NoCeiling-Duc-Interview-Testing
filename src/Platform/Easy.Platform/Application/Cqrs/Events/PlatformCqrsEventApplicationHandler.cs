@@ -330,28 +330,23 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                     // If not then create new scope to open new uow so that multiple events handlers from an event do not get conflicted
                     // uow in the same scope if not open new scope
                     if (AllowHandleInBackgroundThread(@event) || CanExecuteHandlingEventUsingInboxConsumer(@event))
-                        using (var uow = UnitOfWorkManager.Begin())
-                        {
-                            await HandleAsync(@event, cancellationToken);
-                            await uow.CompleteAsync(cancellationToken);
-                        }
+                        await UnitOfWorkManager.ExecuteUowTask(() => HandleAsync(@event, cancellationToken));
                     else
-                        using (var newScope = RootServiceProvider.CreateScope())
-                        {
-                            using (var uow = newScope.ServiceProvider.GetRequiredService<IPlatformUnitOfWorkManager>().Begin())
+                        await RootServiceProvider.ExecuteInjectScopedAsync(
+                            async (IPlatformUnitOfWorkManager unitOfWorkManager, IServiceProvider serviceProvider) =>
                             {
-                                await newScope.ServiceProvider.GetRequiredService(GetType())
-                                    .As<PlatformCqrsEventApplicationHandler<TEvent>>()
-                                    .With(newInstance => CopyPropertiesToNewInstanceBeforeExecution(this, newInstance))
-                                    .HandleAsync(@event, cancellationToken);
-
-                                await uow.CompleteAsync(cancellationToken);
-                            }
-                        }
+                                await unitOfWorkManager.ExecuteUowTask(
+                                    () => serviceProvider.GetRequiredService(GetType())
+                                        .As<PlatformCqrsEventApplicationHandler<TEvent>>()
+                                        .With(newInstance => CopyPropertiesToNewInstanceBeforeExecution(this, newInstance))
+                                        .HandleAsync(@event, cancellationToken));
+                            });
                 }
                 else
                 {
                     await HandleAsync(@event, cancellationToken);
+
+                    await UnitOfWorkManager.TryCurrentActiveUowSaveChangesAsync();
                 }
             },
             retryCount: retryCount ?? RetryOnFailedTimes,

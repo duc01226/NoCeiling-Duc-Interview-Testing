@@ -272,8 +272,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 else
                 {
                     // If there's an active unit of work, save changes to ensure the inbox message is persisted.
-                    if (inboxBusMessageRepository.UowManager().TryGetCurrentActiveUow() != null)
-                        await inboxBusMessageRepository.UowManager().CurrentActiveUow().SaveChangesAsync(cancellationToken);
+                    await inboxBusMessageRepository.UowManager().TryCurrentActiveUowSaveChangesAsync();
 
                     if (allowHandleNewInboxMessageInBackground)
                         Util.TaskRunner.QueueActionInBackground(
