@@ -483,9 +483,13 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
                 //Asynchronously wait to enter the Semaphore. If no-one has been granted access to the Semaphore, code execution will proceed, otherwise this thread waits here until the semaphore is released 
                 await uow.UowOfType<TUow>().LockAsync();
 
-                return await executeFn(uow);
+                var result = await executeFn(uow);
+
+                uow.UowOfType<TUow>().ReleaseLock();
+
+                return result;
             }
-            finally
+            catch (Exception)
             {
                 //When the task is ready, release the semaphore. It is vital to ALWAYS release the semaphore when we are ready, or else we will end up with a Semaphore that is forever locked.
                 //This is why it is important to do the Release within a try...finally clause; program execution may crash or take a different path, this way you are guaranteed execution

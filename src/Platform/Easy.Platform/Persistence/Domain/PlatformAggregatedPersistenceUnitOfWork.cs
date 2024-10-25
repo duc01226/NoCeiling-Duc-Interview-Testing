@@ -33,7 +33,6 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
 
     protected override ConcurrentDictionary<Type, IPlatformUnitOfWork> CachedInnerUowByTypes => cachedInnerUowsLazy.Value;
     protected override ConcurrentDictionary<string, IPlatformUnitOfWork> CachedInnerUowByIds => cachedInnerUowByIdsLazy.Value;
-    protected override ConcurrentDictionary<string, object>? CachedExistingOriginalEntities { get; } = null;
 
     public override bool IsPseudoTransactionUow()
     {

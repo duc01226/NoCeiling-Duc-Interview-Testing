@@ -30,7 +30,7 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
         pooledDbContextFactory = serviceProvider.GetService<PooledDbContextFactory<TDbContext>>();
     }
 
-    protected override SemaphoreSlim NotThreadSafeDbContextQueryLock { get; } = new(ContextMaxConcurrentThreadLock, ContextMaxConcurrentThreadLock);
+    protected override SemaphoreSlim NotThreadSafeDbContextLock { get; } = new(ContextMaxConcurrentThreadLock, ContextMaxConcurrentThreadLock);
 
     protected IPlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration { get; }
 

@@ -199,11 +199,11 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     public bool Completed { get; protected set; }
     public bool Disposed { get; protected set; }
 
-    protected virtual SemaphoreSlim? NotThreadSafeDbContextQueryLock { get; } = null;
+    protected virtual SemaphoreSlim? NotThreadSafeDbContextLock { get; } = null;
     protected ILoggerFactory LoggerFactory { get; }
     protected virtual ConcurrentDictionary<string, object>? CachedExistingOriginalEntities => cachedExistingOriginalEntitiesLazy.Value;
-    protected virtual ConcurrentDictionary<string, IPlatformUnitOfWork>? CachedInnerUowByIds { get; } = null;
-    protected virtual ConcurrentDictionary<Type, IPlatformUnitOfWork>? CachedInnerUowByTypes { get; } = null;
+    protected virtual ConcurrentDictionary<string, IPlatformUnitOfWork>? CachedInnerUowByIds => null;
+    protected virtual ConcurrentDictionary<Type, IPlatformUnitOfWork>? CachedInnerUowByTypes => null;
 
     protected IPlatformRootServiceProvider RootServiceProvider { get; }
 
@@ -253,13 +253,13 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 
     public async Task LockAsync()
     {
-        if (NotThreadSafeDbContextQueryLock != null) await NotThreadSafeDbContextQueryLock.WaitAsync();
+        if (NotThreadSafeDbContextLock != null) await NotThreadSafeDbContextLock.WaitAsync();
     }
 
     public void ReleaseLock()
     {
-        if (NotThreadSafeDbContextQueryLock is { CurrentCount: < ContextMaxConcurrentThreadLock })
-            NotThreadSafeDbContextQueryLock.Release();
+        if (NotThreadSafeDbContextLock is { CurrentCount: < ContextMaxConcurrentThreadLock })
+            NotThreadSafeDbContextLock.Release();
     }
 
     public void Dispose()
@@ -376,7 +376,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
             // Release managed resources
             if (disposing)
             {
-                NotThreadSafeDbContextQueryLock?.Dispose();
+                NotThreadSafeDbContextLock?.Dispose();
                 CachedExistingOriginalEntities?.Clear();
 
                 CachedInnerUowByTypes?.Values.ForEach(p => p.Dispose());

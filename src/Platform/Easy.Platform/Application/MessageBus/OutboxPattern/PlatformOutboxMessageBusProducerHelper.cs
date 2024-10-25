@@ -544,13 +544,13 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         IPlatformOutboxBusMessageRepository outboxBusMessageRepository)
         where TMessage : class, new()
     {
-        // Get the current active unit of work, if applicable.
-        var currentActiveUow = sourceOutboxUowId != null
+        // Get the sourceOutboxUow active unit of work, if applicable.
+        var sourceOutboxUowActiveUow = sourceOutboxUowId != null
             ? unitOfWorkManager.TryGetCurrentOrCreatedActiveUow(sourceOutboxUowId)
             : null;
 
         // If there's no active unit of work or the unit of work is a pseudo transaction, send the message immediately in a background thread.
-        var canSendMessageDirectlyWithoutWaitUowTransaction = currentActiveUow == null || currentActiveUow.IsPseudoTransactionUow();
+        var canSendMessageDirectlyWithoutWaitUowTransaction = sourceOutboxUowActiveUow == null || sourceOutboxUowActiveUow.IsPseudoTransactionUow();
 
         if (canSendMessageDirectlyWithoutWaitUowTransaction)
             // Try to send directly first without using outbox for faster performance if no uow or fake uow. If failed => use inbox to support retry later
@@ -601,7 +601,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 else
                 {
                     // If there's an active unit of work, add an action to send the message after the unit of work completes.
-                    currentActiveUow!.OnSaveChangesCompletedActions.Add(
+                    sourceOutboxUowActiveUow!.OnSaveChangesCompletedActions.Add(
                         async () =>
                         {
                             // Try to process sending the outbox message immediately after the unit of work completes.

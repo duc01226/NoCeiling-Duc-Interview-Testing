@@ -350,8 +350,6 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
                 else
                 {
                     await HandleAsync(@event, cancellationToken);
-
-                    await UnitOfWorkManager.TryCurrentActiveUowSaveChangesAsync();
                 }
             },
             retryCount: retryCount ?? RetryOnFailedTimes,
