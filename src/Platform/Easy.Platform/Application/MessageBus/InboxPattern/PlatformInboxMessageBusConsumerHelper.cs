@@ -108,7 +108,6 @@ public static class PlatformInboxMessageBusConsumerHelper
                 subQueueMessageIdPrefix,
                 retryProcessFailedMessageInSecondsUnit,
                 allowHandleNewInboxMessageInBackground,
-                inboxConfig,
                 cancellationToken);
     }
 
@@ -151,7 +150,6 @@ public static class PlatformInboxMessageBusConsumerHelper
         string subQueueMessageIdPrefix,
         double retryProcessFailedMessageInSecondsUnit,
         bool allowHandleNewInboxMessageInBackground,
-        PlatformInboxConfig inboxConfig,
         CancellationToken cancellationToken) where TMessage : class, new()
     {
         // if message can handle parallel without check in order sub queue then can try to execute immediately
@@ -180,7 +178,6 @@ public static class PlatformInboxMessageBusConsumerHelper
                     subQueueMessageIdPrefix,
                     retryProcessFailedMessageInSecondsUnit,
                     allowHandleNewInboxMessageInBackground,
-                    inboxConfig,
                     cancellationToken);
             }
             finally
@@ -205,7 +202,6 @@ public static class PlatformInboxMessageBusConsumerHelper
                 subQueueMessageIdPrefix,
                 retryProcessFailedMessageInSecondsUnit,
                 allowHandleNewInboxMessageInBackground,
-                inboxConfig,
                 cancellationToken);
     }
 
@@ -226,7 +222,6 @@ public static class PlatformInboxMessageBusConsumerHelper
         string subQueueMessageIdPrefix,
         double retryProcessFailedMessageInSecondsUnit,
         bool allowHandleNewInboxMessageInBackground,
-        PlatformInboxConfig inboxConfig,
         CancellationToken cancellationToken) where TMessage : class, new()
     {
         try
@@ -242,7 +237,6 @@ public static class PlatformInboxMessageBusConsumerHelper
                     subQueueMessageIdPrefix,
                     needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
                     applicationSettingContext,
-                    inboxConfig,
                     cancellationToken);
 
             if (toProcessInboxMessage != null)
@@ -344,7 +338,6 @@ public static class PlatformInboxMessageBusConsumerHelper
         string subQueueMessageIdPrefix,
         bool needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
         IPlatformApplicationSettingContext applicationSettingContext,
-        PlatformInboxConfig inboxConfig,
         CancellationToken cancellationToken) where TMessage : class, new()
     {
         return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
