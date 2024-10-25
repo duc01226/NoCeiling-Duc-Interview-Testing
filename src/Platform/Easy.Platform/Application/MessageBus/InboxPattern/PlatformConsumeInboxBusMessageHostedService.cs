@@ -182,7 +182,6 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                                         .Where(
                                             PlatformInboxBusMessage.CanHandleMessagesExpr(
                                                 ApplicationSettingContext.ApplicationName,
-                                                InboxConfig.MaxRetriedProcessCount,
                                                 firstTimeProcessDate: firstTimeProcessDate,
                                                 retryFailedMessageImmediately: isFirstTimeProcess))
                                         .OrderBy(p => p.CreatedDate)
@@ -232,7 +231,6 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                                 .Where(
                                     PlatformInboxBusMessage.CanHandleMessagesExpr(
                                         ApplicationSettingContext.ApplicationName,
-                                        InboxConfig.MaxRetriedProcessCount,
                                         firstTimeProcessDate: firstTimeProcessDate,
                                         retryFailedMessageImmediately: isFirstTimeProcess)),
                             cancellationToken: cancellationToken),
@@ -462,7 +460,6 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
             .Where(
                 PlatformInboxBusMessage.CanHandleMessagesExpr(
                     ApplicationSettingContext.ApplicationName,
-                    InboxConfig.MaxRetriedProcessCount,
                     retryFailedMessageImmediately: isFirstTimeProcess,
                     firstTimeProcessDate: firstTimeProcessDate))
             // Order messages by creation date.

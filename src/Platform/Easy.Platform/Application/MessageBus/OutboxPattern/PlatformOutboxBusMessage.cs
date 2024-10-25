@@ -10,7 +10,7 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
     public const int IdMaxLength = 400;
     public const int RoutingKeyMaxLength = 500;
     public const int MessageTypeFullNameMaxLength = 1000;
-    public const double DefaultRetryProcessFailedMessageInSecondsUnit = 30;
+    public const double DefaultRetryProcessFailedMessageInSecondsUnit = 60;
     public const string BuildIdPrefixSeparator = "----";
     public const string BuildIdSubQueuePrefixSeparator = "++++";
     public const int CheckProcessingPingIntervalSeconds = 30;
@@ -112,7 +112,7 @@ public class PlatformOutboxBusMessage : RootEntity<PlatformOutboxBusMessage, str
         double retryProcessFailedMessageInSecondsUnit = DefaultRetryProcessFailedMessageInSecondsUnit)
     {
         return DateTime.UtcNow.AddSeconds(
-            retryProcessFailedMessageInSecondsUnit * retriedProcessCount ?? 1);
+            retryProcessFailedMessageInSecondsUnit * (retriedProcessCount ?? 1));
     }
 
     public static Expression<Func<PlatformOutboxBusMessage, bool>> CheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessageExpr(

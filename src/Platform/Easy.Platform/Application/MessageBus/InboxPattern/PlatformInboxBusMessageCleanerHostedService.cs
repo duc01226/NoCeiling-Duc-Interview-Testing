@@ -172,9 +172,7 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
             var toIgnoreMessageCount = await ServiceProvider.ExecuteScopedAsync(
                 p => p.ServiceProvider.GetRequiredService<IPlatformInboxBusMessageRepository>()
                     .CountAsync(
-                        PlatformInboxBusMessage.ToIgnoreFailedExpiredMessagesExpr(
-                            InboxConfig.IgnoreExpiredFailedMessageInSeconds,
-                            InboxConfig.MaxRetriedProcessCount),
+                        PlatformInboxBusMessage.ToIgnoreFailedExpiredMessagesExpr(InboxConfig.IgnoreExpiredFailedMessageInSeconds),
                         cancellationToken));
 
             if (toIgnoreMessageCount > 0)
@@ -186,10 +184,7 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
                         {
                             var expiredMessages = await inboxEventBusMessageRepo.GetAllAsync(
                                 queryBuilder: query => query
-                                    .Where(
-                                        PlatformInboxBusMessage.ToIgnoreFailedExpiredMessagesExpr(
-                                            InboxConfig.IgnoreExpiredFailedMessageInSeconds,
-                                            InboxConfig.MaxRetriedProcessCount))
+                                    .Where(PlatformInboxBusMessage.ToIgnoreFailedExpiredMessagesExpr(InboxConfig.IgnoreExpiredFailedMessageInSeconds))
                                     .OrderBy(p => p.CreatedDate)
                                     .Take(NumberOfDeleteMessagesBatch()),
                                 cancellationToken);

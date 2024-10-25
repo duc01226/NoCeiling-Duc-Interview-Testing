@@ -410,11 +410,17 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             {
                 await ContextThreadSafeLock.WaitAsync(cancellationToken);
 
-                return await GetTable<TEntity>().Where(predicate).ExecuteDeleteAsync(cancellationToken);
-            }
-            finally
-            {
+                var result = await GetTable<TEntity>().Where(predicate).ExecuteDeleteAsync(cancellationToken);
+
                 ContextThreadSafeLock.Release();
+
+                return result;
+            }
+            catch (Exception)
+            {
+                if (ContextThreadSafeLock.CurrentCount < ContextMaxConcurrentThreadLock)
+                    ContextThreadSafeLock.Release();
+                throw;
             }
 
         var entities = await GetAllAsync(GetQuery<TEntity>().Where(predicate), cancellationToken);
@@ -433,11 +439,17 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             {
                 await ContextThreadSafeLock.WaitAsync(cancellationToken);
 
-                return await queryBuilder(GetTable<TEntity>()).ExecuteDeleteAsync(cancellationToken);
-            }
-            finally
-            {
+                var result = await queryBuilder(GetTable<TEntity>()).ExecuteDeleteAsync(cancellationToken);
+
                 ContextThreadSafeLock.Release();
+
+                return result;
+            }
+            catch (Exception)
+            {
+                if (ContextThreadSafeLock.CurrentCount < ContextMaxConcurrentThreadLock)
+                    ContextThreadSafeLock.Release();
+                throw;
             }
 
         var entities = await GetAllAsync(queryBuilder(GetQuery<TEntity>()), cancellationToken);

@@ -393,8 +393,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                     isAnySameConsumerMessageIdPrefixOtherNotProcessedMessage ||
                     existedInboxMessage?.Is(
                         PlatformInboxBusMessage.CanHandleMessagesExpr(
-                            applicationSettingContext.ApplicationName,
-                            inboxConfig.MaxRetriedProcessCount)) == false
+                            applicationSettingContext.ApplicationName)) == false
                         ? null
                         : existedInboxMessage ?? newInboxMessage;
 

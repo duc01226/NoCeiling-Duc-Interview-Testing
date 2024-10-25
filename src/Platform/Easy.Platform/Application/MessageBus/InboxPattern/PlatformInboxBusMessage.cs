@@ -49,16 +49,13 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
 
     public static Expression<Func<PlatformInboxBusMessage, bool>> CanHandleMessagesExpr(
         string forApplicationName,
-        int maxRetriedProcessCount,
         bool retryFailedMessageImmediately = false,
         DateTime? firstTimeProcessDate = null)
     {
         Expression<Func<PlatformInboxBusMessage, bool>> initialExpr =
             p => p.ConsumeStatus == ConsumeStatuses.New ||
                  (p.ConsumeStatus == ConsumeStatuses.Failed && ((retryFailedMessageImmediately && p.LastConsumeDate < firstTimeProcessDate) ||
-                                                                (p.RetriedProcessCount <= maxRetriedProcessCount &&
-                                                                 (p.NextRetryProcessAfter == null ||
-                                                                  p.NextRetryProcessAfter <= DateTime.UtcNow)))) ||
+                                                                p.NextRetryProcessAfter == null || p.NextRetryProcessAfter <= DateTime.UtcNow)) ||
                  (p.ConsumeStatus == ConsumeStatuses.Processing &&
                   (p.LastProcessingPingDate == null ||
                    p.LastProcessingPingDate < Clock.UtcNow.AddSeconds(-CheckProcessingPingIntervalSeconds * MaxAllowedProcessingPingMisses)));
@@ -77,11 +74,10 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
     }
 
     public static Expression<Func<PlatformInboxBusMessage, bool>> ToIgnoreFailedExpiredMessagesExpr(
-        double ignoreExpiredFailedMessageInSeconds,
-        int maxRetriedProcessCount)
+        double ignoreExpiredFailedMessageInSeconds)
     {
         return p => p.ConsumeStatus == ConsumeStatuses.Failed &&
-                    (p.CreatedDate <= Clock.UtcNow.AddSeconds(-ignoreExpiredFailedMessageInSeconds) || p.RetriedProcessCount > maxRetriedProcessCount);
+                    p.CreatedDate <= Clock.UtcNow.AddSeconds(-ignoreExpiredFailedMessageInSeconds);
     }
 
     public static Expression<Func<PlatformInboxBusMessage, bool>> CheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessageExpr(
@@ -157,7 +153,7 @@ public class PlatformInboxBusMessage : RootEntity<PlatformInboxBusMessage, strin
         double retryProcessFailedMessageInSecondsUnit = DefaultRetryProcessFailedMessageInSecondsUnit)
     {
         return DateTime.UtcNow.AddSeconds(
-            retryProcessFailedMessageInSecondsUnit * Math.Pow(retriedProcessCount ?? 1, 2));
+            retryProcessFailedMessageInSecondsUnit * (retriedProcessCount ?? 1));
     }
 
     public static PlatformInboxBusMessage Create<TMessage>(
