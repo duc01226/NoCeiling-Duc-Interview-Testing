@@ -23,14 +23,12 @@ internal sealed class ClearCacheOnSaveSnippetTextCommandEventHandler : PlatformC
         this.cacheRepositoryProvider = cacheRepositoryProvider;
     }
 
-    // Demo can override to config either this handler run in a background thread
-    protected override bool AllowHandleInBackgroundThread(PlatformCqrsCommandEvent<SaveSnippetTextCommand, SaveSnippetTextCommandResult> @event)
-    {
-        return true;
-    }
+    // Default is true to improve performance when command save, the event is executed separately and could be in parallel.
+    // Set it to false if you want the event executed sync with the command and in order
+    // protected override bool MustWaitHandlerExecutionFinishedImmediately() => true;
 
     // Can override to return False to TURN OFF support for store cqrs event handler as inbox
-    // protected override bool EnableHandleEventFromInboxBusMessage => false;
+    // protected override bool EnableInboxEventBusMessage => false;
 
     protected override async Task HandleAsync(
         PlatformCqrsCommandEvent<SaveSnippetTextCommand, SaveSnippetTextCommandResult> @event,

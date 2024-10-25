@@ -27,7 +27,7 @@ public class TextSnippetSqlEfCorePersistenceModule : PlatformEfCorePersistenceMo
         return new PlatformPersistenceConfigurationPooledDbContextOptions
         {
             Enabled = true,
-            PoolSize = 100
+            PoolSize = 1000
         };
     }
 

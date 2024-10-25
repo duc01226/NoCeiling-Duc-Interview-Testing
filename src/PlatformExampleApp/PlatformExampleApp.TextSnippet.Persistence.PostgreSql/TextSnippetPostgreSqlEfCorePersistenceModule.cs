@@ -26,7 +26,7 @@ public class TextSnippetPostgreSqlEfCorePersistenceModule : PlatformEfCorePersis
         return new PlatformPersistenceConfigurationPooledDbContextOptions
         {
             Enabled = true,
-            PoolSize = 100
+            PoolSize = 1000
         };
     }
 

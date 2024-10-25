@@ -14,6 +14,8 @@ public class TextSnippetApplicationSettingContext : IPlatformApplicationSettingC
     {
         AdditionalSettingExample = configuration["AllowCorsOrigins"];
         ApplicationAssembly = GetType().Assembly;
+        IsDebugInformationMode = configuration
+            .GetValue<bool?>(PlatformApplicationSettingContext.DefaultIsDebugInformationModeConfigurationKey) == true;
     }
 
     public string AdditionalSettingExample { get; }
