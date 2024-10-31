@@ -17,7 +17,7 @@ import {
 } from './platform.api-error';
 import { PlatformHttpOptionsConfigService } from './platform.http-options-config-service';
 
-const ERR_CONNECTION_REFUSED_STATUSES: (HttpStatusCode | number)[] = [0, 504];
+const ERR_CONNECTION_REFUSED_STATUSES: (HttpStatusCode | number)[] = [0, 504, 503, 502];
 const UNAUTHORIZATION_STATUSES: HttpStatusCode[] = [HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden];
 
 @Injectable()

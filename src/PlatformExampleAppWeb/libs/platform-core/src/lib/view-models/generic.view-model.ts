@@ -39,12 +39,12 @@ export class PlatformVm implements IPlatformVm {
     public static readonly requestStateDefaultKey = requestStateDefaultKey;
 
     public status: StateStatus = 'Pending';
-    public error: string | undefined | null = undefined;
+    public error: string | undefined | null = null;
 
     public errorMsgMap: Dictionary<string | undefined> = {};
     public loadingMap: Dictionary<boolean | undefined> = {};
     public reloadingMap: Dictionary<boolean | undefined> = {};
-    public allErrorMsgs?: string;
+    public allErrorMsgs?: string | null;
 
     constructor(data?: Partial<IPlatformVm>) {
         if (data == null) return;
@@ -158,9 +158,9 @@ export class PlatformVm implements IPlatformVm {
     }
 
     public clearAllErrorMsgs() {
-        this.allErrorMsgs = undefined;
+        this.allErrorMsgs = null;
         this.errorMsgMap = {};
-        this.error = undefined;
+        this.error = null;
 
         return this;
     }
