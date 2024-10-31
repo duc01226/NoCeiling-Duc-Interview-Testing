@@ -226,6 +226,32 @@ public interface IPlatformUnitOfWorkManager : IDisposable
                     }
                 });
     }
+
+    public async Task<TResult> ExecuteInjectScopedAsync<TResult>(
+        Delegate method,
+        params object[] manuallyParams)
+    {
+        return await GetRootServiceProvider()
+            .ExecuteInjectScopedAsync<TResult>(
+                async (IPlatformUnitOfWorkManager newScopeUnitOfWorkManager, IServiceProvider serviceProvider) =>
+                {
+                    try
+                    {
+                        using (var uow = newScopeUnitOfWorkManager.Begin(false))
+                        {
+                            var result = await serviceProvider.ExecuteInjectAsync<TResult>(method, manuallyParams);
+
+                            await uow.CompleteAsync();
+
+                            return result;
+                        }
+                    }
+                    finally
+                    {
+                        GetRootServiceProvider().GetService<IPlatformApplicationSettingContext>().ProcessAutoGarbageCollect();
+                    }
+                });
+    }
 }
 
 public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
@@ -264,7 +290,10 @@ public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
 
     public virtual IPlatformUnitOfWork CurrentUow()
     {
-        return CurrentUnitOfWorksDict.IsEmpty ? null : CurrentUnitOfWorksDict.Last().Value;
+        if (CurrentUnitOfWorksDict.IsEmpty) return null;
+        if (CurrentUnitOfWorksDict.Count == 1) return CurrentUnitOfWorksDict.First().Value;
+
+        return CurrentUnitOfWorksDict.MaxBy(p => p.Value.Timestamp).Value;
     }
 
     public IPlatformUnitOfWork CurrentActiveUow()

@@ -228,7 +228,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
             trackableBusMessage.ProduceFrom ??= ApplicationSettingContext.ApplicationName;
             trackableBusMessage.CreatedUtcDate ??= DateTime.UtcNow;
             if (trackableBusMessage.RequestContext == null || trackableBusMessage.RequestContext.IsEmpty())
-                trackableBusMessage.RequestContext = RequestContextAccessor.Current.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys());
+                trackableBusMessage.RequestContext = RequestContextAccessor.Current.GetAllKeyValues();
         }
 
         // If outbox message support is enabled and auto-saving is requested, save the message to the outbox.
@@ -274,7 +274,7 @@ public class PlatformApplicationBusMessageProducer : IPlatformApplicationBusMess
             producerContext: ApplicationSettingContext.ApplicationName,
             messageGroup: messageGroup,
             messageAction: messageAction,
-            requestContext: RequestContextAccessor.Current.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()));
+            requestContext: RequestContextAccessor.Current.GetAllKeyValues());
     }
 
     /// <summary>

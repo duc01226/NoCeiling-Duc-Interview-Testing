@@ -218,7 +218,7 @@ public abstract class PlatformCqrsEventApplicationHandler<TEvent> : PlatformCqrs
         try
         {
             if (@event.RequestContext == null || @event.RequestContext.IsEmpty())
-                @event.SetRequestContextValues(requestContextAccessor.Current.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()));
+                @event.SetRequestContextValues(requestContextAccessor.Current.GetAllKeyValues());
 
             if (RootServiceProvider.GetService<PlatformModule.DistributedTracingConfig>()?.DistributedTracingStackTraceEnabled() == true &&
                 @event.StackTrace == null)

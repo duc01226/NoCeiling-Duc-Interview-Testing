@@ -116,7 +116,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                                         ex.Message,
                                         request.AuditInfo?.AuditTrackId,
                                         request.ToJson(),
-                                        RequestContext.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()).ToJson());
+                                        RequestContext.GetAllKeyValues().ToJson());
                             else
                                 LoggerFactory.CreateLogger(typeof(PlatformCqrsCommandApplicationHandler<>).GetNameOrGenericTypeName() + $"-{GetType().Name}")
                                     .LogWarning(
@@ -132,7 +132,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
                         typeof(IPlatformCqrsEventHandler<PlatformCqrsCommandEvent<TCommand, TResult>>)))
                         await Cqrs.Value.SendEvent(
                             new PlatformCqrsCommandEvent<TCommand, TResult>(request, result, PlatformCqrsCommandEventAction.Executed)
-                                .With(p => p.SetRequestContextValues(RequestContext.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()))),
+                                .With(p => p.SetRequestContextValues(RequestContext.GetAllKeyValues())),
                             cancellationToken);
 
                     return result;

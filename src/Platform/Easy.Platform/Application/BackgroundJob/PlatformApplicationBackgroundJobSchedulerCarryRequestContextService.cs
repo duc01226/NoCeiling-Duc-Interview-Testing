@@ -20,7 +20,7 @@ public class PlatformApplicationBackgroundJobSchedulerCarryRequestContextService
 
     public IDictionary<string, object> CurrentRequestContext()
     {
-        return requestContextAccessor.Current.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys());
+        return requestContextAccessor.Current.GetAllKeyValues();
     }
 
     public void SetCurrentRequestContextValues(IServiceScope serviceScope, IDictionary<string, object> requestContextValues)

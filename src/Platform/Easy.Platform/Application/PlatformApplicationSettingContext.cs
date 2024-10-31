@@ -1,4 +1,5 @@
 using System.Reflection;
+using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,8 +8,6 @@ namespace Easy.Platform.Application;
 
 public interface IPlatformApplicationSettingContext
 {
-    public static HashSet<string> DefaultIgnoreRequestContextKeys { get; } = ["Authorization"];
-
     public string ApplicationName { get; }
 
     public Assembly ApplicationAssembly { get; }
@@ -35,11 +34,11 @@ public interface IPlatformApplicationSettingContext
     public bool IsDebugInformationMode { get; set; }
 
     /// <summary>
-    /// Return <see cref="IgnoreRequestContextKeys" /> or <see cref="DefaultIgnoreRequestContextKeys" /> if <see cref="IgnoreRequestContextKeys" /> is null
+    /// Return <see cref="IgnoreRequestContextKeys" /> or <see cref="IPlatformApplicationRequestContext.DefaultIgnoreRequestContextKeys" /> if <see cref="IgnoreRequestContextKeys" /> is null
     /// </summary>
     public HashSet<string> GetIgnoreRequestContextKeys()
     {
-        return IgnoreRequestContextKeys ?? DefaultIgnoreRequestContextKeys;
+        return IgnoreRequestContextKeys ?? IPlatformApplicationRequestContext.DefaultIgnoreRequestContextKeys;
     }
 
     public void ProcessAutoGarbageCollect()
@@ -81,7 +80,7 @@ public class PlatformApplicationSettingContext : IPlatformApplicationSettingCont
     /// </summary>
     public double AutoGarbageCollectPerProcessRequestOrBusMessageThrottleTimeSeconds { get; set; } = Util.GarbageCollector.DefaultCollectGarbageMemoryThrottleSeconds;
 
-    public HashSet<string>? IgnoreRequestContextKeys { get; set; } = IPlatformApplicationSettingContext.DefaultIgnoreRequestContextKeys;
+    public HashSet<string>? IgnoreRequestContextKeys { get; set; } = IPlatformApplicationRequestContext.DefaultIgnoreRequestContextKeys;
 
     public bool IsDebugInformationMode { get; set; }
 }

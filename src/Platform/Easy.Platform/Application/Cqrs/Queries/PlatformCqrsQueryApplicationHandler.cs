@@ -117,7 +117,7 @@ public abstract class PlatformCqrsQueryApplicationHandler<TQuery, TResult>
                                         ex.Message,
                                         request.AuditInfo?.AuditTrackId,
                                         request.ToJson(),
-                                        RequestContext.GetAllKeyValues(ApplicationSettingContext.GetIgnoreRequestContextKeys()).ToJson());
+                                        RequestContext.GetAllKeyValues().ToJson());
                             else
                                 LoggerFactory.CreateLogger(typeof(PlatformCqrsQueryApplicationHandler<,>).GetNameOrGenericTypeName() + $"-{GetType().Name}")
                                     .LogWarning(

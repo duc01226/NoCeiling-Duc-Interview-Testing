@@ -56,6 +56,8 @@ public interface IPlatformUnitOfWork : IDisposable
     /// </summary>
     public ConcurrentBag<Func<PlatformUnitOfWorkFailedArgs, Task>> OnSaveChangesFailedActions { get; set; }
 
+    public long Timestamp { get; set; }
+
     /// <summary>
     /// By default a uow usually present a db context, then the GetInnerUowOfType always return null. <br />
     /// Some application could use multiple db in one service, which then the current uow could be a aggregation uow of multiple db context uow. <br />
@@ -224,6 +226,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     public ConcurrentBag<Func<Task>> OnDisposedActions { get; set; } = [];
     public ConcurrentBag<Func<Task>> OnUowCompletedActions { get; set; } = [];
     public ConcurrentBag<Func<PlatformUnitOfWorkFailedArgs, Task>> OnSaveChangesFailedActions { get; set; } = [];
+    public long Timestamp { get; set; } = Stopwatch.GetTimestamp();
     public IPlatformUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
 
     public virtual async Task CompleteAsync(CancellationToken cancellationToken = default)

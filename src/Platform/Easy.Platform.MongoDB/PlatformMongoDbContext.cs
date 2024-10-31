@@ -296,7 +296,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                                 entity => Task.FromResult(entity),
                                 false,
                                 eventCustomConfig,
-                                () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
+                                () => RequestContextAccessor.Current.GetAllKeyValues(),
                                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, false),
                                 cancellationToken));
 
@@ -479,7 +479,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                                 entity => Task.FromResult(entity),
                                 false,
                                 eventCustomConfig,
-                                () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
+                                () => RequestContextAccessor.Current.GetAllKeyValues(),
                                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, false),
                                 cancellationToken));
                         await SendBulkEntitiesEvent<TEntity, TPrimaryKey>(
@@ -539,7 +539,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 },
                 dismissSendEvent,
                 eventCustomConfig,
-                () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
+                () => RequestContextAccessor.Current.GetAllKeyValues(),
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken)
             .ThenAction(
@@ -799,11 +799,6 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         return entities;
     }
 
-    protected HashSet<string> IgnoreLogRequestContextKeys()
-    {
-        return ApplicationSettingContext.GetIgnoreRequestContextKeys();
-    }
-
     public ILogger CreateLogger(ILoggerFactory loggerFactory)
     {
         return loggerFactory.CreateLogger(typeof(PlatformMongoDbContext<>).GetNameOrGenericTypeName() + $"-{GetType().Name}");
@@ -875,7 +870,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         cancellationToken),
                 dismissSendEvent,
                 eventCustomConfig,
-                () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
+                () => RequestContextAccessor.Current.GetAllKeyValues(),
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
@@ -907,7 +902,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         cancellationToken),
                 dismissSendEvent,
                 eventCustomConfig,
-                () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
+                () => RequestContextAccessor.Current.GetAllKeyValues(),
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
@@ -1134,7 +1129,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 entity => GetTable<TEntity>().InsertOneAsync(entity, null, cancellationToken).Then(() => entity),
                 dismissSendEvent,
                 eventCustomConfig,
-                () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
+                () => RequestContextAccessor.Current.GetAllKeyValues(),
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
         else
@@ -1151,7 +1146,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                     .Then(() => entity),
                 dismissSendEvent,
                 eventCustomConfig,
-                () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
+                () => RequestContextAccessor.Current.GetAllKeyValues(),
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
@@ -1246,7 +1241,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             entities,
             crudAction,
             eventCustomConfig,
-            () => RequestContextAccessor.Current.GetAllKeyValues(IgnoreLogRequestContextKeys()),
+            () => RequestContextAccessor.Current.GetAllKeyValues(),
             PlatformCqrsEntityEvent.GetBulkEntitiesEventStackTrace<TEntity, TPrimaryKey>(RootServiceProvider),
             cancellationToken);
     }

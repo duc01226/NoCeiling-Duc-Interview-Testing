@@ -8,6 +8,13 @@ public class PlatformDefaultApplicationRequestContextAccessor : IPlatformApplica
 {
     private static readonly AsyncLocal<RequestContextHolder> RequestContextCurrentThread = new();
 
+    protected readonly IServiceProvider ServiceProvider;
+
+    public PlatformDefaultApplicationRequestContextAccessor(IServiceProvider serviceProvider)
+    {
+        ServiceProvider = serviceProvider;
+    }
+
     public IPlatformApplicationRequestContext Current
     {
         get
@@ -37,7 +44,7 @@ public class PlatformDefaultApplicationRequestContextAccessor : IPlatformApplica
 
     protected virtual IPlatformApplicationRequestContext CreateNewContext()
     {
-        return new PlatformDefaultApplicationRequestContext();
+        return new PlatformDefaultApplicationRequestContext(new PlatformApplicationSettingContext(ServiceProvider));
     }
 
     protected sealed class RequestContextHolder

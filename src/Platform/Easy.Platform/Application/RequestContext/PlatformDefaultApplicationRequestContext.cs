@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.RequestContext;
+using Type = System.Type;
 
 namespace Easy.Platform.Application.RequestContext;
 
@@ -12,13 +13,20 @@ public class PlatformDefaultApplicationRequestContext : IPlatformApplicationRequ
         typeof(PlatformDefaultApplicationRequestContext).GetMethods()
             .First(p => p.IsGenericMethod && p.Name == nameof(GetValue) && p.GetGenericArguments().Length == 1 && p.IsPublic);
 
-    protected readonly ConcurrentDictionary<string, object> RequestContextData = new();
+    protected readonly IPlatformApplicationSettingContext ApplicationSettingContext;
+    protected readonly ConcurrentDictionary<string, object?> FullRequestContextData = new();
+    protected readonly ConcurrentDictionary<string, object?> IgnoreRequestContextKeysRequestContextData = new();
+
+    public PlatformDefaultApplicationRequestContext(IPlatformApplicationSettingContext applicationSettingContext)
+    {
+        ApplicationSettingContext = applicationSettingContext;
+    }
 
     public T GetValue<T>(string contextKey)
     {
         ArgumentNullException.ThrowIfNull(contextKey);
 
-        if (PlatformRequestContextHelper.TryGetValue(RequestContextData, contextKey, out T item)) return item;
+        if (PlatformRequestContextHelper.TryGetValue(FullRequestContextData, contextKey, out T item)) return item;
 
         return default;
     }
@@ -30,58 +38,71 @@ public class PlatformDefaultApplicationRequestContext : IPlatformApplicationRequ
             .Invoke(this, parameters: [contextKey]);
     }
 
-    public void SetValue(object value, string contextKey)
+    public void SetValue(object? value, string contextKey)
     {
         ArgumentNullException.ThrowIfNull(contextKey);
 
-        RequestContextData.Upsert(contextKey, value);
+        FullRequestContextData.Upsert(contextKey, value);
+        if (!ApplicationSettingContext.GetIgnoreRequestContextKeys().Contains(contextKey))
+            IgnoreRequestContextKeysRequestContextData.Upsert(contextKey, value);
+    }
+
+    public List<string> GetAllIncludeIgnoredKeys()
+    {
+        return FullRequestContextData.Keys.ToList();
+    }
+
+    public IDictionary<string, object?> GetAllIncludeIgnoredKeyValues()
+    {
+        return FullRequestContextData;
     }
 
     public List<string> GetAllKeys()
     {
-        return [.. RequestContextData.Keys];
+        return IgnoreRequestContextKeysRequestContextData.Keys.ToList();
     }
 
-    public Dictionary<string, object> GetAllKeyValues(HashSet<string>? ignoreKeys = null)
+    public IDictionary<string, object?> GetAllKeyValues()
     {
-        return GetAllKeys()
-            .WhereIf(ignoreKeys?.Any() == true, key => !ignoreKeys.Contains(key))
-            .Select(key => new KeyValuePair<string, object>(key, GetValue<object>(key)))
-            .ToDictionary(p => p.Key, p => p.Value);
+        return IgnoreRequestContextKeysRequestContextData;
     }
 
     public void Add(KeyValuePair<string, object> item)
     {
-        RequestContextData.Upsert(item.Key, item.Value);
+        FullRequestContextData.Upsert(item.Key, item.Value);
+        if (!ApplicationSettingContext.GetIgnoreRequestContextKeys().Contains(item.Key))
+            IgnoreRequestContextKeysRequestContextData.Upsert(item.Key, item.Value);
     }
 
     public void Clear()
     {
-        RequestContextData.Clear();
+        FullRequestContextData.Clear();
+        IgnoreRequestContextKeysRequestContextData.Clear();
     }
 
     public bool Contains(KeyValuePair<string, object> item)
     {
         // ReSharper disable once UsageOfDefaultStructEquality
-        return RequestContextData.Contains(item);
+        return FullRequestContextData.Contains(item);
     }
 
     public void CopyTo(KeyValuePair<string, object>[] array, int arrayIndex)
     {
-        RequestContextData.ToList().CopyTo(array, arrayIndex);
+        FullRequestContextData.ToList().CopyTo(array, arrayIndex);
     }
 
     public bool Remove(KeyValuePair<string, object> item)
     {
-        return RequestContextData.Remove(item.Key, out _);
+        IgnoreRequestContextKeysRequestContextData.Remove(item.Key, out _);
+        return FullRequestContextData.Remove(item.Key, out _);
     }
 
-    public int Count => RequestContextData.Count;
+    public int Count => FullRequestContextData.Count;
     public bool IsReadOnly => false;
 
     public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
     {
-        return RequestContextData.GetEnumerator();
+        return FullRequestContextData.GetEnumerator();
     }
 
     IEnumerator IEnumerable.GetEnumerator()
@@ -91,30 +112,38 @@ public class PlatformDefaultApplicationRequestContext : IPlatformApplicationRequ
 
     public void Add(string key, object value)
     {
-        RequestContextData.Upsert(key, value);
+        FullRequestContextData.Upsert(key, value);
+        if (!ApplicationSettingContext.GetIgnoreRequestContextKeys().Contains(key))
+            IgnoreRequestContextKeysRequestContextData.Upsert(key, value);
     }
 
     public bool ContainsKey(string key)
     {
-        return RequestContextData.ContainsKey(key);
+        return FullRequestContextData.ContainsKey(key);
     }
 
     public bool Remove(string key)
     {
-        return RequestContextData.Remove(key, out _);
+        IgnoreRequestContextKeysRequestContextData.Remove(key, out _);
+        return FullRequestContextData.Remove(key, out _);
     }
 
     public bool TryGetValue(string key, out object value)
     {
-        return RequestContextData.TryGetValue(key, out value);
+        return FullRequestContextData.TryGetValue(key, out value);
     }
 
     public object this[string key]
     {
-        get => RequestContextData[key];
-        set => RequestContextData[key] = value;
+        get => FullRequestContextData[key];
+        set
+        {
+            FullRequestContextData[key] = value;
+            if (!ApplicationSettingContext.GetIgnoreRequestContextKeys().Contains(key))
+                IgnoreRequestContextKeysRequestContextData.Upsert(key, value);
+        }
     }
 
-    public ICollection<string> Keys => RequestContextData.Keys;
-    public ICollection<object> Values => RequestContextData.Values;
+    public ICollection<string> Keys => FullRequestContextData.Keys;
+    public ICollection<object> Values => FullRequestContextData.Values;
 }
