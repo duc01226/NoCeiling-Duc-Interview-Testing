@@ -33,6 +33,7 @@ import { delay, filter, finalize, share, switchMap, takeUntil, tap, throttleTime
 
 import { toSignal } from '@angular/core/rxjs-interop';
 import { PlatformApiServiceErrorResponse } from '../../api-services';
+import { PlatformCachingService } from '../../caching';
 import { LifeCycleHelper } from '../../helpers';
 import { PLATFORM_CORE_GLOBAL_ENV } from '../../platform-core-global-environment';
 import { applyIf, onCancel, skipDuplicates, skipTime, subscribeUntil, tapLimit, tapOnce } from '../../rxjs';
@@ -138,6 +139,7 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
     public changeDetector: ChangeDetectorRef = inject(ChangeDetectorRef);
     public translateSrv: PlatformTranslateService = inject(PlatformTranslateService);
     public elementRef: ElementRef<HTMLElement> = inject(ElementRef);
+    public cacheService: PlatformCachingService = inject(PlatformCachingService);
 
     public initiated$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
     public initiated = toSignal(this.initiated$);
@@ -852,7 +854,10 @@ export abstract class PlatformComponent implements OnInit, AfterViewInit, OnDest
                 })
             );
 
-        if (error instanceof Error) console.error(error);
+        if (error instanceof Error) {
+            console.error(error);
+            this.cacheService.clear();
+        }
     };
 
     /**

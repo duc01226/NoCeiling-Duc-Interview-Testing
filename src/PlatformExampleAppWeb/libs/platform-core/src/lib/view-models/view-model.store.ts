@@ -689,6 +689,11 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
             errorMsgMap: immutableUpdate(this.currentState().errorMsgMap, { [requestKey]: errorMsg }),
             error: errorMsg ?? null
         });
+
+        if (error instanceof Error) {
+            console.error(error);
+            this.cacheService.clear();
+        }
     };
 
     /**

@@ -22,13 +22,13 @@ public static class PostgresSqlMigrationUtil
     {
         migrationBuilder.Sql(
             $@"DO $$
-        BEGIN
-            IF EXISTS (
-                SELECT 1 FROM pg_indexes
-                WHERE indexname = '{indexName}' AND tablename = '{table}'
-            ) THEN
-                EXECUTE 'DROP INDEX IF EXISTS ""{indexName}""';
-            END IF;
-        END $$;");
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM pg_indexes
+                    WHERE indexname = '{indexName}' AND tablename = '{table}'
+                ) THEN
+                    EXECUTE 'DROP INDEX IF EXISTS ""{indexName}""';
+                END IF;
+            END $$;");
     }
 }

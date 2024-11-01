@@ -20,6 +20,8 @@ public static class SqlServerMigrationUtil
         string keyIndex,
         string fullTextCatalog)
     {
+        CreateFullTextCatalogIfNotExists(migrationBuilder, fullTextCatalog);
+
         migrationBuilder.Sql(
             @$"IF NOT EXISTS (select 1 from sys.fulltext_indexes
                 join sys.objects on fulltext_indexes.object_id = objects.object_id where objects.name = '{tableName}')

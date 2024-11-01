@@ -293,7 +293,7 @@ public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
         if (CurrentUnitOfWorksDict.IsEmpty) return null;
         if (CurrentUnitOfWorksDict.Count == 1) return CurrentUnitOfWorksDict.First().Value;
 
-        return CurrentUnitOfWorksDict.MaxBy(p => p.Value.Timestamp).Value;
+        return CurrentUnitOfWorksDict.MaxBy(p => p.Value.BeginTimestamp).Value;
     }
 
     public IPlatformUnitOfWork CurrentActiveUow()
