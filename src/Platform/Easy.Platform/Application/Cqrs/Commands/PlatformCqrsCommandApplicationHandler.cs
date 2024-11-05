@@ -209,14 +209,7 @@ public abstract class PlatformCqrsCommandApplicationHandler<TCommand, TResult> :
     {
         if (AutoOpenUow == false) return await HandleAsync(request, cancellationToken);
 
-        using (var uow = UnitOfWorkManager.Begin())
-        {
-            var result = await HandleAsync(request, cancellationToken);
-
-            await uow.CompleteAsync(cancellationToken);
-
-            return result;
-        }
+        return await UnitOfWorkManager.ExecuteUowTask(async () => await HandleAsync(request, cancellationToken));
     }
 }
 

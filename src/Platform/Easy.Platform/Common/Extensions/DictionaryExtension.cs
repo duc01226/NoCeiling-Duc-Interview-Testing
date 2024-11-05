@@ -152,8 +152,16 @@ public static class DictionaryExtension
     /// This method is useful for scenarios where the dictionary may not contain all keys,
     /// and returning the key itself is a valid fallback.
     /// </remarks>
-    public static T GetValueOrKey<T>(this IReadOnlyDictionary<T, T> dictionary, T key)
+    public static T GetValueOrKey<T>(this IDictionary<T, T> dictionary, T key)
     {
-        return dictionary.ContainsKey(key) ? dictionary[key] : key;
+        return dictionary.TryGetValue(key, out var value) ? value : key;
+    }
+
+    /// <summary>
+    /// Get value of given key. If not found then return first value
+    /// </summary>
+    public static T GetValueOrFirst<T>(this IDictionary<T, T> dictionary, T key)
+    {
+        return dictionary.TryGetValue(key, out var value) ? value : dictionary.First().Value;
     }
 }

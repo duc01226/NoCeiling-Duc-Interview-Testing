@@ -141,6 +141,27 @@ public interface IPlatformUnitOfWorkManager : IDisposable
         }
     }
 
+    public async Task<TResult> ExecuteUowTask<TResult>(Func<Task<TResult>> taskFn)
+    {
+        var currentActiveUow = TryGetCurrentActiveUow();
+
+        if (currentActiveUow != null)
+        {
+            var result = await taskFn();
+            await currentActiveUow.SaveChangesAsync();
+
+            return result;
+        }
+
+        using (var uow = Begin())
+        {
+            var result = await taskFn();
+            await uow.CompleteAsync();
+
+            return result;
+        }
+    }
+
     IServiceProvider CurrentScopeServiceProvider();
 
     IPlatformRootServiceProvider GetRootServiceProvider();
