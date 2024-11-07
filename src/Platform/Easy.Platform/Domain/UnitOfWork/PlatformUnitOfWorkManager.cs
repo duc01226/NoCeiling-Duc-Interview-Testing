@@ -162,8 +162,6 @@ public interface IPlatformUnitOfWorkManager : IDisposable
         }
     }
 
-    IServiceProvider CurrentScopeServiceProvider();
-
     IPlatformRootServiceProvider GetRootServiceProvider();
 
     /// <inheritdoc cref="DependencyInjectionExtension.ExecuteInjectScopedScrollingPagingAsync{TItem}(System.IServiceProvider,int,System.Delegate,object[])" />
@@ -277,18 +275,21 @@ public interface IPlatformUnitOfWorkManager : IDisposable
 
 public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
 {
+    private readonly Lazy<ConcurrentDictionary<string, IPlatformUnitOfWork>> completedUnitOfWorksDictLazy =
+        new(() => new ConcurrentDictionary<string, IPlatformUnitOfWork>());
+
     private readonly Lazy<IPlatformCqrs> currentSameScopeCqrsLazy;
 
-    private readonly Lazy<ConcurrentDictionary<string, IPlatformUnitOfWork>> currentUnitOfWorksStackWorksLazy =
+    private readonly Lazy<ConcurrentDictionary<string, IPlatformUnitOfWork>> currentUnitOfWorksDictLazy =
         new(() => new ConcurrentDictionary<string, IPlatformUnitOfWork>());
 
     private readonly Lazy<ConcurrentDictionary<string, IPlatformUnitOfWork>> freeCreatedUnitOfWorksLazy =
         new(() => new ConcurrentDictionary<string, IPlatformUnitOfWork>());
 
-    private readonly Lazy<ConcurrentDictionary<string, ConcurrentDictionary<string, IPlatformUnitOfWork>>>
-        lastOrDefaultMatchedUowOfIdCachedResultDictLazy =
-            new(() => new ConcurrentDictionary<string, ConcurrentDictionary<string, IPlatformUnitOfWork>>());
+    private readonly Lazy<ConcurrentDictionary<string, ConcurrentDictionary<string, IPlatformUnitOfWork>>> lastOrDefaultMatchedUowOfIdCachedResultDictLazy =
+        new(() => new ConcurrentDictionary<string, ConcurrentDictionary<string, IPlatformUnitOfWork>>());
 
+    private volatile IPlatformUnitOfWork? cachedCurrentUow;
     private bool disposed;
     private IPlatformUnitOfWork? globalUow;
 
@@ -299,8 +300,8 @@ public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
         currentSameScopeCqrsLazy = cqrs;
     }
 
-    protected ConcurrentDictionary<string, IPlatformUnitOfWork> CompletedUows { get; } = [];
-    protected ConcurrentDictionary<string, IPlatformUnitOfWork> CurrentUnitOfWorksDict => currentUnitOfWorksStackWorksLazy.Value;
+    protected ConcurrentDictionary<string, IPlatformUnitOfWork> CompletedUows => completedUnitOfWorksDictLazy.Value;
+    protected ConcurrentDictionary<string, IPlatformUnitOfWork> CurrentUnitOfWorksDict => currentUnitOfWorksDictLazy.Value;
     protected ConcurrentDictionary<string, IPlatformUnitOfWork> FreeCreatedUnitOfWorks => freeCreatedUnitOfWorksLazy.Value;
     protected IPlatformRootServiceProvider RootServiceProvider { get; }
     protected IServiceProvider ServiceProvider { get; }
@@ -309,12 +310,14 @@ public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
 
     public abstract IPlatformUnitOfWork CreateNewUow(bool isUsingOnceTransientUow);
 
-    public virtual IPlatformUnitOfWork CurrentUow()
+    public virtual IPlatformUnitOfWork? CurrentUow()
     {
         if (CurrentUnitOfWorksDict.IsEmpty) return null;
-        if (CurrentUnitOfWorksDict.Count == 1) return CurrentUnitOfWorksDict.First().Value;
+        if (cachedCurrentUow != null) return cachedCurrentUow;
 
-        return CurrentUnitOfWorksDict.MaxBy(p => p.Value.BeginTimestamp).Value;
+        cachedCurrentUow = CurrentUnitOfWorksDict.Count == 1 ? CurrentUnitOfWorksDict.First().Value : CurrentUnitOfWorksDict.MaxBy(p => p.Value.BeginOrder).Value;
+
+        return cachedCurrentUow;
     }
 
     public IPlatformUnitOfWork CurrentActiveUow()
@@ -372,13 +375,17 @@ public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
     {
         if (suppressCurrentUow || CurrentUnitOfWorksDict.IsEmpty())
         {
-            var newUow = CreateNewUow(false);
+            var newUow = CreateNewUow(false)
+                .With(p => p.BeginOrder = CurrentUnitOfWorksDict.Count);
 
             CurrentUnitOfWorksDict.TryAdd(newUow.Id, newUow);
+            cachedCurrentUow = newUow;
+
             newUow.OnUowCompletedActions.Add(
                 () => Task.Run(
                     () =>
                     {
+                        cachedCurrentUow = null;
                         CurrentUnitOfWorksDict.TryRemove(newUow.Id, out _);
                         CompletedUows.TryAdd(newUow.Id, newUow);
                     }));
@@ -386,6 +393,7 @@ public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
                 () => Task.Run(
                     () =>
                     {
+                        cachedCurrentUow = null;
                         CurrentUnitOfWorksDict.TryRemove(newUow.Id, out _);
                         CompletedUows.TryRemove(newUow.Id, out _);
                     }));
@@ -394,11 +402,6 @@ public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
         }
 
         return CurrentUow();
-    }
-
-    public IServiceProvider CurrentScopeServiceProvider()
-    {
-        return ServiceProvider;
     }
 
     public IPlatformRootServiceProvider GetRootServiceProvider()
@@ -482,10 +485,10 @@ public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
             {
                 // Release managed resources
 
-                if (currentUnitOfWorksStackWorksLazy.IsValueCreated)
+                if (currentUnitOfWorksDictLazy.IsValueCreated)
                 {
                     CurrentUnitOfWorksDict.Values.ForEach(p => p?.Dispose());
-                    currentUnitOfWorksStackWorksLazy.Value.Clear();
+                    currentUnitOfWorksDictLazy.Value.Clear();
                 }
 
                 if (freeCreatedUnitOfWorksLazy.IsValueCreated)

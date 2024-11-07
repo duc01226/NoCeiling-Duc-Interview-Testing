@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
@@ -35,8 +34,6 @@ public class PlatformDefaultPersistenceUnitOfWorkManager : PlatformUnitOfWorkMan
                     p.AssociatedToDisposeWithServiceScope = newScope;
                     p.IsUsingOnceTransientUow = isUsingOnceTransientUow;
                     p.CreatedByUnitOfWorkManager = this;
-                    if (!isUsingOnceTransientUow)
-                        p.BeginTimestamp = Stopwatch.GetTimestamp();
                 });
 
         if (isUsingOnceTransientUow)
