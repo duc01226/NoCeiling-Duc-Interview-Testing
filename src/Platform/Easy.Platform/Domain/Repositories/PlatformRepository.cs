@@ -213,7 +213,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
     public IQueryable<TEntity> GetGlobalUowQuery(params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
     {
-        return GetQuery(GlobalUow(), loadRelatedEntities);
+        return GetQuery(UnitOfWorkManager.GlobalUow, loadRelatedEntities);
     }
 
     public Func<IQueryable<TEntity>, IQueryable<TResult>> GetQueryBuilder<TResult>(Func<IQueryable<TEntity>, IQueryable<TResult>> builderFn)
@@ -264,11 +264,6 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     public IPlatformUnitOfWork TryGetCurrentActiveUow()
     {
         return UnitOfWorkManager.TryGetCurrentActiveUow()?.UowOfType<TUow>();
-    }
-
-    public TUow GlobalUow()
-    {
-        return UnitOfWorkManager.GlobalUow.UowOfType<TUow>();
     }
 
     public abstract Task<TEntity> CreateAsync(
@@ -444,6 +439,11 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Expression<Func<TEntity, object>>[] loadRelatedEntities,
         TResult result);
 
+    /// <summary>
+    /// Return True to determine that this uow is Thread Safe and could support multiple parallel query
+    /// </summary>
+    protected abstract bool DoesSupportParallelQuery();
+
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(
         Func<IPlatformUnitOfWork, IQueryable<TEntity>, Task<TResult>> readDataFn,
         Expression<Func<TEntity, object>>[] loadRelatedEntities)
@@ -452,18 +452,25 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
         if (currentActiveUow == null)
         {
-            var useOnceTransientUow = UnitOfWorkManager.CreateNewUow(true);
-            TResult useOnceTransientUowResult = default;
-
-            try
+            if (DoesSupportParallelQuery())
             {
-                useOnceTransientUowResult = await ExecuteReadData(useOnceTransientUow, readDataFn, loadRelatedEntities);
-
-                return useOnceTransientUowResult;
+                return await ExecuteReadData(UnitOfWorkManager.GlobalUow, readDataFn, loadRelatedEntities);
             }
-            finally
+            else
             {
-                HandleDisposeUsingOnceTransientUowLogic(useOnceTransientUow, loadRelatedEntities, useOnceTransientUowResult);
+                var useOnceTransientUow = UnitOfWorkManager.CreateNewUow(true);
+                TResult useOnceTransientUowResult = default;
+
+                try
+                {
+                    useOnceTransientUowResult = await ExecuteReadData(useOnceTransientUow, readDataFn, loadRelatedEntities);
+
+                    return useOnceTransientUowResult;
+                }
+                finally
+                {
+                    HandleDisposeUsingOnceTransientUowLogic(useOnceTransientUow, loadRelatedEntities, useOnceTransientUowResult);
+                }
             }
         }
         else
@@ -479,15 +486,18 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
     protected async Task<TResult> ExecuteUowReadQueryThreadSafe<TResult>(IPlatformUnitOfWork uow, Func<IPlatformUnitOfWork, Task<TResult>> executeFn)
     {
-        if (uow.UowOfType<TUow>().DoesSupportParallelQuery() == false)
+        if (DoesSupportParallelQuery() == false)
+        {
+            var uowOfTUow = uow.UowOfType<TUow>();
+
             try
             {
                 //Asynchronously wait to enter the Semaphore. If no-one has been granted access to the Semaphore, code execution will proceed, otherwise this thread waits here until the semaphore is released 
-                await uow.UowOfType<TUow>().LockAsync();
+                await uowOfTUow.LockAsync();
 
                 var result = await executeFn(uow);
 
-                uow.UowOfType<TUow>().ReleaseLock();
+                uowOfTUow.ReleaseLock();
 
                 return result;
             }
@@ -495,8 +505,9 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
             {
                 //When the task is ready, release the semaphore. It is vital to ALWAYS release the semaphore when we are ready, or else we will end up with a Semaphore that is forever locked.
                 //This is why it is important to do the Release within a try...finally clause; program execution may crash or take a different path, this way you are guaranteed execution
-                uow.UowOfType<TUow>().ReleaseLock();
+                uowOfTUow.ReleaseLock();
             }
+        }
 
         return await executeFn(uow);
     }

@@ -26,7 +26,10 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
     {
     }
 
-    public virtual IMongoCollection<TEntity> Table => DbContext.GetCollection<TEntity>();
+    protected override bool DoesSupportParallelQuery()
+    {
+        return true;
+    }
 
     public virtual IMongoCollection<TEntity> GetTable(IPlatformUnitOfWork uow)
     {
@@ -69,7 +72,7 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
 
     protected void LogDebugQueryLog<TSource>(IEnumerable<TSource> source)
     {
-        if (Debugger.IsAttached && DbContext.EnableDebugQueryLog)
+        if (Debugger.IsAttached && PersistenceConfiguration.EnableDebugQueryLog)
             source.TryToMongoQueryString()
                 .PipeAction(
                     queryStr =>

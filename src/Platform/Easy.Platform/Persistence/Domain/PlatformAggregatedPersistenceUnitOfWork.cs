@@ -9,7 +9,6 @@ public interface IPlatformAggregatedPersistenceUnitOfWork : IPlatformUnitOfWork
 {
     public bool IsPseudoTransactionUow<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork;
     public bool MustKeepUowForQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork;
-    public bool DoesSupportParallelQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork;
 }
 
 /// <summary>
@@ -44,11 +43,6 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
         return CachedInnerUowByTypes!.Values.Any(p => p.MustKeepUowForQuery());
     }
 
-    public override bool DoesSupportParallelQuery()
-    {
-        return CachedInnerUowByTypes!.Values.All(p => p.DoesSupportParallelQuery());
-    }
-
     public bool IsPseudoTransactionUow<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork
     {
         return CachedInnerUowByIds!.GetValueOrDefault(uow.Id)?.IsPseudoTransactionUow() == true;
@@ -57,11 +51,6 @@ public class PlatformAggregatedPersistenceUnitOfWork : PlatformUnitOfWork, IPlat
     public bool MustKeepUowForQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork
     {
         return CachedInnerUowByIds!.GetValueOrDefault(uow.Id)?.MustKeepUowForQuery() == true;
-    }
-
-    public bool DoesSupportParallelQuery<TInnerUnitOfWork>(TInnerUnitOfWork uow) where TInnerUnitOfWork : IPlatformUnitOfWork
-    {
-        return CachedInnerUowByIds!.GetValueOrDefault(uow.Id)?.DoesSupportParallelQuery() == true;
     }
 
     protected override Task InternalSaveChangesAsync(CancellationToken cancellationToken)

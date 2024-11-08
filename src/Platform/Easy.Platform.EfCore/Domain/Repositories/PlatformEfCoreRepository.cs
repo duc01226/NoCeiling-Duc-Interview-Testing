@@ -32,6 +32,11 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
 
     protected DbContextOptions<TDbContext> DbContextOptions { get; }
 
+    protected override bool DoesSupportParallelQuery()
+    {
+        return false;
+    }
+
     public virtual DbSet<TEntity> GetTable(IPlatformUnitOfWork uow)
     {
         return GetUowDbContext(uow).Set<TEntity>();

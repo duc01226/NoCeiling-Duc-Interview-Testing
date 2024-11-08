@@ -58,11 +58,6 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     public IMongoDatabase Database { get; }
 
-    /// <summary>
-    /// If true enable show query to Debug output
-    /// </summary>
-    public virtual bool EnableDebugQueryLog { get; set; } = true;
-
     public IMongoCollection<PlatformInboxBusMessage> InboxBusMessageCollection =>
         Database.GetCollection<PlatformInboxBusMessage>(GetCollectionName<PlatformInboxBusMessage>());
 

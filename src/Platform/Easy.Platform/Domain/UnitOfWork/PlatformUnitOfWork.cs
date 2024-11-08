@@ -101,11 +101,6 @@ public interface IPlatformUnitOfWork : IDisposable
     public bool MustKeepUowForQuery();
 
     /// <summary>
-    /// Return True to determine that this uow is Thread Safe and could support multiple parallel query
-    /// </summary>
-    public bool DoesSupportParallelQuery();
-
-    /// <summary>
     /// Asynchronously wait to enter the UowLock. If no-one has been granted access to the UowLock, code execution will proceed, otherwise this thread waits here until the semaphore is released
     /// </summary>
     public Task LockAsync();
@@ -257,8 +252,6 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     public abstract bool IsPseudoTransactionUow();
 
     public abstract bool MustKeepUowForQuery();
-
-    public abstract bool DoesSupportParallelQuery();
 
     public async Task LockAsync()
     {

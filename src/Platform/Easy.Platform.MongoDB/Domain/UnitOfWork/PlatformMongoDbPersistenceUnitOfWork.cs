@@ -31,9 +31,4 @@ public class PlatformMongoDbPersistenceUnitOfWork<TDbContext>
     {
         return false;
     }
-
-    public override bool DoesSupportParallelQuery()
-    {
-        return true;
-    }
 }

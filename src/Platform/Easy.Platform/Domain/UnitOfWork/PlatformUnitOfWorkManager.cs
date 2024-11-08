@@ -5,7 +5,9 @@ using Easy.Platform.Application;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Cqrs;
 using Easy.Platform.Common.Extensions;
+using Easy.Platform.Persistence.Domain;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Easy.Platform.Domain.UnitOfWork;
 
@@ -286,18 +288,20 @@ public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
     private readonly Lazy<ConcurrentDictionary<string, IPlatformUnitOfWork>> freeCreatedUnitOfWorksLazy =
         new(() => new ConcurrentDictionary<string, IPlatformUnitOfWork>());
 
+    private readonly Lazy<IPlatformUnitOfWork> globalUowLazy;
+
     private readonly Lazy<ConcurrentDictionary<string, ConcurrentDictionary<string, IPlatformUnitOfWork>>> lastOrDefaultMatchedUowOfIdCachedResultDictLazy =
         new(() => new ConcurrentDictionary<string, ConcurrentDictionary<string, IPlatformUnitOfWork>>());
 
     private volatile IPlatformUnitOfWork? cachedCurrentUow;
     private bool disposed;
-    private IPlatformUnitOfWork? globalUow;
 
     protected PlatformUnitOfWorkManager(Lazy<IPlatformCqrs> cqrs, IPlatformRootServiceProvider rootServiceProvider, IServiceProvider serviceProvider)
     {
         ServiceProvider = serviceProvider;
         RootServiceProvider = rootServiceProvider;
         currentSameScopeCqrsLazy = cqrs;
+        globalUowLazy = new Lazy<IPlatformUnitOfWork>(() => CreateNewUow(false));
     }
 
     protected ConcurrentDictionary<string, IPlatformUnitOfWork> CompletedUows => completedUnitOfWorksDictLazy.Value;
@@ -308,7 +312,47 @@ public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
 
     public IPlatformCqrs CurrentSameScopeCqrs => currentSameScopeCqrsLazy.Value;
 
-    public abstract IPlatformUnitOfWork CreateNewUow(bool isUsingOnceTransientUow);
+    public virtual IPlatformUnitOfWork CreateNewUow(bool isUsingOnceTransientUow)
+    {
+        // Doing create scope because IUnitOfWork resolve with DbContext, and DbContext lifetime is usually scoped to support resolve db context
+        // to use it directly in application layer in some project or cases without using repository.
+        // But we still want to support Uow create new like transient, each uow associated with new db context
+        // So that we can begin/destroy uow separately
+        var newScope = ServiceProvider.CreateScope();
+
+        var uow = new PlatformAggregatedPersistenceUnitOfWork(
+                RootServiceProvider,
+                newScope.ServiceProvider,
+                newScope.ServiceProvider.GetService<ILoggerFactory>())
+            .With(
+                p =>
+                {
+                    p.AssociatedToDisposeWithServiceScope = newScope;
+                    p.IsUsingOnceTransientUow = isUsingOnceTransientUow;
+                    p.CreatedByUnitOfWorkManager = this;
+                });
+
+        if (isUsingOnceTransientUow)
+        {
+            FreeCreatedUnitOfWorks.TryAdd(uow.Id, uow);
+            uow.OnUowCompletedActions.Add(
+                () => Task.Run(
+                    () =>
+                    {
+                        FreeCreatedUnitOfWorks.TryRemove(uow.Id, out _);
+                        CompletedUows.TryAdd(uow.Id, uow);
+                    }));
+            uow.OnDisposedActions.Add(
+                () => Task.Run(
+                    () =>
+                    {
+                        FreeCreatedUnitOfWorks.TryRemove(uow.Id, out _);
+                        CompletedUows.TryRemove(uow.Id, out _);
+                    }));
+        }
+
+        return uow;
+    }
 
     public virtual IPlatformUnitOfWork? CurrentUow()
     {
@@ -422,7 +466,7 @@ public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
                 $"Current unit of work of type {typeof(TUnitOfWork).FullName} has been completed or disposed.");
     }
 
-    public IPlatformUnitOfWork GlobalUow => globalUow ??= CreateNewUow(false);
+    public IPlatformUnitOfWork GlobalUow => globalUowLazy.Value;
 
     public void Dispose()
     {
@@ -503,7 +547,8 @@ public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
                 CompletedUows.Values.ForEach(p => p.Dispose());
                 CompletedUows.Clear();
 
-                globalUow?.Dispose();
+                if (globalUowLazy.IsValueCreated)
+                    globalUowLazy.Value.Dispose();
             }
 
             // Release unmanaged resources

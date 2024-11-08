@@ -7,6 +7,8 @@ public interface IPlatformPersistenceConfiguration
     public bool ForCrossDbMigrationOnly { get; set; }
 
     public PlatformPersistenceConfigurationBadQueryWarningConfig BadQueryWarning { get; set; }
+
+    public bool EnableDebugQueryLog { get; set; }
 }
 
 public interface IPlatformPersistenceConfiguration<TDbContext> : IPlatformPersistenceConfiguration
@@ -38,6 +40,11 @@ public class PlatformPersistenceConfiguration : IPlatformPersistenceConfiguratio
     public bool ForCrossDbMigrationOnly { get; set; }
 
     public PlatformPersistenceConfigurationBadQueryWarningConfig BadQueryWarning { get; set; } = new();
+
+    /// <summary>
+    /// If true, query log in Debugger when it's attached, mean that you are debugging, is logout in the output of debugger
+    /// </summary>
+    public bool EnableDebugQueryLog { get; set; } = true;
 }
 
 public class PlatformPersistenceConfiguration<TDbContext> : PlatformPersistenceConfiguration, IPlatformPersistenceConfiguration<TDbContext>

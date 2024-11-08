@@ -37,11 +37,6 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
             .AddSqlClientInstrumentation(options => options.SetDbStatementForText = true)
             .AddNpgsql();
 
-    /// <summary>
-    /// If true enable show query to Debug output
-    /// </summary>
-    public virtual bool EnableDebugQueryLog { get; set; } = true;
-
     protected override void InternalRegister(IServiceCollection serviceCollection)
     {
         base.InternalRegister(serviceCollection);
@@ -177,6 +172,7 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
 
         DbContextOptionsBuilderActionProvider(serviceProvider).Invoke(builder);
 
-        if (Debugger.IsAttached && EnableDebugQueryLog) builder.UseLoggerFactory(Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddDebug()));
+        if (Debugger.IsAttached && serviceProvider.GetRequiredService<IPlatformPersistenceConfiguration>().EnableDebugQueryLog)
+            builder.UseLoggerFactory(Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddDebug()));
     }
 }

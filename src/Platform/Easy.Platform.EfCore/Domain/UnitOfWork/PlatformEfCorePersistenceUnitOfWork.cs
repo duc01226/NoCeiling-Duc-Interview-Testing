@@ -46,11 +46,6 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
         return DbContextOptions.IsUsingLazyLoadingProxy();
     }
 
-    public override bool DoesSupportParallelQuery()
-    {
-        return false;
-    }
-
     protected override TDbContext DbContextFactory(IServiceProvider serviceProvider)
     {
         if (CanUsePooledDbContext())
