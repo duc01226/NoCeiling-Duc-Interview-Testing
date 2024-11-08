@@ -148,6 +148,12 @@ public interface IPlatformUnitOfWork : IDisposable
     public TEntity SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(TEntity existingEntity, Type runtimeEntityType = null)
         where TEntity : class, IEntity<TPrimaryKey>, new();
 
+    public IList<TEntity> SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(IList<TEntity> existingEntities, Type runtimeEntityType = null)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        return existingEntities.SelectList(p => SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p, runtimeEntityType));
+    }
+
     public void RemoveCachedExistingOriginalEntity(string existingEntityId);
 
     public void ClearCachedExistingOriginalEntity();

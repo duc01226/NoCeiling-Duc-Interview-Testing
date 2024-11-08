@@ -448,7 +448,9 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Func<IPlatformUnitOfWork, IQueryable<TEntity>, Task<TResult>> readDataFn,
         Expression<Func<TEntity, object>>[] loadRelatedEntities)
     {
-        if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
+        var currentActiveUow = UnitOfWorkManager.TryGetCurrentActiveUow();
+
+        if (currentActiveUow == null)
         {
             var useOnceTransientUow = UnitOfWorkManager.CreateNewUow(true);
             TResult useOnceTransientUowResult = default;
@@ -464,15 +466,15 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
                 HandleDisposeUsingOnceTransientUowLogic(useOnceTransientUow, loadRelatedEntities, useOnceTransientUowResult);
             }
         }
+        else
+        {
+            var result = await ExecuteUowReadQueryThreadSafe(currentActiveUow, uow => ExecuteReadData(uow, readDataFn, loadRelatedEntities));
 
-        var currentActiveUow = UnitOfWorkManager.CurrentActiveUow();
+            // If there is opening uow, may get data for update => set cached original entities for track update
+            SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate(result, currentActiveUow);
 
-        var result = await ExecuteUowReadQueryThreadSafe(currentActiveUow, uow => ExecuteReadData(uow, readDataFn, loadRelatedEntities));
-
-        // If there is opening uow, may get data for update => set cached original entities for track update
-        SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate(result, currentActiveUow);
-
-        return result;
+            return result;
+        }
     }
 
     protected async Task<TResult> ExecuteUowReadQueryThreadSafe<TResult>(IPlatformUnitOfWork uow, Func<IPlatformUnitOfWork, Task<TResult>> executeFn)
@@ -525,7 +527,9 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     {
         if (forceUseUow != null) return await action(forceUseUow);
 
-        if (UnitOfWorkManager.TryGetCurrentActiveUow() == null)
+        var currentActiveUow = UnitOfWorkManager.TryGetCurrentActiveUow();
+
+        if (currentActiveUow == null)
         {
             var uow = UnitOfWorkManager.CreateNewUow(true);
             TResult result = default;
@@ -543,8 +547,10 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
                 if (!DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result, uow)) uow.Dispose();
             }
         }
-
-        return await action(UnitOfWorkManager.CurrentActiveUow());
+        else
+        {
+            return await action(currentActiveUow);
+        }
     }
 
     protected abstract bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IPlatformUnitOfWork uow);

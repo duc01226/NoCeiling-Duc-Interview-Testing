@@ -390,7 +390,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         return await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
             async () =>
             {
-                if (entities.IsEmpty()) return entities;
+                if (entities.IsNullOrEmpty()) return entities;
 
                 if (IsDistributedTracingEnabled)
                     using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateManyAsync)}"))
@@ -540,7 +540,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entities.IsEmpty()) return entities;
+        if (entities.IsNullOrEmpty()) return entities;
 
         if (IsDistributedTracingEnabled)
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateManyAsync)}"))
@@ -563,7 +563,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entities.IsEmpty()) return entities;
+        if (entities.IsNullOrEmpty()) return entities;
 
         if (IsDistributedTracingEnabled)
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateManyAsync)}"))
@@ -587,7 +587,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entities.IsEmpty()) return entities;
+        if (entities.IsNullOrEmpty()) return entities;
 
         if (IsDistributedTracingEnabled)
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(UpdateManyAsync)}"))
@@ -610,7 +610,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entities.IsEmpty()) return entities;
+        if (entities.IsNullOrEmpty()) return entities;
 
         if (IsDistributedTracingEnabled)
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(UpdateManyAsync)}"))
@@ -634,7 +634,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entityIds.IsEmpty()) return [];
+        if (entityIds.IsNullOrEmpty()) return [];
 
         if (IsDistributedTracingEnabled)
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteManyAsync)}"))
@@ -720,7 +720,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entities.IsEmpty()) return entities;
+        if (entities.IsNullOrEmpty()) return entities;
 
         if (IsDistributedTracingEnabled)
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteManyAsync)}"))
@@ -744,7 +744,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        if (entities.IsEmpty()) return entities;
+        if (entities.IsNullOrEmpty()) return entities;
 
         if (IsDistributedTracingEnabled)
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteManyAsync)}"))
