@@ -275,7 +275,7 @@ public static class DependencyInjectionExtension
         bool skipIfExist = false,
         CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
     {
-        services.RegisterIfNotExist(implementationType, implementationType, lifeTime, skipIfExistStrategy);
+        services.Register(implementationType, implementationType, lifeTime, replaceIfExist, replaceStrategy);
 
         services.RegisterInterfacesForImplementation(
             implementationType,
@@ -306,7 +306,7 @@ public static class DependencyInjectionExtension
         bool replaceIfExist = true,
         CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
-        services.RegisterIfNotExist(implementationType, implementationType, lifeTime, CheckRegisteredStrategy.ByBoth);
+        services.Register(implementationType, implementationType, lifeTime, replaceIfExist, replaceStrategy);
 
         services.RegisterInterfacesForImplementation(
             implementationType,

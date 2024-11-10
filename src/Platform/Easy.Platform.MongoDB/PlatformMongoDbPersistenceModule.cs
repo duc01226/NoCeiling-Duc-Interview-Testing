@@ -61,6 +61,7 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
     {
         base.InternalRegister(serviceCollection);
 
+        serviceCollection.RegisterAllForImplementation<TDbContext>(ServiceLifeTime.Transient);
         serviceCollection.Configure<TMongoOptions>(ExecuteConfigureMongoOptions);
         serviceCollection.Configure<PlatformMongoOptions<TDbContext>>(ExecuteConfigureMongoOptions);
 
