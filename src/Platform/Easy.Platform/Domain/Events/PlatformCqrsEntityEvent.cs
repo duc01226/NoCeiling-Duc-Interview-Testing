@@ -163,13 +163,13 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         {
             var entityEvent = eventBuilder()
                 .With(@event => eventCustomConfig?.Invoke(@event))
-                .With(@event => @event.SourceUowId = mappedToDbContextUow?.Id)
+                .WithIf(mappedToDbContextUow != null && !mappedToDbContextUow.IsPseudoTransactionUow(), @event => @event.SourceUowId = mappedToDbContextUow?.Id)
                 .WithIf(requestContext != null, @event => @event.SetRequestContextValues(requestContext!()))
                 .WithIf(
                     p => eventStackTrace != null,
                     p => p.StackTrace = eventStackTrace);
 
-            if (mappedToDbContextUow != null)
+            if (mappedToDbContextUow?.CreatedByUnitOfWorkManager != null)
                 await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs.SendEvent(entityEvent, cancellationToken);
             else
                 await rootServiceProvider.ExecuteInjectScopedAsync(

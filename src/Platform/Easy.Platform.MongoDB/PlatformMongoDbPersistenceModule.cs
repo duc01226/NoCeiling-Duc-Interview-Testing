@@ -38,6 +38,8 @@ public abstract class PlatformMongoDbPersistenceModule<TDbContext, TClientContex
     public override Action<TracerProviderBuilder> AdditionalTracingConfigure =>
         builder => builder.AddSource(typeof(DiagnosticsActivityEventSubscriber).Assembly.GetName().Name!);
 
+    protected override bool AllowSingletonUnitOfWork => true;
+
     public static void RegisterClassMapType(Type platformMongoClassMapType)
     {
         if (PlatformMongoDbPersistenceModuleCache.RegisteredClassMapTypes.NotContains(platformMongoClassMapType))

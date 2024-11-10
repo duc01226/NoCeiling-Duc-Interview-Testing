@@ -74,7 +74,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     public virtual string DataMigrationHistoryCollectionName => "MigrationHistory";
 
-    public virtual int ParallelIoTaskMaxConcurrent => Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio;
+    public virtual int ExecutionManyPageSize => 100;
 
     public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryCollection.AsQueryable();
 
@@ -128,7 +128,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         await RootServiceProvider.ExecuteInjectScopedAsync(async (TDbContext context) => await fn(context));
     }
 
-    public IPlatformUnitOfWork MappedUnitOfWork { get; set; }
+    public IPlatformUnitOfWork? MappedUnitOfWork { get; set; }
     public ILogger Logger => lazyLogger.Value;
 
     public virtual async Task Initialize(IServiceProvider serviceProvider)
@@ -260,7 +260,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         if (entities.IsEmpty()) return entities;
 
         return await entities
-            .PagedGroups(ParallelIoTaskMaxConcurrent)
+            .PagedGroups(ExecutionManyPageSize)
             .SelectAsync(
                 async entities =>
                 {
@@ -281,7 +281,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
                     await GetTable<TEntity>().BulkWriteAsync(bulkCreateOps, new BulkWriteOptions { IsOrdered = false }, cancellationToken);
 
-                    if (!dismissSendEvent)
+                    if (!dismissSendEvent && PlatformCqrsEntityEvent.IsAnyEntityEventHandlerRegisteredForEntity<TEntity>(RootServiceProvider))
                     {
                         await toBeCreatedEntities.ParallelAsync(
                             toBeCreatedEntity => PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
@@ -345,7 +345,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         if (entities.IsEmpty()) return entities;
 
         return await entities
-            .PagedGroups(ParallelIoTaskMaxConcurrent)
+            .PagedGroups(ExecutionManyPageSize)
             .SelectAsync(
                 async entities =>
                 {
@@ -462,7 +462,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                                 }
                             });
 
-                    if (!dismissSendEvent)
+                    if (!dismissSendEvent && PlatformCqrsEntityEvent.IsAnyEntityEventHandlerRegisteredForEntity<TEntity>(RootServiceProvider))
                     {
                         await toBeUpdatedItems.ParallelAsync(
                             toBeUpdatedItem => PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, TEntity>(
@@ -625,34 +625,26 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
         if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider))
         {
+            var ids = await GetAllAsync<TEntity, TPrimaryKey>(
+                query => queryBuilder(query).Select(p => p.Id),
+                cancellationToken);
+
+            await GetTable<TEntity>().DeleteManyAsync(p => ids.Contains(p.Id), null, cancellationToken).Then(p => p.DeletedCount);
+        }
+        else
+        {
             await Util.Pager.ExecuteScrollingPagingAsync(
                 async () =>
                 {
-                    var ids = await GetAllAsync<TEntity, TPrimaryKey>(
-                        query => queryBuilder(query).Take(ParallelIoTaskMaxConcurrent).Select(p => p.Id),
-                        cancellationToken);
+                    var entities = await GetAllAsync(queryBuilder(GetQuery<TEntity>()).Take(ExecutionManyPageSize), cancellationToken);
 
-                    await GetTable<TEntity>().DeleteManyAsync(p => ids.Contains(p.Id), null, cancellationToken).Then(p => p.DeletedCount);
+                    await DeleteManyAsync<TEntity, TPrimaryKey>(entities, false, eventCustomConfig, cancellationToken).Then(_ => entities.Count);
 
-                    return ids;
+                    return entities;
                 },
-                maxExecutionCount: totalCount / ParallelIoTaskMaxConcurrent,
+                maxExecutionCount: totalCount / ExecutionManyPageSize,
                 cancellationToken: cancellationToken);
-
-            return totalCount;
         }
-
-        await Util.Pager.ExecuteScrollingPagingAsync(
-            async () =>
-            {
-                var entities = await GetAllAsync(queryBuilder(GetQuery<TEntity>()).Take(ParallelIoTaskMaxConcurrent), cancellationToken);
-
-                await DeleteManyAsync<TEntity, TPrimaryKey>(entities, false, eventCustomConfig, cancellationToken).Then(_ => entities.Count);
-
-                return entities;
-            },
-            maxExecutionCount: totalCount / ParallelIoTaskMaxConcurrent,
-            cancellationToken: cancellationToken);
 
         return totalCount;
     }
@@ -923,11 +915,12 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
         Logger.LogInformation("[{TargetName}] EnsureIndexesAsync STARTED.", GetType().Name);
 
-        await EnsureMigrationHistoryCollectionIndexesAsync(recreate);
-        await EnsureApplicationDataMigrationHistoryCollectionIndexesAsync(recreate);
-        await EnsureInboxBusMessageCollectionIndexesAsync(recreate);
-        await EnsureOutboxBusMessageCollectionIndexesAsync(recreate);
-        await InternalEnsureIndexesAsync(true);
+        await Task.WhenAll(
+            EnsureMigrationHistoryCollectionIndexesAsync(recreate),
+            EnsureApplicationDataMigrationHistoryCollectionIndexesAsync(recreate),
+            EnsureInboxBusMessageCollectionIndexesAsync(recreate),
+            EnsureOutboxBusMessageCollectionIndexesAsync(recreate),
+            InternalEnsureIndexesAsync(recreate));
 
         if (!IsEnsureIndexesMigrationExecuted())
             await MigrationHistoryCollection.InsertOneAsync(

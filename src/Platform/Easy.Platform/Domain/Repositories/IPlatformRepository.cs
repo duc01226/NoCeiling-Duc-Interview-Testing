@@ -696,29 +696,11 @@ public interface IPlatformQueryableRepository<TEntity, TPrimaryKey> : IPlatformR
     where TEntity : class, IEntity<TPrimaryKey>, new()
 {
     /// <summary>
-    /// Return enumerable from query belong to <see cref="IPlatformUnitOfWorkManager.GlobalUow" />. <br />
-    /// A single separated global uow in current scoped is used by repository for read data using query, usually when need to return data
-    /// as enumerable to help download data like streaming data (not load all big data into ram) <br />
-    /// or any other purpose that just want to using query directly without affecting the current active uow. <br />
-    /// This uow is auto created once per scope when access it. <br />
-    /// This won't affect the normal current uow queue list when Begin a new uow.
-    /// </summary>
-    public IQueryable<TEntity> GetGlobalUowQuery(params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
-
-    /// <summary>
     /// Returns a query for the current Unit of Work (UoW).
     /// </summary>
     /// <param name="loadRelatedEntities">Expressions to load related entities.</param>
     /// <returns>An IQueryable of TEntity that represents the current UoW query.</returns>
     public IQueryable<TEntity> GetCurrentUowQuery(params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
-
-    /// <see cref="GetCurrentUowQuery" />
-    public IQueryable<TResult> GetCurrentUowQuery<TResult>(
-        Func<IQueryable<TEntity>, IQueryable<TResult>> queryBuilder,
-        params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
-    {
-        return queryBuilder(GetCurrentUowQuery(loadRelatedEntities));
-    }
 
     /// <summary>
     /// Build and get query from a given uow

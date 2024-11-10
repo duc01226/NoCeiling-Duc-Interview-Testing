@@ -26,7 +26,16 @@ public interface IPlatformUnitOfWorkManager : IDisposable
     /// This uow is auto created once per scope when access it. <br />
     /// This won't affect the normal current uow queue list when Begin a new uow.
     /// </summary>
-    public IPlatformUnitOfWork GlobalUow { get; }
+    public IPlatformUnitOfWork GlobalScopedUow { get; }
+
+    /// <summary>
+    /// A single separated global singleton uow is used by repository for read data using query, usually when need to return data
+    /// as enumerable to help download data like streaming data (not load all big data into ram) <br />
+    /// or any other purpose that just want to using query directly without think about uow of the query. <br />
+    /// This uow is auto created once when access it. <br />
+    /// This won't affect the normal current uow queue list when Begin a new uow.
+    /// </summary>
+    public PlatformSingletonUnitOfWorkContainer? GlobalSingletonUow { get; }
 
     public IPlatformCqrs CurrentSameScopeCqrs { get; }
 
@@ -302,6 +311,7 @@ public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
         RootServiceProvider = rootServiceProvider;
         currentSameScopeCqrsLazy = cqrs;
         globalUowLazy = new Lazy<IPlatformUnitOfWork>(() => CreateNewUow(false));
+        GlobalSingletonUow = RootServiceProvider.GetService<PlatformSingletonUnitOfWorkContainer>();
     }
 
     protected ConcurrentDictionary<string, IPlatformUnitOfWork> CompletedUows => completedUnitOfWorksDictLazy.Value;
@@ -310,6 +320,7 @@ public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
     protected IPlatformRootServiceProvider RootServiceProvider { get; }
     protected IServiceProvider ServiceProvider { get; }
 
+    public PlatformSingletonUnitOfWorkContainer? GlobalSingletonUow { get; }
     public IPlatformCqrs CurrentSameScopeCqrs => currentSameScopeCqrsLazy.Value;
 
     public virtual IPlatformUnitOfWork CreateNewUow(bool isUsingOnceTransientUow)
@@ -389,7 +400,7 @@ public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
 
     public IPlatformUnitOfWork? TryGetCurrentOrCreatedActiveUow(string uowId)
     {
-        if (uowId == null) return TryGetCurrentActiveUow();
+        if (uowId == null) return null;
 
         var currentOrCreatedUow = CurrentOrCreatedUow(uowId);
 
@@ -466,7 +477,7 @@ public abstract class PlatformUnitOfWorkManager : IPlatformUnitOfWorkManager
                 $"Current unit of work of type {typeof(TUnitOfWork).FullName} has been completed or disposed.");
     }
 
-    public IPlatformUnitOfWork GlobalUow => globalUowLazy.Value;
+    public IPlatformUnitOfWork GlobalScopedUow => globalUowLazy.Value;
 
     public void Dispose()
     {

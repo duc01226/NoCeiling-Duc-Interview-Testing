@@ -30,6 +30,10 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     protected IPlatformCqrs Cqrs => cqrsLazy.Value;
     protected IServiceProvider ServiceProvider { get; }
 
+    protected IPlatformUnitOfWork GlobalUow => DoesSupportSingletonUow() && UnitOfWorkManager.GlobalSingletonUow != null
+        ? UnitOfWorkManager.GlobalSingletonUow.Value
+        : UnitOfWorkManager.GlobalScopedUow;
+
     public IPlatformUnitOfWork CurrentActiveUow()
     {
         return UnitOfWorkManager.CurrentActiveUow().UowOfType<TUow>();
@@ -210,11 +214,6 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     public abstract Task<int> CountAsync<TQueryItemResult>(
         Func<IQueryable<TEntity>, IQueryable<TQueryItemResult>> queryBuilder,
         CancellationToken cancellationToken = default);
-
-    public IQueryable<TEntity> GetGlobalUowQuery(params Expression<Func<TEntity, object?>>[] loadRelatedEntities)
-    {
-        return GetQuery(UnitOfWorkManager.GlobalUow, loadRelatedEntities);
-    }
 
     public Func<IQueryable<TEntity>, IQueryable<TResult>> GetQueryBuilder<TResult>(Func<IQueryable<TEntity>, IQueryable<TResult>> builderFn)
     {
@@ -442,7 +441,25 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     /// <summary>
     /// Return True to determine that this uow is Thread Safe and could support multiple parallel query
     /// </summary>
-    protected abstract bool DoesSupportParallelQuery();
+    protected abstract bool DoesSupportParallelExecution();
+
+    protected abstract bool DoesSupportSingletonUow();
+
+    /// <summary>
+    /// If true, the uow actually do not handle real transaction. Repository when create/update data actually save immediately
+    /// </summary>
+    /// <remarks>
+    /// The IsPseudoTransactionUow method is part of the IUnitOfWork interface in the Easy.Platform.Domain.UnitOfWork namespace. This method is used to determine whether the current unit of work (UoW) is handling a real transaction or not.
+    /// <br />
+    /// In the context of a UoW pattern, a real transaction implies that the changes made within the UoW are not immediately saved to the database, but are instead held until the UoW is completed. If the UoW fails, the changes can be rolled back, maintaining the integrity of the data.
+    /// <br />
+    /// On the other hand, a pseudo-transaction UoW implies that the changes are immediately saved to the database when they are made. This means there is no rollback mechanism if the UoW fails.
+    /// <br />
+    /// In the provided code, different implementations of the IUnitOfWork interface override the IsPseudoTransactionUow method to specify whether they handle real transactions or pseudo-transactions. For example, the PlatformEfCorePersistenceUnitOfWork class returns false, indicating it handles real transactions, while the PlatformMongoDbPersistenceUnitOfWork class returns true, indicating it handles pseudo-transactions.
+    /// <br />
+    /// This method is used in various parts of the code to decide how to handle certain operations. For example, in the PlatformCqrsEventApplicationHandler class, the IsPseudoTransactionUow method is used to determine whether to execute certain actions immediately or add them to the OnSaveChangesCompletedActions list to be executed when the UoW is completed.
+    /// </remarks>
+    protected abstract bool IsPseudoTransactionUow();
 
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(
         Func<IPlatformUnitOfWork, IQueryable<TEntity>, Task<TResult>> readDataFn,
@@ -452,9 +469,9 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
         if (currentActiveUow == null)
         {
-            if (DoesSupportParallelQuery())
+            if (DoesSupportParallelExecution())
             {
-                return await ExecuteReadData(UnitOfWorkManager.GlobalUow, readDataFn, loadRelatedEntities);
+                return await ExecuteReadData(GlobalUow, readDataFn, loadRelatedEntities);
             }
             else
             {
@@ -486,7 +503,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
     protected async Task<TResult> ExecuteUowReadQueryThreadSafe<TResult>(IPlatformUnitOfWork uow, Func<IPlatformUnitOfWork, Task<TResult>> executeFn)
     {
-        if (DoesSupportParallelQuery() == false)
+        if (DoesSupportParallelExecution() == false)
         {
             var uowOfTUow = uow.UowOfType<TUow>();
 
@@ -542,20 +559,29 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
         if (currentActiveUow == null)
         {
-            var uow = UnitOfWorkManager.CreateNewUow(true);
-            TResult result = default;
-
-            try
+            if (DoesSupportParallelExecution() && IsPseudoTransactionUow())
             {
-                result = await action(uow);
-
-                await uow.CompleteAsync();
+                var result = await action(GlobalUow);
 
                 return result;
             }
-            finally
+            else
             {
-                if (!DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result, uow)) uow.Dispose();
+                var uow = UnitOfWorkManager.CreateNewUow(true);
+                TResult result = default;
+
+                try
+                {
+                    result = await action(uow);
+
+                    await uow.CompleteAsync();
+
+                    return result;
+                }
+                finally
+                {
+                    if (!DoesNeedKeepUowForQueryOrEnumerableExecutionLater(result, uow)) uow.Dispose();
+                }
             }
         }
         else

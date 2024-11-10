@@ -19,12 +19,10 @@ public interface IPlatformUnitOfWork : IDisposable
     /// </summary>
     public string Id { get; set; }
 
-    public IServiceScope? AssociatedToDisposeWithServiceScope { get; set; }
-
     /// <summary>
     /// Indicate it's created by UnitOfWorkManager
     /// </summary>
-    public IPlatformUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
+    public IPlatformUnitOfWorkManager? CreatedByUnitOfWorkManager { get; set; }
 
     /// <summary>
     /// Default is false. When it's true, the uow determine that this is a temporarily created uow for single read/write data action
@@ -228,7 +226,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     public ConcurrentBag<Func<Task>> OnUowCompletedActions { get; set; } = [];
     public ConcurrentBag<Func<PlatformUnitOfWorkFailedArgs, Task>> OnSaveChangesFailedActions { get; set; } = [];
     public long? BeginOrder { get; set; }
-    public IPlatformUnitOfWorkManager CreatedByUnitOfWorkManager { get; set; }
+    public IPlatformUnitOfWorkManager? CreatedByUnitOfWorkManager { get; set; }
 
     public virtual async Task CompleteAsync(CancellationToken cancellationToken = default)
     {
@@ -437,4 +435,21 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 
         OnSaveChangesFailedActions.Clear();
     }
+}
+
+/// <summary>
+/// A single separated global singleton uow is used by repository for read data using query, usually when need to return data
+/// as enumerable to help download data like streaming data (not load all big data into ram) <br />
+/// or any other purpose that just want to using query directly without think about uow of the query. <br />
+/// This uow is auto created once when access it. <br />
+/// This won't affect the normal current uow queue list when Begin a new uow.
+/// </summary>
+public class PlatformSingletonUnitOfWorkContainer
+{
+    public PlatformSingletonUnitOfWorkContainer(IPlatformUnitOfWork value)
+    {
+        Value = value;
+    }
+
+    public IPlatformUnitOfWork Value { get; }
 }

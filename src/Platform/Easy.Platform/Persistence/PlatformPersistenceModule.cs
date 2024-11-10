@@ -227,6 +227,8 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
     {
     }
 
+    protected virtual bool AllowSingletonUnitOfWork => false;
+
     public override int ExecuteInitPriority => DefaultExecuteInitPriority;
 
     public override async Task MigrateApplicationDataAsync(IServiceScope serviceScope)
@@ -285,6 +287,22 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
         if (PooledDbContextOption().Enabled) RegisterDbContextPool(serviceCollection);
 
         base.InternalRegister(serviceCollection);
+
+        if (AllowSingletonUnitOfWork)
+            serviceCollection.Register(
+                typeof(PlatformSingletonUnitOfWorkContainer),
+                sp => new PlatformSingletonUnitOfWorkContainer(
+                    new PlatformAggregatedPersistenceUnitOfWork(
+                            sp.GetRequiredService<IPlatformRootServiceProvider>(),
+                            sp,
+                            sp.GetService<ILoggerFactory>())
+                        .With(
+                            p =>
+                            {
+                                p.IsUsingOnceTransientUow = false;
+                            })),
+                ServiceLifeTime.Singleton,
+                replaceStrategy: DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
     }
 
     protected void RegisterPersistenceConfiguration(IServiceCollection serviceCollection)
@@ -295,6 +313,11 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
                 .With(config => config.PooledOptions = PooledDbContextOption())
                 .Pipe(config => ConfigurePersistenceConfiguration(config, Configuration)),
             ServiceLifeTime.Singleton);
+        serviceCollection.Register(
+            typeof(IPlatformPersistenceConfiguration<TDbContext>),
+            sp => sp.GetRequiredService<PlatformPersistenceConfiguration<TDbContext>>(),
+            ServiceLifeTime.Singleton,
+            replaceStrategy: DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
     }
 
     /// <summary>

@@ -78,14 +78,20 @@ public interface IPlatformModule
     /// <param name="moduleType">The type of the modules to wait for.</param>
     /// <param name="logger">The logger to log information. If null, a default logger will be created.</param>
     /// <param name="logSuffix">The suffix for the log information.</param>
+    /// <param name="notLogging">If true not log information</param>
     /// <returns>A Task representing the asynchronous operation.</returns>
-    public static async Task WaitAllModulesInitiatedAsync(IServiceProvider serviceProvider, Type moduleType, ILogger logger = null, string logSuffix = null)
+    public static async Task WaitAllModulesInitiatedAsync(
+        IServiceProvider serviceProvider,
+        Type moduleType,
+        ILogger logger = null,
+        string logSuffix = null,
+        bool notLogging = true)
     {
         if (serviceProvider.GetServices(moduleType).Select(p => p.As<IPlatformModule>()).All(p => p.Initiated)) return;
 
         var useLogger = logger ?? CreateDefaultLogger(serviceProvider);
 
-        useLogger.LogInformation("[PlatformModule] Start WaitAllModulesInitiated of type {ModuleType} {LogSuffix} STARTED", moduleType.Name, logSuffix);
+        if (!notLogging) useLogger.LogInformation("[PlatformModule] Start WaitAllModulesInitiated of type {ModuleType} {LogSuffix} STARTED", moduleType.Name, logSuffix);
 
         await Util.TaskRunner.WaitUntilAsync(
             () =>
@@ -98,7 +104,7 @@ public interface IPlatformModule
             waitForMsg: $"Wait for all modules of type {moduleType.Name} get initiated",
             waitIntervalSeconds: 5);
 
-        useLogger.LogInformation("[Platform] WaitAllModulesInitiated of type {ModuleType} {LogSuffix} FINISHED", moduleType.Name, logSuffix);
+        if (!notLogging) useLogger.LogInformation("[Platform] WaitAllModulesInitiated of type {ModuleType} {LogSuffix} FINISHED", moduleType.Name, logSuffix);
     }
 
     /// <summary>

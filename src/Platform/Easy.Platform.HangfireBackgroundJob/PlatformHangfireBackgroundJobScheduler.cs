@@ -194,28 +194,40 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
 
     public void ReplaceAllRecurringBackgroundJobs(List<IPlatformBackgroundJobExecutor> newAllRecurringJobs)
     {
-        // Remove obsolete recurring job, job is not existed in the all current recurring declared jobs in source code
-        var newCurrentRecurringJobExecutorIds = newAllRecurringJobs
-            .Select(p => BuildAutoRecurringJobIdByType(p.GetType()))
+        var newCurrentRecurringJobExecutorToIdPairs = newAllRecurringJobs
+            .Select(p => (JobExecutor: p, JobExecutorId: BuildAutoRecurringJobIdByType(p.GetType())))
+            .ToHashSet();
+
+        var newCurrentRecurringJobExecutorIds = newCurrentRecurringJobExecutorToIdPairs
+            .Select(p => p.JobExecutorId)
             .ToHashSet();
         var allExistingRecurringJobIds = AllExistingRecurringJobIds();
 
-        foreach (var existingAutoRecurringJobId in allExistingRecurringJobIds.Where(p => p.StartsWith(AutoRecurringJobIdByTypeSuffix)))
+        // Remove obsolete recurring job, job is not existed in the all current recurring declared jobs in source code
+        foreach (var existingAutoRecurringJobId in allExistingRecurringJobIds)
             if (!newCurrentRecurringJobExecutorIds.Contains(existingAutoRecurringJobId))
                 RemoveRecurringJobIfExist(existingAutoRecurringJobId);
 
         // Upsert all new recurring jobs
-        newAllRecurringJobs.ForEach(
-            recurringBackgroundJobExecutor =>
-            {
-                var backgroundJobTimeZoneOffset = PlatformRecurringJobAttribute.GetRecurringJobAttributeInfo(recurringBackgroundJobExecutor.GetType()).TimeZoneOffset;
+        newCurrentRecurringJobExecutorToIdPairs
+            .Where(p => !allExistingRecurringJobIds.Contains(p.JobExecutorId))
+            .Select(p => p.JobExecutor)
+            .ParallelAsync(
+                recurringBackgroundJobExecutor =>
+                {
+                    return Task.Run(
+                        () =>
+                        {
+                            var backgroundJobTimeZoneOffset = PlatformRecurringJobAttribute.GetRecurringJobAttributeInfo(recurringBackgroundJobExecutor.GetType())
+                                .TimeZoneOffset;
 
-                var backgroundJobTimeZoneInfo = backgroundJobTimeZoneOffset != null
-                    ? TimeZoneInfo.GetSystemTimeZones().MinBy(p => Math.Abs(p.BaseUtcOffset.TotalHours - backgroundJobTimeZoneOffset.Value))
-                    : null;
+                            var backgroundJobTimeZoneInfo = backgroundJobTimeZoneOffset != null
+                                ? TimeZoneInfo.GetSystemTimeZones().MinBy(p => Math.Abs(p.BaseUtcOffset.TotalHours - backgroundJobTimeZoneOffset.Value))
+                                : null;
 
-                UpsertRecurringJob(recurringBackgroundJobExecutor.GetType(), timeZone: backgroundJobTimeZoneInfo);
-            });
+                            UpsertRecurringJob(recurringBackgroundJobExecutor.GetType(), timeZone: backgroundJobTimeZoneInfo);
+                        });
+                });
     }
 
     public void ExecuteBackgroundJob<TJobExecutor>() where TJobExecutor : IPlatformBackgroundJobExecutor

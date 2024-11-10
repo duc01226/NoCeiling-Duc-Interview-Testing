@@ -771,11 +771,6 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             cancellationToken);
     }
 
-    protected bool IsEntityTracked<TEntity>(TEntity entity) where TEntity : class, IEntity, new()
-    {
-        return GetTable<TEntity>().Local.Any(e => e == entity);
-    }
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ApplyEntityConfigurationsFromAssembly(modelBuilder);

@@ -32,7 +32,17 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
 
     protected DbContextOptions<TDbContext> DbContextOptions { get; }
 
-    protected override bool DoesSupportParallelQuery()
+    protected override bool DoesSupportParallelExecution()
+    {
+        return false;
+    }
+
+    protected override bool DoesSupportSingletonUow()
+    {
+        return false;
+    }
+
+    protected override bool IsPseudoTransactionUow()
     {
         return false;
     }

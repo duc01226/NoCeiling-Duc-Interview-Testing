@@ -26,7 +26,17 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
     {
     }
 
-    protected override bool DoesSupportParallelQuery()
+    protected override bool DoesSupportParallelExecution()
+    {
+        return true;
+    }
+
+    protected override bool DoesSupportSingletonUow()
+    {
+        return true;
+    }
+
+    protected override bool IsPseudoTransactionUow()
     {
         return true;
     }

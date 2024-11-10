@@ -34,7 +34,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     /// Auto use GlobalUow if there's no current active uow. <br />
     /// Support for old system code or other application want to use platform repository inherit DbContext but without open new uow
     /// </summary>
-    protected virtual TDbContext DbContext => GetUowDbContext(TryGetCurrentActiveUow() ?? UnitOfWorkManager.GlobalUow);
+    protected virtual TDbContext DbContext => GetUowDbContext(TryGetCurrentActiveUow() ?? GlobalUow);
 
     protected PlatformPersistenceConfiguration<TDbContext> PersistenceConfiguration { get; }
     protected ILogger Logger => loggerLazy.Value;

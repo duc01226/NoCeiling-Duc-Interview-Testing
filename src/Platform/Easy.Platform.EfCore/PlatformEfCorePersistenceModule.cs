@@ -172,7 +172,7 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
 
         DbContextOptionsBuilderActionProvider(serviceProvider).Invoke(builder);
 
-        if (Debugger.IsAttached && serviceProvider.GetRequiredService<IPlatformPersistenceConfiguration>().EnableDebugQueryLog)
+        if (Debugger.IsAttached && serviceProvider.GetRequiredService<IPlatformPersistenceConfiguration<TDbContext>>().EnableDebugQueryLog)
             builder.UseLoggerFactory(Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddDebug()));
     }
 }
