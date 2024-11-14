@@ -12,7 +12,7 @@ public static partial class Util
 {
     public static class TaskRunner
     {
-        public const int DefaultWaitUntilMaxSeconds = 60;
+        public const int DefaultWaitUntilMaxSeconds = 30;
         public const double DefaultWaitIntervalSeconds = 2;
         public const double DefaultSlowWaitIntervalSeconds = 5;
         public const int DefaultResilientRetryCount = 3;
@@ -1018,6 +1018,18 @@ public static partial class Util
                     throw new TimeoutException(
                         $"WaitUntil is timed out (Max: {maxWaitSeconds} seconds)." +
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+        }
+
+        /// <summary>
+        /// See <see cref="WaitUntilAsync(Func{Task{bool}},double,double,string)" /> with default fast small wait seconds max wait and interval also
+        /// </summary>
+        public static async Task FastWaitUntilAsync(
+            Func<Task<bool>> condition,
+            double maxWaitSeconds = 5,
+            double waitIntervalSeconds = 1,
+            string waitForMsg = null)
+        {
+            await WaitUntilAsync(condition, maxWaitSeconds, waitIntervalSeconds, waitForMsg);
         }
 
         /// <summary>
