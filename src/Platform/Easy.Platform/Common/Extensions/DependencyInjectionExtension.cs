@@ -1080,7 +1080,9 @@ public static class DependencyInjectionExtension
         if (!implementationType.IsGenericType)
             implementationType
                 .GetInterfaces()
-                .Where(implementationTypeInterface => !implementationTypeInterface.IsGenericType)
+                .Where(
+                    implementationTypeInterface => !implementationTypeInterface.IsGenericType ||
+                                                   !implementationTypeInterface.ContainsGenericParameters)
                 .Where(DefaultIgnoreRegisterLibraryInterfacesForImplementationExpr())
                 .ForEach(
                     implementationTypeInterface => services.Register(

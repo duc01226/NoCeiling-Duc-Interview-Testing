@@ -63,6 +63,8 @@ public interface IPlatformUnitOfWork : IDisposable
     /// </summary>
     public T? GetInnerUowOfType<T>() where T : class, IPlatformUnitOfWork;
 
+    public T? GetInnerUowOfAssignedToType<T>() where T : class, IPlatformUnitOfWork;
+
     /// <summary>
     /// Completes this unit of work.
     /// It saves all changes and commit transaction if exists.
@@ -166,6 +168,11 @@ public interface IPlatformUnitOfWork : IDisposable
     public TUnitOfWork UowOfType<TUnitOfWork>() where TUnitOfWork : class, IPlatformUnitOfWork
     {
         return this.As<TUnitOfWork>() ?? GetInnerUowOfType<TUnitOfWork>();
+    }
+
+    public TUnitOfWork UowOfAssignedToType<TUnitOfWork>() where TUnitOfWork : class, IPlatformUnitOfWork
+    {
+        return this.As<TUnitOfWork>() ?? GetInnerUowOfAssignedToType<TUnitOfWork>();
     }
 
     /// <summary>
@@ -354,6 +361,29 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
             typeof(T),
             _ =>
             {
+                var uow = ServiceProvider.GetRequiredService<T>()
+                    .With(w => w.CreatedByUnitOfWorkManager = CreatedByUnitOfWorkManager)
+                    .With(w => w.ParentUnitOfWork = this)
+                    .With(w => w.IsUsingOnceTransientUow = IsUsingOnceTransientUow);
+
+                if (uow != null)
+                    CachedInnerUowByIds?.TryAdd(uow.Id, uow);
+
+                return uow;
+            }) as T;
+    }
+
+    public T GetInnerUowOfAssignedToType<T>() where T : class, IPlatformUnitOfWork
+    {
+        if (CachedInnerUowByTypes == null) return ParentUnitOfWork?.UowOfAssignedToType<T>();
+
+        return CachedInnerUowByTypes?.GetOrAdd(
+            typeof(T),
+            _ =>
+            {
+                var innerUowTypeAssignedTo = CachedInnerUowByTypes.Where(p => p.Value.GetType().IsAssignableTo(typeof(T))).Select(p => p.Value).FirstOrDefault();
+                if (innerUowTypeAssignedTo != null) return innerUowTypeAssignedTo;
+
                 var uow = ServiceProvider.GetRequiredService<T>()
                     .With(w => w.CreatedByUnitOfWorkManager = CreatedByUnitOfWorkManager)
                     .With(w => w.ParentUnitOfWork = this)
