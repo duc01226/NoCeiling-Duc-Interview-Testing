@@ -86,9 +86,11 @@ public static class DictionaryExtension
 
     public static TValue GetValueOrDefaultIgnoreCase<TValue>(this IDictionary<string, TValue> dictionary, string key, TValue defaultValue = default)
     {
-        return dictionary.TryGetValueOrDefault(key, defaultValue) ??
-               dictionary.TryGetValueOrDefault(key.ToLower(), defaultValue) ??
-               dictionary.TryGetValueOrDefault(key.ToUpper(), defaultValue);
+        if (dictionary.TryGetValue(key, out var value)) return value;
+        if (dictionary.TryGetValue(key.ToLower(), out var fromToLowerKeyValue)) return fromToLowerKeyValue;
+        if (dictionary.TryGetValue(key.ToUpper(), out var fromToUpperKeyValue)) return fromToUpperKeyValue;
+
+        return defaultValue;
     }
 
     /// <summary>

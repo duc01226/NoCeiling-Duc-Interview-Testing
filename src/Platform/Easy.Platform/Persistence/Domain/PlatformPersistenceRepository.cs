@@ -184,7 +184,8 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => GetUowDbContext(uow).CountAsync(predicate, cancellationToken),
-            []);
+            [],
+            forceOpenUowUsingOnce: true);
     }
 
     public override Task<int> CountAsync(IQueryable<TEntity> query, CancellationToken cancellationToken = default)
@@ -198,7 +199,8 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => GetUowDbContext(uow).AnyAsync(predicate, cancellationToken),
-            []);
+            [],
+            forceOpenUowUsingOnce: true);
     }
 
     public override Task<int> CountAsync<TQueryItemResult>(
@@ -207,7 +209,8 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (_, query) => CountAsync(queryBuilder(query), cancellationToken),
-            []);
+            [],
+            forceOpenUowUsingOnce: true);
     }
 
     public override Task<int> CountAsync<TQueryItemResult>(
@@ -216,7 +219,8 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     {
         return ExecuteAutoOpenUowUsingOnceTimeForRead(
             (uow, query) => CountAsync(queryBuilder(uow, query), cancellationToken),
-            []);
+            [],
+            forceOpenUowUsingOnce: true);
     }
 
     public override Task<List<TSelector>> GetAllAsync<TSelector>(

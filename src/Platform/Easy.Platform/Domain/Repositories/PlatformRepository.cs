@@ -463,9 +463,10 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
     protected virtual async Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(
         Func<IPlatformUnitOfWork, IQueryable<TEntity>, Task<TResult>> readDataFn,
-        Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        Expression<Func<TEntity, object>>[] loadRelatedEntities,
+        bool forceOpenUowUsingOnce = false)
     {
-        var currentActiveUow = UnitOfWorkManager.TryGetCurrentActiveUow();
+        var currentActiveUow = forceOpenUowUsingOnce ? null : UnitOfWorkManager.TryGetCurrentActiveUow();
 
         if (currentActiveUow == null)
         {
@@ -539,9 +540,10 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
     protected virtual Task<TResult> ExecuteAutoOpenUowUsingOnceTimeForRead<TResult>(
         Func<IPlatformUnitOfWork, IQueryable<TEntity>, TResult> readDataFn,
-        Expression<Func<TEntity, object>>[] loadRelatedEntities)
+        Expression<Func<TEntity, object>>[] loadRelatedEntities,
+        bool forceOpenUowUsingOnce = false)
     {
-        return ExecuteAutoOpenUowUsingOnceTimeForRead(ReadDataFnAsync, loadRelatedEntities);
+        return ExecuteAutoOpenUowUsingOnceTimeForRead(ReadDataFnAsync, loadRelatedEntities, forceOpenUowUsingOnce);
 
         async Task<TResult> ReadDataFnAsync(IPlatformUnitOfWork unitOfWork, IQueryable<TEntity> entities)
         {
