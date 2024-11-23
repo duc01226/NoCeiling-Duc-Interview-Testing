@@ -2,9 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using IdentityServer4;
 using IdentityServer4.Events;
 using IdentityServer4.Extensions;
@@ -117,12 +114,14 @@ public class ConsentController : Controller
             {
                 var scopes = model.ScopesConsented;
                 if (ConsentOptions.EnableOfflineAccess == false)
+                {
                     scopes = scopes.Where(
                         x => x != IdentityServerConstants.StandardScopes.OfflineAccess);
+                }
 
                 grantedConsent = new ConsentResponse
                 {
-                    RememberConsent = model.RememberConsent,
+                    RememberConsent = model.RememberConsent == true,
                     ScopesValuesConsented = scopes.ToArray(),
                     Description = model.Description
                 };
@@ -137,14 +136,10 @@ public class ConsentController : Controller
                         grantedConsent.RememberConsent));
             }
             else
-            {
                 result.ValidationError = ConsentOptions.MustChooseOneErrorMessage;
-            }
         }
         else
-        {
             result.ValidationError = ConsentOptions.InvalidSelectionErrorMessage;
-        }
 
         if (grantedConsent != null)
         {
@@ -212,18 +207,20 @@ public class ConsentController : Controller
         }
 
         if (ConsentOptions.EnableOfflineAccess && request.ValidatedResources.Resources.OfflineAccess)
+        {
             apiScopes.Add(
                 GetOfflineAccessScope(
                     vm.ScopesConsented.Contains(
                         IdentityServerConstants.StandardScopes.OfflineAccess) ||
                     model == null));
+        }
 
         vm.ApiScopes = apiScopes;
 
         return vm;
     }
 
-    private ScopeViewModel CreateScopeViewModel(IdentityResource identity, bool check)
+    private static ScopeViewModel CreateScopeViewModel(IdentityResource identity, bool check)
     {
         return new ScopeViewModel
         {
@@ -253,7 +250,7 @@ public class ConsentController : Controller
         };
     }
 
-    private ScopeViewModel GetOfflineAccessScope(bool check)
+    private static ScopeViewModel GetOfflineAccessScope(bool check)
     {
         return new ScopeViewModel
         {

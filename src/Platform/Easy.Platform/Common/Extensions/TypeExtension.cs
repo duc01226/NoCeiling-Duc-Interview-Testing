@@ -17,8 +17,10 @@ public static class TypeExtension
             var givenInterfaceTypes = givenType.GetInterfaces();
 
             foreach (var givenInterfaceType in givenInterfaceTypes)
+            {
                 if (givenInterfaceType.IsGenericType && givenInterfaceType.GetGenericTypeDefinition() == genericType)
                     return true;
+            }
 
             if (givenType.IsGenericType && givenType.GetGenericTypeDefinition() == genericType) return true;
 
@@ -151,8 +153,10 @@ public static class TypeExtension
             var givenInterfaceTypes = givenType.GetInterfaces();
 
             foreach (var givenInterfaceType in givenInterfaceTypes)
+            {
                 if (givenInterfaceType.IsGenericType && givenInterfaceType.GetGenericTypeDefinition() == genericType.GetGenericTypeDefinition())
                     return givenInterfaceType;
+            }
 
             if (givenType.IsGenericType && givenType.GetGenericTypeDefinition() == genericType.GetGenericTypeDefinition()) return givenType;
 

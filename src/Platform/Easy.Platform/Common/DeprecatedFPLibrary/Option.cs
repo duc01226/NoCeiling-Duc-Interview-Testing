@@ -15,10 +15,14 @@ public class Option
 
         internal Some(T value)
         {
+#pragma warning disable S2955
             if (value == null)
+#pragma warning restore S2955
+            {
                 throw new ArgumentNullException(
                     nameof(value),
                     "Cannot wrap a null value in a 'Some'; use 'None' instead");
+            }
 
             Value = value;
         }
@@ -27,14 +31,12 @@ public class Option
 
 public readonly struct Option<T> : IEquatable<Option.None>, IEquatable<Option<T>>
 {
-    private readonly T value;
-
     private Option(T value)
     {
-        if (value == null) throw new ArgumentNullException(nameof(value));
+        ArgumentNullException.ThrowIfNull(value);
 
         IsSome = true;
-        this.value = value;
+        Value = value;
     }
 
     public static implicit operator Option<T>(Option.None none)
@@ -61,29 +63,29 @@ public readonly struct Option<T> : IEquatable<Option.None>, IEquatable<Option<T>
 
     public bool IsNone => !IsSome;
 
-    public T Value => value;
+    public T Value { get; }
 
     public TR Match<TR>(Func<TR> none, Func<T, TR> some)
     {
-        return IsSome ? some(value) : none();
+        return IsSome ? some(Value) : none();
     }
 
     public void Match(Action none, Action<T> some)
     {
         if (IsSome)
-            some(value);
+            some(Value);
         else
             none();
     }
 
     public IEnumerable<T> AsEnumerable()
     {
-        if (IsSome) yield return value;
+        if (IsSome) yield return Value;
     }
 
     public bool Equals(Option<T> other)
     {
-        return IsSome == other.IsSome && (IsNone || value.Equals(other.value));
+        return IsSome == other.IsSome && (IsNone || Value.Equals(other.Value));
     }
 
     public bool Equals(Option.None other)
@@ -98,7 +100,7 @@ public readonly struct Option<T> : IEquatable<Option.None>, IEquatable<Option<T>
 
     public override string ToString()
     {
-        return IsSome ? $"Some({value})" : "None";
+        return IsSome ? $"Some({Value})" : "None";
     }
 
     public override bool Equals(object obj)
@@ -190,7 +192,9 @@ public static class OptionExt
 
     public static Option<T> AsOption<T>(this T value)
     {
+#pragma warning disable S2955
         return value == null ? F.None : F.Some(value);
+#pragma warning restore S2955
     }
 
     public static Option<T> AsOption<T>(this T? value) where T : struct

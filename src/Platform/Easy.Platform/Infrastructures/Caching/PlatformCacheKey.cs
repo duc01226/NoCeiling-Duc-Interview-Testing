@@ -63,18 +63,6 @@ public readonly struct PlatformCacheKey
     /// </summary>
     public string RequestKey { get; init; }
 
-    public bool Equals(PlatformCacheKey x, PlatformCacheKey y)
-    {
-        if (x.GetType() != y.GetType())
-            return false;
-        return x.ToString() == y.ToString();
-    }
-
-    public int GetHashCode(PlatformCacheKey obj)
-    {
-        return HashCode.Combine(obj.Context, obj.Collection, obj.RequestKey);
-    }
-
     public bool Equals(PlatformCacheKey other)
     {
         return ToString() == other.ToString();

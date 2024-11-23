@@ -12,7 +12,7 @@ public static class EnsureExtension
     /// <exception cref="Exception">The exception produced by the exception function if the target object is null.</exception>
     public static T EnsureNotNull<T>(this T target, Func<Exception> exception)
     {
-        return target.Ensure(target => target != null, exception);
+        return target.Ensure(target => target is not null, exception);
     }
 
     /// <summary>

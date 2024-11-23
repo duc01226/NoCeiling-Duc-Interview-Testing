@@ -79,6 +79,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         {
             // If standalone scope for outbox is enabled, execute the sending logic in a new scope.
             if (outboxConfig.StandaloneScopeForOutbox)
+            {
                 await serviceProvider.ExecuteInjectScopedAsync(
                     (
                         IPlatformOutboxBusMessageRepository outboxBusMessageRepository,
@@ -96,8 +97,10 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         outboxBusMessageRepository,
                         messageBusProducer,
                         unitOfWorkManager));
+            }
             // Otherwise, execute the sending logic in the current scope.
             else
+            {
                 await serviceProvider.ExecuteInjectAsync(
                     (
                         IPlatformOutboxBusMessageRepository outboxBusMessageRepository,
@@ -115,12 +118,11 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         outboxBusMessageRepository,
                         messageBusProducer,
                         unitOfWorkManager));
+            }
         }
         // If no outbox message repository is configured, send the message directly to the message bus.
         else
-        {
             await messageBusProducer.SendAsync(message, routingKey, cancellationToken);
-        }
     }
 
     /// <summary>
@@ -158,6 +160,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         if (handleExistingOutboxMessage != null &&
             handleExistingOutboxMessage.SendStatus != PlatformOutboxBusMessage.SendStatuses.Processed &&
             handleExistingOutboxMessage.SendStatus != PlatformOutboxBusMessage.SendStatuses.Ignored)
+        {
             await SendExistingOutboxMessageAsync(
                 handleExistingOutboxMessage,
                 message,
@@ -168,8 +171,10 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 logger,
                 messageBusProducer,
                 outboxBusMessageRepository);
+        }
         // If there's no existing outbox message, create a new one and attempt to send it.
         else if (handleExistingOutboxMessage == null)
+        {
             await SaveAndTrySendNewOutboxMessageAsync(
                 message,
                 routingKey,
@@ -181,6 +186,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 logger,
                 unitOfWorkManager,
                 outboxBusMessageRepository);
+        }
     }
 
     /// <summary>
@@ -219,9 +225,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 await outboxBusMessageRepository.AnyAsync(
                     PlatformOutboxBusMessage.CheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessageExpr(existingOutboxMessage),
                     cancellationToken))
-            {
                 await RevertExistingOutboxToNewMessageAsync(existingOutboxMessage, outboxBusMessageRepository, cancellationToken);
-            }
             else
             {
                 StartIntervalPingProcessing(
@@ -272,12 +276,14 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             async () =>
             {
                 while (!cancellationToken.IsCancellationRequested)
+                {
                     await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                         async () =>
                         {
                             try
                             {
                                 if (!cancellationToken.IsCancellationRequested)
+                                {
                                     await rootServiceProvider.ExecuteInjectScopedAsync(
                                         async (IPlatformOutboxBusMessageRepository outboxBusMessageRepository) =>
                                         {
@@ -294,6 +300,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                                                 existingOutboxMessage.LastProcessingPingDate = toUpdateExistingOutboxMessage.LastProcessingPingDate;
                                             }
                                         });
+                                }
 
                                 await Task.Delay(PlatformOutboxBusMessage.CheckProcessingPingIntervalSeconds.Seconds(), cancellationToken);
                             }
@@ -308,6 +315,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                         {
                             if (retryAttempt > 10) loggerFactory().LogError(ex.BeautifyStackTrace(), "Update PlatformOutboxBusMessage LastProcessingPingTime failed");
                         });
+                }
             },
             loggerFactory: loggerFactory,
             delayTimeSeconds: PlatformOutboxBusMessage.CheckProcessingPingIntervalSeconds,
@@ -322,7 +330,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
     /// <param name="outboxBusMessageRepository">The repository for accessing outbox messages.</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken" /> that can be used to cancel the operation.</param>
     /// <returns>A <see cref="Task" /> representing the asynchronous operation.</returns>
-    public async Task RevertExistingOutboxToNewMessageAsync(
+    public static async Task RevertExistingOutboxToNewMessageAsync(
         PlatformOutboxBusMessage existingOutboxMessage,
         IPlatformOutboxBusMessageRepository outboxBusMessageRepository,
         CancellationToken cancellationToken)
@@ -467,12 +475,14 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                                 cancellationToken);
 
                             if (latestCurrentExistingOutboxMessage != null)
+                            {
                                 await UpdateExistingOutboxMessageFailedAsync(
                                     latestCurrentExistingOutboxMessage,
                                     exception,
                                     retryProcessFailedMessageInSecondsUnit,
                                     cancellationToken,
                                     outboxBusMessageRepository);
+                            }
                         });
                 },
                 retryCount: DefaultResilientRetiredCount,
@@ -552,8 +562,9 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
         // If there's no active unit of work or the unit of work is a pseudo transaction, send the message immediately in a background thread.
         var canSendMessageDirectlyWithoutWaitUowTransaction = sourceOutboxUowActiveUow == null || sourceOutboxUowActiveUow.IsPseudoTransactionUow();
 
+        // Try to send directly first without using outbox for faster performance if no uow or fake uow. If failed => use inbox to support retry later
         if (canSendMessageDirectlyWithoutWaitUowTransaction)
-            // Try to send directly first without using outbox for faster performance if no uow or fake uow. If failed => use inbox to support retry later
+        {
             try
             {
                 await messageBusProducer.SendAsync(message, routingKey, cancellationToken);
@@ -562,6 +573,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             {
                 await DoCreateNewInboxAndSendMessage();
             }
+        }
         else
             await DoCreateNewInboxAndSendMessage();
 

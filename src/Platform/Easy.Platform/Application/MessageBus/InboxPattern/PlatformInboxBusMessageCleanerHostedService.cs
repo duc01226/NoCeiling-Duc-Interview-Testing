@@ -50,12 +50,14 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
                 onRetry: (ex, timeSpan, currentRetry, ctx) =>
                 {
                     if (currentRetry >= MinimumRetryCleanInboxMessageTimesToWarning)
+                    {
                         Logger.LogError(
-                            "Retry CleanInboxEventBusMessage {CurrentRetry} time(s) failed: {Error}. [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
+                            "Retry CleanInboxEventBusMessage {CurrentRetry} time(s) failed: {Error}. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
                             currentRetry,
                             ex.Message,
                             ApplicationSettingContext.ApplicationName,
                             ApplicationSettingContext.ApplicationAssembly.FullName);
+                    }
                 },
                 cancellationToken: cancellationToken);
         }
@@ -63,7 +65,7 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
         {
             Logger.LogError(
                 ex.BeautifyStackTrace(),
-                "CleanInboxEventBusMessage failed. [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
+                "CleanInboxEventBusMessage failed. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
                 ApplicationSettingContext.ApplicationName,
                 ApplicationSettingContext.ApplicationAssembly.FullName);
         }

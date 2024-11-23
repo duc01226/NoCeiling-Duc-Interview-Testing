@@ -985,12 +985,16 @@ public static partial class Util
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
             while (!condition())
+            {
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     Thread.Sleep((int)(waitIntervalSeconds * 1000));
                 else
+                {
                     throw new TimeoutException(
                         $"WaitUntil is timed out (Max: {maxWaitSeconds} seconds)." +
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+                }
+            }
         }
 
         /// <summary>
@@ -1012,12 +1016,16 @@ public static partial class Util
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
             while (!await condition())
+            {
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     await Task.Delay((int)(waitIntervalSeconds * 1000));
                 else
+                {
                     throw new TimeoutException(
                         $"WaitUntil is timed out (Max: {maxWaitSeconds} seconds)." +
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+                }
+            }
         }
 
         /// <summary>
@@ -1051,12 +1059,16 @@ public static partial class Util
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
             while (!condition())
+            {
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     await Task.Delay((int)(waitIntervalSeconds * 1000));
                 else
+                {
                     throw new TimeoutException(
                         $"WaitUntil is timed out (Max: {maxWaitSeconds} seconds)." +
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+                }
+            }
         }
 
         /// <summary>
@@ -1184,15 +1196,15 @@ public static partial class Util
             var result = getResult(target);
 
             while (!condition(result))
+            {
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                 {
                     await Task.Delay((int)(delayRetryTimeSeconds * 1000), cancellationToken);
                     result = getResult(target);
                 }
                 else
-                {
                     break;
-                }
+            }
 
             return result;
         }
@@ -1222,15 +1234,15 @@ public static partial class Util
             var result = await getResult(target);
 
             while (!condition(result))
+            {
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                 {
                     await Task.Delay((int)(delayRetryTimeSeconds * 1000), cancellationToken);
                     result = await getResult(target);
                 }
                 else
-                {
                     break;
-                }
+            }
 
             return result;
         }
@@ -1273,9 +1285,11 @@ public static partial class Util
                     if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                         Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
                     else
+                    {
                         throw new TimeoutException(
                             $"WaitUntil is timed out (Max: {maxWaitSeconds} seconds)." +
                             $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+                    }
                 }
 
                 return target;
@@ -1437,10 +1451,12 @@ public static partial class Util
                         if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                             Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
                         else
+                        {
                             throw new TimeoutException(
                                 $"WaitUntilGetSuccess is timed out (Max: {maxWaitSeconds} seconds)." +
                                 $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}" +
                                 $"{Environment.NewLine}Error: {e.Message}");
+                        }
                     }
                 }
             }
@@ -1455,7 +1471,7 @@ public static partial class Util
             T target,
             Func<T, TResult> getResult,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
-            string waitForMsg = null)
+            string waitForMsg = null) where TResult : class
         {
             return WaitUntilGetSuccessAsync(target, getResult, null, maxWaitSeconds, waitForMsg);
         }
@@ -1479,7 +1495,7 @@ public static partial class Util
             Func<T, TResult> getResult,
             Func<T, TAny> continueWaitOnlyWhen = null,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
-            string waitForMsg = null)
+            string waitForMsg = null) where TResult : class
         {
             var startWaitTime = DateTime.UtcNow;
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
@@ -1494,17 +1510,19 @@ public static partial class Util
                     {
                         var result = getResult(target);
 
-                        return result == null ? throw new Exception("Result must be not null") : result;
+                        return result ?? throw new Exception("Result must be not null");
                     }
                     catch (Exception e)
                     {
                         if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                             await Task.Delay((int)(DefaultWaitIntervalSeconds * 1000));
                         else
+                        {
                             throw new TimeoutException(
                                 $"WaitUntilGetSuccess is timed out (Max: {maxWaitSeconds} seconds)." +
                                 $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}" +
                                 $"{Environment.NewLine}Error: {e.Message}");
+                        }
                     }
                 }
             }
@@ -1519,7 +1537,7 @@ public static partial class Util
             Func<T, TResult> getResult,
             Action<T> continueWaitOnlyWhen,
             double maxWaitSeconds = DefaultWaitUntilMaxSeconds,
-            string waitForMsg = null)
+            string waitForMsg = null) where TResult : class
         {
             return WaitUntilGetSuccessAsync(target, getResult, continueWaitOnlyWhen?.ToFunc(), maxWaitSeconds, waitForMsg);
         }
@@ -1546,12 +1564,16 @@ public static partial class Util
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
             while (!condition())
+            {
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     Thread.Sleep((int)(waitIntervalSeconds * 1000));
                 else
+                {
                     throw new TimeoutException(
                         $"WaitUntil is timed out (Max: {maxWaitSeconds} seconds)." +
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+                }
+            }
 
             return action();
         }
@@ -1577,12 +1599,16 @@ public static partial class Util
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
             while (!await condition())
+            {
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     await Task.Delay((int)(waitIntervalSeconds * 1000));
                 else
+                {
                     throw new TimeoutException(
                         $"WaitUntil is timed out (Max: {maxWaitSeconds} seconds)." +
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+                }
+            }
 
             await action();
         }
@@ -1610,12 +1636,16 @@ public static partial class Util
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
             while (!condition())
+            {
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     Thread.Sleep((int)(waitIntervalSeconds * 1000));
                 else
+                {
                     throw new TimeoutException(
                         $"WaitUntil is timed out (Max: {maxWaitSeconds} seconds)." +
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+                }
+            }
 
             action();
         }
@@ -1641,12 +1671,16 @@ public static partial class Util
             var maxWaitMilliseconds = maxWaitSeconds * 1000;
 
             while (!whenDo.HasMatchedCase())
+            {
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     Thread.Sleep((int)(waitIntervalSeconds * 1000));
                 else
+                {
                     throw new TimeoutException(
                         $"WaitUntilHasMatchedCase is timed out (Max: {maxWaitSeconds} seconds)." +
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+                }
+            }
 
             return whenDo.Execute();
         }
@@ -1691,9 +1725,11 @@ public static partial class Util
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     Thread.Sleep((int)(waitIntervalSeconds * 1000));
                 else
+                {
                     throw new TimeoutException(
                         $"WaitRetryDoUntil is timed out (Max: {maxWaitSeconds} seconds)." +
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+                }
 
                 action();
             }
@@ -1727,9 +1763,11 @@ public static partial class Util
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     Thread.Sleep((int)(waitIntervalSeconds * 1000));
                 else
+                {
                     throw new TimeoutException(
                         $"WaitRetryDoUntil is timed out (Max: {maxWaitSeconds} seconds)." +
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+                }
 
                 result = action();
             }
@@ -1766,9 +1804,11 @@ public static partial class Util
             while (!await until())
             {
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds >= maxWaitMilliseconds)
+                {
                     throw new TimeoutException(
                         $"DoUntil is timed out (Max: {maxWaitSeconds} seconds)." +
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+                }
 
                 await action();
                 await Task.Delay((int)(waitIntervalSeconds * 1000));
@@ -1802,9 +1842,11 @@ public static partial class Util
             while (!await until())
             {
                 if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds >= maxWaitMilliseconds)
+                {
                     throw new TimeoutException(
                         $"DoUntil is timed out (Max: {maxWaitSeconds} seconds)." +
                         $"{(waitForMsg != null ? $"{Environment.NewLine}WaitFor: {waitForMsg}" : "")}");
+                }
 
                 result = await action();
                 await Task.Delay((int)(waitIntervalSeconds * 1000));
@@ -1933,9 +1975,11 @@ public static partial class Util
             else if (itemsList.Count <= maxDegreeOfParallelism)
                 await Task.WhenAll(itemsList.Select((p, i) => action(p, i)));
             else
+            {
                 await itemsList
                     .PagedGroups(maxDegreeOfParallelism)
                     .ForEachAsync(pagedItems => Task.WhenAll(pagedItems.Select((p, i) => action(p, i))));
+            }
         }
 
         /// <summary>

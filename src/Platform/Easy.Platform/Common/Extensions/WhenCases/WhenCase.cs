@@ -53,7 +53,7 @@ public class WhenCase<TSource, TTarget> : WhenCase
 
     public static Func<TSource, bool> WhenValueCaseBuilder(TSource @case)
     {
-        return source => (source == null && @case == null) || source?.Equals(@case) == true;
+        return source => (source is null && @case is null) || source?.Equals(@case) == true;
     }
 
     public static WhenCase<TSource, TTarget> WhenValue(
@@ -149,8 +149,10 @@ public class WhenCase<TSource, TTarget> : WhenCase
     public async Task<TTarget> ExecuteAsync()
     {
         foreach (var @case in Cases)
+        {
             if (await @case.IsMatch(Source))
                 return await @case.CaseAction(Source);
+        }
 
         return default;
     }

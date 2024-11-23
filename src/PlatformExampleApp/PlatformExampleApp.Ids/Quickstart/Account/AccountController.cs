@@ -62,6 +62,7 @@ public class AccountController : Controller
 
         if (vm.IsExternalLoginOnly)
             // we only have one option for logging in and it's an external provider
+        {
             return RedirectToAction(
                 "Challenge",
                 "External",
@@ -70,6 +71,7 @@ public class AccountController : Controller
                     scheme = vm.ExternalLoginScheme,
                     returnUrl
                 });
+        }
 
         return View(vm);
     }
@@ -123,12 +125,14 @@ public class AccountController : Controller
                 // only set explicit expiration here if user chooses "remember me".
                 // otherwise we rely upon expiration configured in cookie middleware.
                 AuthenticationProperties props = null;
-                if (AccountOptions.AllowRememberLogin && model.RememberLogin)
+                if (AccountOptions.AllowRememberLogin && model.RememberLogin == true)
+                {
                     props = new AuthenticationProperties
                     {
                         IsPersistent = true,
                         ExpiresUtc = DateTimeOffset.UtcNow.Add(AccountOptions.RememberMeLoginDuration)
                     };
+                }
 
                 // issue authentication cookie with subject ID and username
                 var isuser = new IdentityServerUser(user.SubjectId)
@@ -255,6 +259,7 @@ public class AccountController : Controller
             };
 
             if (!local)
+            {
                 vm.ExternalProviders =
                 [
                     new ExternalProvider
@@ -262,6 +267,7 @@ public class AccountController : Controller
                         AuthenticationScheme = context.IdP
                     }
                 ];
+            }
 
             return vm;
         }
@@ -287,10 +293,12 @@ public class AccountController : Controller
                 allowLocal = client.EnableLocalLogin;
 
                 if (client.IdentityProviderRestrictions != null && client.IdentityProviderRestrictions.Any())
+                {
                     providers = providers.Where(
                             provider =>
                                 client.IdentityProviderRestrictions.Contains(provider.AuthenticationScheme))
                         .ToList();
+                }
             }
         }
 

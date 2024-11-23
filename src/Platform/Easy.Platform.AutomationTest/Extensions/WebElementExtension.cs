@@ -55,12 +55,14 @@ public static class WebElementExtension
                 webDriver.FindElement(cssSelector: "body").SendKeys(Keys.Escape);
 
                 if (element.IsFocused(webDriver))
+                {
                     TryActionToFocusOutToOtherElement(
                         element,
                         webDriver,
                         additionalFocusToOtherElements,
                         _ => new Actions(webDriver).SendKeys(Keys.Escape).Perform()
                     );
+                }
             },
             until: _ => !element.IsFocused(webDriver),
             maxWaitSeconds: DefaultShortWaitUiUpdateSeconds
@@ -89,10 +91,12 @@ public static class WebElementExtension
                 .Where(otherElement => !otherElement.Equals(targetElement));
 
             foreach (var action in otherElementActions)
+            {
                 if (IsFocused(targetElement, webDriver))
                     action();
                 else
                     return;
+            }
         }
     }
 
@@ -205,7 +209,7 @@ public static class WebElementExtension
             }
             catch (StaleElementReferenceException)
             {
-                if (defaultValue != null) return defaultValue;
+                if (defaultValue is not null) return defaultValue;
 
                 return default;
             }

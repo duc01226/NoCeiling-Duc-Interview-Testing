@@ -19,9 +19,9 @@ public interface IPlatformFullTextSearchPersistenceService : IPersistenceService
     public IQueryable<T> Search<T>(
         IQueryable<T> query,
         string searchText,
-        Expression<Func<T, object>>[] inFullTextSearchProps,
+        Expression<Func<T, object?>>[] inFullTextSearchProps,
         bool fullTextAccurateMatch = true,
-        Expression<Func<T, object>>[] includeStartWithProps = null) where T : class;
+        Expression<Func<T, object?>>[] includeStartWithProps = null) where T : class;
 
     public bool IsSupportQuery<T>(IQueryable<T> query) where T : class;
 }
@@ -38,9 +38,9 @@ public abstract class PlatformFullTextSearchPersistenceService : IPlatformFullTe
     public IQueryable<T> Search<T>(
         IQueryable<T> query,
         string searchText,
-        Expression<Func<T, object>>[] inFullTextSearchProps,
+        Expression<Func<T, object?>>[] inFullTextSearchProps,
         bool fullTextAccurateMatch = true,
-        Expression<Func<T, object>>[] includeStartWithProps = null) where T : class
+        Expression<Func<T, object?>>[] includeStartWithProps = null) where T : class
     {
         var byFirstSupportQueryHelperFilterQuery = !IsSupportQuery(query)
             ? TrySearchByFirstSupportQueryHelper(query, searchText, inFullTextSearchProps, fullTextAccurateMatch, includeStartWithProps)

@@ -4,7 +4,7 @@ namespace Easy.Platform.EfCore.Utils;
 
 public static class PostgresSqlMigrationUtil
 {
-    public static void DropConstraintIfExists(MigrationBuilder migrationBuilder, string name, string table)
+    public static void DropConstraintIfExists(MigrationBuilder migrationBuilder, string name, string table, bool suppressTransaction = false)
     {
         migrationBuilder.Sql(
             $@"DO $$
@@ -15,10 +15,11 @@ public static class PostgresSqlMigrationUtil
                 ) THEN
                     EXECUTE 'ALTER TABLE ""{table}"" DROP CONSTRAINT ""{name}""';
                 END IF;
-            END $$;");
+            END $$;",
+            suppressTransaction);
     }
 
-    public static void DropIndexIfExists(MigrationBuilder migrationBuilder, string indexName, string table)
+    public static void DropIndexIfExists(MigrationBuilder migrationBuilder, string indexName, string table, bool suppressTransaction = false)
     {
         migrationBuilder.Sql(
             $@"DO $$
@@ -29,6 +30,7 @@ public static class PostgresSqlMigrationUtil
                 ) THEN
                     EXECUTE 'DROP INDEX IF EXISTS ""{indexName}""';
                 END IF;
-            END $$;");
+            END $$;",
+            suppressTransaction);
     }
 }

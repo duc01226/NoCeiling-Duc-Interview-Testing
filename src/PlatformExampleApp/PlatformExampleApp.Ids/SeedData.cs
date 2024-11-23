@@ -2,8 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
-using System.Linq;
-using System.Threading.Tasks;
 using IdentityServer4.EntityFramework.DbContexts;
 using IdentityServer4.EntityFramework.Mappers;
 using IdentityServer4.EntityFramework.Storage;
@@ -47,7 +45,7 @@ public class SeedData
 
     private static async Task EnsureSeedData(ConfigurationDbContext context)
     {
-        if (!context.Clients.Any())
+        if (!await context.Clients.AnyAsync())
         {
             Log.Debug("Clients being populated");
             foreach (var client in Config.Clients.ToList())
@@ -56,11 +54,9 @@ public class SeedData
             await context.SaveChangesAsync();
         }
         else
-        {
             Log.Debug("Clients already populated");
-        }
 
-        if (!context.IdentityResources.Any())
+        if (!await context.IdentityResources.AnyAsync())
         {
             Log.Debug("IdentityResources being populated");
             foreach (var resource in Config.IdentityResources.ToList())
@@ -69,11 +65,9 @@ public class SeedData
             await context.SaveChangesAsync();
         }
         else
-        {
             Log.Debug("IdentityResources already populated");
-        }
 
-        if (!context.ApiResources.Any())
+        if (!await context.ApiResources.AnyAsync())
         {
             Log.Debug("ApiScopes being populated");
             foreach (var resource in Config.ApiScopes.ToList())
@@ -82,8 +76,6 @@ public class SeedData
             await context.SaveChangesAsync();
         }
         else
-        {
             Log.Debug("ApiScopes already populated");
-        }
     }
 }

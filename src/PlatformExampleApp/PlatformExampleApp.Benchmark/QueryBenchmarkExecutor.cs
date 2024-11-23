@@ -95,7 +95,7 @@ public class QueryBenchmarkExecutor
         return scannedResultType;
     }
 
-    private void PopulateMockBenchmarkRequestContext(IPlatformApplicationRequestContext current, IConfiguration configuration)
+    private static void PopulateMockBenchmarkRequestContext(IPlatformApplicationRequestContext current, IConfiguration configuration)
     {
         current.SetEmail("testBenchmark@example.com");
     }

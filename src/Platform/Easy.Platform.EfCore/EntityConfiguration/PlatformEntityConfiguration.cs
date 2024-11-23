@@ -37,7 +37,7 @@ public abstract class PlatformEntityConfiguration<TEntity, TPrimaryKey>
         if (AutoIndexUserAuditInfo) IndexUserAuditInfo(builder);
     }
 
-    private void IndexUserAuditInfo(EntityTypeBuilder<TEntity> builder)
+    private static void IndexUserAuditInfo(EntityTypeBuilder<TEntity> builder)
     {
         if (typeof(TEntity).IsAssignableTo(typeof(IUserAuditedEntity<TPrimaryKey>)))
         {

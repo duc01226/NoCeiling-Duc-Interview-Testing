@@ -582,14 +582,14 @@ public static class TaskExtension
         double delayRetryTimeSeconds = Util.TaskRunner.DefaultWaitIntervalSeconds,
         string waitForMsg = null)
     {
-        return WaitUntilGetValidResultAsync(target, getResult, result => result != null, maxWaitSeconds, delayRetryTimeSeconds, waitForMsg);
+        return WaitUntilGetValidResultAsync(target, getResult, result => result is not null, maxWaitSeconds, delayRetryTimeSeconds, waitForMsg);
     }
 
     public static Task<TResult> WaitUntilGetSuccessAsync<T, TResult>(
         this T target,
         Func<T, TResult> getResult,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
-        string waitForMsg = null)
+        string waitForMsg = null) where TResult : class
     {
         return Util.TaskRunner.WaitUntilGetSuccessAsync(target, getResult, maxWaitSeconds, waitForMsg);
     }
@@ -599,7 +599,7 @@ public static class TaskExtension
         Func<T, TResult> getResult,
         Func<T, TAny> continueWaitOnlyWhen = null,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
-        string waitForMsg = null)
+        string waitForMsg = null) where TResult : class
     {
         return Util.TaskRunner.WaitUntilGetSuccessAsync(target, getResult, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
     }
@@ -609,7 +609,7 @@ public static class TaskExtension
         Func<T, TResult> getResult,
         Action<T> continueWaitOnlyWhen,
         double maxWaitSeconds = Util.TaskRunner.DefaultWaitUntilMaxSeconds,
-        string waitForMsg = null)
+        string waitForMsg = null) where TResult : class
     {
         return Util.TaskRunner.WaitUntilGetSuccessAsync(target, getResult, continueWaitOnlyWhen, maxWaitSeconds, waitForMsg);
     }
@@ -731,34 +731,22 @@ public static class TaskExtension
 
     public static TResult ExecuteUseThreadLock<TTarget, TResult>(this TTarget target, object lockObj, Func<TTarget, TResult> fn)
     {
-        lock (lockObj)
-        {
-            return fn(target);
-        }
+        lock (lockObj) return fn(target);
     }
 
     public static void ExecuteUseThreadLock<TTarget>(this TTarget target, object lockObj, Action<TTarget> fn)
     {
-        lock (lockObj)
-        {
-            fn(target);
-        }
+        lock (lockObj) fn(target);
     }
 
     public static TResult ExecuteUseThreadLockAsync<TTarget, TResult>(this TTarget target, object lockObj, Func<TTarget, Task<TResult>> fn)
     {
-        lock (lockObj)
-        {
-            return fn(target).GetResult();
-        }
+        lock (lockObj) return fn(target).GetResult();
     }
 
     public static void ExecuteUseThreadLockAsync<TTarget>(this TTarget target, object lockObj, Func<TTarget, Task> fn)
     {
-        lock (lockObj)
-        {
-            fn(target).Wait();
-        }
+        lock (lockObj) fn(target).Wait();
     }
 
     #region Tuple await all

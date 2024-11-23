@@ -30,7 +30,7 @@ public interface IPlatformCacheRepository
     /// </summary>
     /// <param name="cacheKey">A string identifying the requested value.</param>
     /// <returns>The located value or null.</returns>
-    T Get<T>(PlatformCacheKey cacheKey);
+    public T Get<T>(PlatformCacheKey cacheKey);
 
     /// <summary>
     /// Gets a value with the given key.
@@ -38,7 +38,7 @@ public interface IPlatformCacheRepository
     /// <param name="cacheKey">A string identifying the requested value.</param>
     /// <param name="token">Optional. The <see cref="CancellationToken" /> used to propagate notifications that the operation should be canceled.</param>
     /// <returns>The <see cref="Task" /> that represents the asynchronous operation, containing the located value or null.</returns>
-    Task<T> GetAsync<T>(PlatformCacheKey cacheKey, CancellationToken token = default);
+    public Task<T> GetAsync<T>(PlatformCacheKey cacheKey, CancellationToken token = default);
 
     /// <summary>
     /// Sets a value with the given key.
@@ -46,7 +46,7 @@ public interface IPlatformCacheRepository
     /// <param name="cacheKey">A string identifying the requested value.</param>
     /// <param name="value">The value to set in the cache.</param>
     /// <param name="cacheOptions">The cache options for the value.</param>
-    void Set<T>(PlatformCacheKey cacheKey, T value, PlatformCacheEntryOptions cacheOptions = null);
+    public void Set<T>(PlatformCacheKey cacheKey, T value, PlatformCacheEntryOptions cacheOptions = null);
 
     /// <summary>
     /// Sets the value with the given key.
@@ -56,7 +56,7 @@ public interface IPlatformCacheRepository
     /// <param name="cacheOptions">The cache options for the value.</param>
     /// <param name="token">Optional. The <see cref="CancellationToken" /> used to propagate notifications that the operation should be canceled.</param>
     /// <returns>The <see cref="Task" /> that represents the asynchronous operation.</returns>
-    Task SetAsync<T>(
+    public Task SetAsync<T>(
         PlatformCacheKey cacheKey,
         T value,
         PlatformCacheEntryOptions cacheOptions = null,
@@ -68,7 +68,7 @@ public interface IPlatformCacheRepository
     /// <param name="cacheKey">A string identifying the requested value.</param>
     /// <param name="value">The value to set in the cache.</param>
     /// <param name="absoluteExpirationInSeconds">The absoluteExpirationInSeconds cache options for the value.</param>
-    void Set<T>(PlatformCacheKey cacheKey, T value, double? absoluteExpirationInSeconds = null);
+    public void Set<T>(PlatformCacheKey cacheKey, T value, double? absoluteExpirationInSeconds = null);
 
     /// <summary>
     /// Sets the value with the given key.
@@ -78,7 +78,7 @@ public interface IPlatformCacheRepository
     /// <param name="absoluteExpirationInSeconds">The absoluteExpirationInSeconds cache options for the value.</param>
     /// <param name="token">Optional. The <see cref="CancellationToken" /> used to propagate notifications that the operation should be canceled.</param>
     /// <returns>The <see cref="Task" /> that represents the asynchronous operation.</returns>
-    Task SetAsync<T>(
+    public Task SetAsync<T>(
         PlatformCacheKey cacheKey,
         T value,
         double? absoluteExpirationInSeconds = null,
@@ -90,7 +90,7 @@ public interface IPlatformCacheRepository
     /// <param name="cacheKey">A string identifying the requested value.</param>
     /// <param name="token">Optional. The <see cref="CancellationToken" /> used to propagate notifications that the operation should be canceled.</param>
     /// <returns>The <see cref="Task" /> that represents the asynchronous operation.</returns>
-    Task RemoveAsync(PlatformCacheKey cacheKey, CancellationToken token = default);
+    public Task RemoveAsync(PlatformCacheKey cacheKey, CancellationToken token = default);
 
     /// <summary>
     /// Removes the value with the given key predicate.
@@ -98,12 +98,12 @@ public interface IPlatformCacheRepository
     /// <param name="cacheKeyPredicate">A string identifying the requested value predicate.</param>
     /// <param name="token">Optional. The <see cref="CancellationToken" /> used to propagate notifications that the operation should be canceled.</param>
     /// <returns>The <see cref="Task" /> that represents the asynchronous operation.</returns>
-    Task RemoveAsync(Func<PlatformCacheKey, bool> cacheKeyPredicate, CancellationToken token = default);
+    public Task RemoveAsync(Func<PlatformCacheKey, bool> cacheKeyPredicate, CancellationToken token = default);
 
     /// <summary>
     /// Removes the all cached value of collection with the given CollectionCacheKeyProvider.
     /// </summary>
-    Task RemoveCollectionAsync<TCollectionCacheKeyProvider>(CancellationToken token = default)
+    public Task RemoveCollectionAsync<TCollectionCacheKeyProvider>(CancellationToken token = default)
         where TCollectionCacheKeyProvider : PlatformCollectionCacheKeyProvider;
 
     /// <summary>
@@ -113,7 +113,7 @@ public interface IPlatformCacheRepository
     /// <param name="cacheKey">A string identifying the requested value.</param>
     /// <param name="cacheOptions">The cache options for the value.</param>
     /// <param name="token">Optional. The <see cref="CancellationToken" /> used to propagate notifications that the operation should be canceled.</param>
-    Task<TData> CacheRequestAsync<TData>(
+    public Task<TData> CacheRequestAsync<TData>(
         Func<Task<TData>> request,
         PlatformCacheKey cacheKey,
         PlatformCacheEntryOptions cacheOptions = null,
@@ -126,7 +126,7 @@ public interface IPlatformCacheRepository
     /// <param name="cacheKey">A string identifying the requested value.</param>
     /// <param name="absoluteExpirationInSeconds">The absoluteExpirationInSeconds cache options for the value.</param>
     /// <param name="token">Optional. The <see cref="CancellationToken" /> used to propagate notifications that the operation should be canceled.</param>
-    Task<TData> CacheRequestAsync<TData>(
+    public Task<TData> CacheRequestAsync<TData>(
         Func<Task<TData>> request,
         PlatformCacheKey cacheKey,
         double? absoluteExpirationInSeconds = null,
@@ -135,7 +135,7 @@ public interface IPlatformCacheRepository
     /// <summary>
     /// Return default cache entry options value. This could be config when register module, override <see cref="PlatformCachingModule.ConfigCacheSettings" />
     /// </summary>
-    PlatformCacheEntryOptions GetDefaultCacheEntryOptions();
+    public PlatformCacheEntryOptions GetDefaultCacheEntryOptions();
 
     /// The ProcessClearDeprecatedGlobalRequestCachedKeys method is part of the IPlatformCacheRepository interface and is implemented in the PlatformCacheRepository abstract class. This method is designed to clear deprecated or outdated keys from the global request cache.
     /// <br />
@@ -144,7 +144,7 @@ public interface IPlatformCacheRepository
     /// The method is implemented in both PlatformMemoryCacheRepository and PlatformRedisDistributedCacheRepository classes, indicating that it's used for both in-memory and distributed Redis cache repositories.
     /// <br />
     /// In the PlatformAutoClearDeprecatedGlobalRequestCachedKeysBackgroundService class, this method is called in an interval process, suggesting that the clearing of deprecated global request cache keys is performed regularly as a background task. This helps to ensure that the cache is consistently maintained and that outdated keys are removed on a regular basis.
-    Task ProcessClearDeprecatedGlobalRequestCachedKeys();
+    public Task ProcessClearDeprecatedGlobalRequestCachedKeys();
 }
 
 public abstract class PlatformCacheRepository : IPlatformCacheRepository
@@ -228,7 +228,7 @@ public abstract class PlatformCacheRepository : IPlatformCacheRepository
     {
         var cachedDataResult = await TryGetAsync<TData>(cacheKey, token);
 
-        return cachedDataResult.IsValid && cachedDataResult.Value != null ? cachedDataResult.Value : await RequestAndCacheNewData();
+        return cachedDataResult.IsValid && cachedDataResult.Value is not null ? cachedDataResult.Value : await RequestAndCacheNewData();
 
         async Task<TData> RequestAndCacheNewData()
         {

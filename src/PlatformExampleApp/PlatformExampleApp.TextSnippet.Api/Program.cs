@@ -54,7 +54,7 @@ try
     // RUN APP
     BeforeRunInit(webApplication);
 
-    webApplication.Run();
+    await webApplication.RunAsync();
 }
 catch (Exception e)
 {

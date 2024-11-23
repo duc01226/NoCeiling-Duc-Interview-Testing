@@ -190,7 +190,7 @@ public static class PlatformValidateObjectExtension
 
     public static PlatformValidationResult<T> ValidateFound<T>(this T? obj, string errorMsg = DefaultNotFoundMessage)
     {
-        return obj != null
+        return obj is not null
             ? PlatformValidationResult.Valid(obj)
             : PlatformValidationResult.Invalid(obj!, errorMsg == DefaultNotFoundMessage ? BuildDefaultNotFoundErrorMsg<T>(errorMsg) : errorMsg);
     }
@@ -256,7 +256,7 @@ public static class PlatformValidateObjectExtension
 
     public static PlatformValidationResult<T> ValidateFound<T>(this T? obj, Func<T, bool> and, string errorMsg = DefaultNotFoundMessage)
     {
-        return obj != null && and(obj)
+        return obj is not null && and(obj)
             ? PlatformValidationResult.Valid(obj)
             : PlatformValidationResult.Invalid(obj!, errorMsg == DefaultNotFoundMessage ? BuildDefaultNotFoundErrorMsg<T>(errorMsg) : errorMsg);
     }
@@ -268,7 +268,7 @@ public static class PlatformValidateObjectExtension
 
     public static async Task<PlatformValidationResult<T>> ValidateFoundAsync<T>(this T? obj, Func<T, Task<bool>> and, string errorMsg = DefaultNotFoundMessage)
     {
-        var andResultCondition = obj != null && await and(obj);
+        var andResultCondition = obj is not null && await and(obj);
 
         return obj.ValidateFound(p => andResultCondition, errorMsg == DefaultNotFoundMessage ? BuildDefaultNotFoundErrorMsg<T>(errorMsg) : errorMsg);
     }

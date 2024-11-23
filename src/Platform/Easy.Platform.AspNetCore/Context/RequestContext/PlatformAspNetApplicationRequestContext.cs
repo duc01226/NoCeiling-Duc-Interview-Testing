@@ -22,7 +22,7 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
 
     private readonly IPlatformApplicationRequestContextKeyToClaimTypeMapper claimTypeMapper;
     private readonly IHttpContextAccessor httpContextAccessor;
-    private readonly object initCachedRequestContextDataLock = new();
+    private readonly Lock initCachedRequestContextDataLock = new();
     private bool cachedRequestContextDataInitiated;
 
     public PlatformAspNetApplicationRequestContext(
@@ -275,7 +275,7 @@ public class PlatformAspNetApplicationRequestContext : IPlatformApplicationReque
                         ApplicationSettingContext,
                         FullCachedRequestContextData,
                         IgnoreRequestContextKeysRequestContextData,
-                        out var _,
+                        out _,
                         claimTypeMapper)))
             .ToDictionary(p => p.Key, p => p.Value);
     }

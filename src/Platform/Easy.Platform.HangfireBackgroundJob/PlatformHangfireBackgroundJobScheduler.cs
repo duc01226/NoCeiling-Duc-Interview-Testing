@@ -186,10 +186,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
 
     public HashSet<string> AllExistingRecurringJobIds()
     {
-        using (var connection = JobStorage.Current.GetConnection())
-        {
-            return connection.GetRecurringJobs().Select(p => p.Id).ToHashSet();
-        }
+        using (var connection = JobStorage.Current.GetConnection()) return connection.GetRecurringJobs().Select(p => p.Id).ToHashSet();
     }
 
     public void ReplaceAllRecurringBackgroundJobs(List<IPlatformBackgroundJobExecutor> newAllRecurringJobs)
@@ -205,8 +202,10 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
 
         // Remove obsolete recurring job, job is not existed in the all current recurring declared jobs in source code
         foreach (var existingAutoRecurringJobId in allExistingRecurringJobIds)
+        {
             if (!newCurrentRecurringJobExecutorIds.Contains(existingAutoRecurringJobId))
                 RemoveRecurringJobIfExist(existingAutoRecurringJobId);
+        }
 
         // Upsert all new recurring jobs
         newCurrentRecurringJobExecutorToIdPairs
@@ -294,7 +293,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
         }
     }
 
-    public string EnsureValidToUpsertRecurringJob(Type jobExecutorType, Func<string>? cronExpression)
+    public static string EnsureValidToUpsertRecurringJob(Type jobExecutorType, Func<string>? cronExpression)
     {
         EnsureJobExecutorTypeValid(jobExecutorType);
 
@@ -304,7 +303,7 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
         return cronExpressionValue;
     }
 
-    public void ExecuteBackgroundJobByInstance(IPlatformBackgroundJobExecutor jobExecutor, string? jobExecutorParamJson)
+    public static void ExecuteBackgroundJobByInstance(IPlatformBackgroundJobExecutor jobExecutor, string? jobExecutorParamJson)
     {
         var withParamJobExecutorType = jobExecutor
             .GetType()
@@ -330,16 +329,16 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
                 [jobExecutorParam]);
         }
         else
-        {
             jobExecutor.Execute();
-        }
     }
 
-    public void EnsureJobExecutorTypeValid(Type jobExecutorType)
+    public static void EnsureJobExecutorTypeValid(Type jobExecutorType)
     {
         if (!jobExecutorType.IsAssignableTo(typeof(IPlatformBackgroundJobExecutor)))
+        {
             throw new Exception(
                 "JobExecutor type is invalid. Must be assignable to IPlatformBackgroundJobExecutor");
+        }
     }
 
     private string CurrentRequestContextValuesAsJsonStr()

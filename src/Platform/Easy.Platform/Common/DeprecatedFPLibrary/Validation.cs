@@ -12,7 +12,7 @@ public static partial class F
 
     public static Validation<T> ValidateNotNull<T>(this T value, params Error[] errors)
     {
-        return value != null ? new Validation<T>(value) : new Validation.Invalid(errors);
+        return value is not null ? new Validation<T>(value) : new Validation.Invalid(errors);
     }
 
     public static Validation<T> Validate<T>(this T value, bool condition, params Error[] errors)

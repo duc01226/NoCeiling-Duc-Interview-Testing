@@ -16,23 +16,25 @@ services:
 
   mongo-data:
     ports:
-      - "27017:27017"
+        - '27017:27017'
     volumes:
-      - Easy.Platform-mongodata-db:/data/db
-      - Easy.Platform-mongodata-configdb:/data/configdb
+        - mongo1data-db:/data/db
+        - mongo1data-configdb:/data/configdb
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=root
-      - MONGO_INITDB_ROOT_PASSWORD=rootPassXXX
-      - MONGO_REPLICA_SET_NAME=rs0
-      #https://stackoverflow.com/questions/42190267/replica-set-mongo-docker-compose
-      #https://github.com/Hangfire-Mongo/Hangfire.Mongo/issues/300 Fix for local hangfire mongo
+        - MONGO_INITDB_ROOT_USERNAME=root
+        - MONGO_INITDB_ROOT_PASSWORD=rootPassXXX
+        #- MONGO_REPLICA_SET_NAME=rs0
+        #https://stackoverflow.com/questions/42190267/replica-set-mongo-docker-compose
+        #https://github.com/Hangfire-Mongo/Hangfire.Mongo/issues/300 Fix for local hangfire mongo
     healthcheck:
-      test: test $$(echo "rs.initiate({_id:'rs0',members:[{_id:0,host:\"mongo-data:27017\"}]}).ok || rs.status().ok" | mongo -u $${MONGO_INITDB_ROOT_USERNAME} -p $${MONGO_INITDB_ROOT_PASSWORD} --quiet) -eq 1
-      interval: 5s
-      retries: 10 #This property specifies the number of consecutive health check failures required to declare the container as unhealthy.
-      start_period: 30s #provides initialization time for containers that need time to bootstrap
-    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27017"]
-    mem_limit: 2g
+        test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+        #test: test $$(echo "rs.initiate({_id:'rs0',members:[{_id:0,host:\"mongo:27017\"}]}).ok || rs.status().ok" | mongo -u $${MONGO_INITDB_ROOT_USERNAME} -p $${MONGO_INITDB_ROOT_PASSWORD} --quiet) -eq 1
+        interval: 5s
+        retries: 10 #This property specifies the number of consecutive health check failures required to declare the container as unhealthy.
+        start_period: 30s #provides initialization time for containers that need time to bootstrap
+    #command: ['--replSet', 'rs0', '--bind_ip_all', '--port', '27017']
+    mem_limit: 1000m
+    restart: on-failure
 
   rabbitmq:
     ports:

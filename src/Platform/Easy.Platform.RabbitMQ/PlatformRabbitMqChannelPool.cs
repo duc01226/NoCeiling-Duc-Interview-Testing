@@ -12,11 +12,11 @@ namespace Easy.Platform.RabbitMQ;
 /// </summary>
 public class PlatformRabbitMqChannelPool : IDisposable
 {
-    protected readonly ConcurrentDictionary<int, IModel> CreatedChannelDict = new();
+    protected readonly ConcurrentDictionary<int, IChannel> CreatedChannelDict = new();
 
     protected readonly SemaphoreSlim InitInternalObjectPoolLock = new(1, 1);
     protected PlatformRabbitMqChannelPoolPolicy ChannelPoolPolicy;
-    protected DefaultObjectPool<IModel> InternalObjectPool;
+    protected DefaultObjectPool<IChannel> InternalObjectPool;
     private bool disposed;
 
     public PlatformRabbitMqChannelPool(PlatformRabbitMqChannelPoolPolicy channelPoolPolicy)
@@ -32,7 +32,7 @@ public class PlatformRabbitMqChannelPool : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    public IModel Get()
+    public IChannel Get()
     {
         InitInternalObjectPool();
 
@@ -55,10 +55,10 @@ public class PlatformRabbitMqChannelPool : IDisposable
     private void InitInternalObjectPool()
     {
         if (InternalObjectPool == null)
-            InitInternalObjectPoolLock.ExecuteLockAction(() => InternalObjectPool ??= new DefaultObjectPool<IModel>(ChannelPoolPolicy, PoolSize));
+            InitInternalObjectPoolLock.ExecuteLockAction(() => InternalObjectPool ??= new DefaultObjectPool<IChannel>(ChannelPoolPolicy, PoolSize));
     }
 
-    public void Return(IModel obj)
+    public void Return(IChannel obj)
     {
         InternalObjectPool.Return(obj);
     }
@@ -70,13 +70,27 @@ public class PlatformRabbitMqChannelPool : IDisposable
         Return(tryGetChannelTestSuccess);
     }
 
-    public void GetChannelDoActionAndReturn(Action<IModel> action)
+    public void GetChannelDoActionAndReturn(Action<IChannel> action)
     {
         var channel = Get();
 
         try
         {
             action(channel);
+        }
+        finally
+        {
+            Return(channel);
+        }
+    }
+
+    public async Task GetChannelDoActionAndReturn(Func<IChannel, Task> action)
+    {
+        var channel = Get();
+
+        try
+        {
+            await action(channel);
         }
         finally
         {

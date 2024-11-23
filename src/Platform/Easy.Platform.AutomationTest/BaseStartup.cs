@@ -18,7 +18,7 @@ public abstract class BaseStartup
     public static IServiceCollection GlobalDiServices { get; private set; } = new ServiceCollection();
 
     public IServiceCollection Services { get; private set; } = new ServiceCollection();
-    public IConfiguration Configuration => GlobalDiServiceProvider.GetRequiredService<IConfiguration>();
+    public static IConfiguration Configuration => GlobalDiServiceProvider.GetRequiredService<IConfiguration>();
 
     /// <summary>
     /// Populate all startup services might created from host builder, return ServiceCollection contain all services generated from the start-up

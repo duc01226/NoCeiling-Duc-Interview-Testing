@@ -291,10 +291,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
             await InitAllModuleDependencies();
             await InitPerformanceProfiling();
 
-            using (var scope = ServiceProvider.CreateScope())
-            {
-                await InternalInit(scope);
-            }
+            using (var scope = ServiceProvider.CreateScope()) await InternalInit(scope);
 
             Initiated = true;
 
@@ -459,7 +456,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
         }
     }
 
-    public List<string> CommonTracingSources()
+    public static List<string> CommonTracingSources()
     {
         return [IPlatformCqrsEventHandler.ActivitySource.Name, PlatformIntervalHostingBackgroundService.ActivitySource.Name];
     }
@@ -567,7 +564,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
         return new PerformanceProfilingConfig();
     }
 
-    protected void RegisterDefaultLogs(IServiceCollection serviceCollection)
+    protected static void RegisterDefaultLogs(IServiceCollection serviceCollection)
     {
         serviceCollection.RegisterIfServiceNotExist(typeof(ILoggerFactory), typeof(LoggerFactory), ServiceLifeTime.Singleton);
         serviceCollection.RegisterIfServiceNotExist(typeof(ILogger<>), typeof(Logger<>));
@@ -577,6 +574,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
     protected void RegisterCqrs(IServiceCollection serviceCollection)
     {
         if (AutoScanAssemblyRegisterCqrs)
+        {
             ExecuteRegisterByAssemblyOnlyOnce(
                 assembly =>
                 {
@@ -587,6 +585,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
                 },
                 GetServicesRegisterScanAssemblies(),
                 nameof(RegisterCqrs));
+        }
     }
 
     protected void RegisterAllModuleDependencies(IServiceCollection serviceCollection)

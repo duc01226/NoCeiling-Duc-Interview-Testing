@@ -50,12 +50,14 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
                 onRetry: (ex, timeSpan, currentRetry, ctx) =>
                 {
                     if (currentRetry >= MinimumRetryCleanOutboxMessageTimesToWarning)
+                    {
                         Logger.LogError(
-                            "Retry CleanOutboxEventBusMessage {CurrentRetry} time(s) failed: {Error}. [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
+                            "Retry CleanOutboxEventBusMessage {CurrentRetry} time(s) failed: {Error}. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
                             currentRetry,
                             ex.Message,
                             ApplicationSettingContext.ApplicationName,
                             ApplicationSettingContext.ApplicationAssembly.FullName);
+                    }
                 },
                 cancellationToken: cancellationToken);
         }
@@ -63,7 +65,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
         {
             Logger.LogError(
                 ex.BeautifyStackTrace(),
-                "CleanOutboxEventBusMessage failed. [[Error:{Error}]] [ApplicationName:{ApplicationSettingContext.ApplicationName}]. [ApplicationAssembly:{ApplicationSettingContext.ApplicationAssembly.FullName}]",
+                "CleanOutboxEventBusMessage failed. [[Error:{Error}]] [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
                 ex.Message,
                 ApplicationSettingContext.ApplicationName,
                 ApplicationSettingContext.ApplicationAssembly.FullName);
@@ -186,12 +188,10 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
                         async (IPlatformOutboxBusMessageRepository outboxEventBusMessageRepo) =>
                         {
                             var expiredMessages = await outboxEventBusMessageRepo.GetAllAsync(
-                                queryBuilder: query => query
-                                    .Where(
-                                        PlatformOutboxBusMessage.ToIgnoreFailedExpiredMessagesExpr(
-                                            OutboxConfig.IgnoreExpiredFailedMessageInSeconds))
-                                    .OrderBy(p => p.CreatedDate)
-                                    .Take(NumberOfDeleteMessagesBatch()),
+                                queryBuilder: query =>
+                                    query.Where(PlatformOutboxBusMessage.ToIgnoreFailedExpiredMessagesExpr(OutboxConfig.IgnoreExpiredFailedMessageInSeconds))
+                                        .OrderBy(p => p.CreatedDate)
+                                        .Take(NumberOfDeleteMessagesBatch()),
                                 cancellationToken);
 
                             if (expiredMessages.Count > 0)

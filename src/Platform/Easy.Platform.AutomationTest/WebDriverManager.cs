@@ -71,7 +71,7 @@ public class WebDriverManager : IWebDriverManager
         return new ChromeDriver(options: BuildChromeDriverOptions(Settings)).Pipe(DefaultConfigDriver);
     }
 
-    public DriverOptions BuildDriverOptions(AutomationTestSettings settings)
+    public static DriverOptions BuildDriverOptions(AutomationTestSettings settings)
     {
         // AddArgument("no-sandbox") to fix https://stackoverflow.com/questions/22322596/selenium-error-the-http-request-to-the-remote-webdriver-timed-out-after-60-sec
         return settings.WebDriverType
@@ -114,7 +114,7 @@ public class WebDriverManager : IWebDriverManager
         return new WebDriverManager(settings);
     }
 
-    public TDriver DefaultConfigDriver<TDriver>(TDriver webDriver) where TDriver : IWebDriver
+    public static TDriver DefaultConfigDriver<TDriver>(TDriver webDriver) where TDriver : IWebDriver
     {
         webDriver.Manage().Window.Maximize();
 

@@ -169,9 +169,11 @@ public class TextSnippetController : PlatformBaseController
     private void RandomThrowToTestHandleInternalException(int percentChance = 5)
     {
         if (Configuration.GetSection("RandomThrowExceptionForTesting").Get<bool?>() == true)
+        {
             Util.RandomGenerator.DoByChance(
                 percentChance,
                 () => throw new Exception("Random Test Throw Exception"));
+        }
     }
 
 
@@ -182,7 +184,7 @@ public class TextSnippetController : PlatformBaseController
         return GetAsyncContent();
     }
 
-    private async IAsyncEnumerable<string> GetAsyncContent()
+    private static async IAsyncEnumerable<string> GetAsyncContent()
     {
         for (var i = 0; i < int.MaxValue; i++)
             yield return await Task.Run(() => Ulid.NewUlid().ToString());

@@ -46,7 +46,7 @@ public static class ListExtension
     /// <returns>A list which contains the remaining elements after the operation.</returns>
     public static List<T> RemoveWhere<T>(this IList<T> items, Func<T, bool> predicate)
     {
-        return RemoveWhere(items, predicate, out var _);
+        return RemoveWhere(items, predicate, out _);
     }
 
     /// <summary>
@@ -86,7 +86,7 @@ public static class ListExtension
     {
         var toRemoveItem = items.FirstOrDefault(predicate);
 
-        if (toRemoveItem != null) items.Remove(toRemoveItem);
+        if (toRemoveItem is not null) items.Remove(toRemoveItem);
 
         return toRemoveItem;
     }
@@ -175,9 +175,7 @@ public static class ListExtension
                 else items[toUpdateItemInfo.index] = updateFn(items[toUpdateItemInfo.index], upsertItem);
             }
             else
-            {
                 items.Add(upsertItem);
-            }
         }
     }
 
@@ -340,9 +338,8 @@ public static class ListExtension
             for (var i = 0; i < itemsSpan.Length; i++) action(itemsSpan[i], i);
         }
         else if (items is T[] itemsArray)
-        {
-            for (var i = 0; i < itemsArray.Length; i++) action(itemsArray[i], i);
-        }
+            for (var i = 0; i < itemsArray.Length; i++)
+                action(itemsArray[i], i);
         else
         {
             var itemsIList = items.As<IList<T>>() ?? items.ToList();
@@ -394,9 +391,8 @@ public static class ListExtension
     public static async Task ForEachAsync<T>(this IEnumerable<T> items, Func<T, int, Task> action)
     {
         if (items is T[] itemsArray)
-        {
-            for (var i = 0; i < itemsArray.Length; i++) await action(itemsArray[i], i);
-        }
+            for (var i = 0; i < itemsArray.Length; i++)
+                await action(itemsArray[i], i);
         else
         {
             var itemsIList = items.As<IList<T>>() ?? items.ToList();
@@ -1090,8 +1086,10 @@ public static class ListExtension
         var notMatchItems = new List<T>();
 
         foreach (var item in list)
+        {
             if (predicateFn(item)) matchItems.Add(item);
             else notMatchItems.Add(item);
+        }
 
         return (matchItems, notMatchItems);
     }

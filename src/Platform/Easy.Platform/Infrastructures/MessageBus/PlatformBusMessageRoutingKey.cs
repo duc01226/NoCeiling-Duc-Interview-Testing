@@ -26,7 +26,7 @@ public class PlatformBusMessageRoutingKey : IEqualityComparer<PlatformBusMessage
     private string producerContext;
 
     /// <summary>
-    /// First group level of message <see cref="CombinedStringKey"/>.
+    /// First group level of message <see cref="CombinedStringKey" />.
     /// Used to determine the exactly message type suffix group. Usually equivalent to message Class name suffix.
     /// Example: CommandEvent, EntityEvent, AuditLog, etc...
     /// </summary>
@@ -37,7 +37,7 @@ public class PlatformBusMessageRoutingKey : IEqualityComparer<PlatformBusMessage
     }
 
     /// <summary>
-    /// Second group level of message <see cref="CombinedStringKey"/>.
+    /// Second group level of message <see cref="CombinedStringKey" />.
     /// Used to determine which application micro service publish this message
     /// </summary>
     public string ProducerContext
@@ -47,7 +47,7 @@ public class PlatformBusMessageRoutingKey : IEqualityComparer<PlatformBusMessage
     }
 
     /// <summary>
-    /// Third group level of message <see cref="CombinedStringKey"/>.
+    /// Third group level of message <see cref="CombinedStringKey" />.
     /// Used to determine the exactly message type. Usually equivalent to message Class name.
     /// Example: RegisterNewUserCommandEvent, UserEntityEvent
     /// </summary>
@@ -58,8 +58,8 @@ public class PlatformBusMessageRoutingKey : IEqualityComparer<PlatformBusMessage
     }
 
     /// <summary>
-    /// Final group level of message <see cref="CombinedStringKey"/>.
-    /// This is Optional. Used to determine specific action on the <see cref="MessageType"/>
+    /// Final group level of message <see cref="CombinedStringKey" />.
+    /// This is Optional. Used to determine specific action on the <see cref="MessageType" />
     /// Example: Created,Updated,Deleted, etc..
     /// </summary>
     public string MessageAction
@@ -172,7 +172,7 @@ public class PlatformBusMessageRoutingKey : IEqualityComparer<PlatformBusMessage
         if (pattern.Length > 2 &&
             pattern.StartsWith(MatchAllSingleGroupLevelChar) &&
             pattern.EndsWith(MatchAllSingleGroupLevelChar))
-            return value.Contains(pattern.Substring(1, pattern.Length - 1));
+            return value.Contains(pattern.Substring(1));
 
         return false;
     }
@@ -192,10 +192,12 @@ public class PlatformBusMessageRoutingKey : IEqualityComparer<PlatformBusMessage
                     .Matches(new Regex($"^[^\\{CombinedStringKeySeparator}]+$"))
                     .WithMessage($"This key part can not contain key separator {CombinedStringKeySeparator}");
                 if (!allowMatchingAllPattern)
+                {
                     ruleBuilderOptions = ruleBuilder
                         .Matches(new Regex($"^[^\\{MatchAllSingleGroupLevelChar}]+$"))
                         .WithMessage(
                             $"This key part can not contain matching all pattern {MatchAllSingleGroupLevelChar}");
+                }
 
                 if (allowNull)
                     ruleBuilderOptions.When(key => keyPartSelector.Compile()(key) != null);

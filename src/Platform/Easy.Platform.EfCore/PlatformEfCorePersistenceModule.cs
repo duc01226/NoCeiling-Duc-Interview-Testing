@@ -9,6 +9,7 @@ using Easy.Platform.EfCore.Services;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,10 +33,12 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
     {
     }
 
-    public override Action<TracerProviderBuilder> AdditionalTracingConfigure =>
-        builder => builder
+    public override Action<TracerProviderBuilder> AdditionalTracingConfigure
+    {
+        get => builder => builder
             .AddSqlClientInstrumentation(options => options.SetDbStatementForText = true)
             .AddNpgsql();
+    }
 
     protected override void InternalRegister(IServiceCollection serviceCollection)
     {
@@ -169,6 +172,7 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
     private void ConfigureDbContextOptionsBuilder(IServiceProvider serviceProvider, DbContextOptionsBuilder builder)
     {
         builder.UseApplicationServiceProvider(serviceProvider);
+        builder.ConfigureWarnings(p => p.Log(RelationalEventId.PendingModelChangesWarning));
 
         DbContextOptionsBuilderActionProvider(serviceProvider).Invoke(builder);
 

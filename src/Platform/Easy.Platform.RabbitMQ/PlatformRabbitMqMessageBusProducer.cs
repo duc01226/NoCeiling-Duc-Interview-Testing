@@ -53,16 +53,14 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
         }
     }
 
-    private Task PublishMessageToQueueAsync(
+    private async Task PublishMessageToQueueAsync(
         string message,
         string routingKey)
     {
-        PublishMessageToQueue(message, routingKey);
-
-        return Task.CompletedTask;
+        await PublishMessageToQueue(message, routingKey);
     }
 
-    private void PublishMessageToQueue(string message, string routingKey)
+    private async Task PublishMessageToQueue(string message, string routingKey)
     {
         using (var activity = IPlatformMessageBusProducer.ActivitySource.StartActivity(
             $"MessageBusProducer.{nameof(IPlatformMessageBusProducer.SendAsync)}",
@@ -71,34 +69,39 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
             activity?.AddTag("routingKey", routingKey);
             activity?.AddTag("message", message);
 
-            IModel channel = null;
+            IChannel channel = null;
 
             try
             {
                 channel = ChannelPool.Get();
 
-                var publishRequestProps = channel.CreateBasicProperties();
-                publishRequestProps.Persistent = true;
+                var publishRequestProps = new BasicProperties
+                {
+                    Persistent = true
+                };
 
                 InjectDistributedTracingInfoIntoRequestProps(activity, publishRequestProps);
 
-                channel.BasicPublish(
+                await channel.BasicPublishAsync(
                     ExchangeProvider.GetExchangeName(routingKey),
                     routingKey,
-                    publishRequestProps,
-                    body: Encoding.UTF8.GetBytes(message));
+                    body: Encoding.UTF8.GetBytes(message),
+                    basicProperties: publishRequestProps,
+                    mandatory: false);
 
                 ChannelPool.Return(channel);
             }
             catch (AlreadyClosedException alreadyClosedException)
             {
-                if (alreadyClosedException.ShutdownReason.ReplyCode == 404)
+                if (alreadyClosedException.ShutdownReason?.ReplyCode == 404)
+                {
                     Logger.Value.LogWarning(
                         "Tried to send a message with routing key {RoutingKey} from {ProducerType} " +
                         "but exchange is not found. May be there is no consumer registered to consume this message." +
                         "If in source code has consumers for this message, this could be unexpected errors",
                         routingKey,
                         GetType().FullName);
+                }
                 else
                     throw;
             }
@@ -112,10 +115,12 @@ public class PlatformRabbitMqMessageBusProducer : IPlatformMessageBusProducer
         void InjectDistributedTracingInfoIntoRequestProps(Activity activity, IBasicProperties publishRequestProps)
         {
             if (activity != null)
+            {
                 TracingActivityPropagator.Inject(
                     new PropagationContext(activity.Context, Baggage.Current),
                     publishRequestProps,
                     InjectDistributedTracingContextIntoSendMessageRequestHeader);
+            }
         }
 
         void InjectDistributedTracingContextIntoSendMessageRequestHeader(IBasicProperties props, string key, string value)

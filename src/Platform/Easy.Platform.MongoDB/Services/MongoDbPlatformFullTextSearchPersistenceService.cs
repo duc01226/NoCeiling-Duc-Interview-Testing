@@ -14,7 +14,7 @@ public class MongoDbPlatformFullTextSearchPersistenceService : PlatformFullTextS
 
     public override bool IsSupportQuery<T>(IQueryable<T> query)
     {
-        return query is IMongoQueryable;
+        return query.Provider is IMongoQueryProvider;
     }
 
     protected override IQueryable<T> DoSearch<T>(
@@ -35,7 +35,7 @@ public class MongoDbPlatformFullTextSearchPersistenceService : PlatformFullTextS
         var finalFilter = textSearchMongoFilter
             .PipeIf(startsWithFilter != null, p => Builders<T>.Filter.Or(p, startsWithFilter));
 
-        return ((IMongoQueryable<T>)query).Where(_ => finalFilter.Inject());
+        return query.Where(_ => finalFilter.Inject());
     }
 
     public static FilterDefinition<T> BuildTextSearchMongoFilterDefinition<T>(

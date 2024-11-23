@@ -4,7 +4,7 @@ using RabbitMQ.Client;
 
 namespace Easy.Platform.RabbitMQ;
 
-public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>, IDisposable
+public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IChannel>, IDisposable
 {
     public const int TryWaitGetConnectionSeconds = 120;
 
@@ -29,17 +29,17 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>, ID
         GC.SuppressFinalize(this);
     }
 
-    public IModel Create()
+    public IChannel Create()
     {
         var connection = rabbitMqConnectionPool.TryWaitGetConnection(TryWaitGetConnectionSeconds);
 
         try
         {
-            var channel = connection.CreateModel();
+            var channel = connection.CreateChannelAsync().Result;
 
             // Config the prefectCount. "defines the max number of unacknowledged deliveries that are permitted on a channel" to limit messages to prevent rabbit mq down
             // Reference: https://www.rabbitmq.com/tutorials/tutorial-two-dotnet.html. Filter: BasicQos
-            channel.BasicQos(prefetchSize: 0, options.QueuePrefetchCount, false);
+            channel.BasicQosAsync(prefetchSize: 0, options.QueuePrefetchCount, false).Wait();
 
             return channel;
         }
@@ -49,7 +49,7 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IModel>, ID
         }
     }
 
-    public bool Return(IModel obj)
+    public bool Return(IChannel obj)
     {
         if (obj.IsClosedPermanently())
         {

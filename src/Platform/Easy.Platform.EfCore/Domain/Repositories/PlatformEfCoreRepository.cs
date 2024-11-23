@@ -69,6 +69,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         CancellationToken cancellationToken = default)
     {
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+        {
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
                 () => source.As<IQueryable<TSource>>()?.ToListAsync(cancellationToken) ?? source.ToList().BoxedInTask(),
                 Logger,
@@ -77,6 +78,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
                 resultQuery: source,
                 resultQueryStringBuilder: source.As<IQueryable<TSource>>()
                     ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+        }
 
         return await (source.As<IQueryable<TSource>>()?.ToListAsync(cancellationToken) ?? source.ToList().BoxedInTask());
     }
@@ -91,6 +93,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         CancellationToken cancellationToken = default)
     {
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+        {
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
                 () => source.FirstOrDefaultAsync(cancellationToken),
                 Logger,
@@ -99,6 +102,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
                 resultQuery: source,
                 resultQueryStringBuilder: source.As<IQueryable<TSource>>()
                     ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+        }
 
         return await source.FirstOrDefaultAsync(cancellationToken);
     }
@@ -118,6 +122,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
         CancellationToken cancellationToken = default)
     {
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+        {
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
                 () => source.FirstAsync(cancellationToken),
                 Logger,
@@ -126,6 +131,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
                 resultQuery: source,
                 resultQueryStringBuilder: source.As<IQueryable<TSource>>()
                     ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+        }
 
         return await source.FirstAsync(cancellationToken);
     }
@@ -133,6 +139,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
     public override async Task<int> CountAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+        {
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
                 () => source.CountAsync(cancellationToken),
                 Logger,
@@ -141,6 +148,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
                 resultQuery: source,
                 resultQueryStringBuilder: source.As<IQueryable<TSource>>()
                     ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+        }
 
         return await source.CountAsync(cancellationToken);
     }
@@ -148,6 +156,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
     public override async Task<bool> AnyAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
     {
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+        {
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
                 () => source.AnyAsync(cancellationToken),
                 Logger,
@@ -156,6 +165,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
                 resultQuery: source,
                 resultQueryStringBuilder: source.As<IQueryable<TSource>>()
                     ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+        }
 
         return await source.AnyAsync(cancellationToken);
     }
@@ -175,12 +185,14 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
             else if (result is IEnumerable<TEntity> entities)
                 entities.ForEach(entity => loadRelatedEntities.ForEach(loadRelatedEntityFn => loadRelatedEntityFn.Compile()(entity)));
             else
+            {
                 result?.GetType()
                     .GetProperties(BindingFlags.Instance | BindingFlags.Public)
                     .Where(p => p.PropertyType == typeof(TEntity))
                     .ForEach(
                         entityPropertyInfo => loadRelatedEntities
                             .ForEach(loadRelatedEntityFn => loadRelatedEntityFn.Compile()(entityPropertyInfo.GetValue(result).As<TEntity>())));
+            }
         }
 
         if (canDisposeContext)
@@ -191,7 +203,7 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
     // to help the entity could load lazy navigation property. If uow disposed => context disposed => lazy-loading proxy failed because db-context disposed
     protected override bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IPlatformUnitOfWork uow)
     {
-        if (result == null ||
+        if (result is null ||
             result.GetType().Pipe(p => p.IsPrimitive || p.IsValueType) ||
             result is string ||
             result.As<ICollection>()?.Count == 0)

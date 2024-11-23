@@ -59,14 +59,15 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         LogDebugQueryLog(source);
 
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+        {
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
                 () => DoToListAsync(source, cancellationToken),
                 Logger,
                 PersistenceConfiguration,
                 forWriteQuery: false,
                 resultQuery: source,
-                resultQueryStringBuilder: source.As<IMongoQueryable<TSource>>()
-                    ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+                resultQueryStringBuilder: source.TryToMongoQueryString);
+        }
 
         return await DoToListAsync(source, cancellationToken);
 
@@ -74,28 +75,31 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
             IEnumerable<TSource> source,
             CancellationToken cancellationToken = default)
         {
-            if (source.As<IMongoQueryable<TSource>>() == null) return source.ToList();
+            if (source is IQueryable<TSource> queryable)
+                return await queryable.ToListAsync(cancellationToken);
 
-            return await IAsyncCursorSourceExtensions.ToListAsync(source.As<IMongoQueryable<TSource>>(), cancellationToken);
+            return source.ToList();
         }
     }
 
     protected void LogDebugQueryLog<TSource>(IEnumerable<TSource> source)
     {
         if (Debugger.IsAttached && PersistenceConfiguration.EnableDebugQueryLog)
+        {
             source.TryToMongoQueryString()
                 .PipeAction(
                     queryStr =>
                     {
                         if (queryStr != null) Debugger.Log(0, null, queryStr + Environment.NewLine);
                     });
+        }
     }
 
     public override async IAsyncEnumerable<TSource> ToAsyncEnumerable<TSource>(
         IEnumerable<TSource> source,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        using (var cursor = await source.As<IMongoQueryable<TSource>>().ToCursorAsync(cancellationToken).ConfigureAwait(false))
+        using (var cursor = await source.As<IQueryable<TSource>>().ToCursorAsync(cancellationToken).ConfigureAwait(false))
         {
             Ensure.IsNotNull(cursor, nameof(source));
             while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
@@ -114,16 +118,17 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         LogDebugQueryLog(source);
 
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+        {
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
-                () => source.As<IMongoQueryable<TSource>>().FirstOrDefaultAsync(cancellationToken),
+                () => source.As<IQueryable<TSource>>().FirstOrDefaultAsync(cancellationToken),
                 Logger,
                 PersistenceConfiguration,
                 forWriteQuery: false,
                 resultQuery: source,
-                resultQueryStringBuilder: source.As<IMongoQueryable<TSource>>()
-                    ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+                resultQueryStringBuilder: source.TryToMongoQueryString);
+        }
 
-        return await source.As<IMongoQueryable<TSource>>().FirstOrDefaultAsync(cancellationToken);
+        return await source.As<IQueryable<TSource>>().FirstOrDefaultAsync(cancellationToken);
     }
 
     public override async Task<TSource> FirstOrDefaultAsync<TSource>(
@@ -133,8 +138,8 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         // ReSharper disable once PossibleMultipleEnumeration
         LogDebugQueryLog(query);
 
-        if (query.As<IMongoQueryable<TSource>>() != null)
-            return await FirstOrDefaultAsync(query.As<IMongoQueryable<TSource>>(), cancellationToken);
+        if (query.As<IQueryable<TSource>>() != null)
+            return await FirstOrDefaultAsync(query.As<IQueryable<TSource>>(), cancellationToken);
 
         // ReSharper disable once PossibleMultipleEnumeration
         return query.FirstOrDefault();
@@ -147,16 +152,17 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         LogDebugQueryLog(source);
 
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+        {
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
-                () => source.As<IMongoQueryable<TSource>>().FirstAsync(cancellationToken),
+                () => source.As<IQueryable<TSource>>().FirstAsync(cancellationToken),
                 Logger,
                 PersistenceConfiguration,
                 forWriteQuery: false,
                 resultQuery: source,
-                resultQueryStringBuilder: source.As<IMongoQueryable<TSource>>()
-                    ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+                resultQueryStringBuilder: source.TryToMongoQueryString);
+        }
 
-        return await source.As<IMongoQueryable<TSource>>().FirstAsync(cancellationToken);
+        return await source.As<IQueryable<TSource>>().FirstAsync(cancellationToken);
     }
 
     public override async Task<int> CountAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
@@ -164,16 +170,17 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         LogDebugQueryLog(source);
 
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+        {
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
-                () => source.As<IMongoQueryable<TSource>>().CountAsync(cancellationToken),
+                () => source.As<IQueryable<TSource>>().CountAsync(cancellationToken),
                 Logger,
                 PersistenceConfiguration,
                 forWriteQuery: false,
                 resultQuery: source,
-                resultQueryStringBuilder: source.As<IMongoQueryable<TSource>>()
-                    ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+                resultQueryStringBuilder: source.TryToMongoQueryString);
+        }
 
-        return await source.As<IMongoQueryable<TSource>>().CountAsync(cancellationToken);
+        return await source.As<IQueryable<TSource>>().CountAsync(cancellationToken);
     }
 
     public override async Task<bool> AnyAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
@@ -181,21 +188,22 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         LogDebugQueryLog(source);
 
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+        {
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
-                () => source.As<IMongoQueryable<TSource>>().AnyAsync(cancellationToken),
+                () => source.AnyAsync(cancellationToken),
                 Logger,
                 PersistenceConfiguration,
                 forWriteQuery: false,
                 resultQuery: source,
-                resultQueryStringBuilder: source.As<IMongoQueryable<TSource>>()
-                    ?.Pipe(queryable => queryable != null ? queryable.ToQueryString : (Func<string>)null));
+                resultQueryStringBuilder: source.TryToMongoQueryString);
+        }
 
-        return await source.As<IMongoQueryable<TSource>>().AnyAsync(cancellationToken);
+        return await source.As<IQueryable<TSource>>().AnyAsync(cancellationToken);
     }
 
     protected override bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IPlatformUnitOfWork uow)
     {
-        if (result == null) return false;
+        if (result is null) return false;
 
         return result.GetType().IsAssignableToGenericType(typeof(IQueryable<>)) ||
                result.GetType().IsAssignableToGenericType(typeof(IAsyncEnumerable<>));

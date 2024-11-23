@@ -25,9 +25,11 @@ internal sealed class FireBasePushNotificationService : IPushNotificationPlatfor
             cancellationToken);
 
         if (!result.IsSuccess())
+        {
             logger.LogError(
-                "Firebase notification error with Device Token Id: {Message.DeviceId} - {Result.Results[0].Error}",
+                "Firebase notification error with Device Token Id: {DeviceId} - {Error}",
                 message.DeviceId,
                 result.Results[0].Error);
+        }
     }
 }

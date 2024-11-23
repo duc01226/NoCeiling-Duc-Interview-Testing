@@ -29,15 +29,15 @@ public static class ExpressionExtension
     /// <typeparam name="T">The type of the parameter of the expressions.</typeparam>
     /// <param name="expression">The first expression to combine.</param>
     /// <param name="if">A boolean value determining whether to combine the expressions.</param>
-    /// <param name="andExpressionAsync">An asynchronous function providing the second expression.</param>
+    /// <param name="andExprAsync">An asynchronous function providing the second expression.</param>
     /// <returns>A new expression representing the combined result.</returns>
     public static async Task<Expression<Func<T, bool>>> AndAlsoIf<T>(
         this Expression<Func<T, bool>> expression,
         bool @if,
-        Func<Task<Expression<Func<T, bool>>>> andExpressionAsync)
+        Func<Task<Expression<Func<T, bool>>>> andExprAsync)
     {
         if (@if)
-            return expression.AndAlso(await andExpressionAsync());
+            return expression.AndAlso(await andExprAsync());
 
         return expression;
     }
@@ -49,15 +49,15 @@ public static class ExpressionExtension
     /// <typeparam name="T">The type of the parameter of the expressions.</typeparam>
     /// <param name="expressionTask">A task returning the first expression to combine.</param>
     /// <param name="if">A boolean value determining whether to combine the expressions.</param>
-    /// <param name="andExpressionAsync">An asynchronous function providing the second expression.</param>
+    /// <param name="andExprAsync">An asynchronous function providing the second expression.</param>
     /// <returns>A task returning a new expression representing the combined result.</returns>
     public static Task<Expression<Func<T, bool>>> AndAlsoIf<T>(
         this Task<Expression<Func<T, bool>>> expressionTask,
         bool @if,
-        Func<Task<Expression<Func<T, bool>>>> andExpressionAsync)
+        Func<Task<Expression<Func<T, bool>>>> andExprAsync)
     {
         if (@if)
-            return expressionTask.Then(async expression => expression.AndAlso(await andExpressionAsync()));
+            return expressionTask.Then(async expression => expression.AndAlso(await andExprAsync()));
 
         return expressionTask;
     }

@@ -107,12 +107,14 @@ public class DeviceController : Controller
             {
                 var scopes = model.ScopesConsented;
                 if (ConsentOptions.EnableOfflineAccess == false)
+                {
                     scopes = scopes.Where(
                         x => x != IdentityServerConstants.StandardScopes.OfflineAccess);
+                }
 
                 grantedConsent = new ConsentResponse
                 {
-                    RememberConsent = model.RememberConsent,
+                    RememberConsent = model.RememberConsent == true,
                     ScopesValuesConsented = scopes.ToArray(),
                     Description = model.Description
                 };
@@ -127,14 +129,10 @@ public class DeviceController : Controller
                         grantedConsent.RememberConsent));
             }
             else
-            {
                 result.ValidationError = ConsentOptions.MustChooseOneErrorMessage;
-            }
         }
         else
-        {
             result.ValidationError = ConsentOptions.InvalidSelectionErrorMessage;
-        }
 
         if (grantedConsent != null)
         {
@@ -203,18 +201,20 @@ public class DeviceController : Controller
         }
 
         if (ConsentOptions.EnableOfflineAccess && request.ValidatedResources.Resources.OfflineAccess)
+        {
             apiScopes.Add(
                 GetOfflineAccessScope(
                     vm.ScopesConsented.Contains(
                         IdentityServerConstants.StandardScopes.OfflineAccess) ||
                     model == null));
+        }
 
         vm.ApiScopes = apiScopes;
 
         return vm;
     }
 
-    private ScopeViewModel CreateScopeViewModel(IdentityResource identity, bool check)
+    private static ScopeViewModel CreateScopeViewModel(IdentityResource identity, bool check)
     {
         return new ScopeViewModel
         {
@@ -240,7 +240,7 @@ public class DeviceController : Controller
         };
     }
 
-    private ScopeViewModel GetOfflineAccessScope(bool check)
+    private static ScopeViewModel GetOfflineAccessScope(bool check)
     {
         return new ScopeViewModel
         {

@@ -1,3 +1,4 @@
+using Easy.Platform.Common;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Infrastructures.BackgroundJob;
 using Hangfire;
@@ -103,7 +104,14 @@ public abstract class PlatformHangfireBackgroundJobModule : PlatformBackgroundJo
                         configuration.UseMongoStorage(
                             options.ConnectionString,
                             options.DatabaseName,
-                            options.StorageOptions);
+                            options.StorageOptions
+                                .WithIf(
+                                    PlatformEnvironment.IsDevelopment,
+                                    p =>
+                                    {
+                                        // https://github.com/Hangfire-Mongo/Hangfire.Mongo/issues/300 Fix for local hangfire mongo
+                                        p.CheckQueuedJobsStrategy = CheckQueuedJobsStrategy.TailNotificationsCollection;
+                                    }));
                     });
                 break;
             }

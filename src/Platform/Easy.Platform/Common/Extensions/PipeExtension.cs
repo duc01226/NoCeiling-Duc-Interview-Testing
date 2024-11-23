@@ -108,7 +108,7 @@ public static class PipeExtension
         Func<TTarget, TResult> thenPipe,
         TResult defaultValue = default)
     {
-        return target != null ? thenPipe(target) : defaultValue;
+        return target is not null ? thenPipe(target) : defaultValue;
     }
 
     /// <summary>
@@ -119,7 +119,7 @@ public static class PipeExtension
         Func<TTarget, TResult> thenPipe,
         TResult defaultValue = default) where TTarget : struct
     {
-        return target != null ? thenPipe(target.Value) : defaultValue;
+        return target is not null ? thenPipe(target.Value) : defaultValue;
     }
 
     /// <summary>
@@ -130,7 +130,7 @@ public static class PipeExtension
         Func<TTarget, Task<TResult>> thenPipe,
         TResult defaultValue = default)
     {
-        return target != null ? await thenPipe(target) : defaultValue;
+        return target is not null ? await thenPipe(target) : defaultValue;
     }
 
     /// <summary>
@@ -165,7 +165,7 @@ public static class PipeExtension
         Func<TTarget, TResult> thenPipe,
         TResult defaultValue = default)
     {
-        return target != null ? thenPipe(target) : defaultValue;
+        return target is not null ? thenPipe(target) : defaultValue;
     }
 
     /// <summary>
@@ -176,6 +176,6 @@ public static class PipeExtension
         Func<TTarget, Task<TResult>> thenPipe,
         TResult defaultValue = default)
     {
-        return target != null ? await thenPipe(target) : defaultValue;
+        return target is not null ? await thenPipe(target) : defaultValue;
     }
 }

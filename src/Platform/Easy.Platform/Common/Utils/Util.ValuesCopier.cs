@@ -83,7 +83,7 @@ public static partial class Util
                 if (InitializationException != null)
                     throw InitializationException;
 
-                if (source == null)
+                if (source is null)
                     throw new ArgumentNullException(nameof(source));
 
                 return Creator(source);
@@ -94,7 +94,7 @@ public static partial class Util
                 if (InitializationException != null)
                     throw InitializationException;
 
-                if (source == null)
+                if (source is null)
                     throw new ArgumentNullException(nameof(source));
 
                 var ignorePropertiesDic = ignoreProperties.ToDictionary(p => p.GetPropertyName());
@@ -117,24 +117,30 @@ public static partial class Util
                     var targetProperty = typeof(TTarget).GetProperty(sourceProperty.Name);
 
                     if (targetProperty == null)
+                    {
                         throw new ArgumentException(
                             "Property " +
                             sourceProperty.Name +
                             " is not present and accessible in " +
                             typeof(TTarget).FullName);
+                    }
 
                     if (targetProperty.GetSetMethod() == null) continue;
 
                     if ((targetProperty.GetSetMethod()?.Attributes & MethodAttributes.Static) != 0)
+                    {
                         throw new ArgumentException(
                             "Property " + sourceProperty.Name + " is static in " + typeof(TTarget).FullName);
+                    }
 
                     if (!targetProperty.PropertyType.IsAssignableFrom(sourceProperty.PropertyType))
+                    {
                         throw new ArgumentException(
                             "Property " +
                             sourceProperty.Name +
                             " has an incompatible type in " +
                             typeof(TTarget).FullName);
+                    }
 
                     bindings.Add(Expression.Bind(targetProperty, Expression.Property(sourceParameter, sourceProperty)));
                     SourceProperties.Add(sourceProperty);

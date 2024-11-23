@@ -9,13 +9,13 @@ using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.Exceptions;
 using Easy.Platform.Domain.UnitOfWork;
-using Easy.Platform.MongoDB.Extensions;
 using Easy.Platform.MongoDB.Migration;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.DataMigration;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 
 namespace Easy.Platform.MongoDB;
 
@@ -83,9 +83,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         var existingEntity = await ApplicationDataMigrationHistoryQuery.Where(p => p.Name == entity.Name).FirstOrDefaultAsync(cancellationToken);
 
         if (existingEntity == null)
-        {
             await ApplicationDataMigrationHistoryCollection.InsertOneAsync(entity, cancellationToken: cancellationToken);
-        }
         else
         {
             if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })
@@ -111,8 +109,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             if (result.MatchedCount <= 0)
             {
                 if (await ApplicationDataMigrationHistoryCollection.AsQueryable().AnyAsync(p => p.Name == entity.Name, cancellationToken))
+                {
                     throw new PlatformDomainRowVersionConflictException(
                         $"Update {nameof(PlatformDataMigrationHistory)} with Name:{toBeUpdatedEntity.Name} has conflicted version.");
+                }
+
                 throw new PlatformDomainEntityNotFoundException<PlatformDataMigrationHistory>(toBeUpdatedEntity.Name);
             }
         }
@@ -156,11 +157,13 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         {
             if (!await ApplicationDataMigrationHistoryCollection.AsQueryable()
                 .AnyAsync(p => p.Name == PlatformDataMigrationHistory.DbInitializedMigrationHistoryName))
+            {
                 await ApplicationDataMigrationHistoryCollection.InsertOneAsync(
                     new PlatformDataMigrationHistory(PlatformDataMigrationHistory.DbInitializedMigrationHistoryName)
                     {
                         Status = PlatformDataMigrationHistory.Statuses.Processed
                     });
+            }
         }
     }
 
@@ -360,12 +363,14 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 }
 
                 if (isEntityRowVersionEntityMissingConcurrencyUpdateToken)
+                {
                     entity.As<IRowVersionEntity>().ConcurrencyUpdateToken =
                         existingEntity?.As<IRowVersionEntity>().ConcurrencyUpdateToken ??
                         await GetQuery<TEntity>()
                             .Where(BuildExistingEntityPredicate(entity))
                             .Select(p => ((IRowVersionEntity)p).ConcurrencyUpdateToken)
                             .FirstOrDefaultAsync(cancellationToken);
+                }
 
                 var toBeUpdatedEntity = entity
                     .PipeIf(
@@ -429,8 +434,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                                             out var existingEntityConcurrencyToken))
                                             throw new PlatformDomainEntityNotFoundException<TEntity>(p.toBeUpdatedEntity.Id.ToString());
                                         if (existingEntityConcurrencyToken != p.currentInMemoryConcurrencyUpdateToken)
+                                        {
                                             throw new PlatformDomainRowVersionConflictException(
                                                 $"Update {typeof(TEntity).Name} with Id:{p.toBeUpdatedEntity.Id} has conflicted version.");
+                                        }
                                     });
                         }
 
@@ -677,12 +684,14 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                                    p => MappedUnitOfWork?.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p));
 
         if (existingEntity != null)
+        {
             return await UpdateAsync<TEntity, TPrimaryKey>(
                 entity.WithIf(!entity.Id.Equals(existingEntity.Id), entity => entity.Id = existingEntity.Id),
                 existingEntity,
                 dismissSendEvent,
                 eventCustomConfig,
                 cancellationToken);
+        }
 
         return await CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, true, eventCustomConfig, cancellationToken);
     }
@@ -805,12 +814,14 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         }
 
         if (isEntityRowVersionEntityMissingConcurrencyUpdateToken)
+        {
             entity.As<IRowVersionEntity>().ConcurrencyUpdateToken =
                 existingEntity?.As<IRowVersionEntity>().ConcurrencyUpdateToken ??
                 await GetQuery<TEntity>()
                     .Where(BuildExistingEntityPredicate())
                     .Select(p => ((IRowVersionEntity)p).ConcurrencyUpdateToken)
                     .FirstOrDefaultAsync(cancellationToken);
+        }
 
         var toBeUpdatedEntity = entity
             .PipeIf(entity is IDateAuditedEntity, p => p.As<IDateAuditedEntity>().With(auditedEntity => auditedEntity.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
@@ -897,7 +908,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     public virtual async Task EnsureIndexesAsync(bool recreate = false)
     {
-        if (!recreate && IsEnsureIndexesMigrationExecuted()) return;
+        if (!recreate && await IsEnsureIndexesMigrationExecuted()) return;
 
         Logger.LogInformation("[{TargetName}] EnsureIndexesAsync STARTED.", GetType().Name);
 
@@ -908,9 +919,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             EnsureOutboxBusMessageCollectionIndexesAsync(recreate),
             InternalEnsureIndexesAsync(recreate));
 
-        if (!IsEnsureIndexesMigrationExecuted())
+        if (!await IsEnsureIndexesMigrationExecuted())
+        {
             await MigrationHistoryCollection.InsertOneAsync(
                 new PlatformMongoMigrationHistory(EnsureIndexesMigrationName));
+        }
 
         Logger.LogInformation("[{TargetName}] EnsureIndexesAsync FINISHED.", GetType().Name);
     }
@@ -972,10 +985,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     public virtual async Task EnsureMigrationHistoryCollectionIndexesAsync(bool recreate = false)
     {
-        if (recreate || !IsEnsureIndexesMigrationExecuted())
+        if (recreate || !await IsEnsureIndexesMigrationExecuted())
             await MigrationHistoryCollection.Indexes.DropAllAsync();
 
-        if (recreate || !IsEnsureIndexesMigrationExecuted())
+        if (recreate || !await IsEnsureIndexesMigrationExecuted())
+        {
             await MigrationHistoryCollection.Indexes.CreateManyAsync(
             [
                 new CreateIndexModel<PlatformMongoMigrationHistory>(
@@ -985,14 +999,16 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         Unique = true
                     })
             ]);
+        }
     }
 
     public virtual async Task EnsureApplicationDataMigrationHistoryCollectionIndexesAsync(bool recreate = false)
     {
-        if (recreate || !IsEnsureIndexesMigrationExecuted())
+        if (recreate || !await IsEnsureIndexesMigrationExecuted())
             await ApplicationDataMigrationHistoryCollection.Indexes.DropAllAsync();
 
-        if (recreate || !IsEnsureIndexesMigrationExecuted())
+        if (recreate || !await IsEnsureIndexesMigrationExecuted())
+        {
             await ApplicationDataMigrationHistoryCollection.Indexes.CreateManyAsync(
             [
                 new CreateIndexModel<PlatformDataMigrationHistory>(
@@ -1004,14 +1020,16 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 new CreateIndexModel<PlatformDataMigrationHistory>(
                     Builders<PlatformDataMigrationHistory>.IndexKeys.Ascending(p => p.Status))
             ]);
+        }
     }
 
     public virtual async Task EnsureInboxBusMessageCollectionIndexesAsync(bool recreate = false)
     {
-        if (recreate || !IsEnsureIndexesMigrationExecuted())
+        if (recreate || !await IsEnsureIndexesMigrationExecuted())
             await InboxBusMessageCollection.Indexes.DropAllAsync();
 
-        if (recreate || !IsEnsureIndexesMigrationExecuted())
+        if (recreate || !await IsEnsureIndexesMigrationExecuted())
+        {
             await InboxBusMessageCollection.Indexes.CreateManyAsync(
             [
                 new CreateIndexModel<PlatformInboxBusMessage>(
@@ -1028,14 +1046,16 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         .Ascending(p => p.CreatedDate)
                         .Ascending(p => p.ConsumeStatus))
             ]);
+        }
     }
 
     public virtual async Task EnsureOutboxBusMessageCollectionIndexesAsync(bool recreate = false)
     {
-        if (recreate || !IsEnsureIndexesMigrationExecuted())
+        if (recreate || !await IsEnsureIndexesMigrationExecuted())
             await OutboxBusMessageCollection.Indexes.DropAllAsync();
 
-        if (recreate || !IsEnsureIndexesMigrationExecuted())
+        if (recreate || !await IsEnsureIndexesMigrationExecuted())
+        {
             await OutboxBusMessageCollection.Indexes.CreateManyAsync(
             [
                 new CreateIndexModel<PlatformOutboxBusMessage>(
@@ -1047,6 +1067,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         .Ascending(p => p.CreatedDate)
                         .Ascending(p => p.SendStatus))
             ]);
+        }
     }
 
     public abstract Task InternalEnsureIndexesAsync(bool recreate = false);
@@ -1072,9 +1093,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         return EntityTypeToCollectionNameDictionary.Value.TryGetValue(typeof(TEntity), out collectionName);
     }
 
-    protected bool IsEnsureIndexesMigrationExecuted()
+    protected async Task<bool> IsEnsureIndexesMigrationExecuted()
     {
-        return MigrationHistoryCollection.AsQueryable().Any(p => p.Name == EnsureIndexesMigrationName);
+        return await MigrationHistoryCollection.AsQueryable().AnyAsync(p => p.Name == EnsureIndexesMigrationName);
     }
 
     protected async Task<TEntity> CreateAsync<TEntity, TPrimaryKey>(
@@ -1096,6 +1117,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 entity => entity.As<IRowVersionEntity>().ConcurrencyUpdateToken = Ulid.NewUlid().ToString());
 
         if (upsert == false)
+        {
             await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
                 RootServiceProvider,
                 MappedUnitOfWork,
@@ -1106,7 +1128,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 () => RequestContextAccessor.Current.GetAllKeyValues(),
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
+        }
         else
+        {
             await PlatformCqrsEntityEvent.ExecuteWithSendingCreateEntityEvent<TEntity, TPrimaryKey, TEntity>(
                 RootServiceProvider,
                 MappedUnitOfWork,
@@ -1123,6 +1147,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 () => RequestContextAccessor.Current.GetAllKeyValues(),
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
+        }
 
         return toBeCreatedEntity;
     }

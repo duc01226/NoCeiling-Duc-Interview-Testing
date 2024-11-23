@@ -115,7 +115,7 @@ public class PlatformCachingModule : PlatformInfrastructureModule
     {
     }
 
-    protected void RegisterDefaultPlatformCacheEntryOptions(IServiceCollection serviceCollection)
+    protected static void RegisterDefaultPlatformCacheEntryOptions(IServiceCollection serviceCollection)
     {
         serviceCollection.Register(
             sp => sp.GetRequiredService<PlatformCacheSettings>().DefaultCacheEntryOptions,
@@ -124,7 +124,7 @@ public class PlatformCachingModule : PlatformInfrastructureModule
             DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
     }
 
-    protected void RegisterCacheItemsByScanAssemblies(
+    protected static void RegisterCacheItemsByScanAssemblies(
         IServiceCollection serviceCollection,
         params Assembly[] assemblies)
     {

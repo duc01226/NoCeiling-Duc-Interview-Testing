@@ -8,7 +8,7 @@ namespace Easy.Platform.RabbitMQ;
 public class RabbitMqConnectionPool : IDisposable
 {
     private readonly DefaultObjectPool<IConnection> connectionPool;
-    private readonly object currentUsingObjectCounterLock = new();
+    private readonly Lock currentUsingObjectCounterLock = new();
     private bool disposed;
 
     public RabbitMqConnectionPool(PlatformRabbitMqOptions options, int poolSize)
@@ -131,7 +131,7 @@ public class RabbitMqPooledObjectPolicy : IPooledObjectPolicy<IConnection>
 
         try
         {
-            return CreateConnection();
+            return CreateConnection().Result;
         }
         catch (Exception ex)
         {
@@ -148,7 +148,7 @@ public class RabbitMqPooledObjectPolicy : IPooledObjectPolicy<IConnection>
         return false;
     }
 
-    private IConnection CreateConnection()
+    private async Task<IConnection> CreateConnection()
     {
         // Store stack trace before call CreateConnection to keep the original stack trace to log
         // after CreateConnection will lose full stack trace (may because it connect async to other external service)
@@ -160,7 +160,7 @@ public class RabbitMqPooledObjectPolicy : IPooledObjectPolicy<IConnection>
                 .Where(hostName => hostName.IsNotNullOrEmpty())
                 .ToArray();
 
-            return connectionFactory.CreateConnection(hostNames);
+            return await connectionFactory.CreateConnectionAsync(hostNames);
         }
         catch (Exception ex)
         {
@@ -180,7 +180,7 @@ public class RabbitMqPooledObjectPolicy : IPooledObjectPolicy<IConnection>
             Password = options.Password,
             VirtualHost = options.VirtualHost,
             Port = options.Port,
-            DispatchConsumersAsync = true,
+            ConsumerDispatchConcurrency = (ushort)Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent,
             ClientProvidedName = options.ClientProvidedName ?? Assembly.GetEntryAssembly()?.FullName,
             RequestedConnectionTimeout = options.RequestedConnectionTimeoutSeconds.Seconds(),
             ContinuationTimeout = options.RequestedConnectionTimeoutSeconds.Seconds(),

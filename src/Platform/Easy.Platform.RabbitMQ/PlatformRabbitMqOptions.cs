@@ -43,7 +43,7 @@ public class PlatformRabbitMqOptions
     public string ClientProvidedName { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of times to retry initializing a RabbitMQ channel (<see cref="IModel" />) if the initial attempt fails.
+    /// Gets or sets the number of times to retry initializing a RabbitMQ channel (<see cref="IChannel" />) if the initial attempt fails.
     /// This ensures resilience against transient network issues during connection establishment.
     /// </summary>
     public int InitRabbitMqChannelRetryCount { get; set; } = DefaultInitRabbitMqChannelRetryCount;

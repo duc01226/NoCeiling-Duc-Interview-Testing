@@ -376,11 +376,13 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
         //        typeof(DemoDoSomeDomainEntityLogicActionOnSaveSnippetTextEntityEventHandler)),
         //    cancellationToken: cancellationToken);
 
+        // TEST DEMO Case update using CreateOrUpdate directly entity is mapped from dto. When update do not get from existing entity still should work normally, should also add domain event
         if (request.Data.HasSubmitId())
-            // TEST DEMO Case update using CreateOrUpdate directly entity is mapped from dto. When update do not get from existing entity still should work normally, should also add domain event
+        {
             savedData = await textSnippetEntityRepository.CreateOrUpdateAsync(
                 request.Data.MapToEntity().With(p => p.FullText += " Updated TEST DEMO Case update using CreateOrUpdate"),
                 cancellationToken: cancellationToken);
+        }
 
         // STEP 4: Build and return result
         return new SaveSnippetTextCommandResult
@@ -406,7 +408,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
             cancellationToken: cancellationToken);
     }
 
-    private PlatformValidationResult<TextSnippetEntity> ValidateSomeThisCommandApplicationLogic(TextSnippetEntity entityToSave)
+    private static PlatformValidationResult<TextSnippetEntity> ValidateSomeThisCommandApplicationLogic(TextSnippetEntity entityToSave)
     {
         return entityToSave
             .Validate(must: p => true, "Example Rule 1 violated error message")
@@ -414,7 +416,7 @@ internal sealed class SaveSnippetTextCommandHandler : PlatformCqrsCommandApplica
             .WithApplicationException();
     }
 
-    private PlatformValidationResult<TextSnippetEntity> ValidateSomeThisCommandApplicationLogicToChangeFlow(TextSnippetEntity entityToSave)
+    private static PlatformValidationResult<TextSnippetEntity> ValidateSomeThisCommandApplicationLogicToChangeFlow(TextSnippetEntity entityToSave)
     {
         return entityToSave
             .Validate(must: p => true, "Example Rule 1 violated error message")

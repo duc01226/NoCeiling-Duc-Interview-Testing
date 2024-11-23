@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
-using System.Threading.Tasks;
 using IdentityModel;
 using IdentityServer4;
 using IdentityServer4.Events;
@@ -87,7 +83,7 @@ public class ExternalController : Controller
         if (logger.IsEnabled(LogLevel.Debug))
         {
             var externalClaims = result.Principal.Claims.Select(c => $"{c.Type}: {c.Value}");
-            logger.LogDebug("External claims: {@claims}", externalClaims);
+            logger.LogDebug("External claims: {Claims}", externalClaims);
         }
 
         // lookup our user and external provider info
@@ -169,7 +165,7 @@ public class ExternalController : Controller
 
     // if the external login is OIDC-based, there are certain things we need to preserve to make logout work
     // this will be different for WS-Fed, SAML2p or other protocols
-    private void ProcessLoginCallback(
+    private static void ProcessLoginCallback(
         AuthenticateResult externalResult,
         List<Claim> localClaims,
         AuthenticationProperties localSignInProps)
@@ -183,6 +179,7 @@ public class ExternalController : Controller
         // if the external provider issued an id_token, we'll keep it for signout
         var idToken = externalResult.Properties!.GetTokenValue("id_token");
         if (idToken != null)
+        {
             localSignInProps.StoreTokens(
             [
                 new AuthenticationToken
@@ -191,5 +188,6 @@ public class ExternalController : Controller
                     Value = idToken
                 }
             ]);
+        }
     }
 }

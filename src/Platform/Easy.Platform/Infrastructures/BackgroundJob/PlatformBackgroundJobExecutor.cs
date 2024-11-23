@@ -78,16 +78,20 @@ public abstract class PlatformBackgroundJobExecutor<TParam> : IPlatformBackgroun
                                 $"ElapsedMilliseconds:{elapsedMilliseconds}.";
 
                             if (elapsedMilliseconds >= SlowProcessWarningTimeMilliseconds())
+                            {
                                 Logger.LogWarning(
-                                    "BackgroundJobExecutor invoking background job {GetTypeFullName} FINISHED. SlowProcessWarningTimeMilliseconds:{SlowProcessWarningTimeMilliseconds()}. {LogMessage}",
+                                    "BackgroundJobExecutor invoking background job {GetTypeFullName} FINISHED. SlowProcessWarningTimeMilliseconds:{SlowProcessWarningTimeMilliseconds}. {LogMessage}",
                                     GetType().FullName,
                                     SlowProcessWarningTimeMilliseconds(),
                                     logMessage);
+                            }
                             else if (LogDebugInformation())
+                            {
                                 Logger.LogInformation(
                                     "BackgroundJobExecutor invoking background job {GetTypeFullName} FINISHED. {LogMessage}",
                                     GetType().FullName,
                                     logMessage);
+                            }
                         })
                     .WaitResult();
             }

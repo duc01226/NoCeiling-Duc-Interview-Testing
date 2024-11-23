@@ -50,7 +50,7 @@ public static class PlatformEntityExtensions
 
     public static T? FindById<T, TId>(this IEnumerable<T> entities, TId id) where T : IEntity<TId>
     {
-        return entities.FirstOrDefault(p => p.Id != null && p.Id.Equals(id));
+        return entities.FirstOrDefault(p => p.Id is not null && p.Id.Equals(id));
     }
 
     public static T GetById<T, TId>(this IEnumerable<T> entities, TId id, Func<Exception>? notFoundException = null) where T : IEntity<TId>

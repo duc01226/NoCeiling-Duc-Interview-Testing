@@ -4,7 +4,7 @@ namespace Easy.Platform.RabbitMQ.Extensions;
 
 public static class RabbitMqIModelExtension
 {
-    public static bool IsClosedPermanently(this IModel channel)
+    public static bool IsClosedPermanently(this IChannel channel)
     {
         try
         {

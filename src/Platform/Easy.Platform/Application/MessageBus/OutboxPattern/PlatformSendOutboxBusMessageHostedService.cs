@@ -105,12 +105,14 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                         {
                             // Log an error if the retry count exceeds a certain threshold.
                             if (currentRetry >= OutboxConfig.MinimumRetrySendOutboxMessageTimesToLogError)
+                            {
                                 Logger.LogError(
                                     "Retry SendOutboxEventBusMessages {CurrentRetry} time(s) failed: {Error}. [ApplicationName:{ApplicationName}]. [ApplicationAssembly:{ApplicationAssembly}]",
                                     currentRetry,
                                     ex.Message,
                                     ApplicationSettingContext.ApplicationName,
                                     ApplicationSettingContext.ApplicationAssembly.FullName);
+                            }
                         },
                         cancellationToken: cancellationToken);
                 }
@@ -234,7 +236,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
     /// <param name="messageGroupedByTypeIdPrefix">The prefix of the message type ID to filter messages by.</param>
     /// <param name="outboxBusMessageRepository">The repository for accessing outbox messages.</param>
     /// <returns>True if there are messages to handle; otherwise, false.</returns>
-    protected async Task<bool> AnyCanHandleOutboxBusMessages(
+    protected static async Task<bool> AnyCanHandleOutboxBusMessages(
         string messageGroupedByTypeIdPrefix,
         IPlatformOutboxBusMessageRepository outboxBusMessageRepository)
     {
@@ -256,7 +258,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
     /// <param name="query">The base query.</param>
     /// <param name="messageGroupedByTypeIdPrefix">The prefix of the message type ID to filter messages by.</param>
     /// <returns>The modified query.</returns>
-    private IQueryable<PlatformOutboxBusMessage> CanHandleMessagesByProducerIdPrefixQueryBuilder(
+    private static IQueryable<PlatformOutboxBusMessage> CanHandleMessagesByProducerIdPrefixQueryBuilder(
         IQueryable<PlatformOutboxBusMessage> query,
         string messageGroupedByTypeIdPrefix)
     {
@@ -390,7 +392,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
     /// <param name="query">The base query.</param>
     /// <param name="messageGroupedByTypeIdPrefix">The prefix of the message type ID to filter messages by.</param>
     /// <returns>The modified query.</returns>
-    protected IQueryable<PlatformOutboxBusMessage> CanHandleMessagesByTypeIdPrefixQueryBuilder(
+    protected static IQueryable<PlatformOutboxBusMessage> CanHandleMessagesByTypeIdPrefixQueryBuilder(
         IQueryable<PlatformOutboxBusMessage> query,
         string messageGroupedByTypeIdPrefix)
     {

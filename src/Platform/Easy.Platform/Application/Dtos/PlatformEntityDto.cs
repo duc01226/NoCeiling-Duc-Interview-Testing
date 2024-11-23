@@ -136,7 +136,9 @@ public abstract class PlatformEntityDto<TEntity, TId> : PlatformDto<TEntity>
     {
         if (mode != MapToEntityModes.MapToUpdateExistingEntity)
             entity.Id = mode == MapToEntityModes.MapNewEntity || NotHasSubmitId() ? GenerateNewId() : (TId)GetSubmittedId()!;
-        else if (entity.Id == null && GetSubmittedId() != null)
+#pragma warning disable S2955
+        else if ((entity.Id == null || entity.Id.Equals(default(TId))) && GetSubmittedId() != default)
+#pragma warning restore S2955
             entity.Id = (TId)GetSubmittedId()!;
     }
 

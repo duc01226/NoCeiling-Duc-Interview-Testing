@@ -149,14 +149,10 @@ public static class ObjectGeneralExtension
                             propInfo.GetValue(obj2),
                             propInfo.PropertyType,
                             propInfo.PropertyType)) // Call with the correct types
-                        {
                             return true;
-                        }
                     }
                     else if (value1 != value2) // Handle null comparison
-                    {
                         return true;
-                    }
                 }
 
                 return false;
@@ -382,7 +378,7 @@ public static class ObjectGeneralExtension
     public static TObject DeepClone<TObject>(this TObject obj)
     {
         // ReSharper disable once ExpressionIsAlwaysNull
-        return obj == null
+        return obj is null
             ? obj
             : PlatformJsonSerializer.Deserialize<TObject>(PlatformJsonSerializer.Serialize(obj));
     }

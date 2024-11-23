@@ -449,19 +449,19 @@ public interface IPage<TPage, TSettings> : IPage<TSettings>
     public TResult WaitUntilAssertSuccess<TResult>(
         Func<TPage, TResult> waitForSuccess,
         string? waitForMsg = null,
-        double? maxWaitSeconds = null);
+        double? maxWaitSeconds = null) where TResult : class;
 
     public TResult WaitUntilAssertSuccess<TResult>(
         Func<TPage, TResult> waitForSuccess,
         Action<TPage> continueWaitOnlyWhen,
         string? waitForMsg = null,
-        double? maxWaitSeconds = null);
+        double? maxWaitSeconds = null) where TResult : class;
 
     public TResult WaitUntilAssertSuccess<TResult>(
         Func<TPage, TResult> waitForSuccess,
         Func<TPage, object> continueWaitOnlyWhen,
         string? waitForMsg = null,
-        double? maxWaitSeconds = null);
+        double? maxWaitSeconds = null) where TResult : class;
 
     public TCurrentActivePage? TryGetCurrentActiveDefinedPage<TCurrentActivePage>() where TCurrentActivePage : class, IPage<TCurrentActivePage, TSettings>;
 
@@ -625,7 +625,7 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
     public virtual TResult WaitUntilAssertSuccess<TResult>(
         Func<TPage, TResult> waitForSuccess,
         string? waitForMsg = null,
-        double? maxWaitSeconds = null)
+        double? maxWaitSeconds = null) where TResult : class
     {
         return this.As<TPage>()
             .WaitUntilGetSuccessAsync(
@@ -639,7 +639,7 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         Func<TPage, TResult> waitForSuccess,
         Action<TPage> continueWaitOnlyWhen,
         string? waitForMsg = null,
-        double? maxWaitSeconds = null)
+        double? maxWaitSeconds = null) where TResult : class
     {
         return this.As<TPage>()
             .WaitUntilGetSuccessAsync(
@@ -668,7 +668,7 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         Func<TPage, TResult> waitForSuccess,
         Func<TPage, object> continueWaitOnlyWhen,
         string? waitForMsg = null,
-        double? maxWaitSeconds = null)
+        double? maxWaitSeconds = null) where TResult : class
     {
         return this.As<TPage>()
             .WaitUntilGetSuccessAsync(
@@ -759,7 +759,7 @@ public abstract class Page<TPage, TSettings> : UiComponent<TPage>, IPage<TPage, 
         Func<TPage, TResult?> getResult,
         Func<TPage, TAny>? continueWaitOnlyWhen = null,
         string? waitForMsg = null,
-        double? maxWaitSeconds = null)
+        double? maxWaitSeconds = null) where TResult : class
     {
         return Util.TaskRunner.WaitUntilGetSuccessAsync(
             this.As<TPage>(),

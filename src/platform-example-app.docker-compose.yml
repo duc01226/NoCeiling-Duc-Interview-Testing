@@ -8,7 +8,7 @@ services:
       dockerfile: fts-sqldata.Dockerfile
 
   mongo-data:
-    image: mongo:4.2
+    image: mongo:7
 
   rabbitmq:
     image: rabbitmq:3.12.4-management
@@ -17,7 +17,7 @@ services:
     image: redis:6.2.5
 
   postgres-sql:
-    image: postgres:14.5
+    image: postgres:16
 
   pyroscope-agent.monitoring:
     image: grafana/pyroscope
