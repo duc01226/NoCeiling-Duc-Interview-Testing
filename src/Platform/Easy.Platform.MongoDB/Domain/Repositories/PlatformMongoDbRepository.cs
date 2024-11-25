@@ -120,7 +120,7 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
         {
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
-                () => source.As<IQueryable<TSource>>().FirstOrDefaultAsync(cancellationToken),
+                () => source.FirstOrDefaultAsync(cancellationToken),
                 Logger,
                 PersistenceConfiguration,
                 forWriteQuery: false,
@@ -128,7 +128,7 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
                 resultQueryStringBuilder: source.TryToMongoQueryString);
         }
 
-        return await source.As<IQueryable<TSource>>().FirstOrDefaultAsync(cancellationToken);
+        return await source.FirstOrDefaultAsync(cancellationToken);
     }
 
     public override async Task<TSource> FirstOrDefaultAsync<TSource>(
@@ -154,7 +154,7 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
         {
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
-                () => source.As<IQueryable<TSource>>().FirstAsync(cancellationToken),
+                () => source.FirstAsync(cancellationToken),
                 Logger,
                 PersistenceConfiguration,
                 forWriteQuery: false,
@@ -162,7 +162,7 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
                 resultQueryStringBuilder: source.TryToMongoQueryString);
         }
 
-        return await source.As<IQueryable<TSource>>().FirstAsync(cancellationToken);
+        return await source.FirstAsync(cancellationToken);
     }
 
     public override async Task<int> CountAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
@@ -172,7 +172,7 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
         {
             return await IPlatformDbContext.ExecuteWithBadQueryWarningHandling(
-                () => source.As<IQueryable<TSource>>().CountAsync(cancellationToken),
+                () => source.CountAsync(cancellationToken),
                 Logger,
                 PersistenceConfiguration,
                 forWriteQuery: false,
@@ -180,7 +180,7 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
                 resultQueryStringBuilder: source.TryToMongoQueryString);
         }
 
-        return await source.As<IQueryable<TSource>>().CountAsync(cancellationToken);
+        return await source.CountAsync(cancellationToken);
     }
 
     public override async Task<bool> AnyAsync<TSource>(IQueryable<TSource> source, CancellationToken cancellationToken = default)
@@ -198,7 +198,7 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
                 resultQueryStringBuilder: source.TryToMongoQueryString);
         }
 
-        return await source.As<IQueryable<TSource>>().AnyAsync(cancellationToken);
+        return await source.AnyAsync(cancellationToken);
     }
 
     protected override bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IPlatformUnitOfWork uow)

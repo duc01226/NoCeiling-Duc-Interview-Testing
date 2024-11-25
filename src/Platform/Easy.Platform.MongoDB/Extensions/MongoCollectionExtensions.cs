@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 
 namespace Easy.Platform.MongoDB.Extensions;
 
@@ -30,7 +31,7 @@ public static class MongoCollectionExtensions
     public static string? TryToMongoQueryString<TItem>(
         this IEnumerable<TItem> source)
     {
-        if (source is IQueryable<TItem> queryable)
+        if (source is IQueryable<TItem> { Provider: IMongoQueryProvider } queryable)
             return $"[ Query:{queryable}; ElementType.Name:{queryable.ElementType.Name}; ]";
 
         return null;
