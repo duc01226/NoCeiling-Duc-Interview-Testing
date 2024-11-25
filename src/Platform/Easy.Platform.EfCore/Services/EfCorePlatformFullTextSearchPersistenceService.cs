@@ -130,7 +130,7 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
 
     public virtual List<string> BuildIgnoredSpecialCharactersSearchWords(string searchText)
     {
-        var specialCharacters = new[] { '\\', '~', '[', ']', '(', ')', '!' };
+        var specialCharacters = new[] { '\\', '~', '[', ']', '(', ')', '!', ',' };
 
         // Remove special not supported character for full text search
         var removedSpecialCharactersSearchText = specialCharacters.Aggregate(searchText, (current, next) => current.Replace(next.ToString(), " "));
