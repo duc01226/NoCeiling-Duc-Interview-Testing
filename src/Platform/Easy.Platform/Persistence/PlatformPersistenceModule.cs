@@ -21,17 +21,17 @@ public interface IPlatformPersistenceModule : IPlatformModule
     /// Default false. Override this to true for db context used to migrate cross db data,
     /// do not need to run migration and register repositories
     /// </summary>
-    bool ForCrossDbMigrationOnly { get; }
+    public bool ForCrossDbMigrationOnly { get; }
 
     /// <summary>
     /// Default false. Override this to true for db context module db from
     /// other sub service but use the same shared module data in one micro-service group point to same db
     /// </summary>
-    bool DisableDbInitializingAndMigration { get; }
+    public bool DisableDbInitializingAndMigration { get; }
 
-    Task MigrateApplicationDataAsync(IServiceScope serviceScope);
+    public Task MigrateApplicationDataAsync(IServiceScope serviceScope);
 
-    Task InitializeDb(IServiceScope serviceScope);
+    public Task InitializeDb(IServiceScope serviceScope);
 
     public static async Task ExecuteDependencyPersistenceModuleMigrateApplicationData(
         List<Type> moduleTypeDependencies,
@@ -62,6 +62,12 @@ public interface IPlatformPersistenceModule : IPlatformModule
 public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersistenceModule
 {
     public new const int DefaultExecuteInitPriority = PlatformModule.DefaultExecuteInitPriority + (ExecuteInitPriorityNextLevelDistance * 2);
+
+    /// <summary>
+    /// To configure a DbContext to release its connection shortly after being idle (e.g., within 3 seconds)
+    ///  => prevent max connection pool error, no connection if a db-context is idling (example run paging for a long time but has opened a db context outside and wait)
+    /// </summary>
+    public const int RecommendedConnectionIdleLifetimeSeconds = 3;
 
     protected PlatformPersistenceModule(IServiceProvider serviceProvider, IConfiguration configuration) : base(serviceProvider, configuration)
     {
@@ -212,8 +218,10 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
         if (ForCrossDbMigrationOnly) return;
 
         if (RegisterLimitedRepositoryImplementationTypes()?.Any() == true)
+        {
             RegisterLimitedRepositoryImplementationTypes()
                 .ForEach(repositoryImplementationType => serviceCollection.RegisterAllForImplementation(repositoryImplementationType));
+        }
         else
             serviceCollection.RegisterAllFromType<IPlatformRepository>(GetServicesRegisterScanAssemblies());
     }
@@ -289,6 +297,7 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
         base.InternalRegister(serviceCollection);
 
         if (AllowSingletonUnitOfWork)
+        {
             serviceCollection.Register(
                 typeof(PlatformSingletonUnitOfWorkContainer),
                 sp => new PlatformSingletonUnitOfWorkContainer(
@@ -303,6 +312,7 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
                             })),
                 ServiceLifeTime.Singleton,
                 replaceStrategy: DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
+        }
     }
 
     protected void RegisterPersistenceConfiguration(IServiceCollection serviceCollection)

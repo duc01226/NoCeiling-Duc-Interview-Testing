@@ -81,15 +81,19 @@ public class TextSnippetSqlEfCorePersistenceModule : PlatformEfCorePersistenceMo
     {
         // UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery) for best practice increase performance
         // With(conn => conn.Enlist = false);With(conn => conn.ReadBufferSize = 8192) https://www.npgsql.org/doc/performance.html
+
+        // (I) LoadBalanceTimeout => To configure a DbContext to release its SQL connection shortly after being idle (e.g., within 3 seconds)
+        // => prevent max connection pool error, no connection if a db-context is idling (example run paging for a long time but has opened a db context outside and wait)
         return options => options
             .UseSqlServer(
                 new SqlConnectionStringBuilder(Configuration.GetConnectionString("DefaultConnection"))
                     .With(conn => conn.Enlist = false)
+                    .With(conn => conn.LoadBalanceTimeout = RecommendedConnectionIdleLifetimeSeconds) // (I)
                     .With(conn => conn.Pooling = true)
                     .With(conn => conn.MinPoolSize = 1) // Always available connection to serve request, reduce latency
                     .With(
                         conn => conn.MaxPoolSize =
-                            Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent) // Setup max pool size depend on the database maximum connections available
+                            Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent * 10) // Setup max pool size depend on the database maximum connections available
                     .ToString(),
                 options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
             .EnableThreadSafetyChecks(false) // improve performance. Only disable after testing ensure no such concurrency bugs.

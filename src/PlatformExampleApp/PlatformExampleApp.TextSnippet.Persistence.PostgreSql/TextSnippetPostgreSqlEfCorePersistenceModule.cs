@@ -54,7 +54,7 @@ public class TextSnippetPostgreSqlEfCorePersistenceModule : PlatformEfCorePersis
                             .With(conn => conn.MinPoolSize = 1) // Always available connection to serve request, reduce latency
                             .With(
                                 conn => conn.MaxPoolSize =
-                                    Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent) // Setup max pool size depend on the database maximum connections available
+                                    Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent * 10) // Setup max pool size depend on the database maximum connections available
                             .ToString())
                     .EnableDynamicJson()
                     .Build(),
