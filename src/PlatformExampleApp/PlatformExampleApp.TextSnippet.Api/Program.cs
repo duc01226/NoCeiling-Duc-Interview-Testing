@@ -52,7 +52,7 @@ try
     ConfigureRequestPipeline(webApplication);
 
     // RUN APP
-    BeforeRunInit(webApplication);
+    await BeforeRunInit(webApplication);
 
     await webApplication.RunAsync();
 }
@@ -148,8 +148,8 @@ static void ConfigureRequestPipeline(WebApplication app)
     app.UseDefaultResponseHealthCheckForPath();
 }
 
-static void BeforeRunInit(WebApplication webApplication)
+static async Task BeforeRunInit(WebApplication webApplication)
 {
     // Init module to start running init for all other modules and this module itself
-    webApplication.InitPlatformAspNetCoreModule<TextSnippetApiAspNetCoreModule>().WaitResult();
+    await webApplication.InitPlatformAspNetCoreModule<TextSnippetApiAspNetCoreModule>();
 }

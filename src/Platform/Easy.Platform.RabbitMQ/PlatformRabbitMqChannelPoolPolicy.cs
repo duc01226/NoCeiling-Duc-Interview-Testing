@@ -35,7 +35,7 @@ public class PlatformRabbitMqChannelPoolPolicy : IPooledObjectPolicy<IChannel>, 
 
         try
         {
-            var channel = connection.CreateChannelAsync().Result;
+            var channel = connection.CreateChannelAsync().GetResult();
 
             // Config the prefectCount. "defines the max number of unacknowledged deliveries that are permitted on a channel" to limit messages to prevent rabbit mq down
             // Reference: https://www.rabbitmq.com/tutorials/tutorial-two-dotnet.html. Filter: BasicQos

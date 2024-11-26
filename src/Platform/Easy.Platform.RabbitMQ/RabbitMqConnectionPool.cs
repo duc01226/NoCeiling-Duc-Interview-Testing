@@ -131,7 +131,7 @@ public class RabbitMqPooledObjectPolicy : IPooledObjectPolicy<IConnection>
 
         try
         {
-            return CreateConnection().Result;
+            return CreateConnection().GetResult();
         }
         catch (Exception ex)
         {
