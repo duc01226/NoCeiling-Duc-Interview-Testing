@@ -18,11 +18,11 @@ public class PlatformMongoClient : IPlatformMongoClient
     public PlatformMongoClient(IOptions<PlatformMongoOptions> options)
     {
         var clientSettings = MongoClientSettings.FromUrl(
-                new MongoUrlBuilder(options.Value.ConnectionString)
-                    .With(p => p.MinConnectionPoolSize = options.Value.MinConnectionPoolSize)
-                    .With(p => p.MaxConnectionPoolSize = options.Value.MaxConnectionPoolSize)
-                    .ToMongoUrl())
-            .With(p => p.MaxConnectionIdleTime = options.Value.MaxConnectionIdleTimeSeconds.Seconds());
+            new MongoUrlBuilder(options.Value.ConnectionString)
+                .With(p => p.MinConnectionPoolSize = options.Value.MinConnectionPoolSize)
+                .With(p => p.MaxConnectionPoolSize = options.Value.MaxConnectionPoolSize)
+                .With(p => p.MaxConnectionIdleTime = options.Value.MaxConnectionIdleTimeSeconds.Seconds())
+                .ToMongoUrl());
 
         MongoClient = new MongoClient(clientSettings);
     }

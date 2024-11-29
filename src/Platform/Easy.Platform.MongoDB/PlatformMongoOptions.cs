@@ -7,7 +7,7 @@ public class PlatformMongoOptions
     public string ConnectionString { get; set; }
     public string Database { get; set; }
     public int MinConnectionPoolSize { get; set; } = 1;
-    public int MaxConnectionPoolSize { get; set; } = Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
+    public int MaxConnectionPoolSize { get; set; } = PlatformPersistenceModule.RecommendedMaxPoolSize;
 
     /// <summary>
     /// To configure a DbContext to release its connection shortly after being idle

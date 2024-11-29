@@ -16,11 +16,12 @@ public class TextSnippetMongoPersistenceModule : PlatformMongoDbPersistenceModul
     {
         options.ConnectionString = Configuration.GetSection("MongoDB:ConnectionString").Value;
         options.Database = Configuration.GetSection("MongoDB:Database").Value;
-        options.MinConnectionPoolSize =
-            Configuration.GetValue<int?>("MongoDB:MinConnectionPoolSize") ?? 1; // Always available connection to serve request, reduce latency
-        options.MaxConnectionPoolSize =
-            Configuration.GetValue<int?>("MongoDB:MaxConnectionPoolSize") ??
-            Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent * 2; // Setup max pool size depend on the database maximum connections available
+        //options.MinConnectionPoolSize =
+        //    Configuration.GetValue<int?>("MongoDB:MinConnectionPoolSize") ?? 1; // Always available connection to serve request, reduce latency
+        //options.MaxConnectionPoolSize =
+        //    Configuration.GetValue<int?>("MongoDB:MaxConnectionPoolSize") ??
+        //    RecommendedMaxPoolSize; // Setup based on app resource cpu ram max concurrent
+        options.MaxConnectionIdleTimeSeconds = RecommendedConnectionIdleLifetimeSeconds;
     }
 
     protected override bool EnableInboxBusMessage()
