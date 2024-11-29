@@ -338,8 +338,10 @@ public static class ListExtension
             for (var i = 0; i < itemsSpan.Length; i++) action(itemsSpan[i], i);
         }
         else if (items is T[] itemsArray)
+        {
             for (var i = 0; i < itemsArray.Length; i++)
                 action(itemsArray[i], i);
+        }
         else
         {
             var itemsIList = items.As<IList<T>>() ?? items.ToList();
@@ -391,8 +393,10 @@ public static class ListExtension
     public static async Task ForEachAsync<T>(this IEnumerable<T> items, Func<T, int, Task> action)
     {
         if (items is T[] itemsArray)
+        {
             for (var i = 0; i < itemsArray.Length; i++)
                 await action(itemsArray[i], i);
+        }
         else
         {
             var itemsIList = items.As<IList<T>>() ?? items.ToList();
@@ -437,14 +441,6 @@ public static class ListExtension
         var itemsList = items.As<IList<T>>() ?? items.ToList();
 
         for (var i = 0; i < itemsList.Count; i++) await action(itemsList[i], i);
-    }
-
-    /// <summary>
-    /// Example: await list.ForEach((item, itemIndex) => do something async)
-    /// </summary>
-    public static async Task ForEachAsync<T>(this IList<T> items, Func<T, int, Task> action)
-    {
-        for (var i = 0; i < items.Count; i++) await action(items[i], i);
     }
 
     /// <inheritdoc cref="ForEachAsync{T}(IEnumerable{T},Func{T,int,Task})" />

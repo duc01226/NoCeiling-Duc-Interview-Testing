@@ -25,6 +25,11 @@ public class PlatformApplicationBackgroundJobScheduler : IPlatformApplicationBac
         return InnerInfrastructureScheduler.Schedule(methodCall, delay);
     }
 
+    public string Schedule(Expression<Func<Task>> methodCall, TimeSpan? delay = null)
+    {
+        return InnerInfrastructureScheduler.Schedule(methodCall, delay);
+    }
+
     public string Schedule<TJobExecutor>(DateTimeOffset enqueueAt) where TJobExecutor : IPlatformBackgroundJobExecutor
     {
         return InnerInfrastructureScheduler.Schedule<TJobExecutor>(enqueueAt);

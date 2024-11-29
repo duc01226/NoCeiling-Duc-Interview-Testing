@@ -15,6 +15,15 @@ public interface IPlatformBackgroundJobScheduler
     public string Schedule(Expression<Action> methodCall, TimeSpan? delay = null);
 
     /// <summary>
+    /// Creates a new background job based on a specified method
+    /// call expression and schedules it to be enqueued after a given delay.
+    /// </summary>
+    /// <param name="methodCall">Instance method call expression that will be marshalled to the Server.</param>
+    /// <param name="delay">Delay, after which the job will be enqueued.</param>
+    /// <returns>Unique identifier of the created job.</returns>
+    public string Schedule(Expression<Func<Task>> methodCall, TimeSpan? delay = null);
+
+    /// <summary>
     /// Creates a new background job based on a specified method call expression
     /// and schedules it to be enqueued at the given moment of time.
     /// </summary>

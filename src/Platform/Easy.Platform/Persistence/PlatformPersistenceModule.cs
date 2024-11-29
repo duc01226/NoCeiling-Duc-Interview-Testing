@@ -7,6 +7,7 @@ using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Repositories;
 using Easy.Platform.Domain.UnitOfWork;
+using Easy.Platform.Persistence.DataMigration;
 using Easy.Platform.Persistence.Domain;
 using Easy.Platform.Persistence.Services;
 using Microsoft.Extensions.Configuration;
@@ -161,6 +162,8 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
             RegisterOutboxEventBusMessageRepository(serviceCollection);
 
             serviceCollection.RegisterAllFromType<IPersistenceService>(GetServicesRegisterScanAssemblies());
+
+            serviceCollection.RegisterAllFromType<IPlatformDataMigrationExecutor>(Assembly);
         }
     }
 
@@ -214,8 +217,8 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
         serviceCollection.RegisterAllFromType<IPlatformUnitOfWorkManager>(
             GetServicesRegisterScanAssemblies(),
             ServiceLifeTime.Scoped,
-            replaceIfExist: true,
-            replaceStrategy: DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
+            true,
+            DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
     }
 
     private void RegisterRepositories(IServiceCollection serviceCollection)
@@ -228,7 +231,9 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
                 .ForEach(repositoryImplementationType => serviceCollection.RegisterAllForImplementation(repositoryImplementationType));
         }
         else
+        {
             serviceCollection.RegisterAllFromType<IPlatformRepository>(GetServicesRegisterScanAssemblies());
+        }
     }
 }
 
@@ -255,9 +260,9 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
             {
                 await serviceScope.ServiceProvider.GetRequiredService<TDbContext>().MigrateApplicationDataAsync(serviceScope.ServiceProvider);
             },
-            sleepDurationProvider: retryAttempt => DefaultDbInitAndMigrationRetryDelaySeconds.Seconds(),
-            retryCount: DefaultDbInitAndMigrationRetryCount,
-            onBeforeThrowFinalExceptionFn: exception => Logger.LogError(
+            retryAttempt => DefaultDbInitAndMigrationRetryDelaySeconds.Seconds(),
+            DefaultDbInitAndMigrationRetryCount,
+            exception => Logger.LogError(
                 exception.BeautifyStackTrace(),
                 "[{DbContext}] {ExceptionType} detected on attempt MigrateApplicationDataAsync",
                 typeof(TDbContext).Name,
@@ -275,9 +280,9 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
             {
                 await serviceScope.ServiceProvider.GetRequiredService<TDbContext>().Initialize(serviceScope.ServiceProvider);
             },
-            sleepDurationProvider: retryAttempt => 10.Seconds(),
-            retryCount: DefaultDbInitAndMigrationRetryCount,
-            onBeforeThrowFinalExceptionFn: exception => Logger.LogError(
+            retryAttempt => 10.Seconds(),
+            DefaultDbInitAndMigrationRetryCount,
+            exception => Logger.LogError(
                 exception.BeautifyStackTrace(),
                 "[{DbContext}] {ExceptionType} detected on attempt InitializeDb",
                 typeof(TDbContext).Name,

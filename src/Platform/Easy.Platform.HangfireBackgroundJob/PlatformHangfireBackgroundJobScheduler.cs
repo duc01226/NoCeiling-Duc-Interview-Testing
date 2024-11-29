@@ -28,6 +28,11 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
         return BackgroundJob.Schedule(methodCall, delay ?? TimeSpan.Zero);
     }
 
+    public string Schedule(Expression<Func<Task>> methodCall, TimeSpan? delay = null)
+    {
+        return BackgroundJob.Schedule(methodCall, delay ?? TimeSpan.Zero);
+    }
+
     public string Schedule<TJobExecutor>(DateTimeOffset enqueueAt)
         where TJobExecutor : IPlatformBackgroundJobExecutor
     {
@@ -186,7 +191,10 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
 
     public HashSet<string> AllExistingRecurringJobIds()
     {
-        using (var connection = JobStorage.Current.GetConnection()) return connection.GetRecurringJobs().Select(p => p.Id).ToHashSet();
+        using (var connection = JobStorage.Current.GetConnection())
+        {
+            return connection.GetRecurringJobs().Select(p => p.Id).ToHashSet();
+        }
     }
 
     public void ReplaceAllRecurringBackgroundJobs(List<IPlatformBackgroundJobExecutor> newAllRecurringJobs)
@@ -329,7 +337,9 @@ public class PlatformHangfireBackgroundJobScheduler : IPlatformBackgroundJobSche
                 [jobExecutorParam]);
         }
         else
+        {
             jobExecutor.Execute();
+        }
     }
 
     public static void EnsureJobExecutorTypeValid(Type jobExecutorType)
