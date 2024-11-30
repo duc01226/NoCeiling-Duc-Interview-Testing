@@ -1,7 +1,11 @@
+using System.Data.SqlClient;
 using Easy.Platform.HangfireBackgroundJob;
 using Easy.Platform.Infrastructures.BackgroundJob;
+using Easy.Platform.Persistence;
 using Hangfire;
 using Microsoft.Extensions.Configuration;
+using MongoDB.Driver;
+using Npgsql;
 using PlatformExampleApp.TextSnippet.Application;
 
 namespace PlatformExampleApp.TextSnippet.Api;
@@ -29,9 +33,35 @@ public class TextSnippetHangfireBackgroundJobModule : PlatformHangfireBackground
     {
         return Configuration.GetSection("UseDbType")
             .Get<string>()
-            .WhenValue("MongoDb", _ => Configuration.GetSection("MongoDB:ConnectionString").Get<string>())
-            .WhenValue("Postgres", _ => Configuration.GetSection("ConnectionStrings:PostgreSqlConnection").Get<string>())
-            .Else(_ => Configuration.GetConnectionString("DefaultConnection"))
+            .WhenValue(
+                "MongoDb",
+                _ => new MongoUrlBuilder(Configuration.GetSection("MongoDB:ConnectionString").Value)
+                    .With(
+                        p => p.MinConnectionPoolSize =
+                            Configuration.GetValue<int?>("MongoDB:MinConnectionPoolSize") ?? 0) // Always available connection to serve request, reduce latency
+                    .With(
+                        p => p.MaxConnectionPoolSize = Configuration.GetValue<int?>("MongoDB:MaxConnectionPoolSize") ?? PlatformPersistenceModule.RecommendedMaxPoolSize)
+                    .With(p => p.MaxConnectionIdleTime = PlatformPersistenceModule.RecommendedConnectionIdleLifetimeSeconds.Seconds())
+                    .ToString())
+            .WhenValue(
+                "Postgres",
+                _ => new NpgsqlConnectionStringBuilder(Configuration.GetConnectionString("PostgreSqlConnection"))
+                    .With(conn => conn.Enlist = false)
+                    .With(conn => conn.Pooling = true)
+                    .With(conn => conn.MinPoolSize = 0) // Always available connection to serve request, reduce latency
+                    .With(conn => conn.MaxPoolSize = PlatformPersistenceModule.RecommendedMaxPoolSize) // Setup based on app resource cpu ram max concurrent
+                    .With(conn => conn.Timeout = 30)
+                    .With(conn => conn.ConnectionIdleLifetime = PlatformPersistenceModule.RecommendedConnectionIdleLifetimeSeconds)
+                    .With(conn => conn.ConnectionPruningInterval = PlatformPersistenceModule.RecommendedConnectionIdleLifetimeSeconds)
+                    .ToString())
+            .Else(
+                _ => new SqlConnectionStringBuilder(Configuration.GetConnectionString("DefaultConnection"))
+                    .With(conn => conn.Enlist = false)
+                    .With(conn => conn.LoadBalanceTimeout = PlatformPersistenceModule.RecommendedConnectionIdleLifetimeSeconds) // (I)
+                    .With(conn => conn.Pooling = true)
+                    .With(conn => conn.MinPoolSize = 0) // Always available connection to serve request, reduce latency
+                    .With(conn => conn.MaxPoolSize = PlatformPersistenceModule.RecommendedMaxPoolSize) // Setup based on app resource cpu ram max concurrent
+                    .ToString())
             .Execute();
     }
 
@@ -49,11 +79,13 @@ public class TextSnippetHangfireBackgroundJobModule : PlatformHangfireBackground
 
     protected override PlatformBackgroundJobUseDashboardUiOptions BackgroundJobUseDashboardUiOptions()
     {
-        return base.BackgroundJobUseDashboardUiOptions().With(o => o.UseAuthentication = true).With(
-            o => o.BasicAuthentication = new PlatformBackgroundJobUseDashboardUiOptions.BasicAuthentications
-            {
-                UserName = Configuration.GetValue<string>("BackgroundJob:DashboardUiOptions:BasicAuthentication:UserName"),
-                Password = Configuration.GetValue<string>("BackgroundJob:DashboardUiOptions:BasicAuthentication:Password")
-            });
+        return base.BackgroundJobUseDashboardUiOptions()
+            .With(o => o.UseAuthentication = true)
+            .With(
+                o => o.BasicAuthentication = new PlatformBackgroundJobUseDashboardUiOptions.BasicAuthentications
+                {
+                    UserName = Configuration.GetValue<string>("BackgroundJob:DashboardUiOptions:BasicAuthentication:UserName"),
+                    Password = Configuration.GetValue<string>("BackgroundJob:DashboardUiOptions:BasicAuthentication:Password")
+                });
     }
 }

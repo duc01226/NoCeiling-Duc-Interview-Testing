@@ -68,12 +68,12 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
     /// To configure a DbContext to release its connection shortly after being idle (e.g., within 5 seconds)
     ///  => prevent max connection pool error, no connection if a db-context is idling (example run paging for a long time but has opened a db context outside and wait)
     /// </summary>
-    public static readonly int RecommendedConnectionIdleLifetimeSeconds = 5;
+    public static readonly int RecommendedConnectionIdleLifetimeSeconds = 3;
 
     /// <summary>
     /// Setup based on app resource cpu ram max concurrent
     /// </summary>
-    public static readonly int RecommendedMaxPoolSize = Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent * Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio;
+    public static readonly int RecommendedMaxPoolSize = Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent * Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
 
     protected PlatformPersistenceModule(IServiceProvider serviceProvider, IConfiguration configuration) : base(serviceProvider, configuration)
     {
@@ -231,9 +231,7 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
                 .ForEach(repositoryImplementationType => serviceCollection.RegisterAllForImplementation(repositoryImplementationType));
         }
         else
-        {
             serviceCollection.RegisterAllFromType<IPlatformRepository>(GetServicesRegisterScanAssemblies());
-        }
     }
 }
 

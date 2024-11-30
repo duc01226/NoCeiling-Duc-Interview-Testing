@@ -45,6 +45,11 @@ public interface IPlatformDbContext : IDisposable
         PlatformDataMigrationExecutor<TDbContext>
             .EnsureAllDataMigrationExecutorsHasUniqueName(GetType().Assembly, serviceProvider);
 
+        await Util.TaskRunner.WaitUntilAsync(
+            () => !DataMigrationHistoryQuery().Any(PlatformDataMigrationHistory.ProcessingExpr()),
+            maxWaitSeconds: TimeSpan.SecondsPerDay,
+            waitIntervalSeconds: PlatformDataMigrationHistory.ProcessingPingIntervalSeconds);
+
         var canExecuteMigrations = PlatformDataMigrationExecutor<TDbContext>
             .GetCanExecuteDataMigrationExecutors(GetType().Assembly, serviceProvider, ApplicationDataMigrationHistoryQuery);
 

@@ -90,7 +90,7 @@ public class TextSnippetSqlEfCorePersistenceModule : PlatformEfCorePersistenceMo
                     .With(conn => conn.Enlist = false)
                     .With(conn => conn.LoadBalanceTimeout = RecommendedConnectionIdleLifetimeSeconds) // (I)
                     .With(conn => conn.Pooling = true)
-                    .With(conn => conn.MinPoolSize = 1) // Always available connection to serve request, reduce latency
+                    .With(conn => conn.MinPoolSize = 0) // Always available connection to serve request, reduce latency
                     .With(conn => conn.MaxPoolSize = RecommendedMaxPoolSize) // Setup based on app resource cpu ram max concurrent
                     .ToString(),
                 options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))

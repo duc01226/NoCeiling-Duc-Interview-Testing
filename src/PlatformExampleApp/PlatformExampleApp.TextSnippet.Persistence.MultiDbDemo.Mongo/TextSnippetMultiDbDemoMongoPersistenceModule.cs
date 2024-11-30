@@ -1,6 +1,7 @@
 using Easy.Platform.MongoDB;
 using Easy.Platform.Persistence;
 using Microsoft.Extensions.Configuration;
+using MongoDB.Driver;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Persistence.MultiDbDemo.Mongo.DemoMigrateDataCrossDb;
 
@@ -21,7 +22,13 @@ public class TextSnippetMultiDbDemoMongoPersistenceModule : PlatformMongoDbPersi
 
     protected override void ConfigureMongoOptions(PlatformMongoOptions<TextSnippetMultiDbDemoDbContext> options)
     {
-        options.ConnectionString = Configuration.GetSection("MongoDB:ConnectionString").Value;
+        options.ConnectionString = new MongoUrlBuilder(Configuration.GetSection("MongoDB:ConnectionString").Value)
+            .With(
+                p => p.MinConnectionPoolSize =
+                    Configuration.GetValue<int?>("MongoDB:MinConnectionPoolSize") ?? 0) // Always available connection to serve request, reduce latency
+            .With(p => p.MaxConnectionPoolSize = Configuration.GetValue<int?>("MongoDB:MaxConnectionPoolSize") ?? RecommendedMaxPoolSize)
+            .With(p => p.MaxConnectionIdleTime = RecommendedConnectionIdleLifetimeSeconds.Seconds())
+            .ToString();
         options.Database = Configuration.GetSection("MongoDB:MultiDbDemoDbDatabase").Value;
     }
 

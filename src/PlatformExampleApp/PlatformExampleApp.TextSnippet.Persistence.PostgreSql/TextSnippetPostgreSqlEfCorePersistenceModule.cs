@@ -51,8 +51,9 @@ public class TextSnippetPostgreSqlEfCorePersistenceModule : PlatformEfCorePersis
                         new NpgsqlConnectionStringBuilder(Configuration.GetConnectionString("PostgreSqlConnection"))
                             .With(conn => conn.Enlist = false)
                             .With(conn => conn.Pooling = true)
-                            .With(conn => conn.MinPoolSize = 1) // Always available connection to serve request, reduce latency
+                            .With(conn => conn.MinPoolSize = 0) // Always available connection to serve request, reduce latency
                             .With(conn => conn.MaxPoolSize = RecommendedMaxPoolSize) // Setup based on app resource cpu ram max concurrent
+                            .With(conn => conn.Timeout = 30)
                             .With(conn => conn.ConnectionIdleLifetime = RecommendedConnectionIdleLifetimeSeconds)
                             .With(conn => conn.ConnectionPruningInterval = RecommendedConnectionIdleLifetimeSeconds)
                             .ToString())

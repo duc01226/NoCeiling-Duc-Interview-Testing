@@ -13,9 +13,9 @@ public static partial class Util
     public static class TaskRunner
     {
         public const int DefaultWaitUntilMaxSeconds = 30;
-        public const double DefaultWaitIntervalSeconds = 2;
+        public const int DefaultWaitIntervalSeconds = 2;
         public const int DefaultResilientRetryCount = 3;
-        public const double DefaultResilientDelaySeconds = 1;
+        public const int DefaultResilientDelaySeconds = 1;
         public const int DefaultBackgroundResilientRetryCount = 20;
         public static readonly Func<int, TimeSpan> DefaultBackgroundRetryDelayProvider = retryAttempt => retryAttempt.Seconds();
 
@@ -1282,7 +1282,7 @@ public static partial class Util
                         });
 
                     if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
-                        Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
+                        Thread.Sleep(DefaultWaitIntervalSeconds * 1000);
                     else
                     {
                         throw new TimeoutException(
@@ -1360,7 +1360,7 @@ public static partial class Util
 
                     if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
                     {
-                        await Task.Delay((int)(DefaultWaitIntervalSeconds * 1000), cancellationToken);
+                        await Task.Delay(DefaultWaitIntervalSeconds * 1000, cancellationToken);
                         result = getResult(target);
                     }
                     else
@@ -1448,7 +1448,7 @@ public static partial class Util
                     catch (Exception e)
                     {
                         if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
-                            Thread.Sleep((int)(DefaultWaitIntervalSeconds * 1000));
+                            Thread.Sleep(DefaultWaitIntervalSeconds * 1000);
                         else
                         {
                             throw new TimeoutException(
@@ -1514,7 +1514,7 @@ public static partial class Util
                     catch (Exception e)
                     {
                         if ((DateTime.UtcNow - startWaitTime).TotalMilliseconds < maxWaitMilliseconds)
-                            await Task.Delay((int)(DefaultWaitIntervalSeconds * 1000));
+                            await Task.Delay(DefaultWaitIntervalSeconds * 1000);
                         else
                         {
                             throw new TimeoutException(

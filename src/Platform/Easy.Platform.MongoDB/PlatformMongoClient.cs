@@ -19,9 +19,9 @@ public class PlatformMongoClient : IPlatformMongoClient
     {
         var clientSettings = MongoClientSettings.FromUrl(
             new MongoUrlBuilder(options.Value.ConnectionString)
-                .With(p => p.MinConnectionPoolSize = options.Value.MinConnectionPoolSize)
-                .With(p => p.MaxConnectionPoolSize = options.Value.MaxConnectionPoolSize)
-                .With(p => p.MaxConnectionIdleTime = options.Value.MaxConnectionIdleTimeSeconds.Seconds())
+                .WithIf(options.Value.MinConnectionPoolSize.HasValue, p => p.MinConnectionPoolSize = options.Value.MinConnectionPoolSize!.Value)
+                .WithIf(options.Value.MaxConnectionPoolSize.HasValue, p => p.MaxConnectionPoolSize = options.Value.MaxConnectionPoolSize!.Value)
+                .WithIf(options.Value.MaxConnectionIdleTimeSeconds.HasValue, p => p.MaxConnectionIdleTime = options.Value.MaxConnectionIdleTimeSeconds!.Value.Seconds())
                 .ToMongoUrl());
 
         MongoClient = new MongoClient(clientSettings);

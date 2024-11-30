@@ -11,6 +11,8 @@ public class PlatformDataMigrationHistory : IRowVersionEntity
     public const int ProcessingPingIntervalSeconds = 30;
     public const int MaxAllowedProcessingPingMisses = 10;
 
+    public static readonly int MaxProcessingWaitPingSeconds = ProcessingPingIntervalSeconds * MaxAllowedProcessingPingMisses;
+
     private DateTime? createdDate;
 
     public PlatformDataMigrationHistory()
@@ -54,12 +56,21 @@ public class PlatformDataMigrationHistory : IRowVersionEntity
 
     public static Expression<Func<PlatformDataMigrationHistory, bool>> ProcessedOrProcessingExpr()
     {
+        return ProcessedExpr().Or(ProcessingExpr());
+    }
+
+    public static Expression<Func<PlatformDataMigrationHistory, bool>> ProcessedExpr()
+    {
         // Null for old PlatformDataMigrationHistory without status
         return p => p.Status == null ||
-                    p.Status == Statuses.Processed ||
-                    (p.Status == Statuses.Processing &&
-                     p.LastProcessingPingTime != null &&
-                     p.LastProcessingPingTime >= Clock.Now.AddSeconds(-ProcessingPingIntervalSeconds * MaxAllowedProcessingPingMisses));
+                    p.Status == Statuses.Processed;
+    }
+
+    public static Expression<Func<PlatformDataMigrationHistory, bool>> ProcessingExpr()
+    {
+        return p => p.Status == Statuses.Processing &&
+                    p.LastProcessingPingTime != null &&
+                    p.LastProcessingPingTime >= Clock.Now.AddSeconds(-MaxProcessingWaitPingSeconds);
     }
 
     public enum Statuses
