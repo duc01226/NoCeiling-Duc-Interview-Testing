@@ -93,7 +93,12 @@ public class TextSnippetSqlEfCorePersistenceModule : PlatformEfCorePersistenceMo
                     .With(conn => conn.MinPoolSize = 0) // Always available connection to serve request, reduce latency
                     .With(conn => conn.MaxPoolSize = RecommendedMaxPoolSize) // Setup based on app resource cpu ram max concurrent
                     .ToString(),
-                options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
+                options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                    .EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: 1.Seconds(),
+                        errorNumbersToAdd: null // Specific error codes to retry (null retries common transient errors)
+                    ))
             .EnableThreadSafetyChecks(false) // improve performance. Only disable after testing ensure no such concurrency bugs.
             .EnableDetailedErrors(detailedErrorsEnabled: PlatformEnvironment.IsDevelopment || Configuration.GetSection("SeedDummyData").Get<bool>());
     }

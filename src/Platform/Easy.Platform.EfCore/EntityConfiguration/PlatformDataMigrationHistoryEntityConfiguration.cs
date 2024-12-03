@@ -9,10 +9,13 @@ public class PlatformDataMigrationHistoryEntityConfiguration : IEntityTypeConfig
 {
     public void Configure(EntityTypeBuilder<PlatformDataMigrationHistory> builder)
     {
+        builder.ToTable(TableName);
         builder.HasKey(p => p.Name);
         builder.Property(p => p.ConcurrencyUpdateToken).IsConcurrencyToken();
         builder.Property(p => p.Status).HasConversion(new EnumToStringConverter<PlatformDataMigrationHistory.Statuses>());
 
         builder.HasIndex(p => p.Status);
     }
+
+    public string TableName { get; set; } = "ApplicationDataMigrationHistoryDbSet";
 }

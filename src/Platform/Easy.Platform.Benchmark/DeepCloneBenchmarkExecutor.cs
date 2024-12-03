@@ -8,19 +8,19 @@ public class DeepCloneBenchmarkExecutor
     public static readonly CheckDiffObjectClass CheckDiffObject = new()
     {
         PropStr1 = "Test",
-        PropDate1 = DateTime.Now,
+        PropDate1 = Clock.Now,
         PropNumber1 = 1,
         PropObj1 = new CheckDiffObjectClass
         {
             PropStr1 = "Test",
-            PropDate1 = DateTime.Now,
+            PropDate1 = Clock.Now,
             PropNumber1 = 1,
             PropListObj1 = Enumerable.Range(0, 100)
                 .Select(
                     p => new CheckDiffObjectClass
                     {
                         PropStr1 = "Test",
-                        PropDate1 = DateTime.Now,
+                        PropDate1 = Clock.Now,
                         PropNumber1 = p
                     })
                 .ToList()
@@ -30,7 +30,7 @@ public class DeepCloneBenchmarkExecutor
                 p => new CheckDiffObjectClass
                 {
                     PropStr1 = "Test",
-                    PropDate1 = DateTime.Now,
+                    PropDate1 = Clock.Now,
                     PropNumber1 = p
                 })
             .ToList()

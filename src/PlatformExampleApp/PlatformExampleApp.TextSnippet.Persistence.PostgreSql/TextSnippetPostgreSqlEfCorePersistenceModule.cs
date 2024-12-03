@@ -59,7 +59,13 @@ public class TextSnippetPostgreSqlEfCorePersistenceModule : PlatformEfCorePersis
                             .ToString())
                     .EnableDynamicJson()
                     .Build(),
-                opts => opts.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery).CommandTimeout(24 * 3600))
+                opts => opts.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
+                    .CommandTimeout(24 * 3600)
+                    .EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: 1.Seconds(),
+                        errorCodesToAdd: null // Specific error codes to retry (null retries common transient errors)
+                    ))
             .EnableThreadSafetyChecks(false) // improve performance. Only disable after testing ensure no such concurrency bugs.
             .EnableDetailedErrors(detailedErrorsEnabled: PlatformEnvironment.IsDevelopment || Configuration.GetSection("SeedDummyData").Get<bool>());
     }

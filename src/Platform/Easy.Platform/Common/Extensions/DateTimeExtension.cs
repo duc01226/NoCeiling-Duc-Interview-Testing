@@ -1,4 +1,5 @@
 using System.Globalization;
+using Easy.Platform.Common.Timing;
 using Easy.Platform.Common.Utils;
 
 namespace Easy.Platform.Common.Extensions;
@@ -82,9 +83,12 @@ public static class DateTimeExtension
     public static double CalculateTotalMonths(this DateTime starDate, DateTime endDate)
     {
         if (starDate > endDate)
+        {
             throw new ArgumentOutOfRangeException(
                 nameof(starDate),
                 "The start date must be before the end date.");
+        }
+
         var totalDays = (endDate - starDate).TotalDays;
 
         var averageDaysPerMonth = DaysPerYear / 12;
@@ -376,7 +380,7 @@ public static class DateTimeExtension
     /// </summary>
     public static bool IsDateWithinWeeksFromNow(this DateTime date, int numberOfWeeks = 1)
     {
-        var nextWeekStart = DateTime.Now.AddDays(7 - (int)DateTime.Now.DayOfWeek + 1);
+        var nextWeekStart = Clock.LocalNow.AddDays(7 - (int)Clock.LocalNow.DayOfWeek + 1);
         if (numberOfWeeks > 1)
             nextWeekStart = nextWeekStart.AddDays(7 * (numberOfWeeks - 1));
         var nextWeekEnd = nextWeekStart.AddDays(6);

@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Linq.Expressions;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
@@ -11,7 +12,43 @@ namespace Easy.Platform.Domain.Entities;
 /// </summary>
 public interface IEntity
 {
-    object GetId();
+    public object GetId();
+
+    public static Expression<Func<TEntity, bool>> IdentifyExpr<TEntity>(TEntity entity) where TEntity : IEntity
+    {
+        // Ensure the entity type implements IEntity<TPrimaryKey>
+        if (typeof(TEntity).IsAssignableToGenericType(typeof(IEntity<>)))
+        {
+            // Get the primary key type
+            var idProperty = typeof(TEntity).GetProperty("Id");
+
+            // Make sure the ID property exists and is of a valid type
+            if (idProperty != null)
+            {
+                // Create an expression for comparing the Id
+                var parameter = Expression.Parameter(typeof(TEntity), "p");
+                var idPropertyExpr = Expression.Property(parameter, idProperty);
+                var entityIdExpr = Expression.Constant(entity.GetId());
+
+                var equalsExpr = Expression.Equal(idPropertyExpr, entityIdExpr);
+
+                return Expression.Lambda<Func<TEntity, bool>>(equalsExpr, parameter);
+            }
+        }
+
+        if (entity is IUniqueCompositeIdSupport<TEntity> uniqueCompositeIdSupportEntity) return uniqueCompositeIdSupportEntity.FindByUniqueCompositeIdExpr();
+
+        throw new ArgumentException(
+            $"Entity of type {typeof(TEntity).FullName} must implement {typeof(IEntity<>).FullName} or {typeof(IUniqueCompositeIdSupport<TEntity>).FullName}",
+            nameof(entity));
+    }
+
+    public static List<TEntity> FilterNotExistingItems<TEntity>(List<TEntity> items, List<TEntity> existingItems) where TEntity : IEntity
+    {
+        var existingItemIds = existingItems.Select(p => p.GetId()).ToHashSet();
+
+        return items.Where(p => !existingItemIds.Contains(p.GetId())).ToList();
+    }
 }
 
 /// <summary>
@@ -23,7 +60,7 @@ public interface IEntity<TPrimaryKey> : IEntity
     /// <summary>
     /// Gets or sets the primary key.
     /// </summary>
-    TPrimaryKey Id { get; set; }
+    public TPrimaryKey Id { get; set; }
 
     public string GetUniqueId()
     {
@@ -51,7 +88,7 @@ public interface IValidatableEntity
     /// <br />
     /// In summary, the Validate method is a key part of the system's validation infrastructure, allowing for the validation of entities and the collection of detailed error information when validation fails.
     /// </remarks>
-    PlatformValidationResult Validate();
+    public PlatformValidationResult Validate();
 }
 
 /// <summary>
@@ -61,7 +98,7 @@ public interface IValidatableEntity
 public interface IValidatableEntity<TEntity> : IValidatableEntity
 {
     /// <inheritdoc cref="IValidatableEntity.Validate" />
-    new PlatformValidationResult<TEntity> Validate();
+    public new PlatformValidationResult<TEntity> Validate();
 }
 
 /// <summary>
@@ -226,7 +263,7 @@ public interface IUniqueCompositeIdSupport
 }
 
 public interface IUniqueCompositeIdSupport<TEntity> : IUniqueCompositeIdSupport
-    where TEntity : class, IEntity, new()
+    where TEntity : IEntity
 {
     /// <summary>
     /// Gets an expression for finding an entity by its unique composite ID.

@@ -55,7 +55,10 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         lazyLogger = new Lazy<ILogger>(() => CreateLogger(loggerFactory));
     }
 
-    public DbSet<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryDbSet => Set<PlatformDataMigrationHistory>();
+    public DbSet<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryDbSet()
+    {
+        return Set<PlatformDataMigrationHistory>();
+    }
 
     protected PlatformPersistenceConfiguration<TDbContext>? PersistenceConfiguration => lazyPersistenceConfiguration.Value;
 
@@ -74,14 +77,14 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         return this.As<IPlatformDbContext>().MigrateApplicationDataAsync<TDbContext>(serviceProvider, RootServiceProvider);
     }
 
-    public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryDbSet.AsQueryable();
+    public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryDbSet().AsQueryable();
 
     public async Task UpsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity, CancellationToken cancellationToken = default)
     {
-        var existingEntity = await ApplicationDataMigrationHistoryDbSet.AsNoTracking().Where(p => p.Name == entity.Name).FirstOrDefaultAsync(cancellationToken);
+        var existingEntity = await ApplicationDataMigrationHistoryDbSet().AsNoTracking().Where(p => p.Name == entity.Name).FirstOrDefaultAsync(cancellationToken);
 
         if (existingEntity == null)
-            await ApplicationDataMigrationHistoryDbSet.AddAsync(entity, cancellationToken);
+            await ApplicationDataMigrationHistoryDbSet().AddAsync(entity, cancellationToken);
         else
         {
             if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })
@@ -92,7 +95,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             var toBeUpdatedEntity = entity
                 .Pipe(entity => DetachLocalIfAnyDifferentTrackedEntity(entity, p => p.Name == entity.Name));
 
-            ApplicationDataMigrationHistoryDbSet
+            ApplicationDataMigrationHistoryDbSet()
                 .Update(toBeUpdatedEntity)
                 .Entity
                 .Pipe(p => p.With(dataMigrationHistory => dataMigrationHistory.ConcurrencyUpdateToken = Ulid.NewUlid().ToString()));
@@ -101,7 +104,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     public IQueryable<PlatformDataMigrationHistory> DataMigrationHistoryQuery()
     {
-        return ApplicationDataMigrationHistoryDbSet.AsQueryable().AsNoTracking();
+        return ApplicationDataMigrationHistoryDbSet().AsQueryable().AsNoTracking();
     }
 
     public async Task ExecuteWithNewDbContextInstanceAsync(Func<IPlatformDbContext, Task> fn)
@@ -163,13 +166,14 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
         async Task InsertDbInitializedApplicationDataMigrationHistory()
         {
-            if (!await ApplicationDataMigrationHistoryDbSet.AnyAsync(p => p.Name == PlatformDataMigrationHistory.DbInitializedMigrationHistoryName))
+            if (!await ApplicationDataMigrationHistoryDbSet().AnyAsync(p => p.Name == PlatformDataMigrationHistory.DbInitializedMigrationHistoryName))
             {
-                await ApplicationDataMigrationHistoryDbSet.AddAsync(
-                    new PlatformDataMigrationHistory(PlatformDataMigrationHistory.DbInitializedMigrationHistoryName)
-                    {
-                        Status = PlatformDataMigrationHistory.Statuses.Processed
-                    });
+                await ApplicationDataMigrationHistoryDbSet()
+                    .AddAsync(
+                        new PlatformDataMigrationHistory(PlatformDataMigrationHistory.DbInitializedMigrationHistoryName)
+                        {
+                            Status = PlatformDataMigrationHistory.Statuses.Processed
+                        });
             }
         }
     }

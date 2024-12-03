@@ -1,4 +1,4 @@
-version: "3.9"
+version: '3.9'
 
 services:
   sql-data:
@@ -22,7 +22,7 @@ services:
   pyroscope-agent.monitoring:
     image: grafana/pyroscope
     ports:
-      - "4040:4040"
+      - '4040:4040'
 
   text-snippet-api:
     image: ${REGISTRY:-duc01226}/easy-platform-example-app-text-snippet-api:${PLATFORM:-linux}-${TAG:-latest}
@@ -41,7 +41,7 @@ services:
     build:
       context: PlatformExampleAppWeb
       args:
-        configuration: "production"
+        configuration: 'production'
       dockerfile: apps/playground-text-snippet/Dockerfile
 
   chrome1:

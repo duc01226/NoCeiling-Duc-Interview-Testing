@@ -111,7 +111,6 @@ public interface IPlatformDbContext : IDisposable
                     await UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(
                         toUpsertMigrationHistory
                             .With(p => p.Status = PlatformDataMigrationHistory.Statuses.Processing)
-                            .With(p => p.LastProcessError = null)
                             .With(p => p.LastProcessingPingTime = Clock.UtcNow));
 
                     var startIntervalPingProcessingMigrationHistoryCts = new CancellationTokenSource();
