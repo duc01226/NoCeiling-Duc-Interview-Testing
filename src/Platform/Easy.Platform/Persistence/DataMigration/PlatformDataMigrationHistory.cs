@@ -7,9 +7,9 @@ namespace Easy.Platform.Persistence.DataMigration;
 
 public class PlatformDataMigrationHistory : IRowVersionEntity
 {
-    public const string DbInitializedMigrationHistoryName = "DbInitialized";
-    public const int ProcessingPingIntervalSeconds = 30;
-    public const int MaxAllowedProcessingPingMisses = 10;
+    public const string DefaultDbInitializedMigrationHistoryName = "DbInitialized";
+    public const int ProcessingPingIntervalSeconds = 10;
+    public const int MaxAllowedProcessingPingMisses = 12;
 
     public static readonly int MaxProcessingWaitPingSeconds = ProcessingPingIntervalSeconds * MaxAllowedProcessingPingMisses;
 
@@ -78,6 +78,7 @@ public class PlatformDataMigrationHistory : IRowVersionEntity
         New,
         Processing,
         Processed,
-        Failed
+        Failed,
+        SkipFailed
     }
 }

@@ -1,5 +1,9 @@
+using System.Collections;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Linq.Expressions;
+using System.Reflection;
+using System.Reflection.Metadata;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Common.Validations;
@@ -12,35 +16,96 @@ namespace Easy.Platform.Domain.Entities;
 /// </summary>
 public interface IEntity
 {
+    private static readonly ConcurrentDictionary<Type, (Type idType, ParameterExpression parameter, MemberExpression idPropertyExpr, MethodInfo containsMethod, Type
+            listIdType, MethodInfo listIdAddMethodInfo)>
+        GetIdsContainExprInfoCache = new();
+
     public object GetId();
 
     public static Expression<Func<TEntity, bool>> IdentifyExpr<TEntity>(TEntity entity) where TEntity : IEntity
     {
-        // Ensure the entity type implements IEntity<TPrimaryKey>
+        return IdentifyExpr([entity]);
+    }
+
+    public static Expression<Func<TEntity, bool>> IdentifyExpr<TEntity>(IList<TEntity> entities) where TEntity : IEntity
+    {
+        if (!entities.Any()) return p => false;
+
+        // Case 1: TEntity implements IEntity<>
         if (typeof(TEntity).IsAssignableToGenericType(typeof(IEntity<>)))
         {
-            // Get the primary key type
-            var idProperty = typeof(TEntity).GetProperty("Id");
+            var (idType, parameter, idPropertyExpr, containsMethod, listIdType, listIdAddMethodInfo) =
+                GetIdsContainExprInfoCache.GetOrAdd(typeof(TEntity), p => GetIdsContainExprInfo());
 
-            // Make sure the ID property exists and is of a valid type
-            if (idProperty != null)
-            {
-                // Create an expression for comparing the Id
-                var parameter = Expression.Parameter(typeof(TEntity), "p");
-                var idPropertyExpr = Expression.Property(parameter, idProperty);
-                var entityIdExpr = Expression.Constant(entity.GetId());
+            // Get the IDs of the entities => Ensure ids are the correct type (cast to the correct primary key type) => Create the Expression for the ids array
+            var idsExpr = entities.SelectList(entity => Convert.ChangeType(entity.GetId(), idType))
+                .Pipe(
+                    typedIds =>
+                    {
+                        // Create an instance of a list of the specified ID type using Activator.CreateInstance
+                        var listInstance = Activator.CreateInstance(listIdType);
 
-                var equalsExpr = Expression.Equal(idPropertyExpr, entityIdExpr);
+                        // Use reflection to add the items to the list
+                        foreach (var id in typedIds) listIdAddMethodInfo.Invoke(listInstance, [id]);
 
-                return Expression.Lambda<Func<TEntity, bool>>(equalsExpr, parameter);
-            }
+                        return Expression.Constant(listInstance, listIdType);
+                    });
+
+            // Create the 'Contains' expression
+            var containsExpr = Expression.Call(containsMethod, idsExpr, idPropertyExpr);
+
+            return Expression.Lambda<Func<TEntity, bool>>(containsExpr, parameter);
         }
 
-        if (entity is IUniqueCompositeIdSupport<TEntity> uniqueCompositeIdSupportEntity) return uniqueCompositeIdSupportEntity.FindByUniqueCompositeIdExpr();
+        // Case 2: TEntity implements IUniqueCompositeIdSupport<TEntity>
+        if (entities.First() is IUniqueCompositeIdSupport<TEntity>)
+        {
+            var conditions = entities
+                .OfType<IUniqueCompositeIdSupport<TEntity>>()
+                .Select(entity => entity.FindByUniqueCompositeIdExpr())
+                .ToArray();
+
+            // Aggregate the conditions with OR
+            var combinedCondition = conditions.Aggregate(
+                (current, next) => Expression.Lambda<Func<TEntity, bool>>(
+                    Expression.OrElse(current.Body, Expression.Invoke(next, current.Parameters)),
+                    current.Parameters));
+
+            return combinedCondition;
+        }
 
         throw new ArgumentException(
-            $"Entity of type {typeof(TEntity).FullName} must implement {typeof(IEntity<>).FullName} or {typeof(IUniqueCompositeIdSupport<TEntity>).FullName}",
-            nameof(entity));
+            $"Entities of type {typeof(TEntity).FullName} must implement {typeof(IEntity<>).FullName} or {typeof(IUniqueCompositeIdSupport<TEntity>).FullName}",
+            nameof(entities));
+
+        static (Type idType, ParameterExpression parameter, MemberExpression idPropertyExpr, MethodInfo containsMethod, Type listIdType, MethodInfo listIdAddMethodInfo)
+            GetIdsContainExprInfo()
+        {
+            // Get the primary key property (Id) and its type
+            var idProperty = typeof(TEntity).GetProperty(nameof(IEntity<object>.Id));
+            if (idProperty == null)
+                throw new InvalidOperationException($"Type {typeof(TEntity).FullName} must have an '{nameof(IEntity<object>.Id)}' property.");
+
+            // Get the type of the Id property (the key type)
+            var idType = idProperty.PropertyType;
+
+            // Prepare the parameter for the expression
+            var parameter = Expression.Parameter(typeof(TEntity), "p");
+
+            // Create an expression for the 'Contains' method
+            var idPropertyExpr = Expression.Property(parameter, idProperty);
+            var containsMethod = typeof(Enumerable).GetMethods()
+                .First(m => m.Name == "Contains" && m.GetParameters().Length == 2)
+                .MakeGenericMethod(idType);
+
+            // Create an instance of a list of the specified ID type using Activator.CreateInstance
+            var listIdType = typeof(List<>).MakeGenericType(idType);
+
+            // Use reflection to add the items to the list
+            var listIdAddMethodInfo = listIdType.GetMethod("Add");
+
+            return (idType, parameter, idPropertyExpr, containsMethod, listIdType, listIdAddMethodInfo);
+        }
     }
 
     public static List<TEntity> FilterNotExistingItems<TEntity>(List<TEntity> items, List<TEntity> existingItems) where TEntity : IEntity

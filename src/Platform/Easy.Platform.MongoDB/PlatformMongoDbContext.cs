@@ -64,26 +64,26 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     public IMongoCollection<PlatformOutboxBusMessage> OutboxBusMessageCollection =>
         Database.GetCollection<PlatformOutboxBusMessage>(GetCollectionName<PlatformOutboxBusMessage>());
 
-    public IMongoCollection<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryCollection =>
-        Database.GetCollection<PlatformDataMigrationHistory>(ApplicationDataMigrationHistoryCollectionName);
+    public IMongoCollection<PlatformDataMigrationHistory> DataMigrationHistoryCollection =>
+        Database.GetCollection<PlatformDataMigrationHistory>(DataMigrationHistoryCollectionName);
 
-    public virtual string ApplicationDataMigrationHistoryCollectionName => "ApplicationDataMigrationHistory";
+    public virtual string DataMigrationHistoryCollectionName => "ApplicationDataMigrationHistory";
 
     public IMongoCollection<PlatformMongoMigrationHistory> MigrationHistoryCollection =>
-        Database.GetCollection<PlatformMongoMigrationHistory>(DataMigrationHistoryCollectionName);
+        Database.GetCollection<PlatformMongoMigrationHistory>(MigrationHistoryCollectionName);
 
-    public virtual string DataMigrationHistoryCollectionName => "MigrationHistory";
+    public virtual string MigrationHistoryCollectionName => "MigrationHistory";
 
     public virtual int ExecutionManyPageSize => 100;
 
-    public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryCollection.AsQueryable();
+    public virtual string DbInitializedMigrationHistoryName => PlatformDataMigrationHistory.DefaultDbInitializedMigrationHistoryName;
 
     public async Task UpsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity, CancellationToken cancellationToken = default)
     {
-        var existingEntity = await ApplicationDataMigrationHistoryQuery.Where(p => p.Name == entity.Name).FirstOrDefaultAsync(cancellationToken);
+        var existingEntity = await DataMigrationHistoryQuery().Where(p => p.Name == entity.Name).FirstOrDefaultAsync(cancellationToken);
 
         if (existingEntity == null)
-            await ApplicationDataMigrationHistoryCollection.InsertOneAsync(entity, cancellationToken: cancellationToken);
+            await DataMigrationHistoryCollection.InsertOneAsync(entity, cancellationToken: cancellationToken);
         else
         {
             if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })
@@ -96,7 +96,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
             toBeUpdatedEntity.ConcurrencyUpdateToken = newUpdateConcurrencyUpdateToken;
 
-            var result = await ApplicationDataMigrationHistoryCollection
+            var result = await DataMigrationHistoryCollection
                 .ReplaceOneAsync(
                     p => p.Name == entity.Name &&
                          (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
@@ -108,7 +108,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
             if (result.MatchedCount <= 0)
             {
-                if (await ApplicationDataMigrationHistoryCollection.AsQueryable().AnyAsync(p => p.Name == entity.Name, cancellationToken))
+                if (await DataMigrationHistoryCollection.AsQueryable().AnyAsync(p => p.Name == entity.Name, cancellationToken))
                 {
                     throw new PlatformDomainRowVersionConflictException(
                         $"Update {nameof(PlatformDataMigrationHistory)} with Name:{toBeUpdatedEntity.Name} has conflicted version.");
@@ -121,7 +121,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     public IQueryable<PlatformDataMigrationHistory> DataMigrationHistoryQuery()
     {
-        return ApplicationDataMigrationHistoryQuery;
+        return DataMigrationHistoryCollection.AsQueryable();
     }
 
     public async Task ExecuteWithNewDbContextInstanceAsync(Func<IPlatformDbContext, Task> fn)
@@ -155,11 +155,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
         async Task InsertDbInitializedApplicationDataMigrationHistory()
         {
-            if (!await ApplicationDataMigrationHistoryCollection.AsQueryable()
-                .AnyAsync(p => p.Name == PlatformDataMigrationHistory.DbInitializedMigrationHistoryName))
+            if (!await DataMigrationHistoryCollection.AsQueryable()
+                .AnyAsync(p => p.Name == DbInitializedMigrationHistoryName))
             {
-                await ApplicationDataMigrationHistoryCollection.InsertOneAsync(
-                    new PlatformDataMigrationHistory(PlatformDataMigrationHistory.DbInitializedMigrationHistoryName)
+                await DataMigrationHistoryCollection.InsertOneAsync(
+                    new PlatformDataMigrationHistory(DbInitializedMigrationHistoryName)
                     {
                         Status = PlatformDataMigrationHistory.Statuses.Processed
                     });
@@ -226,10 +226,10 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         return queryBuilder(GetQuery<TEntity>()).ToListAsync(cancellationToken);
     }
 
-    public Task SaveChangesAsync(CancellationToken cancellationToken = default)
+    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         // Not support real transaction tracking. No need to do anything
-        return Task.CompletedTask;
+        return Task.FromResult(0);
     }
 
     public IQueryable<TEntity> GetQuery<TEntity>() where TEntity : class, IEntity
@@ -940,7 +940,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         EnsureAllMigrationExecutorsHasUniqueName();
 
         var dbInitializedDate =
-            ApplicationDataMigrationHistoryQuery.FirstOrDefault(p => p.Name == PlatformDataMigrationHistory.DbInitializedMigrationHistoryName)?.CreatedDate ??
+            DataMigrationHistoryQuery().FirstOrDefault(p => p.Name == DbInitializedMigrationHistoryName)?.CreatedDate ??
             DateTime.UtcNow;
 
         await NotExecutedMigrationExecutors()
@@ -1005,11 +1005,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     public virtual async Task EnsureApplicationDataMigrationHistoryCollectionIndexesAsync(bool recreate = false)
     {
         if (recreate || !await IsEnsureIndexesMigrationExecuted())
-            await ApplicationDataMigrationHistoryCollection.Indexes.DropAllAsync();
+            await DataMigrationHistoryCollection.Indexes.DropAllAsync();
 
         if (recreate || !await IsEnsureIndexesMigrationExecuted())
         {
-            await ApplicationDataMigrationHistoryCollection.Indexes.CreateManyAsync(
+            await DataMigrationHistoryCollection.Indexes.CreateManyAsync(
             [
                 new CreateIndexModel<PlatformDataMigrationHistory>(
                     Builders<PlatformDataMigrationHistory>.IndexKeys.Ascending(p => p.Name),

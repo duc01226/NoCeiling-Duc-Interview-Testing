@@ -113,17 +113,36 @@ public static class ExpressionExtension
     /// <returns>
     /// The property name.
     /// </returns>
-    public static string GetPropertyName<T, TProp>(this Expression<Func<T, TProp>> property)
+    public static string GetPropertyName<T, TProp>(this Expression<Func<T, TProp>> property, string separator = ".")
     {
         LambdaExpression lambda = property;
 
-        return lambda.Body switch
+        // Traverse the expression tree to build the full property path
+        string GetFullPropertyPath(Expression expression)
         {
-            UnaryExpression unaryExpression => ((MemberExpression)unaryExpression.Operand).Member.Name,
-            ConstantExpression constantExpression => constantExpression.ToString(),
-            _ => ((MemberExpression)lambda.Body).Member.Name
-        };
+            switch (expression)
+            {
+                case MemberExpression memberExpression:
+                    // Traverse deeper into nested properties
+                    var parentPath = GetFullPropertyPath(memberExpression.Expression);
+                    return parentPath.IsNullOrEmpty()
+                        ? memberExpression.Member.Name
+                        : $"{parentPath}{separator}{memberExpression.Member.Name}";
+
+                case UnaryExpression unaryExpression:
+                    return GetFullPropertyPath(unaryExpression.Operand);
+
+                case ParameterExpression:
+                    return string.Empty; // Root parameter, no property path to add
+
+                default:
+                    throw new InvalidOperationException("Unsupported expression type for property name resolution.");
+            }
+        }
+
+        return GetFullPropertyPath(lambda.Body);
     }
+
 
     /// <summary>
     /// Combines two expressions with the logical AND operator.

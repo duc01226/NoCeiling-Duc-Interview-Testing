@@ -37,25 +37,14 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 (PlatformPersistenceConfiguration<TDbContext>)null));
         lazyRequestContextAccessor = new Lazy<IPlatformApplicationRequestContextAccessor>(this.GetService<IPlatformApplicationRequestContextAccessor>);
         lazyRootServiceProvider = new Lazy<IPlatformRootServiceProvider>(this.GetService<IPlatformRootServiceProvider>);
-        lazyLogger = new Lazy<ILogger>(() => CreateLogger(this.GetService<ILoggerFactory>()));
-    }
 
-    public PlatformEfCoreDbContext(
-        DbContextOptions<TDbContext> options,
-        PlatformPersistenceConfiguration<TDbContext> persistenceConfiguration,
-        IPlatformApplicationRequestContextAccessor requestContextAccessor,
-        IPlatformRootServiceProvider rootServiceProvider,
-        ILoggerFactory loggerFactory,
-        IPlatformApplicationSettingContext applicationSettingContext) : base(options)
-    {
-        // Use lazy because we are using this.GetService to support EfCore pooling => force constructor must take only DbContextOptions<TDbContext>
-        lazyPersistenceConfiguration = new Lazy<PlatformPersistenceConfiguration<TDbContext>>(() => persistenceConfiguration);
-        lazyRequestContextAccessor = new Lazy<IPlatformApplicationRequestContextAccessor>(() => requestContextAccessor);
-        lazyRootServiceProvider = new Lazy<IPlatformRootServiceProvider>(() => rootServiceProvider);
+        // Must get loggerFactory outside lazy factory func then use it inside because when logging the context might be disposed
+        // need to get logger factory here first
+        var loggerFactory = Util.TaskRunner.CatchException<Exception, ILoggerFactory>(() => this.GetService<ILoggerFactory>(), fallbackValue: null);
         lazyLogger = new Lazy<ILogger>(() => CreateLogger(loggerFactory));
     }
 
-    public DbSet<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryDbSet()
+    public DbSet<PlatformDataMigrationHistory> DataMigrationHistoryDbSet()
     {
         return Set<PlatformDataMigrationHistory>();
     }
@@ -72,19 +61,19 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     public ILogger Logger => lazyLogger.Value;
 
+    public virtual string DbInitializedMigrationHistoryName => PlatformDataMigrationHistory.DefaultDbInitializedMigrationHistoryName;
+
     public Task MigrateApplicationDataAsync(IServiceProvider serviceProvider)
     {
         return this.As<IPlatformDbContext>().MigrateApplicationDataAsync<TDbContext>(serviceProvider, RootServiceProvider);
     }
 
-    public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery => ApplicationDataMigrationHistoryDbSet().AsQueryable();
-
     public async Task UpsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity, CancellationToken cancellationToken = default)
     {
-        var existingEntity = await ApplicationDataMigrationHistoryDbSet().AsNoTracking().Where(p => p.Name == entity.Name).FirstOrDefaultAsync(cancellationToken);
+        var existingEntity = await DataMigrationHistoryDbSet().AsNoTracking().Where(p => p.Name == entity.Name).FirstOrDefaultAsync(cancellationToken);
 
         if (existingEntity == null)
-            await ApplicationDataMigrationHistoryDbSet().AddAsync(entity, cancellationToken);
+            await DataMigrationHistoryDbSet().AddAsync(entity, cancellationToken);
         else
         {
             if (entity is IRowVersionEntity { ConcurrencyUpdateToken: null })
@@ -95,7 +84,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             var toBeUpdatedEntity = entity
                 .Pipe(entity => DetachLocalIfAnyDifferentTrackedEntity(entity, p => p.Name == entity.Name));
 
-            ApplicationDataMigrationHistoryDbSet()
+            DataMigrationHistoryDbSet()
                 .Update(toBeUpdatedEntity)
                 .Entity
                 .Pipe(p => p.With(dataMigrationHistory => dataMigrationHistory.ConcurrencyUpdateToken = Ulid.NewUlid().ToString()));
@@ -104,7 +93,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     public IQueryable<PlatformDataMigrationHistory> DataMigrationHistoryQuery()
     {
-        return ApplicationDataMigrationHistoryDbSet().AsQueryable().AsNoTracking();
+        return DataMigrationHistoryDbSet().AsQueryable().AsNoTracking();
     }
 
     public async Task ExecuteWithNewDbContextInstanceAsync(Func<IPlatformDbContext, Task> fn)
@@ -112,13 +101,15 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         await RootServiceProvider.ExecuteInjectScopedAsync(async (TDbContext context) => await fn(context));
     }
 
-    public new async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            await base.SaveChangesAsync(cancellationToken);
+            var result = await base.SaveChangesAsync(cancellationToken);
 
             MappedUnitOfWork?.ClearCachedExistingOriginalEntity();
+
+            return result;
         }
         catch (DbUpdateConcurrencyException ex)
         {
@@ -166,11 +157,11 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
         async Task InsertDbInitializedApplicationDataMigrationHistory()
         {
-            if (!await ApplicationDataMigrationHistoryDbSet().AnyAsync(p => p.Name == PlatformDataMigrationHistory.DbInitializedMigrationHistoryName))
+            if (!await DataMigrationHistoryDbSet().AnyAsync(p => p.Name == DbInitializedMigrationHistoryName))
             {
-                await ApplicationDataMigrationHistoryDbSet()
+                await DataMigrationHistoryDbSet()
                     .AddAsync(
-                        new PlatformDataMigrationHistory(PlatformDataMigrationHistory.DbInitializedMigrationHistoryName)
+                        new PlatformDataMigrationHistory(DbInitializedMigrationHistoryName)
                         {
                             Status = PlatformDataMigrationHistory.Statuses.Processed
                         });

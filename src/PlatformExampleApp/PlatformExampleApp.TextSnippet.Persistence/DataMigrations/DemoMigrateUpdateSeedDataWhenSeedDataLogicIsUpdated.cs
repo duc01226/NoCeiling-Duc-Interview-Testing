@@ -15,7 +15,7 @@ internal sealed class DemoMigrateUpdateSeedDataWhenSeedDataLogicIsUpdated : Plat
     }
 
     public override string Name => "20220130_DemoMigrateUpdateSeedDataWhenSeedDataLogicIsUpdated";
-    public override DateTime CreationDate => new(2022, 01, 30);
+    public override DateTime? OnlyForDbsCreatedBeforeDate => new(2022, 01, 30);
 
     // Demo can override this to allow DataMigration execution parallel in background thread, allow not wait, do not block the application start
     public override bool AllowRunInBackgroundThread => true;

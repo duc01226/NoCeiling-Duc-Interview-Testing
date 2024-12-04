@@ -95,12 +95,12 @@ public class TextSnippetSqlEfCorePersistenceModule : PlatformEfCorePersistenceMo
                     .ToString(),
                 options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
                     .EnableRetryOnFailure(
-                        maxRetryCount: 5,
+                        maxRetryCount: RecommendedConnectionIdleLifetimeSeconds * 2,
                         maxRetryDelay: 1.Seconds(),
                         errorNumbersToAdd: null // Specific error codes to retry (null retries common transient errors)
                     ))
             .EnableThreadSafetyChecks(false) // improve performance. Only disable after testing ensure no such concurrency bugs.
-            .EnableDetailedErrors(detailedErrorsEnabled: PlatformEnvironment.IsDevelopment || Configuration.GetSection("SeedDummyData").Get<bool>());
+            .EnableDetailedErrors();
     }
 }
 

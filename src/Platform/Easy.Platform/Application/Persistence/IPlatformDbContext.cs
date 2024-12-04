@@ -26,11 +26,11 @@ public interface IPlatformDbContext : IDisposable
     public static int MigrationRetryCount => PlatformEnvironment.IsDevelopment ? 5 : 10;
     public static int MigrationRetryDelaySeconds => PlatformEnvironment.IsDevelopment ? 15 : 30;
 
-    public IQueryable<PlatformDataMigrationHistory> ApplicationDataMigrationHistoryQuery { get; }
-
     public IPlatformUnitOfWork? MappedUnitOfWork { get; set; }
 
     public ILogger Logger { get; }
+
+    public string DbInitializedMigrationHistoryName { get; }
 
     public Task UpsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity, CancellationToken cancellationToken = default);
 
@@ -50,8 +50,11 @@ public interface IPlatformDbContext : IDisposable
             maxWaitSeconds: TimeSpan.SecondsPerDay,
             waitIntervalSeconds: PlatformDataMigrationHistory.ProcessingPingIntervalSeconds);
 
-        var canExecuteMigrations = PlatformDataMigrationExecutor<TDbContext>
-            .GetCanExecuteDataMigrationExecutors(GetType().Assembly, serviceProvider, ApplicationDataMigrationHistoryQuery);
+        var canExecuteMigrations = PlatformDataMigrationExecutor<TDbContext>.GetCanExecuteDataMigrationExecutors(
+            GetType().Assembly,
+            serviceProvider,
+            DataMigrationHistoryQuery(),
+            DbInitializedMigrationHistoryName);
 
         var mainThreadMigrations = canExecuteMigrations.Where(p => !p.AllowRunInBackgroundThread).ToList();
         var backgroundThreadMigrations = canExecuteMigrations.Where(p => p.AllowRunInBackgroundThread).ToList();
@@ -102,7 +105,10 @@ public interface IPlatformDbContext : IDisposable
 
                 if ((existingMigrationHistory == null || existingMigrationHistory.CanStartOrRetryProcess()) &&
                     (previousMigrationName == null || DataMigrationHistoryQuery()
-                        .Any(p => p.Name == previousMigrationName && (p.Status == null || p.Status == PlatformDataMigrationHistory.Statuses.Processed))))
+                        .Any(
+                            PlatformDataMigrationHistory.ProcessedExpr()
+                                .Or(p => p.Status == PlatformDataMigrationHistory.Statuses.SkipFailed)
+                                .AndAlso(p => p.Name == previousMigrationName))))
                 {
                     Logger.LogInformation("DataMigration {MigrationExecutionName} STARTED.", migrationExecution.Name);
 
@@ -170,7 +176,10 @@ public interface IPlatformDbContext : IDisposable
                                     {
                                         await newContextInstance.UpsertOneDataMigrationHistorySaveChangesImmediatelyAsync(
                                             toUpdatePingTimeMigrationHistory
-                                                .With(p => p.Status = PlatformDataMigrationHistory.Statuses.Failed)
+                                                .With(
+                                                    p => p.Status = migrationExecution.CanSkipIfFailed
+                                                        ? PlatformDataMigrationHistory.Statuses.SkipFailed
+                                                        : PlatformDataMigrationHistory.Statuses.Failed)
                                                 .With(p => p.LastProcessError = e.Serialize()),
                                             CancellationToken.None);
                                     }
@@ -182,7 +191,8 @@ public interface IPlatformDbContext : IDisposable
                                 if (retryAttempt >= 2) Logger.LogError(ex.BeautifyStackTrace(), "Upsert DataMigrationHistory Status=Failed failed");
                             },
                             CancellationToken.None);
-                        throw;
+
+                        if (!migrationExecution.CanSkipIfFailed) throw;
                     }
                     finally
                     {
@@ -363,7 +373,7 @@ public interface IPlatformDbContext : IDisposable
             loggingStackTrace);
     }
 
-    public Task SaveChangesAsync(CancellationToken cancellationToken = default);
+    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     public IQueryable<TEntity> GetQuery<TEntity>() where TEntity : class, IEntity;
 

@@ -8,6 +8,8 @@ namespace Easy.Platform.EfCore.Services;
 
 public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformFullTextSearchPersistenceService
 {
+    public const string EfCoreOwnsOneDeeperObjectColumnSeparator = "_";
+
     public EfCorePlatformFullTextSearchPersistenceService(IServiceProvider serviceProvider) : base(serviceProvider)
     {
     }
@@ -111,12 +113,24 @@ public abstract class EfCorePlatformFullTextSearchPersistenceService : PlatformF
         if (string.IsNullOrWhiteSpace(searchText))
             return query;
 
+        // Build search words with ignored special characters
         var ignoredSpecialCharactersSearchWords = BuildIgnoredSpecialCharactersSearchWords(searchText.Trim());
-        var fullTextSearchPropNames =
-            inFullTextSearchProps.Where(p => p != null).Select(ExpressionExtension.GetPropertyName).ToList();
-        var includeStartWithPropNames =
-            includeStartWithProps?.Where(p => p != null).Select(ExpressionExtension.GetPropertyName).ToList();
 
+        // Generate full-text search property names, supporting deep paths
+        var fullTextSearchPropNames =
+            inFullTextSearchProps
+                .Where(p => p != null)
+                .Select(p => p.GetPropertyName(EfCoreOwnsOneDeeperObjectColumnSeparator))
+                .ToList();
+
+        // Generate include-start-with property names, supporting deep paths
+        var includeStartWithPropNames =
+            includeStartWithProps?
+                .Where(p => p != null)
+                .Select(p => p.GetPropertyName(EfCoreOwnsOneDeeperObjectColumnSeparator))
+                .ToList();
+
+        // Build the searched query using the property names
         var searchedQuery = BuildSearchQuery(
             query,
             searchText,

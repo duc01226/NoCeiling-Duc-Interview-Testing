@@ -16,7 +16,7 @@ internal sealed class DemoMigrateDataCrossDb : PlatformDataMigrationExecutor<Tex
     }
 
     public override string Name => "20500101000000_DemoMigrateDataCrossDb";
-    public override DateTime CreationDate => new(2050, 01, 01);
+    public override DateTime? OnlyForDbsCreatedBeforeDate => new(2050, 01, 01);
 
     /// <summary>
     /// This application data migration only valid until 2022/12/01

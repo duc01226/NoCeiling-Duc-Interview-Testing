@@ -19,37 +19,40 @@ public interface IPlatformDataMigrationExecutor<in TDbContext> : IPlatformDataMi
     /// <summary>
     /// The unique name of the migration. The name will be used to order. Convention should be: YYYYMMDDhhmmss_MigrationName
     /// </summary>
-    string Name { get; }
+    public string Name { get; }
 
     /// <summary>
     /// Set this data to state that the data migration only valid if db initialized before a certain date. <br />
     /// Implement this prop define the date, usually the date you define your data migration. <br />
-    /// When define it, for example CreationDate = 2000/12/31, mean that after 2000/12/31,
+    /// When define it, for example ValidAfterDbCreationDate = 2000/12/31, mean that after 2000/12/31,
     /// if you run a fresh new system with no db, db is init created after 2000/12/31, the migration will be not executed.
-    /// This will help to prevent run not necessary data migration for a new system fresh db
+    /// This will help to prevent run not necessary data migration for a new system fresh db.
+    /// Default Return NULL mean that this migration will always run event for new db
     /// </summary>
-    DateTime CreationDate { get; }
+    public DateTime? OnlyForDbsCreatedBeforeDate => null;
 
     /// <summary>
     /// The find the date that this migration will not be executed after a given date.
     /// </summary>
-    DateTime? ExpirationDate { get; }
+    public DateTime? ExpirationDate { get; }
 
     /// <summary>
     /// If true, Allow DataMigration execution in background thread, allow not wait, do not block the application start
     /// </summary>
-    bool AllowRunInBackgroundThread { get; }
+    public bool AllowRunInBackgroundThread { get; }
 
-    Task Execute(TDbContext dbContext);
+    public bool CanSkipIfFailed { get; }
 
-    bool IsExpired();
+    public Task Execute(TDbContext dbContext);
+
+    public bool IsExpired();
 
     /// <summary>
     /// Get order value string. This will be used to order migrations for execution.
     /// <br />
     /// Example: "00001_MigrationName"
     /// </summary>
-    string GetOrderByValue();
+    public string GetOrderByValue();
 }
 
 /// <summary>
@@ -73,7 +76,9 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
 
     public virtual DateTime? ExpirationDate => null;
 
-    public abstract DateTime CreationDate { get; }
+    public abstract DateTime? OnlyForDbsCreatedBeforeDate { get; }
+
+    public virtual bool CanSkipIfFailed => false;
 
     public abstract Task Execute(TDbContext dbContext);
 
@@ -91,7 +96,7 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
     /// </summary>
     public string GetOrderByValue()
     {
-        return CreationDate.ToString("yyyyMMdd") + $"_{Name}";
+        return OnlyForDbsCreatedBeforeDate?.ToString("yyyyMMdd") + $"_{Name}";
     }
 
     public void Dispose()
@@ -129,8 +134,10 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
             dataMigrationExecutor =>
             {
                 if (!applicationDataMigrationExecutionNames.Add(dataMigrationExecutor.Name))
+                {
                     throw new Exception(
                         $"Application DataMigration Executor Names is duplicated. Duplicated name: {dataMigrationExecutor.Name}");
+                }
 
                 dataMigrationExecutor.Dispose();
             });
@@ -139,13 +146,14 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
     public static List<PlatformDataMigrationExecutor<TDbContext>> GetCanExecuteDataMigrationExecutors(
         Assembly scanAssembly,
         IServiceProvider serviceProvider,
-        IQueryable<PlatformDataMigrationHistory> allApplicationDataMigrationHistoryQuery)
+        IQueryable<PlatformDataMigrationHistory> allApplicationDataMigrationHistoryQuery,
+        string dbInitializedMigrationHistoryName)
     {
         var dbInitializedMigrationHistory = allApplicationDataMigrationHistoryQuery
-            .First(p => p.Name == PlatformDataMigrationHistory.DbInitializedMigrationHistoryName);
+            .First(p => p.Name == dbInitializedMigrationHistoryName);
         var executedOrProcessingMigrationNames = allApplicationDataMigrationHistoryQuery
             .Where(PlatformDataMigrationHistory.ProcessedOrProcessingExpr())
-            .Where(p => p.Name != PlatformDataMigrationHistory.DbInitializedMigrationHistoryName)
+            .Where(p => p.Name != dbInitializedMigrationHistoryName)
             .Select(p => p.Name)
             .ToHashSet();
 
@@ -158,7 +166,8 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
                 {
                     if (!executedOrProcessingMigrationNames.Contains(migrationExecution.Name) &&
                         !migrationExecution.IsExpired() &&
-                        migrationExecution.CreationDate >= dbInitializedMigrationHistory.CreatedDate.Date)
+                        (migrationExecution.OnlyForDbsCreatedBeforeDate == null ||
+                         migrationExecution.OnlyForDbsCreatedBeforeDate >= dbInitializedMigrationHistory.CreatedDate.Date))
                         canExecutedMigrations.Add(migrationExecution);
                     else
                         migrationExecution.Dispose();
