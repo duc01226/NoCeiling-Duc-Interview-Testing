@@ -43,6 +43,8 @@ public interface IPlatformDataMigrationExecutor<in TDbContext> : IPlatformDataMi
 
     public bool CanSkipIfFailed { get; }
 
+    public bool Ignored { get; }
+
     public Task Execute(TDbContext dbContext);
 
     public bool IsExpired();
@@ -79,6 +81,8 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
     public abstract DateTime? OnlyForDbsCreatedBeforeDate { get; }
 
     public virtual bool CanSkipIfFailed => false;
+
+    public virtual bool Ignored => false;
 
     public abstract Task Execute(TDbContext dbContext);
 
@@ -167,7 +171,8 @@ public abstract class PlatformDataMigrationExecutor<TDbContext> : IPlatformDataM
                     if (!executedOrProcessingMigrationNames.Contains(migrationExecution.Name) &&
                         !migrationExecution.IsExpired() &&
                         (migrationExecution.OnlyForDbsCreatedBeforeDate == null ||
-                         migrationExecution.OnlyForDbsCreatedBeforeDate >= dbInitializedMigrationHistory.CreatedDate.Date))
+                         migrationExecution.OnlyForDbsCreatedBeforeDate >= dbInitializedMigrationHistory.CreatedDate.Date) &&
+                        !migrationExecution.Ignored)
                         canExecutedMigrations.Add(migrationExecution);
                     else
                         migrationExecution.Dispose();

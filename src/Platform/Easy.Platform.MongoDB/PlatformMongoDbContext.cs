@@ -242,9 +242,9 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         Database.RunCommand<BsonDocument>(command);
     }
 
-    public Task MigrateApplicationDataAsync(IServiceProvider serviceProvider)
+    public Task MigrateDataAsync(IServiceProvider serviceProvider)
     {
-        return this.As<IPlatformDbContext>().MigrateApplicationDataAsync<TDbContext>(serviceProvider, RootServiceProvider);
+        return this.As<IPlatformDbContext>().MigrateDataAsync<TDbContext>(serviceProvider, RootServiceProvider);
     }
 
     public void Dispose()
@@ -466,7 +466,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                     toBeUpdatedItem.toBeUpdatedEntity,
                     toBeUpdatedItem.existingEntity ??
                     MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(toBeUpdatedItem.toBeUpdatedEntity.Id.ToString()),
-                    entity => Task.FromResult(entity),
+                    entity => Task.FromResult((entity, true)),
                     false,
                     eventCustomConfig,
                     () => RequestContextAccessor.Current.GetAllKeyValues(),
@@ -851,7 +851,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                               ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken),
                         entity,
                         new ReplaceOptions { IsUpsert = false },
-                        cancellationToken),
+                        cancellationToken)
+                    .Then(p => (p, true)),
                 dismissSendEvent,
                 eventCustomConfig,
                 () => RequestContextAccessor.Current.GetAllKeyValues(),
@@ -883,7 +884,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         p => p.Id.Equals(toBeUpdatedEntity.Id),
                         toBeUpdatedEntity,
                         new ReplaceOptions { IsUpsert = false },
-                        cancellationToken),
+                        cancellationToken)
+                    .Then(p => (p, true)),
                 dismissSendEvent,
                 eventCustomConfig,
                 () => RequestContextAccessor.Current.GetAllKeyValues(),

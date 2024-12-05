@@ -38,7 +38,7 @@ public interface IPlatformDbContext : IDisposable
 
     public Task ExecuteWithNewDbContextInstanceAsync(Func<IPlatformDbContext, Task> fn);
 
-    public async Task MigrateApplicationDataAsync<TDbContext>(
+    public async Task MigrateDataAsync<TDbContext>(
         IServiceProvider serviceProvider,
         IPlatformRootServiceProvider rootServiceProvider) where TDbContext : class, IPlatformDbContext<TDbContext>
     {
@@ -539,5 +539,5 @@ public interface IPlatformDbContext : IDisposable
 
 public interface IPlatformDbContext<TDbContext> : IPlatformDbContext where TDbContext : IPlatformDbContext<TDbContext>
 {
-    public Task MigrateApplicationDataAsync(IServiceProvider serviceProvider);
+    public Task MigrateDataAsync(IServiceProvider serviceProvider);
 }

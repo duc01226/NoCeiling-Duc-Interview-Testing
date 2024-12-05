@@ -23,10 +23,10 @@ public interface IPlatformCqrsEntityEvent : IPlatformCqrsEvent
     /// <br />
     /// For example, if an error occurs while processing an event, knowing the SourceUowId can help identify the initial operation that led to the event being generated. Similarly, in an auditing scenario, the SourceUowId can provide information about which unit of work was responsible for a particular change in the system's state.
     /// </summary>
-    string SourceUowId { get; set; }
+    public string SourceUowId { get; set; }
 
     /// <inheritdoc cref="PlatformCqrsEvent.SetWaitHandlerExecutionFinishedImmediately" />
-    PlatformCqrsEntityEvent SetForceWaitEventHandlerFinished<THandler>()
+    public PlatformCqrsEntityEvent SetForceWaitEventHandlerFinished<THandler>()
         where THandler : IPlatformCqrsEventHandler;
 }
 
@@ -172,11 +172,13 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
             if (mappedToDbContextUow?.CreatedByUnitOfWorkManager != null)
                 await mappedToDbContextUow.CreatedByUnitOfWorkManager.CurrentSameScopeCqrs.SendEvent(entityEvent, cancellationToken);
             else
+            {
                 await rootServiceProvider.ExecuteInjectScopedAsync(
                     async (IPlatformCqrs cqrs) =>
                     {
                         await cqrs.SendEvent(entityEvent, cancellationToken);
                     });
+            }
         }
     }
 
@@ -271,6 +273,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                 async _ =>
                 {
                     if (!dismissSendEvent)
+                    {
                         await SendEvent(
                             rootServiceProvider,
                             mappedToDbContextUow,
@@ -281,6 +284,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                             requestContext,
                             eventStackTrace,
                             cancellationToken);
+                    }
                 });
 
         return result;
@@ -302,6 +306,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                 async _ =>
                 {
                     if (!dismissSendEvent)
+                    {
                         await SendEvent(
                             rootServiceProvider,
                             mappedToDbContextUow,
@@ -312,6 +317,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                             requestContext,
                             eventStackTrace,
                             cancellationToken);
+                    }
                 });
 
         return result;
@@ -322,7 +328,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         IPlatformUnitOfWork unitOfWork,
         TEntity entity,
         TEntity? existingOriginalEntity,
-        Func<TEntity, Task<TResult>> updateEntityAction,
+        Func<TEntity, Task<(TResult result, bool isDataChanged)>> updateEntityAction,
         bool dismissSendEvent,
         Action<PlatformCqrsEntityEvent> eventCustomConfig,
         Func<IDictionary<string, object>> requestContext,
@@ -332,11 +338,12 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
         if (!dismissSendEvent && existingOriginalEntity != null)
             entity.AutoAddFieldUpdatedEvent(existingOriginalEntity);
 
-        var result = await updateEntityAction(entity)
+        var (result, _) = await updateEntityAction(entity)
             .ThenActionAsync(
-                async _ =>
+                async p =>
                 {
-                    if (!dismissSendEvent)
+                    if (!dismissSendEvent && p.isDataChanged)
+                    {
                         await SendEvent(
                             rootServiceProvider,
                             unitOfWork,
@@ -347,6 +354,7 @@ public abstract class PlatformCqrsEntityEvent : PlatformCqrsEvent, IPlatformUowE
                             requestContext,
                             eventStackTrace,
                             cancellationToken);
+                    }
                 });
 
         return result;
@@ -392,9 +400,11 @@ public class PlatformCqrsEntityEvent<TEntity> : PlatformCqrsEntityEvent, IPlatfo
         CrudAction = crudAction;
 
         if (entityData is ISupportDomainEventsEntity businessActionEventsEntity)
+        {
             DomainEvents = businessActionEventsEntity.GetDomainEvents()
                 .Select(p => new KeyValuePair<string, string>(p.Key, PlatformJsonSerializer.Serialize(p.Value)))
                 .ToList();
+        }
     }
 
     public override string EventType => EventTypeValue;
@@ -434,6 +444,7 @@ public class PlatformCqrsBulkEntitiesEvent<TEntity, TPrimaryKey> : PlatformCqrsE
         CrudAction = crudAction;
 
         if (typeof(TEntity).IsAssignableTo(typeof(ISupportDomainEventsEntity)))
+        {
             DomainEvents = entities.GroupBy(p => p.Id)
                 .ToDictionary(
                     group => group.Key,
@@ -444,6 +455,7 @@ public class PlatformCqrsBulkEntitiesEvent<TEntity, TPrimaryKey> : PlatformCqrsE
                                 .GetDomainEvents()
                                 .Select(p => new KeyValuePair<string, string>(p.Key, PlatformJsonSerializer.Serialize(p.Value))))
                         .ToList());
+        }
     }
 
     public override string EventType => EventTypeValue;

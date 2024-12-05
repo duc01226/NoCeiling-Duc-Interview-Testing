@@ -63,9 +63,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
     public virtual string DbInitializedMigrationHistoryName => PlatformDataMigrationHistory.DefaultDbInitializedMigrationHistoryName;
 
-    public Task MigrateApplicationDataAsync(IServiceProvider serviceProvider)
+    public Task MigrateDataAsync(IServiceProvider serviceProvider)
     {
-        return this.As<IPlatformDbContext>().MigrateApplicationDataAsync<TDbContext>(serviceProvider, RootServiceProvider);
+        return this.As<IPlatformDbContext>().MigrateDataAsync<TDbContext>(serviceProvider, RootServiceProvider);
     }
 
     public async Task UpsertOneDataMigrationHistoryAsync(PlatformDataMigrationHistory entity, CancellationToken cancellationToken = default)
@@ -82,7 +82,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             // Run DetachLocalIfAny to prevent
             // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
             var toBeUpdatedEntity = entity
-                .Pipe(entity => DetachLocalIfAnyDifferentTrackedEntity(entity, p => p.Name == entity.Name));
+                .Pipe(entity => DetachLocalIfAnyDifferentTrackedEntity(entity, p => p.Name == entity.Name).entity);
 
             DataMigrationHistoryDbSet()
                 .Update(toBeUpdatedEntity)
@@ -256,7 +256,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
             // Run DetachLocalIfAny to prevent
             // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
-            var toBeUpdatedEntity = entity.Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>);
+            var toBeUpdatedEntity = entity.Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>).entity;
 
             var result = GetTable<TEntity>()
                 .Update(toBeUpdatedEntity)
@@ -466,7 +466,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             await ContextThreadSafeLock.WaitAsync(cancellationToken);
 
             var toBeCreatedEntity = entity
-                .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
+                .Pipe(entity => DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(entity).entity)
                 .PipeIf(
                     entity.IsAuditedUserEntity(),
                     p => p.As<IUserAuditedEntity>()
@@ -685,14 +685,14 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
             // Run DetachLocalIfAny to prevent
             // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
-            var toBeUpdatedEntity = entity
+            var (toBeUpdatedEntity, isEntityTracked, isEntityNotTrackedOrTrackedModified) = entity
                 .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
-                .PipeIf(
-                    entity is IDateAuditedEntity,
-                    p => p.As<IDateAuditedEntity>().With(auditedEntity => auditedEntity.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
-                .PipeIf(
-                    entity.IsAuditedUserEntity(),
-                    p => p.As<IUserAuditedEntity>()
+                .WithIf(
+                    p => p.isEntityNotTrackedOrTrackedModified && entity is IDateAuditedEntity,
+                    p => p.entity.As<IDateAuditedEntity>().With(auditedEntity => auditedEntity.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
+                .WithIf(
+                    p => p.isEntityNotTrackedOrTrackedModified && entity.IsAuditedUserEntity(),
+                    p => p.entity.As<IUserAuditedEntity>()
                         .SetLastUpdatedBy(RequestContextAccessor.Current.UserId(entity.GetAuditedUserIdType()))
                         .As<TEntity>());
 
@@ -703,16 +703,25 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 existingEntity ?? MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()),
                 entity =>
                 {
-                    var result = GetTable<TEntity>()
-                        .Update(entity)
-                        .Entity
-                        .PipeIf(
-                            entity is IRowVersionEntity,
-                            p => p.As<IRowVersionEntity>().With(rowVersionEntity => rowVersionEntity.ConcurrencyUpdateToken = Ulid.NewUlid().ToString()).As<TEntity>());
+                    var updatedEntity = !isEntityTracked
+                        ? GetTable<TEntity>()
+                            .Update(entity)
+                            .Entity
+                            .PipeIf(
+                                entity is IRowVersionEntity,
+                                p => p.As<IRowVersionEntity>()
+                                    .With(rowVersionEntity => rowVersionEntity.ConcurrencyUpdateToken = Ulid.NewUlid().ToString())
+                                    .As<TEntity>())
+                        : entity
+                            .PipeIf(
+                                entity => entity is IRowVersionEntity && isEntityNotTrackedOrTrackedModified,
+                                p => p.As<IRowVersionEntity>()
+                                    .With(rowVersionEntity => rowVersionEntity.ConcurrencyUpdateToken = Ulid.NewUlid().ToString())
+                                    .As<TEntity>());
 
                     ContextThreadSafeLock.Release();
 
-                    return Task.FromResult(result);
+                    return Task.FromResult((updatedEntity, !isEntityTracked || isEntityNotTrackedOrTrackedModified));
                 },
                 dismissSendEvent,
                 eventCustomConfig,
@@ -737,19 +746,23 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         }
     }
 
-    protected TEntity DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(TEntity entity) where TEntity : class, IEntity<TPrimaryKey>, new()
+    protected (TEntity entity, bool isEntityTracked, bool isEntityNotTrackedOrTrackedModified) DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(
+        TEntity entity)
+        where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         return DetachLocalIfAnyDifferentTrackedEntity(entity, entry => entry.Id.Equals(entity.Id));
     }
 
-    protected TEntity DetachLocalIfAnyDifferentTrackedEntity<TEntity>(TEntity entity, Func<TEntity, bool> findExistingEntityPredicate)
+    protected (TEntity entity, bool isEntityTracked, bool isEntityNotTrackedOrTrackedModified) DetachLocalIfAnyDifferentTrackedEntity<TEntity>(
+        TEntity entity,
+        Func<TEntity, bool> findExistingEntityPredicate)
         where TEntity : class, IEntity, new()
     {
         var local = GetTable<TEntity>().Local.FirstOrDefault(findExistingEntityPredicate);
 
         if (local != null && local != entity) GetTable<TEntity>().Entry(local).State = EntityState.Detached;
 
-        return entity;
+        return (entity, local == entity, local != entity || GetTable<TEntity>().Entry(entity!).State == EntityState.Modified);
     }
 
     public DbSet<TEntity> GetTable<TEntity>() where TEntity : class, IEntity, new()

@@ -212,7 +212,9 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
     public bool RegisterServicesExecuted { get; protected set; }
 
-    public bool Initiated { get; protected set; }
+    public bool InitExecuted { get; protected set; }
+
+    public virtual bool Initiated => InitExecuted;
 
     /// <summary>
     /// Override this to call every time a new other module is registered
@@ -283,7 +285,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
             await InitLockAsync.WaitAsync();
 
-            if (Initiated)
+            if (InitExecuted)
                 return;
 
             Logger.LogInformation("[PlatformModule] {Module} Init STARTED", GetType().Name);
@@ -293,7 +295,7 @@ public abstract class PlatformModule : IPlatformModule, IDisposable
 
             using (var scope = ServiceProvider.CreateScope()) await InternalInit(scope);
 
-            Initiated = true;
+            InitExecuted = true;
 
             Logger.LogInformation("[PlatformModule] {Module} Init FINISHED", GetType().Name);
         }

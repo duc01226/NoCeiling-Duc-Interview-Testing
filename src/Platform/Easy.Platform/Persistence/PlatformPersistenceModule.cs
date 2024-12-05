@@ -24,13 +24,15 @@ public interface IPlatformPersistenceModule : IPlatformModule
     /// </summary>
     public bool ForCrossDbMigrationOnly { get; }
 
+    public bool MigrateDataExecuted { get; }
+
     /// <summary>
     /// Default false. Override this to true for db context module db from
     /// other sub service but use the same shared module data in one micro-service group point to same db
     /// </summary>
     public bool DisableDbInitializingAndMigration { get; }
 
-    public Task MigrateApplicationDataAsync(IServiceScope serviceScope);
+    public Task MigrateDataAsync(IServiceScope serviceScope);
 
     public Task InitializeDb(IServiceScope serviceScope);
 
@@ -47,7 +49,7 @@ public interface IPlatformPersistenceModule : IPlatformModule
                 async moduleType =>
                 {
                     await serviceProvider.ExecuteScopedAsync(
-                        scope => scope.ServiceProvider.GetService(moduleType).As<IPlatformPersistenceModule>().MigrateApplicationDataAsync(scope));
+                        scope => scope.ServiceProvider.GetService(moduleType).As<IPlatformPersistenceModule>().MigrateDataAsync(scope));
                 });
     }
 }
@@ -104,6 +106,8 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
     /// </remarks>
     public virtual bool ForCrossDbMigrationOnly => false;
 
+    public bool MigrateDataExecuted { get; protected set; }
+
     /// <summary>
     /// Gets a value indicating whether the database initialization and migration is disabled.
     /// </summary>
@@ -126,7 +130,7 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
     /// <remarks>
     /// This method is responsible for migrating the application data. It is an abstract method, meaning it must be implemented in any non-abstract class that extends PlatformPersistenceModule.
     /// </remarks>
-    public abstract Task MigrateApplicationDataAsync(IServiceScope serviceScope);
+    public abstract Task MigrateDataAsync(IServiceScope serviceScope);
 
     /// <summary>
     /// Initializes the database.
@@ -247,24 +251,33 @@ public abstract class PlatformPersistenceModule<TDbContext> : PlatformPersistenc
 
     public override int ExecuteInitPriority => DefaultExecuteInitPriority;
 
-    public override async Task MigrateApplicationDataAsync(IServiceScope serviceScope)
-    {
-        if (ForCrossDbMigrationOnly || DisableDbInitializingAndMigration) return;
+    public override bool Initiated => InitExecuted && MigrateDataExecuted;
 
-        // if the db server container is not created on run docker compose,
-        // the migration action could fail for network related exception. So that we do retry to ensure that Initialize action run successfully.
-        await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
-            async () =>
-            {
-                await serviceScope.ServiceProvider.GetRequiredService<TDbContext>().MigrateApplicationDataAsync(serviceScope.ServiceProvider);
-            },
-            retryAttempt => DefaultDbInitAndMigrationRetryDelaySeconds.Seconds(),
-            DefaultDbInitAndMigrationRetryCount,
-            exception => Logger.LogError(
-                exception.BeautifyStackTrace(),
-                "[{DbContext}] {ExceptionType} detected on attempt MigrateApplicationDataAsync",
-                typeof(TDbContext).Name,
-                exception.GetType().Name));
+    public override async Task MigrateDataAsync(IServiceScope serviceScope)
+    {
+        await IPlatformPersistenceModule.ExecuteDependencyPersistenceModuleMigrateApplicationData(
+            ModuleTypeDependencies().SelectList(p => p.Invoke(Configuration)),
+            ServiceProvider);
+
+        if (!ForCrossDbMigrationOnly && !DisableDbInitializingAndMigration)
+        {
+            // if the db server container is not created on run docker compose,
+            // the migration action could fail for network related exception. So that we do retry to ensure that Initialize action run successfully.
+            await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
+                async () =>
+                {
+                    await serviceScope.ServiceProvider.GetRequiredService<TDbContext>().MigrateDataAsync(serviceScope.ServiceProvider);
+                },
+                retryAttempt => DefaultDbInitAndMigrationRetryDelaySeconds.Seconds(),
+                DefaultDbInitAndMigrationRetryCount,
+                exception => Logger.LogError(
+                    exception.BeautifyStackTrace(),
+                    "[{DbContext}] {ExceptionType} detected on attempt MigrateDataAsync",
+                    typeof(TDbContext).Name,
+                    exception.GetType().Name));
+        }
+
+        MigrateDataExecuted = true;
     }
 
     public override async Task InitializeDb(IServiceScope serviceScope)
