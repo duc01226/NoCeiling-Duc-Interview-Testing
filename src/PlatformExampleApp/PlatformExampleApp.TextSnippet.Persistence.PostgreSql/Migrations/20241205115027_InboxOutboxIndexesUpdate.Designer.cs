@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PlatformExampleApp.TextSnippet.Domain.ValueObjects;
@@ -13,9 +14,11 @@ using PlatformExampleApp.TextSnippet.Persistence.PostgreSql;
 namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
 {
     [DbContext(typeof(TextSnippetDbContext))]
-    partial class TextSnippetDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241205115027_InboxOutboxIndexesUpdate")]
+    partial class InboxOutboxIndexesUpdate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

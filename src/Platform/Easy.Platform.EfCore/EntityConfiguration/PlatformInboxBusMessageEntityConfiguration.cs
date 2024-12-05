@@ -28,6 +28,15 @@ public class PlatformInboxBusMessageEntityConfiguration : PlatformEntityConfigur
             {
                 p.ForApplicationName,
                 p.ConsumeStatus,
+                p.NextRetryProcessAfter,
+                p.CreatedDate
+            });
+        builder.HasIndex(
+            p => new
+            {
+                p.ForApplicationName,
+                p.ConsumeStatus,
+                p.LastProcessingPingDate,
                 p.CreatedDate
             });
         builder.HasIndex(
@@ -35,12 +44,6 @@ public class PlatformInboxBusMessageEntityConfiguration : PlatformEntityConfigur
             {
                 p.ConsumeStatus,
                 p.CreatedDate
-            });
-        builder.HasIndex(
-            p => new
-            {
-                p.CreatedDate,
-                p.ConsumeStatus
             });
     }
 }
