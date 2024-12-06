@@ -95,8 +95,8 @@ public class TextSnippetSqlEfCorePersistenceModule : PlatformEfCorePersistenceMo
                     .ToString(),
                 options => options.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
                     .EnableRetryOnFailure(
-                        maxRetryCount: RecommendedConnectionIdleLifetimeSeconds,
-                        maxRetryDelay: 1.Seconds(),
+                        maxRetryCount: RecommendedConnectionRetryOnFailureCount,
+                        maxRetryDelay: RecommendedConnectionRetryDelay,
                         errorNumbersToAdd: null // Specific error codes to retry (null retries common transient errors)
                     ))
             .EnableDetailedErrors();

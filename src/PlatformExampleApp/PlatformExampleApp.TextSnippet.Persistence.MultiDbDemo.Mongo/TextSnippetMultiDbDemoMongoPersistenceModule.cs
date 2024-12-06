@@ -26,7 +26,7 @@ public class TextSnippetMultiDbDemoMongoPersistenceModule : PlatformMongoDbPersi
             .With(
                 p => p.MinConnectionPoolSize = RecommendedMinPoolSize) // Always available connection to serve request, reduce latency
             .With(p => p.MaxConnectionPoolSize = RecommendedMaxPoolSize)
-            //.With(p => p.MaxConnectionIdleTime = RecommendedConnectionIdleLifetimeSeconds.Seconds())
+            .With(p => p.MaxConnectionIdleTime = RecommendedConnectionIdleLifetimeSeconds.Seconds())
             .ToString();
         options.Database = Configuration.GetSection("MongoDB:MultiDbDemoDbDatabase").Value;
     }

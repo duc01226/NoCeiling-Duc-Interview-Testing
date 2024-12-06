@@ -72,12 +72,15 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
     /// </summary>
     public static readonly int RecommendedConnectionIdleLifetimeSeconds = 10;
 
+    public static readonly int RecommendedConnectionRetryOnFailureCount = RecommendedConnectionIdleLifetimeSeconds;
+    public static readonly TimeSpan RecommendedConnectionRetryDelay = 1.Seconds();
+
     /// <summary>
     /// Setup based on app resource cpu ram max concurrent
     /// </summary>
-    public static readonly int RecommendedMaxPoolSize = Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent;
+    public static readonly int RecommendedMaxPoolSize = Math.Max(Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent * Environment.ProcessorCount, 100);
 
-    public static readonly int RecommendedMinPoolSize = Math.Min(Environment.ProcessorCount, PlatformEnvironment.IsDevelopment ? 4 : Environment.ProcessorCount);
+    public static readonly int RecommendedMinPoolSize = 1;
 
     protected PlatformPersistenceModule(IServiceProvider serviceProvider, IConfiguration configuration) : base(serviceProvider, configuration)
     {
