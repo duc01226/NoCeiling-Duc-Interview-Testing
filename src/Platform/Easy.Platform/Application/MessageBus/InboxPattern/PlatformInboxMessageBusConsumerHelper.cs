@@ -77,6 +77,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         if (handleExistingInboxMessage != null &&
             handleExistingInboxMessage.ConsumeStatus != PlatformInboxBusMessage.ConsumeStatuses.Processed &&
             handleExistingInboxMessage.ConsumeStatus != PlatformInboxBusMessage.ConsumeStatuses.Ignored)
+        {
             await HandleConsumerLogicDirectlyForExistingInboxMessage(
                 handleExistingInboxMessage,
                 currentScopeConsumerInstance,
@@ -89,8 +90,10 @@ public static class PlatformInboxMessageBusConsumerHelper
                 autoDeleteProcessedMessageImmediately,
                 needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage,
                 cancellationToken);
+        }
         // If there's no existing inbox message, create a new one and attempt to consume it.
         else if (handleExistingInboxMessage == null)
+        {
             await SaveAndTryConsumeNewInboxMessageAsync(
                 rootServiceProvider,
                 currentScopeServiceProvider,
@@ -109,6 +112,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 retryProcessFailedMessageInSecondsUnit,
                 allowHandleNewInboxMessageInBackground,
                 cancellationToken);
+        }
     }
 
     /// <summary>
@@ -154,6 +158,7 @@ public static class PlatformInboxMessageBusConsumerHelper
     {
         // if message can handle parallel without check in order sub queue then can try to execute immediately
         if (message.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix().IsNullOrEmpty() == true)
+        {
             try
             {
                 // Try to execute directly to improve performance. Then if failed execute use inbox to support retry failed message later.
@@ -184,7 +189,9 @@ public static class PlatformInboxMessageBusConsumerHelper
             {
                 applicationSettingContext.ProcessAutoGarbageCollect();
             }
+        }
         else
+        {
             await DoProcessInboxForSaveAndTryConsumeNewInboxMessageAsync(
                 rootServiceProvider,
                 currentScopeServiceProvider,
@@ -203,6 +210,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 retryProcessFailedMessageInSecondsUnit,
                 allowHandleNewInboxMessageInBackground,
                 cancellationToken);
+        }
     }
 
     private static async Task DoProcessInboxForSaveAndTryConsumeNewInboxMessageAsync<TMessage>(
@@ -274,6 +282,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                     await inboxBusMessageRepository.UowManager().TryCurrentActiveUowSaveChangesAsync();
 
                     if (allowHandleNewInboxMessageInBackground)
+                    {
                         Util.TaskRunner.QueueActionInBackground(
                             async () =>
                             {
@@ -293,7 +302,9 @@ public static class PlatformInboxMessageBusConsumerHelper
                             },
                             loggerFactory: loggerFactory,
                             cancellationToken: CancellationToken.None);
+                    }
                     else
+                    {
                         await ExecuteConsumerForNewInboxMessage(
                             rootServiceProvider,
                             currentScopeServiceProvider,
@@ -307,6 +318,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                             retryProcessFailedMessageInSecondsUnit,
                             loggerFactory,
                             cancellationToken);
+                    }
                 }
             }
         }
@@ -427,6 +439,7 @@ public static class PlatformInboxMessageBusConsumerHelper
         CancellationToken cancellationToken) where TMessage : class, new()
     {
         if (currentScopeConsumerInstance == null)
+        {
             await rootServiceProvider.ExecuteInjectScopedAsync(
                 async (IServiceProvider serviceProvider) =>
                 {
@@ -435,6 +448,7 @@ public static class PlatformInboxMessageBusConsumerHelper
 
                     await ExecuteConsumeHandleAsync(consumer, serviceProvider);
                 });
+        }
         else
             await ExecuteConsumeHandleAsync(currentScopeConsumerInstance, currentScopeServiceProvider);
 
@@ -527,9 +541,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                 await inboxBusMessageRepository.AnyAsync(
                     PlatformInboxBusMessage.CheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessageExpr(existingInboxMessage),
                     cancellationToken))
-            {
                 await RevertExistingInboxToNewMessageAsync(existingInboxMessage, inboxBusMessageRepository, cancellationToken);
-            }
             else
             {
                 StartIntervalPingProcessing(
@@ -556,11 +568,13 @@ public static class PlatformInboxMessageBusConsumerHelper
 
                     // If auto-deletion is enabled, delete the processed message.
                     if (autoDeleteProcessedMessage)
+                    {
                         await DeleteExistingInboxProcessedMessageAsync(
                             serviceProvider,
                             existingInboxMessage,
                             loggerFactory,
                             cancellationToken);
+                    }
                 }
                 catch (Exception)
                 {
@@ -608,26 +622,36 @@ public static class PlatformInboxMessageBusConsumerHelper
             async () =>
             {
                 while (!cancellationToken.IsCancellationRequested)
+                {
                     await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                         async () =>
                         {
                             try
                             {
                                 if (!cancellationToken.IsCancellationRequested)
+                                {
                                     await rootServiceProvider.ExecuteInjectScopedAsync(
                                         async (IPlatformInboxBusMessageRepository inboxBusMessageRepository) =>
                                         {
-                                            var toUpdateExistingInboxMessage = await inboxBusMessageRepository.GetByIdAsync(existingInboxMessage.Id, cancellationToken);
-
-                                            if (!cancellationToken.IsCancellationRequested)
+                                            using (var uow = inboxBusMessageRepository.UowManager().Begin())
                                             {
-                                                await inboxBusMessageRepository.SetAsync(
-                                                    toUpdateExistingInboxMessage.With(p => p.LastProcessingPingDate = Clock.UtcNow),
-                                                    cancellationToken: cancellationToken);
+                                                var toUpdateExistingInboxMessage = await inboxBusMessageRepository.GetByIdAsync(
+                                                    existingInboxMessage.Id,
+                                                    cancellationToken);
 
-                                                existingInboxMessage.LastProcessingPingDate = toUpdateExistingInboxMessage.LastProcessingPingDate;
+                                                if (!cancellationToken.IsCancellationRequested)
+                                                {
+                                                    await inboxBusMessageRepository.SetAsync(
+                                                        toUpdateExistingInboxMessage.With(p => p.LastProcessingPingDate = Clock.UtcNow),
+                                                        cancellationToken: cancellationToken);
+
+                                                    existingInboxMessage.LastProcessingPingDate = toUpdateExistingInboxMessage.LastProcessingPingDate;
+                                                }
+
+                                                await uow.CompleteAsync(cancellationToken);
                                             }
                                         });
+                                }
 
                                 await Task.Delay(PlatformInboxBusMessage.CheckProcessingPingIntervalSeconds.Seconds(), cancellationToken);
                             }
@@ -642,6 +666,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                         {
                             if (retryAttempt > 10) loggerFactory().LogError(ex.BeautifyStackTrace(), "Update PlatformInboxBusMessage LastProcessingPingTime failed");
                         });
+                }
             },
             loggerFactory: loggerFactory,
             delayTimeSeconds: PlatformInboxBusMessage.CheckProcessingPingIntervalSeconds,
@@ -744,10 +769,12 @@ public static class PlatformInboxMessageBusConsumerHelper
                                 cancellationToken: cancellationToken);
 
                             if (existingInboxMessage != null)
+                            {
                                 await UpdateExistingInboxProcessedMessageAsync(
                                     serviceProvider.GetRequiredService<IPlatformRootServiceProvider>(),
                                     existingInboxMessage,
                                     cancellationToken);
+                            }
                         }),
                 retryAttempt => DefaultResilientRetiredDelaySeconds.Seconds(),
                 retryCount: DefaultResilientRetiredCount,
@@ -911,6 +938,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                                     cancellationToken);
 
                             if (latestCurrentExistingInboxMessage != null)
+                            {
                                 await UpdateExistingInboxFailedMessageAsync(
                                     exception,
                                     retryProcessFailedMessageInSecondsUnit,
@@ -918,6 +946,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                                     cancellationToken,
                                     latestCurrentExistingInboxMessage,
                                     inboxBusMessageRepo);
+                            }
                         });
                 },
                 sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelaySeconds.Seconds(),

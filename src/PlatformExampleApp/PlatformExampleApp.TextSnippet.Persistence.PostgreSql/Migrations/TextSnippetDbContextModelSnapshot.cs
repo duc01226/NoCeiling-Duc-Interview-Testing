@@ -82,10 +82,9 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
 
                     b.HasIndex("ConsumeStatus", "CreatedDate");
 
-                    b.HasIndex("ForApplicationName", "ConsumeStatus", "LastProcessingPingDate", "CreatedDate");
+                    b.HasIndex("ConsumeStatus", "LastProcessingPingDate", "ForApplicationName", "CreatedDate");
 
-                    b.HasIndex("ForApplicationName", "ConsumeStatus", "NextRetryProcessAfter", "CreatedDate")
-                        .HasDatabaseName("IX_PlatformInboxEventBusMessage_ForApplicationName_ConsumeSta~1");
+                    b.HasIndex("ConsumeStatus", "NextRetryProcessAfter", "ForApplicationName", "CreatedDate");
 
                     b.ToTable("PlatformInboxEventBusMessage", (string)null);
                 });

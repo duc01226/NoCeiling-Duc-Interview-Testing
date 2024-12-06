@@ -1,4 +1,4 @@
-version: "3.9"
+version: '3.9'
 
 # References: https://github.com/diemol/selenium-issues/blob/master/docker-selenium/issue-1463/docker-compose.yml
 # https://github.com/SeleniumHQ/docker-selenium/issues/1463
@@ -7,45 +7,45 @@ services:
   sql-data:
     environment:
       SA_PASSWORD: 123456Abc
-      ACCEPT_EULA: "Y"
-      MSSQL_AGENT_ENABLED: "True"
+      ACCEPT_EULA: 'Y'
+      MSSQL_AGENT_ENABLED: 'True'
     ports:
-      - "14330:1433"
+      - '14330:1433'
     volumes:
       - Easy.Platform-sqldata:/var/opt/mssql
 
   mongo-data:
     ports:
-        - '27017:27017'
+      - '27017:27017'
     volumes:
-        - mongo1data-db:/data/db
-        - mongo1data-configdb:/data/configdb
+      - mongo1data-db:/data/db
+      - mongo1data-configdb:/data/configdb
     environment:
-        - MONGO_INITDB_ROOT_USERNAME=root
-        - MONGO_INITDB_ROOT_PASSWORD=rootPassXXX
-        #- MONGO_REPLICA_SET_NAME=rs0
-        #https://stackoverflow.com/questions/42190267/replica-set-mongo-docker-compose
-        #https://github.com/Hangfire-Mongo/Hangfire.Mongo/issues/300 Fix for local hangfire mongo
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=rootPassXXX
+      #- MONGO_REPLICA_SET_NAME=rs0
+      #https://stackoverflow.com/questions/42190267/replica-set-mongo-docker-compose
+      #https://github.com/Hangfire-Mongo/Hangfire.Mongo/issues/300 Fix for local hangfire mongo
     healthcheck:
-        test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-        #test: test $$(echo "rs.initiate({_id:'rs0',members:[{_id:0,host:\"mongo:27017\"}]}).ok || rs.status().ok" | mongo -u $${MONGO_INITDB_ROOT_USERNAME} -p $${MONGO_INITDB_ROOT_PASSWORD} --quiet) -eq 1
-        interval: 5s
-        retries: 10 #This property specifies the number of consecutive health check failures required to declare the container as unhealthy.
-        start_period: 30s #provides initialization time for containers that need time to bootstrap
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      #test: test $$(echo "rs.initiate({_id:'rs0',members:[{_id:0,host:\"mongo:27017\"}]}).ok || rs.status().ok" | mongo -u $${MONGO_INITDB_ROOT_USERNAME} -p $${MONGO_INITDB_ROOT_PASSWORD} --quiet) -eq 1
+      interval: 5s
+      retries: 10 #This property specifies the number of consecutive health check failures required to declare the container as unhealthy.
+      start_period: 30s #provides initialization time for containers that need time to bootstrap
     #command: ['--replSet', 'rs0', '--bind_ip_all', '--port', '27017']
     mem_limit: 1000m
     restart: on-failure
 
   rabbitmq:
     ports:
-      - "15672:15672"
-      - "5672:5672"
+      - '15672:15672'
+      - '5672:5672'
     volumes:
       - Easy.Platform-rabbitmq-volume:/var/lib/rabbitmq
 
   redis-cache:
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - Easy.Platform-redis-cache-data:/data
 
@@ -54,11 +54,12 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "54320:5432"
+      - '54320:5432'
     volumes:
       - Easy.Platform-postgres-sql-data:/var/lib/postgresql/data
       - Easy.Platform-postgres-sql-pgdata:/var/lib/postgresql/pgdata
-    mem_limit: 500m
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf
+    command: ['postgres', '-c', 'config_file=/etc/postgresql/postgresql.conf']
 
   text-snippet-api:
     environment:
@@ -84,7 +85,7 @@ services:
       - PYROSCOPE_PROFILING_LOCK_ENABLED=${PYROSCOPE_PROFILING_LOCK_ENABLED:-0}
       - PYROSCOPE_PROFILING_EXCEPTION_ENABLED=${PYROSCOPE_PROFILING_EXCEPTION_ENABLED:-0}
     ports:
-      - "5001:80"
+      - '5001:80'
     healthcheck:
       test: curl --fail http://0.0.0.0:80 || exit 1
       interval: 5s
@@ -92,18 +93,18 @@ services:
       retries: 20 #This property specifies the number of consecutive health check failures required to declare the container as unhealthy.
       start_period: 10s #provides initialization time for containers that need time to bootstrap
     extra_hosts:
-      - "host.docker.internal:host-gateway"
-      - "localhost:host-gateway"
+      - 'host.docker.internal:host-gateway'
+      - 'localhost:host-gateway'
     mem_limit: 300m
 
   text-snippet-webspa:
     build:
       args:
-        configuration: "docker-dev"
+        configuration: 'docker-dev'
     environment:
       - __TEXT_SNIPPET_API_HOST__=${__TEXT_SNIPPET_API_HOST__:-http://localhost:5001}
     ports:
-      - "4001:80"
+      - '4001:80'
 
   chrome1:
     image: selenium/node-chrome:111.0
@@ -121,10 +122,10 @@ services:
       - DISPLAY_NUM=1
       - SCREEN_WIDTH=1280
       - SCREEN_HEIGHT=720
-    network_mode: "host"
+    network_mode: 'host'
     extra_hosts:
-      - "host.docker.internal:host-gateway"
-      - "localhost:host-gateway"
+      - 'host.docker.internal:host-gateway'
+      - 'localhost:host-gateway'
     # command: bash -c "sudo chmod 777 /etc/hosts && sudo sed 's/127.0.0.1\s\{1,\}localhost/#127.0.0.1       localhost/g' /etc/hosts > /tmp/hosts-new && sudo cp /tmp/hosts-new /etc/hosts && sudo cat /etc/hosts && /opt/bin/entry_point.sh"
   chrome2:
     image: selenium/node-chrome:111.0
@@ -142,10 +143,10 @@ services:
       - DISPLAY_NUM=2
       - SCREEN_WIDTH=1280
       - SCREEN_HEIGHT=720
-    network_mode: "host"
+    network_mode: 'host'
     extra_hosts:
-      - "host.docker.internal:host-gateway"
-      - "localhost:host-gateway"
+      - 'host.docker.internal:host-gateway'
+      - 'localhost:host-gateway'
     # command: bash -c "sudo chmod 777 /etc/hosts && sudo sed 's/127.0.0.1\s\{1,\}localhost/#127.0.0.1       localhost/g' /etc/hosts > /tmp/hosts-new && sudo cp /tmp/hosts-new /etc/hosts && sudo cat /etc/hosts && /opt/bin/entry_point.sh"
 
   edge:
@@ -164,10 +165,10 @@ services:
       - DISPLAY_NUM=21
       - SCREEN_WIDTH=1280
       - SCREEN_HEIGHT=720
-    network_mode: "host"
+    network_mode: 'host'
     extra_hosts:
-      - "host.docker.internal:host-gateway"
-      - "localhost:host-gateway"
+      - 'host.docker.internal:host-gateway'
+      - 'localhost:host-gateway'
     # command: bash -c "sudo chmod 777 /etc/hosts && sudo sed 's/127.0.0.1\s\{1,\}localhost/#127.0.0.1       localhost/g' /etc/hosts > /tmp/hosts-new && sudo cp /tmp/hosts-new /etc/hosts && sudo cat /etc/hosts && /opt/bin/entry_point.sh"
 
   firefox:
@@ -186,10 +187,10 @@ services:
       - DISPLAY_NUM=41
       - SCREEN_WIDTH=1280
       - SCREEN_HEIGHT=720
-    network_mode: "host"
+    network_mode: 'host'
     extra_hosts:
-      - "host.docker.internal:host-gateway"
-      - "localhost:host-gateway"
+      - 'host.docker.internal:host-gateway'
+      - 'localhost:host-gateway'
     # command: bash -c "sudo chmod 777 /etc/hosts && sudo sed 's/127.0.0.1\s\{1,\}localhost/#127.0.0.1       localhost/g' /etc/hosts > /tmp/hosts-new && sudo cp /tmp/hosts-new /etc/hosts && sudo cat /etc/hosts && /opt/bin/entry_point.sh"
 
   selenium-hub:
@@ -197,12 +198,12 @@ services:
     container_name: selenium-hub
     # network_mode: "host"
     ports:
-      - "4442:4442"
-      - "4443:4443"
-      - "4444:4444"
+      - '4442:4442'
+      - '4443:4443'
+      - '4444:4444'
     extra_hosts:
-      - "host.docker.internal:host-gateway"
-      - "localhost:host-gateway"
+      - 'host.docker.internal:host-gateway'
+      - 'localhost:host-gateway'
     # command: bash -c "sudo chmod 777 /etc/hosts && sudo sed 's/127.0.0.1\s\{1,\}localhost/#127.0.0.1       localhost/g' /etc/hosts > /tmp/hosts-new && sudo cp /tmp/hosts-new /etc/hosts && sudo cat /etc/hosts && /opt/bin/entry_point.sh"
 
   text-snippet-automation-test:
@@ -212,8 +213,8 @@ services:
       - AutomationTestSettings__RemoteWebDriverUrl=${AutomationTestSettings__RemoteWebDriverUrl:-http://localhost:4444/wd/hub}
       - AutomationTestSettings__WebDriverType=${AutomationTestSettings__WebDriverType:-Chrome}
     extra_hosts:
-      - "host.docker.internal:host-gateway"
-      - "localhost:host-gateway"
+      - 'host.docker.internal:host-gateway'
+      - 'localhost:host-gateway'
     command: bash -c "echo 'Sleep 60s waiting for other app started to run automation test' && sleep 60s && /opt/bin/entry_point.sh"
 
   text-snippet-automation-test-bdd-chrome:
@@ -223,8 +224,8 @@ services:
       - AutomationTestSettings__RemoteWebDriverUrl=${AutomationTestSettings__RemoteWebDriverUrl:-http://localhost:4444/wd/hub}
       - AutomationTestSettings__WebDriverType=${AutomationTestSettings__WebDriverType:-Chrome}
     extra_hosts:
-      - "host.docker.internal:host-gateway"
-      - "localhost:host-gateway"
+      - 'host.docker.internal:host-gateway'
+      - 'localhost:host-gateway'
     command: bash -c "echo 'Sleep 60s waiting for other app started to run automation test' && sleep 60s && /opt/bin/entry_point.sh"
 
   text-snippet-automation-test-bdd-edge:
@@ -234,8 +235,8 @@ services:
       - AutomationTestSettings__RemoteWebDriverUrl=${AutomationTestSettings__RemoteWebDriverUrl:-http://localhost:4444/wd/hub}
       - AutomationTestSettings__WebDriverType=${AutomationTestSettings__WebDriverType:-Edge}
     extra_hosts:
-      - "host.docker.internal:host-gateway"
-      - "localhost:host-gateway"
+      - 'host.docker.internal:host-gateway'
+      - 'localhost:host-gateway'
     command: bash -c "echo 'Sleep 60s waiting for other app started to run automation test' && sleep 60s && /opt/bin/entry_point.sh"
 
   text-snippet-automation-test-bdd-firefox:
@@ -245,8 +246,8 @@ services:
       - AutomationTestSettings__RemoteWebDriverUrl=${AutomationTestSettings__RemoteWebDriverUrl:-http://localhost:4444/wd/hub}
       - AutomationTestSettings__WebDriverType=${AutomationTestSettings__WebDriverType:-Firefox}
     extra_hosts:
-      - "host.docker.internal:host-gateway"
-      - "localhost:host-gateway"
+      - 'host.docker.internal:host-gateway'
+      - 'localhost:host-gateway'
     command: bash -c "echo 'Sleep 60s waiting for other app started to run automation test' && sleep 60s && /opt/bin/entry_point.sh"
 
 volumes:

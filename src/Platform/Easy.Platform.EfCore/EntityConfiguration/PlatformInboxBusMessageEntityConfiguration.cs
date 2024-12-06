@@ -26,17 +26,17 @@ public class PlatformInboxBusMessageEntityConfiguration : PlatformEntityConfigur
         builder.HasIndex(
             p => new
             {
-                p.ForApplicationName,
                 p.ConsumeStatus,
                 p.NextRetryProcessAfter,
+                p.ForApplicationName,
                 p.CreatedDate
             });
         builder.HasIndex(
             p => new
             {
-                p.ForApplicationName,
                 p.ConsumeStatus,
                 p.LastProcessingPingDate,
+                p.ForApplicationName,
                 p.CreatedDate
             });
         builder.HasIndex(

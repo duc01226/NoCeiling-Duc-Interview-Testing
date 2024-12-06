@@ -28,14 +28,14 @@ public class PlatformOutboxConfig
     public int MaxStoreProcessedMessageCount { get; set; } = 100;
 
     /// <summary>
-    /// To config how long a message can live in the database as Failed in seconds. Default is two week (28 days); After that the message will be automatically ignored by change status to Ignored
+    /// To config how long a message can live in the database as Failed in seconds. Default is two week (30 days); After that the message will be automatically ignored by change status to Ignored
     /// </summary>
-    public double IgnoreExpiredFailedMessageInSeconds { get; set; } = TimeSpan.FromDays(28).TotalSeconds;
+    public double IgnoreExpiredFailedMessageInSeconds { get; set; } = TimeSpan.FromDays(30).TotalSeconds;
 
     /// <summary>
-    /// To config how long a message can live in the database as Ignored in seconds. Default is one month (365 days); After that the message will be automatically deleted
+    /// To config how long a message can live in the database as Ignored in seconds. Default is one month (30 days); After that the message will be automatically deleted
     /// </summary>
-    public double DeleteExpiredIgnoredMessageInSeconds { get; set; } = TimeSpan.FromDays(365).TotalSeconds;
+    public double DeleteExpiredIgnoredMessageInSeconds { get; set; } = TimeSpan.FromDays(30).TotalSeconds;
 
     /// <summary>
     /// Default number messages is processed to be Deleted/Ignored in batch. Default is Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio;

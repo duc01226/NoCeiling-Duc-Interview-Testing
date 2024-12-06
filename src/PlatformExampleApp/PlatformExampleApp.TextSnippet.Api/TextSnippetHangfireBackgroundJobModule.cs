@@ -37,10 +37,9 @@ public class TextSnippetHangfireBackgroundJobModule : PlatformHangfireBackground
                 "MongoDb",
                 _ => new MongoUrlBuilder(Configuration.GetSection("MongoDB:ConnectionString").Value)
                     .With(
-                        p => p.MinConnectionPoolSize =
-                            Configuration.GetValue<int?>("MongoDB:MinConnectionPoolSize") ?? 0) // Always available connection to serve request, reduce latency
+                        p => p.MinConnectionPoolSize = PlatformPersistenceModule.RecommendedMinPoolSize) // Always available connection to serve request, reduce latency
                     .With(
-                        p => p.MaxConnectionPoolSize = Configuration.GetValue<int?>("MongoDB:MaxConnectionPoolSize") ?? PlatformPersistenceModule.RecommendedMaxPoolSize)
+                        p => p.MaxConnectionPoolSize = PlatformPersistenceModule.RecommendedMaxPoolSize)
                     .With(p => p.MaxConnectionIdleTime = PlatformPersistenceModule.RecommendedConnectionIdleLifetimeSeconds.Seconds())
                     .ToString())
             .WhenValue(

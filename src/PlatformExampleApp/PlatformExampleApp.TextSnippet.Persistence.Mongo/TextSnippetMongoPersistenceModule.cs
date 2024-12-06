@@ -17,18 +17,17 @@ public class TextSnippetMongoPersistenceModule : PlatformMongoDbPersistenceModul
     {
         options.ConnectionString = new MongoUrlBuilder(Configuration.GetSection("MongoDB:ConnectionString").Value)
             .With(
-                p => p.MinConnectionPoolSize =
-                    Configuration.GetValue<int?>("MongoDB:MinConnectionPoolSize") ?? 0) // Always available connection to serve request, reduce latency
-            .With(p => p.MaxConnectionPoolSize = Configuration.GetValue<int?>("MongoDB:MaxConnectionPoolSize") ?? RecommendedMaxPoolSize)
-            .With(p => p.MaxConnectionIdleTime = RecommendedConnectionIdleLifetimeSeconds.Seconds())
+                p => p.MinConnectionPoolSize = RecommendedMinPoolSize) // Always available connection to serve request, reduce latency
+            .With(p => p.MaxConnectionPoolSize = RecommendedMaxPoolSize)
+            //.With(p => p.MaxConnectionIdleTime = RecommendedConnectionIdleLifetimeSeconds.Seconds())
             .ToString();
         options.Database = Configuration.GetSection("MongoDB:Database").Value;
         //options.MinConnectionPoolSize =
-        //    Configuration.GetValue<int?>("MongoDB:MinConnectionPoolSize") ?? 0; // Always available connection to serve request, reduce latency
+        //    Configuration.GetValue<int?>("MongoDB:MinConnectionPoolSize") ?? PlatformPersistenceModule.RecommendedMinPoolSize; // Always available connection to serve request, reduce latency
         //options.MaxConnectionPoolSize =
         //    Configuration.GetValue<int?>("MongoDB:MaxConnectionPoolSize") ??
         //    RecommendedMaxPoolSize; // Setup based on app resource cpu ram max concurrent
-        //options.MaxConnectionIdleTimeSeconds = RecommendedConnectionIdleLifetimeSeconds;
+        ////options.MaxConnectionIdleTimeSeconds = RecommendedConnectionIdleLifetimeSeconds;
     }
 
     protected override bool EnableInboxBusMessage()

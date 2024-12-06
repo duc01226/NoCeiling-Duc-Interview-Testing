@@ -60,13 +60,12 @@ public class TextSnippetPostgreSqlEfCorePersistenceModule : PlatformEfCorePersis
                     .EnableDynamicJson()
                     .Build(),
                 opts => opts.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)
-                    .CommandTimeout(24 * 3600)
+                    .CommandTimeout(300)
                     .EnableRetryOnFailure(
-                        maxRetryCount: RecommendedConnectionIdleLifetimeSeconds * 2,
+                        maxRetryCount: RecommendedConnectionIdleLifetimeSeconds,
                         maxRetryDelay: 1.Seconds(),
                         errorCodesToAdd: null // Specific error codes to retry (null retries common transient errors)
                     ))
-            .EnableThreadSafetyChecks(false) // improve performance. Only disable after testing ensure no such concurrency bugs.
             .EnableDetailedErrors();
     }
 

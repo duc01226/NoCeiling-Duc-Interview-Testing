@@ -142,7 +142,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
         try
         {
-            await Database.MigrateAsync();
+            await Database.With(p => p.SetCommandTimeout(3600)).MigrateAsync();
             await InsertDbInitializedApplicationDataMigrationHistory();
             await SaveChangesAsync();
         }
@@ -250,28 +250,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     public async Task<TEntity> SetAsync<TEntity, TPrimaryKey>(TEntity entity, CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        try
-        {
-            await ContextThreadSafeLock.WaitAsync(cancellationToken);
-
-            // Run DetachLocalIfAny to prevent
-            // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
-            var toBeUpdatedEntity = entity.Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>).entity;
-
-            var result = GetTable<TEntity>()
-                .Update(toBeUpdatedEntity)
-                .Entity;
-
-            ContextThreadSafeLock.Release();
-
-            return result;
-        }
-        catch
-        {
-            if (ContextThreadSafeLock.CurrentCount < ContextMaxConcurrentThreadLock)
-                ContextThreadSafeLock.Release();
-            throw;
-        }
+        return await InternalUpdateOrSetAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent: true, null, onlySetData: true, cancellationToken);
     }
 
     public async Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
@@ -648,6 +627,23 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
+        return await InternalUpdateOrSetAsync<TEntity, TPrimaryKey>(
+            entity,
+            existingEntity,
+            dismissSendEvent,
+            eventCustomConfig,
+            onlySetData: false,
+            cancellationToken);
+    }
+
+    private async Task<TEntity> InternalUpdateOrSetAsync<TEntity, TPrimaryKey>(
+        TEntity entity,
+        TEntity existingEntity,
+        bool dismissSendEvent,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig,
+        bool onlySetData,
+        CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
         try
         {
             await ContextThreadSafeLock.WaitAsync(cancellationToken);
@@ -655,6 +651,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             var isEntityRowVersionEntityMissingConcurrencyUpdateToken = entity is IRowVersionEntity { ConcurrencyUpdateToken: null };
 
             if (existingEntity == null &&
+                !onlySetData &&
                 !dismissSendEvent &&
                 PlatformCqrsEntityEvent.IsAnyEntityEventHandlerRegisteredForEntity<TEntity>(RootServiceProvider) &&
                 entity.HasTrackValueUpdatedDomainEventAttribute())
@@ -672,7 +669,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 if (!existingEntity.Id.Equals(entity.Id)) entity.Id = existingEntity.Id;
             }
 
-            if (isEntityRowVersionEntityMissingConcurrencyUpdateToken)
+            if (isEntityRowVersionEntityMissingConcurrencyUpdateToken && !onlySetData)
             {
                 entity.As<IRowVersionEntity>().ConcurrencyUpdateToken =
                     existingEntity?.As<IRowVersionEntity>().ConcurrencyUpdateToken ??
@@ -680,7 +677,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                         .AsNoTracking()
                         .Where(BuildExistingEntityPredicate())
                         .Select(p => ((IRowVersionEntity)p).ConcurrencyUpdateToken)
-                        .FirstOrDefaultAsync(cancellationToken);
+                        .FirstOrDefaultAsync<string>(cancellationToken);
             }
 
             // Run DetachLocalIfAny to prevent
@@ -688,13 +685,16 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             var (toBeUpdatedEntity, isEntityTracked, isEntityNotTrackedOrTrackedModified) = entity
                 .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
                 .WithIf(
-                    p => p.isEntityNotTrackedOrTrackedModified && entity is IDateAuditedEntity,
+                    p => p.isEntityNotTrackedOrTrackedModified && entity is IDateAuditedEntity && !onlySetData,
                     p => p.entity.As<IDateAuditedEntity>().With(auditedEntity => auditedEntity.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
                 .WithIf(
-                    p => p.isEntityNotTrackedOrTrackedModified && entity.IsAuditedUserEntity(),
+                    p => p.isEntityNotTrackedOrTrackedModified && entity.IsAuditedUserEntity() && !onlySetData,
                     p => p.entity.As<IUserAuditedEntity>()
                         .SetLastUpdatedBy(RequestContextAccessor.Current.UserId(entity.GetAuditedUserIdType()))
                         .As<TEntity>());
+
+            if (!isEntityNotTrackedOrTrackedModified)
+                return entity;
 
             var result = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, TEntity>(
                 RootServiceProvider,
@@ -708,20 +708,18 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                             .Update(entity)
                             .Entity
                             .PipeIf(
-                                entity is IRowVersionEntity,
+                                entity is IRowVersionEntity && !onlySetData,
                                 p => p.As<IRowVersionEntity>()
                                     .With(rowVersionEntity => rowVersionEntity.ConcurrencyUpdateToken = Ulid.NewUlid().ToString())
                                     .As<TEntity>())
                         : entity
                             .PipeIf(
-                                entity => entity is IRowVersionEntity && isEntityNotTrackedOrTrackedModified,
+                                entity => entity is IRowVersionEntity && !onlySetData,
                                 p => p.As<IRowVersionEntity>()
                                     .With(rowVersionEntity => rowVersionEntity.ConcurrencyUpdateToken = Ulid.NewUlid().ToString())
                                     .As<TEntity>());
 
-                    ContextThreadSafeLock.Release();
-
-                    return Task.FromResult((updatedEntity, !isEntityTracked || isEntityNotTrackedOrTrackedModified));
+                    return Task.FromResult((updatedEntity, true));
                 },
                 dismissSendEvent,
                 eventCustomConfig,
@@ -731,11 +729,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
             return result;
         }
-        catch
+        finally
         {
-            if (ContextThreadSafeLock.CurrentCount < ContextMaxConcurrentThreadLock)
-                ContextThreadSafeLock.Release();
-            throw;
+            ContextThreadSafeLock.TryRelease();
         }
 
         Expression<Func<TEntity, bool>> BuildExistingEntityPredicate()
@@ -760,9 +756,10 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     {
         var local = GetTable<TEntity>().Local.FirstOrDefault(findExistingEntityPredicate);
 
-        if (local != null && local != entity) GetTable<TEntity>().Entry(local).State = EntityState.Detached;
+        if (local != null && !ReferenceEquals(local, entity))
+            GetTable<TEntity>().Entry(local).State = EntityState.Detached;
 
-        return (entity, local == entity, local != entity || GetTable<TEntity>().Entry(entity!).State == EntityState.Modified);
+        return (entity, local == entity, !ReferenceEquals(local, entity) || GetTable<TEntity>().Entry(entity!).State == EntityState.Modified);
     }
 
     public DbSet<TEntity> GetTable<TEntity>() where TEntity : class, IEntity, new()

@@ -316,19 +316,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     public async Task<TEntity> SetAsync<TEntity, TPrimaryKey>(TEntity entity, CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        var toBeUpdatedEntity = entity;
-
-        var result = await GetTable<TEntity>()
-            .ReplaceOneAsync(
-                p => p.Id.Equals(toBeUpdatedEntity.Id),
-                toBeUpdatedEntity,
-                new ReplaceOptions { IsUpsert = false },
-                cancellationToken);
-
-        if (result.MatchedCount <= 0)
-            throw new PlatformDomainEntityNotFoundException<TEntity>(toBeUpdatedEntity.Id.ToString());
-
-        return entity;
+        return await InternalUpdateOrSetAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent: true, null, onlySetData: true, cancellationToken);
     }
 
     public async Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
@@ -794,9 +782,21 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
+        return await InternalUpdateOrSetAsync<TEntity, TPrimaryKey>(entity, existingEntity, dismissSendEvent, eventCustomConfig, onlySetData: false, cancellationToken);
+    }
+
+    private async Task<TEntity> InternalUpdateOrSetAsync<TEntity, TPrimaryKey>(
+        TEntity entity,
+        TEntity existingEntity,
+        bool dismissSendEvent,
+        Action<PlatformCqrsEntityEvent> eventCustomConfig,
+        bool onlySetData,
+        CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
         var isEntityRowVersionEntityMissingConcurrencyUpdateToken = entity is IRowVersionEntity { ConcurrencyUpdateToken: null };
 
         if (existingEntity == null &&
+            !onlySetData &&
             !dismissSendEvent &&
             PlatformCqrsEntityEvent.IsAnyEntityEventHandlerRegisteredForEntity<TEntity>(RootServiceProvider) &&
             entity.HasTrackValueUpdatedDomainEventAttribute())
@@ -813,25 +813,30 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             if (!existingEntity.Id.Equals(entity.Id)) entity.Id = existingEntity.Id;
         }
 
-        if (isEntityRowVersionEntityMissingConcurrencyUpdateToken)
+        if (isEntityRowVersionEntityMissingConcurrencyUpdateToken && !onlySetData)
         {
             entity.As<IRowVersionEntity>().ConcurrencyUpdateToken =
                 existingEntity?.As<IRowVersionEntity>().ConcurrencyUpdateToken ??
                 await GetQuery<TEntity>()
                     .Where(BuildExistingEntityPredicate())
                     .Select(p => ((IRowVersionEntity)p).ConcurrencyUpdateToken)
-                    .FirstOrDefaultAsync(cancellationToken);
+                    .FirstOrDefaultAsync<string>(cancellationToken);
         }
 
+        if (existingEntity != null && !ReferenceEquals(entity, existingEntity) && entity.IsValuesEqual(existingEntity))
+            return entity;
+
         var toBeUpdatedEntity = entity
-            .PipeIf(entity is IDateAuditedEntity, p => p.As<IDateAuditedEntity>().With(auditedEntity => auditedEntity.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
             .PipeIf(
-                entity.IsAuditedUserEntity(),
+                entity is IDateAuditedEntity && !onlySetData,
+                p => p.As<IDateAuditedEntity>().With(auditedEntity => auditedEntity.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
+            .PipeIf(
+                entity.IsAuditedUserEntity() && !onlySetData,
                 p => p.As<IUserAuditedEntity>()
                     .SetLastUpdatedBy(RequestContextAccessor.Current.UserId(entity.GetAuditedUserIdType()))
                     .As<TEntity>());
 
-        if (toBeUpdatedEntity is IRowVersionEntity toBeUpdatedRowVersionEntity)
+        if (toBeUpdatedEntity is IRowVersionEntity toBeUpdatedRowVersionEntity && !onlySetData)
         {
             var currentInMemoryConcurrencyUpdateToken = toBeUpdatedRowVersionEntity.ConcurrencyUpdateToken;
             var newUpdateConcurrencyUpdateToken = Ulid.NewUlid().ToString();
@@ -1036,15 +1041,15 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             [
                 new CreateIndexModel<PlatformInboxBusMessage>(
                     Builders<PlatformInboxBusMessage>.IndexKeys
-                        .Ascending(p => p.ForApplicationName)
                         .Ascending(p => p.ConsumeStatus)
                         .Ascending(p => p.NextRetryProcessAfter)
+                        .Ascending(p => p.ForApplicationName)
                         .Ascending(p => p.CreatedDate)),
                 new CreateIndexModel<PlatformInboxBusMessage>(
                     Builders<PlatformInboxBusMessage>.IndexKeys
-                        .Ascending(p => p.ForApplicationName)
                         .Ascending(p => p.ConsumeStatus)
                         .Ascending(p => p.LastProcessingPingDate)
+                        .Ascending(p => p.ForApplicationName)
                         .Ascending(p => p.CreatedDate)),
                 new CreateIndexModel<PlatformInboxBusMessage>(
                     Builders<PlatformInboxBusMessage>.IndexKeys

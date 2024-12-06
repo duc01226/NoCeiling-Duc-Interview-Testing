@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PlatformExampleApp.TextSnippet.Persistence;
 
@@ -11,9 +12,11 @@ using PlatformExampleApp.TextSnippet.Persistence;
 namespace PlatformExampleApp.TextSnippet.Persistence.Migrations
 {
     [DbContext(typeof(TextSnippetDbContext))]
-    partial class TextSnippetDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241205200558_InboxOutboxIndexesUpdate1")]
+    partial class InboxOutboxIndexesUpdate1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

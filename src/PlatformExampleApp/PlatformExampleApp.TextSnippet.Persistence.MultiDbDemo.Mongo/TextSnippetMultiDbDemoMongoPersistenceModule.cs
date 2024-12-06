@@ -24,10 +24,9 @@ public class TextSnippetMultiDbDemoMongoPersistenceModule : PlatformMongoDbPersi
     {
         options.ConnectionString = new MongoUrlBuilder(Configuration.GetSection("MongoDB:ConnectionString").Value)
             .With(
-                p => p.MinConnectionPoolSize =
-                    Configuration.GetValue<int?>("MongoDB:MinConnectionPoolSize") ?? 0) // Always available connection to serve request, reduce latency
-            .With(p => p.MaxConnectionPoolSize = Configuration.GetValue<int?>("MongoDB:MaxConnectionPoolSize") ?? RecommendedMaxPoolSize)
-            .With(p => p.MaxConnectionIdleTime = RecommendedConnectionIdleLifetimeSeconds.Seconds())
+                p => p.MinConnectionPoolSize = RecommendedMinPoolSize) // Always available connection to serve request, reduce latency
+            .With(p => p.MaxConnectionPoolSize = RecommendedMaxPoolSize)
+            //.With(p => p.MaxConnectionIdleTime = RecommendedConnectionIdleLifetimeSeconds.Seconds())
             .ToString();
         options.Database = Configuration.GetSection("MongoDB:MultiDbDemoDbDatabase").Value;
     }

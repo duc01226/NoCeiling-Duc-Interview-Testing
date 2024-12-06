@@ -287,17 +287,22 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                                     await rootServiceProvider.ExecuteInjectScopedAsync(
                                         async (IPlatformOutboxBusMessageRepository outboxBusMessageRepository) =>
                                         {
-                                            var toUpdateExistingOutboxMessage = await outboxBusMessageRepository.GetByIdAsync(
-                                                existingOutboxMessage.Id,
-                                                cancellationToken);
-
-                                            if (!cancellationToken.IsCancellationRequested)
+                                            using (var uow = outboxBusMessageRepository.UowManager().Begin())
                                             {
-                                                await outboxBusMessageRepository.SetAsync(
-                                                    toUpdateExistingOutboxMessage.With(p => p.LastProcessingPingDate = Clock.UtcNow),
-                                                    cancellationToken: cancellationToken);
+                                                var toUpdateExistingOutboxMessage = await outboxBusMessageRepository.GetByIdAsync(
+                                                    existingOutboxMessage.Id,
+                                                    cancellationToken);
 
-                                                existingOutboxMessage.LastProcessingPingDate = toUpdateExistingOutboxMessage.LastProcessingPingDate;
+                                                if (!cancellationToken.IsCancellationRequested)
+                                                {
+                                                    await outboxBusMessageRepository.SetAsync(
+                                                        toUpdateExistingOutboxMessage.With(p => p.LastProcessingPingDate = Clock.UtcNow),
+                                                        cancellationToken: cancellationToken);
+
+                                                    existingOutboxMessage.LastProcessingPingDate = toUpdateExistingOutboxMessage.LastProcessingPingDate;
+                                                }
+
+                                                await uow.CompleteAsync(cancellationToken);
                                             }
                                         });
                                 }
