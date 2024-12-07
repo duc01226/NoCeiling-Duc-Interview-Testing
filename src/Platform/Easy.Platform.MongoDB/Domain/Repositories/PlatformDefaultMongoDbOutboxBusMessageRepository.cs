@@ -7,8 +7,7 @@ public class PlatformDefaultMongoDbOutboxBusMessageRepository<TDbContext>
     : PlatformMongoDbRootRepository<PlatformOutboxBusMessage, string, TDbContext>, IPlatformOutboxBusMessageRepository
     where TDbContext : PlatformMongoDbContext<TDbContext>
 {
-    public PlatformDefaultMongoDbOutboxBusMessageRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IServiceProvider serviceProvider) : base(
-        unitOfWorkManager,
+    public PlatformDefaultMongoDbOutboxBusMessageRepository(IServiceProvider serviceProvider) : base(
         serviceProvider)
     {
     }

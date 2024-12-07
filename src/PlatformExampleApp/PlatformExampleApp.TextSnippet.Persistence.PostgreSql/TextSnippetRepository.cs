@@ -11,10 +11,8 @@ internal sealed class TextSnippetRepository<TEntity>
     where TEntity : class, IEntity<string>, new()
 {
     public TextSnippetRepository(
-        IPlatformUnitOfWorkManager unitOfWorkManager,
         DbContextOptions<TextSnippetDbContext> dbContextOptions,
         IServiceProvider serviceProvider) : base(
-        unitOfWorkManager,
         dbContextOptions,
         serviceProvider)
     {
@@ -26,10 +24,8 @@ internal sealed class TextSnippetRootRepository<TEntity>
     where TEntity : class, IRootEntity<string>, new()
 {
     public TextSnippetRootRepository(
-        IPlatformUnitOfWorkManager unitOfWorkManager,
         DbContextOptions<TextSnippetDbContext> dbContextOptions,
         IServiceProvider serviceProvider) : base(
-        unitOfWorkManager,
         dbContextOptions,
         serviceProvider)
     {

@@ -9,10 +9,8 @@ public class PlatformDefaultEfCoreOutboxBusMessageRepository<TDbContext>
     where TDbContext : PlatformEfCoreDbContext<TDbContext>
 {
     public PlatformDefaultEfCoreOutboxBusMessageRepository(
-        IPlatformUnitOfWorkManager unitOfWorkManager,
         DbContextOptions<TDbContext> dbContextOptions,
         IServiceProvider serviceProvider) : base(
-        unitOfWorkManager,
         dbContextOptions,
         serviceProvider)
     {

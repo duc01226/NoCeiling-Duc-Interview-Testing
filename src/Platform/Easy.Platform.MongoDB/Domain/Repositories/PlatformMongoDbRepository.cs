@@ -20,8 +20,7 @@ public abstract class PlatformMongoDbRepository<TEntity, TPrimaryKey, TDbContext
     where TEntity : class, IEntity<TPrimaryKey>, new()
     where TDbContext : PlatformMongoDbContext<TDbContext>
 {
-    public PlatformMongoDbRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IServiceProvider serviceProvider) : base(
-        unitOfWorkManager,
+    public PlatformMongoDbRepository(IServiceProvider serviceProvider) : base(
         serviceProvider)
     {
     }
@@ -223,8 +222,7 @@ public abstract class PlatformMongoDbRootRepository<TEntity, TPrimaryKey, TDbCon
     where TEntity : class, IRootEntity<TPrimaryKey>, new()
     where TDbContext : PlatformMongoDbContext<TDbContext>
 {
-    public PlatformMongoDbRootRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IServiceProvider serviceProvider) : base(
-        unitOfWorkManager,
+    public PlatformMongoDbRootRepository(IServiceProvider serviceProvider) : base(
         serviceProvider)
     {
     }

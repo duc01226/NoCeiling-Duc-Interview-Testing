@@ -67,10 +67,10 @@ public abstract class PlatformPersistenceModule : PlatformModule, IPlatformPersi
     public new const int DefaultExecuteInitPriority = PlatformModule.DefaultExecuteInitPriority + (ExecuteInitPriorityNextLevelDistance * 2);
 
     /// <summary>
-    /// To configure a DbContext to release its connection shortly after being idle (e.g., within 10 seconds)
+    /// To configure a DbContext to release its connection shortly after being idle (e.g., within 3 seconds)
     ///  => prevent max connection pool error, no connection if a db-context is idling (example run paging for a long time but has opened a db context outside and wait)
     /// </summary>
-    public static readonly int RecommendedConnectionIdleLifetimeSeconds = 10;
+    public static readonly int RecommendedConnectionIdleLifetimeSeconds = 3;
 
     public static readonly int RecommendedConnectionRetryOnFailureCount = RecommendedConnectionIdleLifetimeSeconds;
     public static readonly TimeSpan RecommendedConnectionRetryDelay = 1.Seconds();

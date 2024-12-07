@@ -301,8 +301,6 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 {
                     GetTable<TEntity>().Remove(entity);
 
-                    ContextThreadSafeLock.Release();
-
                     return Task.FromResult(entity);
                 },
                 dismissSendEvent,
@@ -311,11 +309,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
         }
-        catch (Exception)
+        finally
         {
-            if (ContextThreadSafeLock.CurrentCount < ContextMaxConcurrentThreadLock)
-                ContextThreadSafeLock.Release();
-            throw;
+            ContextThreadSafeLock.TryRelease();
         }
     }
 
@@ -385,15 +381,11 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
                 var result = await GetTable<TEntity>().Where(predicate).ExecuteDeleteAsync(cancellationToken);
 
-                ContextThreadSafeLock.Release();
-
                 return result;
             }
-            catch (Exception)
+            finally
             {
-                if (ContextThreadSafeLock.CurrentCount < ContextMaxConcurrentThreadLock)
-                    ContextThreadSafeLock.Release();
-                throw;
+                ContextThreadSafeLock.TryRelease();
             }
         }
 
@@ -416,15 +408,11 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
                 var result = await queryBuilder(GetTable<TEntity>()).ExecuteDeleteAsync(cancellationToken);
 
-                ContextThreadSafeLock.Release();
-
                 return result;
             }
-            catch (Exception)
+            finally
             {
-                if (ContextThreadSafeLock.CurrentCount < ContextMaxConcurrentThreadLock)
-                    ContextThreadSafeLock.Release();
-                throw;
+                ContextThreadSafeLock.TryRelease();
             }
         }
 
@@ -463,8 +451,6 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 {
                     var result = GetTable<TEntity>().AddAsync(toBeCreatedEntity, cancellationToken).AsTask().Then(_ => toBeCreatedEntity);
 
-                    ContextThreadSafeLock.Release();
-
                     return result;
                 },
                 dismissSendEvent,
@@ -475,11 +461,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
             return result;
         }
-        catch (Exception)
+        finally
         {
-            if (ContextThreadSafeLock.CurrentCount < ContextMaxConcurrentThreadLock)
-                ContextThreadSafeLock.Release();
-            throw;
+            ContextThreadSafeLock.TryRelease();
         }
     }
 

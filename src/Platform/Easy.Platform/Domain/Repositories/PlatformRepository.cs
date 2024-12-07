@@ -14,10 +14,11 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     where TUow : class, IPlatformUnitOfWork
 {
     private readonly Lazy<IPlatformCqrs> cqrsLazy;
+    private readonly Lazy<IPlatformUnitOfWorkManager> lazyUnitOfWorkManager;
 
-    public PlatformRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IServiceProvider serviceProvider)
+    public PlatformRepository(IServiceProvider serviceProvider)
     {
-        UnitOfWorkManager = unitOfWorkManager;
+        lazyUnitOfWorkManager = new Lazy<IPlatformUnitOfWorkManager>(() => serviceProvider.GetRequiredService<IPlatformUnitOfWorkManager>());
         cqrsLazy = serviceProvider.GetRequiredService<Lazy<IPlatformCqrs>>();
         ServiceProvider = serviceProvider;
         RootServiceProvider = serviceProvider.GetRequiredService<IPlatformRootServiceProvider>();
@@ -26,7 +27,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
 
     protected IPlatformRootServiceProvider RootServiceProvider { get; }
     protected virtual bool IsDistributedTracingEnabled { get; }
-    public IPlatformUnitOfWorkManager UnitOfWorkManager { get; }
+    public IPlatformUnitOfWorkManager UnitOfWorkManager => lazyUnitOfWorkManager.Value;
     protected IPlatformCqrs Cqrs => cqrsLazy.Value;
     protected IServiceProvider ServiceProvider { get; }
 
@@ -471,9 +472,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         if (currentActiveUow == null)
         {
             if (DoesSupportParallelExecution())
-            {
                 return await ExecuteReadData(GlobalUow, readDataFn, loadRelatedEntities);
-            }
             else
             {
                 var useOnceTransientUow = UnitOfWorkManager.CreateNewUow(true);
@@ -587,9 +586,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
             }
         }
         else
-        {
             return await action(currentActiveUow);
-        }
     }
 
     protected abstract bool DoesNeedKeepUowForQueryOrEnumerableExecutionLater<TResult>(TResult result, IPlatformUnitOfWork uow);

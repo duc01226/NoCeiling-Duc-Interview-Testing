@@ -138,7 +138,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
     {
         try
         {
-            var toCleanMessageCount = await ServiceProvider.ExecuteScoped(
+            var toCleanMessageCount = await ServiceProvider.ExecuteScopedAsync(
                 scope => scope.ServiceProvider.GetRequiredService<IPlatformOutboxBusMessageRepository>()
                     .CountAsync(
                         PlatformOutboxBusMessage.ToCleanExpiredMessagesExpr(
@@ -173,7 +173,7 @@ public class PlatformOutboxBusMessageCleanerHostedService : PlatformIntervalHost
     {
         try
         {
-            var toIgnoreMessageCount = await ServiceProvider.ExecuteScoped(
+            var toIgnoreMessageCount = await ServiceProvider.ExecuteScopedAsync(
                 scope => scope.ServiceProvider.GetRequiredService<IPlatformOutboxBusMessageRepository>()
                     .CountAsync(
                         PlatformOutboxBusMessage.ToIgnoreFailedExpiredMessagesExpr(

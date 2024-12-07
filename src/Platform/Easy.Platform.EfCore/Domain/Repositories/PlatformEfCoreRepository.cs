@@ -21,10 +21,8 @@ public abstract class PlatformEfCoreRepository<TEntity, TPrimaryKey, TDbContext>
     where TDbContext : PlatformEfCoreDbContext<TDbContext>
 {
     public PlatformEfCoreRepository(
-        IPlatformUnitOfWorkManager unitOfWorkManager,
         DbContextOptions<TDbContext> dbContextOptions,
         IServiceProvider serviceProvider) : base(
-        unitOfWorkManager,
         serviceProvider)
     {
         DbContextOptions = dbContextOptions;
@@ -257,10 +255,8 @@ public abstract class PlatformEfCoreRootRepository<TEntity, TPrimaryKey, TDbCont
     where TDbContext : PlatformEfCoreDbContext<TDbContext>
 {
     public PlatformEfCoreRootRepository(
-        IPlatformUnitOfWorkManager unitOfWorkManager,
         DbContextOptions<TDbContext> dbContextOptions,
         IServiceProvider serviceProvider) : base(
-        unitOfWorkManager,
         dbContextOptions,
         serviceProvider)
     {

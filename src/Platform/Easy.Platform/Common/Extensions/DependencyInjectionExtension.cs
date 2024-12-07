@@ -1078,6 +1078,7 @@ public static class DependencyInjectionExtension
         CheckRegisteredStrategy skipIfExistStrategy = CheckRegisteredStrategy.ByBoth)
     {
         if (!implementationType.IsGenericType)
+        {
             implementationType
                 .GetInterfaces()
                 .Where(
@@ -1093,8 +1094,10 @@ public static class DependencyInjectionExtension
                         replaceStrategy,
                         skipIfExist: skipIfExist,
                         skipIfExistStrategy: skipIfExistStrategy));
+        }
 
         else
+        {
             implementationType
                 .GetInterfaces()
                 .Where(implementationType.MatchGenericArguments)
@@ -1108,6 +1111,7 @@ public static class DependencyInjectionExtension
                         replaceStrategy,
                         skipIfExist: skipIfExist,
                         skipIfExistStrategy: skipIfExistStrategy));
+        }
     }
 
     public static Func<Type, bool> DefaultIgnoreRegisterLibraryInterfacesForImplementationExpr()
@@ -1160,6 +1164,7 @@ public static class DependencyInjectionExtension
         CheckRegisteredStrategy replaceStrategy = CheckRegisteredStrategy.ByBoth)
     {
         if (implementationType.IsGenericType)
+        {
             implementationType
                 .GetInterfaces()
                 .Where(implementationType.MatchGenericArguments)
@@ -1171,7 +1176,9 @@ public static class DependencyInjectionExtension
                         lifeTime,
                         replaceIfExist,
                         replaceStrategy));
+        }
         else
+        {
             implementationType
                 .GetInterfaces()
                 .Where(p => !p.IsGenericType)
@@ -1183,6 +1190,7 @@ public static class DependencyInjectionExtension
                         lifeTime,
                         replaceIfExist,
                         replaceStrategy));
+        }
     }
 
     /// <summary>
@@ -1306,7 +1314,13 @@ public static class DependencyInjectionExtension
 
         var result = method.DynamicInvoke(parameters);
 
-        if (result?.As<Task<TResult>>() != null) return await result.As<Task<TResult>>();
+        if (result?.As<Task<TResult>>() != null)
+        {
+            // Declare param result before return to ensure scope is not disposed before task finish execution
+            var resultOfTask = await result.As<Task<TResult>>();
+
+            return resultOfTask;
+        }
 
         return result.Cast<TResult>();
     }
@@ -1316,10 +1330,7 @@ public static class DependencyInjectionExtension
     /// </summary>
     public static void ExecuteScoped(this IServiceProvider serviceProvider, Action<IServiceScope> method)
     {
-        using (var scope = serviceProvider.CreateScope())
-        {
-            method(scope);
-        }
+        using (var scope = serviceProvider.CreateScope()) method(scope);
     }
 
     /// <summary>
@@ -1335,10 +1346,7 @@ public static class DependencyInjectionExtension
         Util.TaskRunner.QueueActionInBackground(
             () =>
             {
-                using (var scope = serviceProvider.CreateScope())
-                {
-                    method(scope);
-                }
+                using (var scope = serviceProvider.CreateScope()) method(scope);
             },
             retryCount,
             retryDelayProvider,
@@ -1361,10 +1369,7 @@ public static class DependencyInjectionExtension
     /// <inheritdoc cref="ExecuteScoped" />
     public static async Task ExecuteScopedAsync(this IServiceProvider serviceProvider, Func<IServiceScope, Task> method)
     {
-        using (var scope = serviceProvider.CreateScope())
-        {
-            await method(scope);
-        }
+        using (var scope = serviceProvider.CreateScope()) await method(scope);
     }
 
     /// <inheritdoc cref="ExecuteScopedInBackground" />
@@ -1378,10 +1383,7 @@ public static class DependencyInjectionExtension
         Util.TaskRunner.QueueActionInBackground(
             async () =>
             {
-                using (var scope = serviceProvider.CreateScope())
-                {
-                    await method(scope);
-                }
+                using (var scope = serviceProvider.CreateScope()) await method(scope);
             },
             retryCount,
             retryDelayProvider,
@@ -1393,7 +1395,10 @@ public static class DependencyInjectionExtension
     {
         using (var scope = serviceProvider.CreateScope())
         {
-            return await method(scope);
+            // get out var result. do not return directly to prevent scope being disposed before function is executed
+            var result = await method(scope);
+
+            return result;
         }
     }
 
@@ -1449,9 +1454,12 @@ public static class DependencyInjectionExtension
     }
 
     /// <inheritdoc cref="ExecuteInjectScoped" />
-    public static Task<TResult> ExecuteInjectScopedAsync<TResult>(this IServiceProvider serviceProvider, Delegate method, params object[] manuallyParams)
+    public static async Task<TResult> ExecuteInjectScopedAsync<TResult>(this IServiceProvider serviceProvider, Delegate method, params object[] manuallyParams)
     {
-        return serviceProvider.ExecuteScopedAsync(scope => scope.ExecuteInjectAsync<TResult>(method, manuallyParams));
+        // Declare result ensure scope not disposed before async task finished
+        var result = await serviceProvider.ExecuteScopedAsync(scope => scope.ExecuteInjectAsync<TResult>(method, manuallyParams));
+
+        return result;
     }
 
     public static bool CheckHasRegisteredScopedService<TService>(this IServiceProvider serviceProvider)
@@ -1463,7 +1471,10 @@ public static class DependencyInjectionExtension
     {
         using (var scope = serviceProvider.CreateScope())
         {
-            return scope.ServiceProvider.GetService(serviceType) != null;
+            // get out var result. do not return directly to prevent scope being disposed before function is executed
+            var result = scope.ServiceProvider.GetService(serviceType) != null;
+
+            return result;
         }
     }
 

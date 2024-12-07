@@ -20,8 +20,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     private readonly Lazy<ILogger> loggerLazy;
 
     protected PlatformPersistenceRepository(
-        IPlatformUnitOfWorkManager unitOfWorkManager,
-        IServiceProvider serviceProvider) : base(unitOfWorkManager, serviceProvider)
+        IServiceProvider serviceProvider) : base(serviceProvider)
     {
         PersistenceConfiguration = serviceProvider.GetRequiredService<PlatformPersistenceConfiguration<TDbContext>>();
         loggerLazy = new Lazy<ILogger>(
@@ -49,6 +48,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     protected Task<TResult> ExecuteWithBadQueryWarningForWriteHandling<TResult>(Func<IPlatformUnitOfWork, Task<TResult>> action, IPlatformUnitOfWork uow)
     {
         if (PersistenceConfiguration.BadQueryWarning.IsEnabled)
+        {
             return IPlatformDbContext.ExecuteWithBadQueryWarningHandling<TResult, TEntity>(
                 () => action(uow),
                 Logger,
@@ -56,6 +56,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                 forWriteQuery: true,
                 resultQuery: null,
                 resultQueryStringBuilder: null);
+        }
 
         return action(uow);
     }
@@ -280,6 +281,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         CancellationToken cancellationToken = default)
     {
         if (IsDistributedTracingEnabled)
+        {
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
@@ -289,6 +291,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                     uow => GetUowDbContext(uow).CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
                     uow);
             }
+        }
 
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).CreateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
@@ -326,6 +329,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             async () =>
             {
                 if (IsDistributedTracingEnabled)
+                {
                     using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateAsync)}"))
                     {
                         activity?.AddTag("EntityType", typeof(TEntity).FullName);
@@ -336,6 +340,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                                 .CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, existingEntity, null, dismissSendEvent, eventCustomConfig, cancellationToken),
                             uow);
                     }
+                }
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow)
@@ -356,6 +361,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             async () =>
             {
                 if (IsDistributedTracingEnabled)
+                {
                     using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateAsync)}"))
                     {
                         activity?.AddTag("EntityType", typeof(TEntity).FullName);
@@ -365,6 +371,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                             uow => GetUowDbContext(uow)
                                 .CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, customCheckExistingPredicate, dismissSendEvent, eventCustomConfig, cancellationToken));
                     }
+                }
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow)
@@ -397,6 +404,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                 if (entities.IsNullOrEmpty()) return entities;
 
                 if (IsDistributedTracingEnabled)
+                {
                     using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateOrUpdateManyAsync)}"))
                     {
                         activity?.AddTag("EntityType", typeof(TEntity).FullName);
@@ -412,6 +420,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                                     cancellationToken),
                             uow);
                     }
+                }
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow)
@@ -448,6 +457,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         CancellationToken cancellationToken = default)
     {
         if (IsDistributedTracingEnabled)
+        {
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(UpdateAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
@@ -457,6 +467,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                     async uow => await GetUowDbContext(uow).SetAsync<TEntity, TPrimaryKey>(entity, cancellationToken),
                     uow);
             }
+        }
 
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             async uow => await GetUowDbContext(uow).SetAsync<TEntity, TPrimaryKey>(entity, cancellationToken),
@@ -471,6 +482,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         CancellationToken cancellationToken = default)
     {
         if (IsDistributedTracingEnabled)
+        {
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(UpdateAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
@@ -480,6 +492,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                     async uow => await GetUowDbContext(uow).UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
                     uow);
             }
+        }
 
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             async uow => await GetUowDbContext(uow).UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
@@ -503,6 +516,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         CancellationToken cancellationToken = default)
     {
         if (IsDistributedTracingEnabled)
+        {
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
@@ -512,6 +526,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                     uow => GetUowDbContext(uow).DeleteAsync<TEntity, TPrimaryKey>(entityId, dismissSendEvent, eventCustomConfig, cancellationToken),
                     uow);
             }
+        }
 
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).DeleteAsync<TEntity, TPrimaryKey>(entityId, dismissSendEvent, eventCustomConfig, cancellationToken),
@@ -525,6 +540,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         CancellationToken cancellationToken = default)
     {
         if (IsDistributedTracingEnabled)
+        {
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
@@ -533,6 +549,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow).DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken));
             }
+        }
 
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).DeleteAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken));
@@ -547,6 +564,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         if (entities.IsNullOrEmpty()) return entities;
 
         if (IsDistributedTracingEnabled)
+        {
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
@@ -555,6 +573,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow).CreateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));
             }
+        }
 
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).CreateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));
@@ -570,6 +589,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         if (entities.IsNullOrEmpty()) return entities;
 
         if (IsDistributedTracingEnabled)
+        {
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(CreateManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
@@ -579,6 +599,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                     uow => GetUowDbContext(uow).CreateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken),
                     uow);
             }
+        }
 
         return await ExecuteWithBadQueryWarningForWriteHandling(
             uow => GetUowDbContext(uow).CreateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken),
@@ -594,6 +615,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         if (entities.IsNullOrEmpty()) return entities;
 
         if (IsDistributedTracingEnabled)
+        {
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(UpdateManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
@@ -602,6 +624,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));
             }
+        }
 
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));
@@ -617,6 +640,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         if (entities.IsNullOrEmpty()) return entities;
 
         if (IsDistributedTracingEnabled)
+        {
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(UpdateManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
@@ -626,6 +650,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                     uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken),
                     uow);
             }
+        }
 
         return await ExecuteWithBadQueryWarningForWriteHandling(
             uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken),
@@ -641,6 +666,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         if (entityIds.IsNullOrEmpty()) return [];
 
         if (IsDistributedTracingEnabled)
+        {
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
@@ -649,6 +675,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entityIds, dismissSendEvent, eventCustomConfig, cancellationToken));
             }
+        }
 
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entityIds, dismissSendEvent, eventCustomConfig, cancellationToken));
@@ -680,6 +707,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         CancellationToken cancellationToken = default)
     {
         if (IsDistributedTracingEnabled)
+        {
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
@@ -688,6 +716,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                     uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(queryBuilder, dismissSendEvent, eventCustomConfig, cancellationToken),
                     uow);
             }
+        }
 
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(queryBuilder, dismissSendEvent, eventCustomConfig, cancellationToken),
@@ -702,6 +731,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         CancellationToken cancellationToken = default)
     {
         if (IsDistributedTracingEnabled)
+        {
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
@@ -711,6 +741,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                     uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(predicate, dismissSendEvent, eventCustomConfig, cancellationToken),
                     uow);
             }
+        }
 
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(predicate, dismissSendEvent, eventCustomConfig, cancellationToken),
@@ -727,6 +758,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         if (entities.IsNullOrEmpty()) return entities;
 
         if (IsDistributedTracingEnabled)
+        {
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
@@ -736,6 +768,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                     uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken),
                     uow);
             }
+        }
 
         return await ExecuteWithBadQueryWarningForWriteHandling(
             uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken),
@@ -751,6 +784,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         if (entities.IsNullOrEmpty()) return entities;
 
         if (IsDistributedTracingEnabled)
+        {
             using (var activity = IPlatformRepository.ActivitySource.StartActivity($"Repository.{nameof(DeleteManyAsync)}"))
             {
                 activity?.AddTag("EntityType", typeof(TEntity).FullName);
@@ -759,6 +793,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));
             }
+        }
 
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
             uow => GetUowDbContext(uow).DeleteManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));
@@ -771,8 +806,7 @@ public abstract class PlatformPersistenceRootRepository<TEntity, TPrimaryKey, TU
     where TUow : class, IPlatformPersistenceUnitOfWork<TDbContext>
     where TDbContext : IPlatformDbContext
 {
-    protected PlatformPersistenceRootRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IServiceProvider serviceProvider) : base(
-        unitOfWorkManager,
+    protected PlatformPersistenceRootRepository(IServiceProvider serviceProvider) : base(
         serviceProvider)
     {
     }

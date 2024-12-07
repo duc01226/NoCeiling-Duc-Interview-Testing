@@ -9,8 +9,7 @@ internal sealed class TextSnippetMultiDbDemoRepository<TEntity>
     : PlatformMongoDbRepository<TEntity, string, TextSnippetMultiDbDemoDbContext>, ITextSnippetRepository<TEntity>
     where TEntity : class, IEntity<string>, new()
 {
-    public TextSnippetMultiDbDemoRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IServiceProvider serviceProvider) : base(
-        unitOfWorkManager,
+    public TextSnippetMultiDbDemoRepository(IServiceProvider serviceProvider) : base(
         serviceProvider)
     {
     }
@@ -20,8 +19,7 @@ internal sealed class TextSnippetMultiDbDemoRootRepository<TEntity>
     : PlatformMongoDbRootRepository<TEntity, string, TextSnippetMultiDbDemoDbContext>, ITextSnippetRootRepository<TEntity>
     where TEntity : class, IRootEntity<string>, new()
 {
-    public TextSnippetMultiDbDemoRootRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IServiceProvider serviceProvider) : base(
-        unitOfWorkManager,
+    public TextSnippetMultiDbDemoRootRepository(IServiceProvider serviceProvider) : base(
         serviceProvider)
     {
     }

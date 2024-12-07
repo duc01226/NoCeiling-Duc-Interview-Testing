@@ -8,8 +8,7 @@ namespace PlatformExampleApp.TextSnippet.Persistence.Mongo;
 internal sealed class TextSnippetRepository<TEntity> : PlatformMongoDbRepository<TEntity, string, TextSnippetDbContext>, ITextSnippetRepository<TEntity>
     where TEntity : class, IEntity<string>, new()
 {
-    public TextSnippetRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IServiceProvider serviceProvider) : base(
-        unitOfWorkManager,
+    public TextSnippetRepository(IServiceProvider serviceProvider) : base(
         serviceProvider)
     {
     }
@@ -18,8 +17,7 @@ internal sealed class TextSnippetRepository<TEntity> : PlatformMongoDbRepository
 internal sealed class TextSnippetRootRepository<TEntity> : PlatformMongoDbRootRepository<TEntity, string, TextSnippetDbContext>, ITextSnippetRootRepository<TEntity>
     where TEntity : class, IRootEntity<string>, new()
 {
-    public TextSnippetRootRepository(IPlatformUnitOfWorkManager unitOfWorkManager, IServiceProvider serviceProvider) : base(
-        unitOfWorkManager,
+    public TextSnippetRootRepository(IServiceProvider serviceProvider) : base(
         serviceProvider)
     {
     }
