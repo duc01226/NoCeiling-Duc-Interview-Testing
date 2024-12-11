@@ -41,13 +41,14 @@ public class TextSnippetHangfireBackgroundJobModule : PlatformHangfireBackground
                     .With(
                         p => p.MaxConnectionPoolSize = PlatformPersistenceModule.RecommendedMaxPoolSize)
                     .With(p => p.MaxConnectionIdleTime = PlatformPersistenceModule.RecommendedConnectionIdleLifetimeSeconds.Seconds())
+                    .With(p => p.ConnectTimeout = 30.Seconds())
                     .ToString())
             .WhenValue(
                 "Postgres",
                 _ => new NpgsqlConnectionStringBuilder(Configuration.GetConnectionString("PostgreSqlConnection"))
                     .With(conn => conn.Enlist = false)
                     .With(conn => conn.Pooling = true)
-                    .With(conn => conn.MinPoolSize = 0) // Always available connection to serve request, reduce latency
+                    .With(conn => conn.MinPoolSize = PlatformPersistenceModule.RecommendedMinPoolSize) // Always available connection to serve request, reduce latency
                     .With(conn => conn.MaxPoolSize = PlatformPersistenceModule.RecommendedMaxPoolSize) // Setup based on app resource cpu ram max concurrent
                     .With(conn => conn.Timeout = 30)
                     .With(conn => conn.ConnectionIdleLifetime = PlatformPersistenceModule.RecommendedConnectionIdleLifetimeSeconds)
@@ -58,8 +59,9 @@ public class TextSnippetHangfireBackgroundJobModule : PlatformHangfireBackground
                     .With(conn => conn.Enlist = false)
                     .With(conn => conn.LoadBalanceTimeout = PlatformPersistenceModule.RecommendedConnectionIdleLifetimeSeconds) // (I)
                     .With(conn => conn.Pooling = true)
-                    .With(conn => conn.MinPoolSize = 0) // Always available connection to serve request, reduce latency
+                    .With(conn => conn.MinPoolSize = PlatformPersistenceModule.RecommendedMinPoolSize) // Always available connection to serve request, reduce latency
                     .With(conn => conn.MaxPoolSize = PlatformPersistenceModule.RecommendedMaxPoolSize) // Setup based on app resource cpu ram max concurrent
+                    .With(p => p.ConnectTimeout = 30)
                     .ToString())
             .Execute();
     }

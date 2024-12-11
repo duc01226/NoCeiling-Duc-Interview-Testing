@@ -25,6 +25,7 @@ public class DemoMigrateDataCrossDbPersistenceModule : PlatformMongoDbPersistenc
                 p => p.MinConnectionPoolSize = RecommendedMinPoolSize) // Always available connection to serve request, reduce latency
             .With(p => p.MaxConnectionPoolSize = RecommendedMaxPoolSize)
             .With(p => p.MaxConnectionIdleTime = RecommendedConnectionIdleLifetimeSeconds.Seconds())
+            .With(p => p.ConnectTimeout = 30.Seconds())
             .ToString();
         options.Database = Configuration.GetSection("MongoDB:Database").Value;
     }

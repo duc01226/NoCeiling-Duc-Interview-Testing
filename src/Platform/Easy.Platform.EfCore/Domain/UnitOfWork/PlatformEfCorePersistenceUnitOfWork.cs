@@ -56,8 +56,7 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
 
     private bool CanUsePooledDbContext()
     {
-        return (PersistenceConfiguration.PooledOptions.UsePooledDbContextForUsingOnceTransientUowOnly == false || IsUsingOnceTransientUow) &&
-               pooledDbContextFactory != null;
+        return pooledDbContextFactory != null;
     }
 
     protected override void BeforeDisposeDbContext(TDbContext dbContext)
