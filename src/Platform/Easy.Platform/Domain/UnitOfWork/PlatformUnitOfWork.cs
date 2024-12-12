@@ -321,7 +321,7 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
         {
             var castedRuntimeTypeExistingEntity = (runtimeEntityType != null ? Convert.ChangeType(existingEntity, runtimeEntityType) : existingEntity)
                 .Pipe(
-                    p => CreatedByUnitOfWorkManager?.TryGetCurrentActiveUow().Pipe(p => p != null && !p.IsPseudoTransactionUow()) == true ||
+                    p => CreatedByUnitOfWorkManager?.TryGetCurrentActiveUow() != null ||
                          (p.As<IEntity>().HasTrackValueUpdatedDomainEventAttribute() &&
                           PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider))
                         ? p.DeepClone()

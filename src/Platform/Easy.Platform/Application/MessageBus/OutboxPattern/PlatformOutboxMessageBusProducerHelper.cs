@@ -17,14 +17,14 @@ namespace Easy.Platform.Application.MessageBus.OutboxPattern;
 public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
 {
     /// <summary>
-    /// The default number of retry attempts for resilient operations, equivalent to approximately one week with a 15-second delay between retries.
+    /// The default number of retry attempts for resilient operations, equivalent to approximately one day with a 1-second delay between retries.
     /// </summary>
-    public const int DefaultResilientRetiredCount = 40320;
+    public const int DefaultResilientRetiredCount = 43200;
 
     /// <summary>
     /// The default delay in seconds between retry attempts for resilient operations.
     /// </summary>
-    public const int DefaultResilientRetiredDelaySeconds = 15;
+    public const int DefaultResilientRetiredDelaySeconds = 1;
 
     private readonly IPlatformMessageBusProducer messageBusProducer;
     private readonly PlatformOutboxConfig outboxConfig;

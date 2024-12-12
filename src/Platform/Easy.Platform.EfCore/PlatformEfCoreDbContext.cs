@@ -300,6 +300,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 entity =>
                 {
                     GetTable<TEntity>().Remove(entity);
+                    ContextThreadSafeLock.TryRelease();
 
                     return Task.FromResult(entity);
                 },
@@ -313,7 +314,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         }
         finally
         {
-            ContextThreadSafeLock.TryRelease();
+            if (ContextThreadSafeLock.CurrentCount < ContextMaxConcurrentThreadLock)
+                ContextThreadSafeLock.TryRelease();
         }
     }
 
@@ -452,6 +454,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 _ =>
                 {
                     var result = GetTable<TEntity>().AddAsync(toBeCreatedEntity, cancellationToken).AsTask().Then(_ => toBeCreatedEntity);
+                    ContextThreadSafeLock.TryRelease();
 
                     return result;
                 },
@@ -465,7 +468,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         }
         finally
         {
-            ContextThreadSafeLock.TryRelease();
+            if (ContextThreadSafeLock.CurrentCount < ContextMaxConcurrentThreadLock)
+                ContextThreadSafeLock.TryRelease();
         }
     }
 
@@ -705,6 +709,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                                     .With(rowVersionEntity => rowVersionEntity.ConcurrencyUpdateToken = Ulid.NewUlid().ToString())
                                     .As<TEntity>());
 
+                    ContextThreadSafeLock.TryRelease();
+
                     return Task.FromResult((updatedEntity, true));
                 },
                 dismissSendEvent,
@@ -717,7 +723,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         }
         finally
         {
-            ContextThreadSafeLock.TryRelease();
+            if (ContextThreadSafeLock.CurrentCount < ContextMaxConcurrentThreadLock)
+                ContextThreadSafeLock.TryRelease();
         }
 
         Expression<Func<TEntity, bool>> BuildExistingEntityPredicate()

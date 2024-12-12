@@ -232,6 +232,8 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
     /// </summary>
     private async Task ConnectConsumersToQueues()
     {
+        if (connectConsumersToQueuesLock.CurrentCount == 0) return;
+
         try
         {
             await connectConsumersToQueuesLock.WaitAsync(currentStartProcessCancellationToken);
@@ -651,7 +653,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                             {
                                 if (channel.IsClosed) throw new Exception("Channel is temporarily closed. Try again later");
 
-                                await channel.BasicNackAsync(rabbitMqMessage.DeliveryTag, multiple: true, requeue: true);
+                                await channel.BasicNackAsync(rabbitMqMessage.DeliveryTag, multiple: true, requeue: true, currentStartProcessCancellationToken);
 
                                 Logger.LogWarning(
                                     message: "RabbitMQ retry queue message for the routing key: {RoutingKey}. " +

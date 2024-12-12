@@ -1,5 +1,6 @@
 using Easy.Platform.Common.JsonSerialization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Serilog.Exceptions.Core;
 using Serilog.Exceptions.Destructurers;
 
@@ -35,11 +36,27 @@ public class PlatformEfCoreDbUpdateExceptionDestructurer : ExceptionDestructurer
         if (exception.TargetSite is not null) propertiesBag.AddProperty(nameof(Exception.TargetSite), exception.TargetSite.ToString());
 #endif
 
-        if (exception.InnerException is not null) propertiesBag.AddProperty(nameof(Exception.InnerException), destructureException(exception.InnerException));
+        // Handle InnerException while excluding Entries
+        if (exception.InnerException is not null)
+        {
+            if (exception.InnerException is DbUpdateException innerDbUpdateException)
+            {
+                // Do not log all entries to fix memory issues. It will log all information which lead to memory issues
+                LogFirstEntry(exception, propertiesBag, innerDbUpdateException.Entries.FirstOrDefault(), $"{nameof(Exception.InnerException)}_");
+            }
+            else
+                propertiesBag.AddProperty(nameof(Exception.InnerException), destructureException(exception.InnerException));
+        }
 
         // Custom Message With first entry info
         var firstEntry = exception.As<DbUpdateException>().Entries.FirstOrDefault();
 
+        // Do not log all entries to fix memory issues. It will log all information which lead to memory issues
+        LogFirstEntry(exception, propertiesBag, firstEntry);
+    }
+
+    private static void LogFirstEntry(Exception exception, IExceptionPropertiesBag propertiesBag, EntityEntry firstEntry, string propPrefix = "")
+    {
         if (firstEntry != null)
         {
             var firstEntryInfo = PlatformJsonSerializer.Serialize(
@@ -47,14 +64,14 @@ public class PlatformEfCoreDbUpdateExceptionDestructurer : ExceptionDestructurer
                     ("EntityType", firstEntry.Metadata.Name),
                     ("EntityId", firstEntry.Members.FirstOrDefault(p => p.Metadata.Name == "Id")?.CurrentValue?.ToString())));
 
-            propertiesBag.AddProperty(nameof(DbUpdateException.Entries), firstEntryInfo);
-            propertiesBag.AddProperty(nameof(Exception.StackTrace), $"[FirstEntryInfo: {firstEntryInfo}] [StackTrace: {exception.StackTrace}]");
-            propertiesBag.AddProperty(nameof(Exception.Message), $"{exception.Message}. [FirstEntryInfo: {firstEntryInfo}]");
+            propertiesBag.AddProperty($"{propPrefix}{nameof(DbUpdateException.Entries)}", firstEntryInfo);
+            propertiesBag.AddProperty($"{propPrefix}{nameof(DbUpdateException.StackTrace)}", $"[FirstEntryInfo: {firstEntryInfo}] [StackTrace: {exception.StackTrace}]");
+            propertiesBag.AddProperty($"{propPrefix}{nameof(DbUpdateException.Message)}", $"{exception.Message}. [FirstEntryInfo: {firstEntryInfo}]");
         }
         else
         {
-            propertiesBag.AddProperty(nameof(Exception.StackTrace), exception.StackTrace);
-            propertiesBag.AddProperty(nameof(Exception.Message), exception.Message);
+            propertiesBag.AddProperty($"{propPrefix}{nameof(DbUpdateException.StackTrace)}", exception.StackTrace);
+            propertiesBag.AddProperty($"{propPrefix}{nameof(DbUpdateException.Message)}", exception.Message);
         }
     }
 

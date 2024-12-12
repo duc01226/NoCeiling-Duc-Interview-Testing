@@ -32,14 +32,11 @@ public class RabbitMqConnectionPool : IDisposable
 
     public IConnection GetConnection()
     {
-        lock (currentUsingObjectCounterLock)
-        {
-            if (IsConnectionPoolFull()) throw new Exception($"RabbitMqConnectionPool is fulled. PoolSize is {PoolSize}");
+        if (IsConnectionPoolFull()) throw new Exception($"RabbitMqConnectionPool is fulled. PoolSize is {PoolSize}");
 
-            var result = ProcessGetConnectionFromPool();
+        var result = ProcessGetConnectionFromPool();
 
-            return result;
-        }
+        return result;
     }
 
 
@@ -50,14 +47,11 @@ public class RabbitMqConnectionPool : IDisposable
                 this,
                 _ =>
                 {
-                    lock (currentUsingObjectCounterLock)
-                    {
-                        if (IsConnectionPoolFull()) return null;
+                    if (IsConnectionPoolFull()) return null;
 
-                        var result = ProcessGetConnectionFromPool();
+                    var result = ProcessGetConnectionFromPool();
 
-                        return result;
-                    }
+                    return result;
                 },
                 con => con != null,
                 maxWaitSeconds,
@@ -94,11 +88,14 @@ public class RabbitMqConnectionPool : IDisposable
 
     private IConnection ProcessGetConnectionFromPool()
     {
-        var result = connectionPool.Get();
+        lock (currentUsingObjectCounterLock)
+        {
+            var result = connectionPool.Get();
 
-        CurrentUsingObjectCounter++;
+            CurrentUsingObjectCounter++;
 
-        return result;
+            return result;
+        }
     }
 
     private bool IsConnectionPoolFull()
