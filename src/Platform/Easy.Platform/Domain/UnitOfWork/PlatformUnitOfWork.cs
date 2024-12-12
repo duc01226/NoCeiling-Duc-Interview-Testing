@@ -319,12 +319,14 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
     {
         if (CachedExistingOriginalEntities != null)
         {
-            var castedRuntimeTypeExistingEntity = (runtimeEntityType != null ? Convert.ChangeType(existingEntity, runtimeEntityType) : existingEntity)
+            var useRunTimeType = runtimeEntityType != null && runtimeEntityType != typeof(TEntity);
+
+            var castedRuntimeTypeExistingEntity = (useRunTimeType ? Convert.ChangeType(existingEntity, runtimeEntityType) : existingEntity)
                 .Pipe(
                     p => CreatedByUnitOfWorkManager?.TryGetCurrentActiveUow() != null ||
                          (p.As<IEntity>().HasTrackValueUpdatedDomainEventAttribute() &&
                           PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(RootServiceProvider))
-                        ? p.DeepClone()
+                        ? useRunTimeType ? p.DeepClone(runtimeEntityType) : p.As<TEntity>().DeepClone()
                         : p);
 
             CachedExistingOriginalEntities.AddOrUpdate(

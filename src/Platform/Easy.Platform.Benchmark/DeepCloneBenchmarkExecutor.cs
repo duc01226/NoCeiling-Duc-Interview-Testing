@@ -42,12 +42,6 @@ public class DeepCloneBenchmarkExecutor
         return CheckDiffObject.DeepClone();
     }
 
-    [Benchmark]
-    public object DeepCloneReflection()
-    {
-        return CheckDiffObject.DeepCloneUseReflection();
-    }
-
     public class CheckDiffObjectClass
     {
         public string PropStr1 { get; set; }

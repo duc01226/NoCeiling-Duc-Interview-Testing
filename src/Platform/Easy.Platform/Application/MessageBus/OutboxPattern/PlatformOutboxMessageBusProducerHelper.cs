@@ -426,7 +426,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                             toUpdateOutboxMessage.LastProcessingPingDate = DateTime.UtcNow;
                             toUpdateOutboxMessage.SendStatus = PlatformOutboxBusMessage.SendStatuses.Processed;
 
-                            await outboxBusMessageRepository.UpdateAsync(toUpdateOutboxMessage, dismissSendEvent: true, eventCustomConfig: null, cancellationToken);
+                            await outboxBusMessageRepository.SetAsync(toUpdateOutboxMessage, cancellationToken);
                         }
                         catch (PlatformDomainRowVersionConflictException)
                         {
@@ -528,7 +528,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
             existingOutboxMessage.RetriedProcessCount,
             retryProcessFailedMessageInSecondsUnit);
 
-        await outboxBusMessageRepository.CreateOrUpdateAsync(existingOutboxMessage, dismissSendEvent: true, eventCustomConfig: null, cancellationToken);
+        await outboxBusMessageRepository.SetAsync(existingOutboxMessage, cancellationToken);
     }
 
     /// <summary>

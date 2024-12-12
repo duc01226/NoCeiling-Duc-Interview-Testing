@@ -304,7 +304,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                         toHandleOutboxMessage.RoutingKey,
                         retryProcessFailedMessageInSecondsUnit,
                         subQueueMessageIdPrefix: toHandleOutboxMessage.As<IPlatformSubMessageQueuePrefixSupport>()?.SubQueuePrefix(),
-                        needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage: true,
+                        needToCheckAnySameSubQueueMessageIdPrefixOtherPreviousNotProcessedMessage: false,
                         handleExistingOutboxMessage: toHandleOutboxMessage,
                         sourceOutboxUowId: null,
                         cancellationToken);

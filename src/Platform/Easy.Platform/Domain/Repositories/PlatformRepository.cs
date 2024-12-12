@@ -495,7 +495,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
             var result = await ExecuteUowReadQueryThreadSafe(currentActiveUow, uow => ExecuteReadData(uow, readDataFn, loadRelatedEntities));
 
             // If there is opening uow, may get data for update => set cached original entities for track update
-            SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate(result, currentActiveUow);
+            SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate(result, currentActiveUow.UowOfType<TUow>());
 
             return result;
         }

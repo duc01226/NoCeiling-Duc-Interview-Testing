@@ -7,12 +7,12 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Easy.Platform.Common.JsonSerialization;
+using Force.DeepCloner;
 
 namespace Easy.Platform.Common.Extensions;
 
 public static class ObjectGeneralExtension
 {
-    private static readonly ConcurrentDictionary<Type, List<PropertyInfo>> CachedCloneWithReflectionTypeToPropsDict = new();
     private static readonly ConcurrentDictionary<Type, List<PropertyInfo>> CachedIsValuesDifferentTypeToPropsDict = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<Type, bool>> CachedCheckTypeIsAssignableFromDict = new();
 
@@ -188,20 +188,6 @@ public static class ObjectGeneralExtension
         return CachedCheckTypeIsAssignableFromDict
             .GetOrAdd(typeof(IEnumerable), p => new ConcurrentDictionary<Type, bool>())
             .GetOrAdd(objType, objType => typeof(IEnumerable).IsAssignableFrom(objType));
-    }
-
-    private static bool IsAssignableFromGenericIDictionary(Type objGenericType)
-    {
-        return CachedCheckTypeIsAssignableFromDict
-            .GetOrAdd(typeof(IDictionary<,>), p => new ConcurrentDictionary<Type, bool>())
-            .GetOrAdd(objGenericType, objType => typeof(IDictionary<,>).IsAssignableFrom(objType));
-    }
-
-    private static bool IsAssignableFromGenericIList(Type objGenericType)
-    {
-        return CachedCheckTypeIsAssignableFromDict
-            .GetOrAdd(typeof(IList<>), p => new ConcurrentDictionary<Type, bool>())
-            .GetOrAdd(objGenericType, objType => typeof(IList<>).IsAssignableFrom(objType));
     }
 
     /// <summary>
@@ -380,201 +366,15 @@ public static class ObjectGeneralExtension
         // ReSharper disable once ExpressionIsAlwaysNull
         return obj is null
             ? obj
-            : PlatformJsonSerializer.Deserialize<TObject>(PlatformJsonSerializer.Serialize(obj));
+            : DeepClonerExtensions.DeepClone(obj);
     }
 
-    public static TObject ShallowClone<TObject>(this TObject obj, Type? objType = null) where TObject : class
+    public static object DeepClone(this object obj, Type objType)
     {
         // ReSharper disable once ExpressionIsAlwaysNull
-        if (obj == null) return obj;
-
-        var type = objType ?? typeof(TObject);
-
-        // Handle value types and string separately
-        if (type == typeof(string) || type.IsValueType || type.IsPrimitive)
-            return obj;
-
-        // Handle arrays
-        if (type.IsArray)
-        {
-            var elementType = type.GetElementType();
-            var array = obj as Array;
-            var clonedArray = Array.CreateInstance(elementType!, array!.Length);
-            for (var i = 0; i < array.Length; i++)
-            {
-                var element = array.GetValue(i);
-                clonedArray.SetValue(element, i);
-            }
-
-            return clonedArray.As<TObject>();
-        }
-
-        // Handle collections (Collection<T>, List<T>, Dictionary<TKey, TValue>, etc.)
-        if (IsAssignableFromIEnumerable(type))
-        {
-            var typeGenericDefinitionType = type.GetGenericTypeDefinition();
-
-            // Handle List<T>
-            if (type.IsGenericType && type.IsClass && IsAssignableFromGenericIList(typeGenericDefinitionType))
-            {
-                var objList = (IList)obj;
-
-                var clonedList = (IList)Activator.CreateInstance(type, args: objList.Count);
-                foreach (var item in objList) clonedList!.Add(item);
-                return clonedList.As<TObject>();
-            }
-
-            // Handle Dictionary<TKey, TValue>
-            if (type.IsGenericType && type.IsClass && IsAssignableFromGenericIDictionary(typeGenericDefinitionType))
-            {
-                var objDict = (IDictionary)obj;
-
-                var clonedDict = (IDictionary)Activator.CreateInstance(type, args: [objDict.Count]);
-                foreach (DictionaryEntry entry in objDict) clonedDict!.Add(entry.Key, entry.Value);
-
-                return clonedDict.As<TObject>();
-            }
-
-            // If type is interface but runtime type is concrete collection
-            var runtimeType = obj.GetType();
-            if (runtimeType != type &&
-                runtimeType.IsGenericType &&
-                runtimeType.IsClass &&
-                runtimeType.GetGenericTypeDefinition()
-                    .Pipe(
-                        runtimeGenericType => IsAssignableFromGenericIList(runtimeGenericType) ||
-                                              IsAssignableFromGenericIDictionary(runtimeGenericType)))
-                return ShallowClone(obj, runtimeType);
-
-            // If is IEnumerable of other types, can not get the real type, then use json Serialize approach
-            return PlatformJsonSerializer.Deserialize(PlatformJsonSerializer.Serialize(obj), type).As<TObject>();
-        }
-
-        // Handle classes (other reference types)
-        if (type.IsClass)
-        {
-            // Create instance of the object
-            var clone = Activator.CreateInstance(type);
-            var propInfos = CachedCloneWithReflectionTypeToPropsDict.GetOrAdd(
-                type,
-                type => type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                    .Where(propInfo => propInfo.CanWrite && propInfo.GetCustomAttribute<JsonIgnoreAttribute>() == null)
-                    .ToList());
-
-            // Deep clone each field
-            foreach (var propInfo in propInfos)
-                propInfo.SetValue(clone, propInfo.GetValue(obj));
-
-            return clone.As<TObject>();
-        }
-
-        // If is interface, can not get the real type, then use json Serialize approach
-        return PlatformJsonSerializer.Deserialize(PlatformJsonSerializer.Serialize(obj), type).As<TObject>();
-    }
-
-    public static TObject DeepCloneUseReflection<TObject>(this TObject obj)
-    {
-        return (TObject)DeepCloneUseReflection(obj, typeof(TObject));
-    }
-
-    private static object DeepCloneUseReflection(object obj, Type type, int currentDeepLevel = 0, int maxDeepLevel = 2)
-    {
-        if (obj == null)
-            return null;
-
-        // Handle value types and string separately
-        if (type == typeof(string) || type.IsValueType || type.IsPrimitive)
-            return obj;
-
-        if (currentDeepLevel > maxDeepLevel)
-            return PlatformJsonSerializer.Deserialize(PlatformJsonSerializer.Serialize(obj), type);
-
-        int nextDeepLevel;
-
-        // Handle arrays
-        if (type.IsArray)
-        {
-            nextDeepLevel = currentDeepLevel + 1;
-
-            var elementType = type.GetElementType();
-            var array = obj as Array;
-            var clonedArray = Array.CreateInstance(elementType!, array!.Length);
-            for (var i = 0; i < array.Length; i++)
-            {
-                var element = array.GetValue(i);
-                clonedArray.SetValue(DeepCloneUseReflection(element, elementType, nextDeepLevel), i);
-            }
-
-            return clonedArray;
-        }
-
-        // Handle collections (Collection<T>, List<T>, Dictionary<TKey, TValue>, etc.)
-        if (IsAssignableFromIEnumerable(type))
-        {
-            nextDeepLevel = currentDeepLevel + 1;
-            var typeGenericDefinitionType = type.GetGenericTypeDefinition();
-
-            // Handle List<T>
-            if (type.IsGenericType && type.IsClass && IsAssignableFromGenericIList(typeGenericDefinitionType))
-            {
-                var objList = (IList)obj;
-
-                var clonedList = (IList)Activator.CreateInstance(type, args: objList.Count);
-                foreach (var item in objList) clonedList!.Add(DeepCloneUseReflection(item, type.GenericTypeArguments[0], nextDeepLevel));
-                return clonedList;
-            }
-
-            // Handle Dictionary<TKey, TValue>
-            if (type.IsGenericType && type.IsClass && IsAssignableFromGenericIDictionary(typeGenericDefinitionType))
-            {
-                var objDict = (IDictionary)obj;
-
-                var clonedDict = (IDictionary)Activator.CreateInstance(type, args: [objDict.Count]);
-                foreach (DictionaryEntry entry in objDict)
-                {
-                    var keyClone = DeepCloneUseReflection(entry.Key, type.GenericTypeArguments[0], nextDeepLevel);
-                    var valueClone = DeepCloneUseReflection(entry.Value, type.GenericTypeArguments[1], nextDeepLevel);
-                    clonedDict!.Add(keyClone, valueClone);
-                }
-
-                return clonedDict;
-            }
-
-            // If type is interface but runtime type is concrete collection
-            var runtimeType = obj.GetType();
-            if (runtimeType != type &&
-                runtimeType.IsGenericType &&
-                runtimeType.IsClass &&
-                runtimeType.GetGenericTypeDefinition()
-                    .Pipe(
-                        runtimeGenericType => IsAssignableFromGenericIList(runtimeGenericType) ||
-                                              IsAssignableFromGenericIDictionary(runtimeGenericType)))
-                return DeepCloneUseReflection(obj, runtimeType, nextDeepLevel);
-
-            // If is IEnumerable of other types, can not get the real type, then use json Serialize approach
-            return PlatformJsonSerializer.Deserialize(PlatformJsonSerializer.Serialize(obj), type);
-        }
-
-        // Handle classes (other reference types)
-        if (type.IsClass)
-        {
-            // Create instance of the object
-            var clone = Activator.CreateInstance(type);
-            var propInfos = CachedCloneWithReflectionTypeToPropsDict.GetOrAdd(
-                type,
-                type => type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                    .Where(propInfo => propInfo.CanWrite && propInfo.GetCustomAttribute<JsonIgnoreAttribute>() == null)
-                    .ToList());
-
-            // Deep clone each field
-            foreach (var propInfo in propInfos)
-                propInfo.SetValue(clone, DeepCloneUseReflection(propInfo.GetValue(obj), propInfo.PropertyType));
-
-            return clone;
-        }
-
-        // If is interface, can not get the real type, then use json Serialize approach
-        return PlatformJsonSerializer.Deserialize(PlatformJsonSerializer.Serialize(obj), type);
+        return obj is null
+            ? obj
+            : PlatformJsonSerializer.Deserialize(PlatformJsonSerializer.Serialize(obj), objType);
     }
 
     public static bool Is<TObject>(this TObject obj, Expression<Func<TObject, bool>> expr)

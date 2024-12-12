@@ -825,7 +825,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 await GetQuery<TEntity>()
                     .Where(BuildExistingEntityPredicate())
                     .Select(p => ((IRowVersionEntity)p).ConcurrencyUpdateToken)
-                    .FirstOrDefaultAsync<string>(cancellationToken);
+                    .FirstOrDefaultAsync(cancellationToken);
         }
 
         if (existingEntity != null && !ReferenceEquals(entity, existingEntity) && entity.IsValuesEqual(existingEntity))

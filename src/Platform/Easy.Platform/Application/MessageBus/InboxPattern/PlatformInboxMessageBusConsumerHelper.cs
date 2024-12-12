@@ -560,12 +560,6 @@ public static class PlatformInboxMessageBusConsumerHelper
                 {
                     await startIntervalPingProcessingCts.CancelAsync();
 
-                    // Update the inbox message as processed.
-                    await UpdateExistingInboxProcessedMessageAsync(
-                        serviceProvider.GetRequiredService<IPlatformRootServiceProvider>(),
-                        existingInboxMessage,
-                        cancellationToken);
-
                     // If auto-deletion is enabled, delete the processed message.
                     if (autoDeleteProcessedMessage)
                     {
@@ -573,6 +567,14 @@ public static class PlatformInboxMessageBusConsumerHelper
                             serviceProvider,
                             existingInboxMessage,
                             loggerFactory,
+                            cancellationToken);
+                    }
+                    else
+                    {
+                        // Update the inbox message as processed.
+                        await UpdateExistingInboxProcessedMessageAsync(
+                            serviceProvider.GetRequiredService<IPlatformRootServiceProvider>(),
+                            existingInboxMessage,
                             cancellationToken);
                     }
                 }
@@ -832,7 +834,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                             toUpdateInboxMessage.LastProcessingPingDate = Clock.UtcNow;
                             toUpdateInboxMessage.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Processed;
 
-                            await inboxBusMessageRepo.UpdateAsync(toUpdateInboxMessage, dismissSendEvent: true, eventCustomConfig: null, cancellationToken);
+                            await inboxBusMessageRepo.SetAsync(toUpdateInboxMessage, cancellationToken);
                         }
                         catch (PlatformDomainRowVersionConflictException)
                         {
@@ -872,7 +874,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                         async (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
                         {
                             await inboxBusMessageRepo.DeleteManyAsync(
-                                predicate: p => p.Id == existingInboxMessage.Id && p.ConsumeStatus == PlatformInboxBusMessage.ConsumeStatuses.Processed,
+                                predicate: p => p.Id == existingInboxMessage.Id,
                                 dismissSendEvent: true,
                                 eventCustomConfig: null,
                                 cancellationToken);
@@ -984,6 +986,6 @@ public static class PlatformInboxMessageBusConsumerHelper
             existingInboxMessage.RetriedProcessCount,
             retryProcessFailedMessageInSecondsUnit);
 
-        await inboxBusMessageRepo.UpdateAsync(existingInboxMessage, dismissSendEvent: true, eventCustomConfig: null, cancellationToken);
+        await inboxBusMessageRepo.SetAsync(existingInboxMessage, cancellationToken);
     }
 }
