@@ -82,12 +82,14 @@ public abstract class PlatformIntervalHostingBackgroundService : PlatformHosting
         if (IntervalProcessLock.CurrentCount == 0) return;
 
         if (ActivateTracing)
+        {
             using (var activity = ActivitySource.StartActivity($"{nameof(PlatformIntervalHostingBackgroundService)}.{nameof(TriggerIntervalProcessAsync)}"))
             {
                 activity?.AddTag("Type", GetType().FullName);
 
                 await DoTriggerIntervalProcessAsync(cancellationToken);
             }
+        }
         else await DoTriggerIntervalProcessAsync(cancellationToken);
     }
 
@@ -115,7 +117,7 @@ public abstract class PlatformIntervalHostingBackgroundService : PlatformHosting
         }
         finally
         {
-            IntervalProcessLock.Release();
+            IntervalProcessLock.TryRelease();
         }
     }
 

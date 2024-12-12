@@ -33,9 +33,9 @@ namespace Easy.Platform.Application;
 
 public interface IPlatformApplicationModule : IPlatformModule
 {
-    Task SeedData(IServiceScope serviceScope);
+    public Task SeedData(IServiceScope serviceScope);
 
-    Task ClearDistributedCache(
+    public Task ClearDistributedCache(
         PlatformApplicationAutoClearDistributedCacheOnInitOptions options,
         IServiceScope serviceScope);
 }
@@ -66,13 +66,15 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
     /// Set min thread pool then default to increase and fix some performance issues. Article:
     /// https://medium.com/@jaiadityarathore/dotnet-core-threadpool-bef2f5a37888
     /// https://github.com/StackExchange/StackExchange.Redis/issues/2332
-    /// Default equal DefaultParallelIoTaskMaxConcurrent + extra available one DefaultNumberOfParallelIoTasksPerCpuRatio
+    /// Default equal DefaultParallelIoTaskMaxConcurrent * DefaultNumberOfParallelIoTasksPerCpuRatio
     /// </summary>
-    protected virtual int MinWorkerThreadPool => Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent + Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio;
+    protected virtual int MinWorkerThreadPool => Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent * Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio;
 
-    protected virtual int MinIoThreadPool => Util.TaskRunner.DefaultParallelIoTaskMaxConcurrent + Util.TaskRunner.DefaultNumberOfParallelIoTasksPerCpuRatio;
+    /// <inheritdoc cref="MinWorkerThreadPool"/>
+    protected virtual int MinIoThreadPool => MinWorkerThreadPool;
 
     public virtual bool AutoClearMemoryEnabled => true;
+
     public virtual int AutoClearMemoryIntervalTimeSeconds => PlatformAutoClearMemoryHostingBackgroundService.DefaultProcessTriggerIntervalTimeSeconds;
 
     /// <summary>
@@ -133,9 +135,11 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         async Task ExecuteDataSeeders(List<IGrouping<int, IPlatformApplicationDataSeeder>> dataSeeders, bool inBackground = false)
         {
             if (inBackground)
+            {
                 Util.TaskRunner.QueueActionInBackground(
                     async () => await RunDataSeeders(dataSeeders, inNewScope: true),
                     loggerFactory: () => CreateLogger(LoggerFactory));
+            }
             else
                 await RunDataSeeders(dataSeeders);
         }
@@ -159,12 +163,14 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
                             }
 
                             if (inNewScope)
+                            {
                                 using (var newScope = ServiceProvider.CreateScope())
                                 {
                                     var dataSeeder = newScope.ServiceProvider.GetService(seeder.GetType()).As<IPlatformApplicationDataSeeder>();
 
                                     await ExecuteDataSeederWithLog(dataSeeder, Logger);
                                 }
+                            }
                             else
                                 await ExecuteDataSeederWithLog(seeder, Logger);
                         });
@@ -315,8 +321,10 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
         GetServicesRegisterScanAssemblies().ForEach(assembly => serviceCollection.RegisterHostedServicesFromType(assembly, typeof(PlatformHostingBackgroundService)));
 
         if (AutoClearMemoryEnabled)
+        {
             serviceCollection.RegisterHostedService(
                 sp => new PlatformAutoClearMemoryHostingBackgroundService(sp, sp.GetRequiredService<ILoggerFactory>(), AutoClearMemoryIntervalTimeSeconds));
+        }
 
         serviceCollection.Register<IPlatformApplicationBackgroundJobScheduler, PlatformApplicationBackgroundJobScheduler>();
         serviceCollection.Register<IPlatformBackgroundJobSchedulerCarryRequestContextService, PlatformApplicationBackgroundJobSchedulerCarryRequestContextService>();
@@ -338,9 +346,11 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
             await ClearDistributedCache(autoClearDistributedCacheOnInitOptions, serviceScope);
 
         if (AutoRegisterDefaultCaching)
+        {
             await serviceScope.ServiceProvider.GetRequiredService<PlatformCachingModule>()
                 .With(p => p.IsChildModule = true)
                 .Init(CurrentAppBuilder);
+        }
     }
 
     /// <summary>
@@ -378,12 +388,14 @@ public abstract class PlatformApplicationModule : PlatformModule, IPlatformAppli
     private static void RegisterDefaultApplicationRequestContext(IServiceCollection serviceCollection)
     {
         if (serviceCollection.All(p => p.ServiceType != typeof(IPlatformApplicationRequestContextAccessor)))
+        {
             serviceCollection.Register(
                 typeof(IPlatformApplicationRequestContextAccessor),
                 typeof(PlatformDefaultApplicationRequestContextAccessor),
                 ServiceLifeTime.Singleton,
                 true,
                 DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
+        }
     }
 
     /// <summary>

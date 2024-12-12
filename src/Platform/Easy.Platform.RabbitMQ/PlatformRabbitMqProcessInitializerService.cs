@@ -153,12 +153,12 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
             async () =>
             {
-                await startProcessLock.WaitAsync(cancellationToken);
-
-                currentStartProcessCancellationToken = cancellationToken;
-
                 try
                 {
+                    await startProcessLock.WaitAsync(cancellationToken);
+
+                    currentStartProcessCancellationToken = cancellationToken;
+
                     if (processStarted) return;
 
                     Logger.LogInformation("[{TargetName}] RabbitMq init process STARTED", GetType().Name);
@@ -179,7 +179,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                 }
                 finally
                 {
-                    startProcessLock.Release();
+                    startProcessLock.TryRelease();
                 }
             },
             _ => 10.Seconds(),
@@ -194,10 +194,10 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
     /// <returns>A <see cref="Task" /> representing the asynchronous operation.</returns>
     public async Task StopProcess()
     {
-        await stopProcessLock.WaitAsync(CancellationToken.None);
-
         try
         {
+            await stopProcessLock.WaitAsync(CancellationToken.None);
+
             if (!processStarted) return;
 
             waitingAckMessages.Clear();
@@ -206,7 +206,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         }
         finally
         {
-            stopProcessLock.Release();
+            stopProcessLock.TryRelease();
         }
     }
 
@@ -297,7 +297,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         }
         finally
         {
-            connectConsumersToQueuesLock.Release();
+            connectConsumersToQueuesLock.TryRelease();
         }
     }
 
@@ -476,7 +476,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
         }
         finally
         {
-            processMessageParallelLimitLock.Release();
+            processMessageParallelLimitLock.TryRelease();
 
             rootServiceProvider.GetService<IPlatformApplicationSettingContext>().ProcessAutoGarbageCollect();
         }
@@ -667,7 +667,7 @@ public class PlatformRabbitMqProcessInitializerService : IDisposable
                         }
                         finally
                         {
-                            processRequeueMessageLock.Release();
+                            processRequeueMessageLock.TryRelease();
                         }
                     },
                     retryAttempt => options.ProcessRequeueMessageRetryDelaySeconds.Seconds(),

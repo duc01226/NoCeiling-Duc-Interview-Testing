@@ -196,7 +196,9 @@ public static partial class Util
                         {
                             await BackgroundActionQueueLimitLock.Value.WaitAsync(cancellationToken);
 
-                            return await action();
+                            var result = await action();
+
+                            return result;
                         }
                         finally
                         {
@@ -2148,11 +2150,11 @@ public static partial class Util
                                 }
                                 finally
                                 {
-                                    MaxParallelLock.Release(); // Release the semaphore slot after processing
+                                    MaxParallelLock.TryRelease(); // Release the semaphore slot after processing
                                     await CheckToDequeueAndProcessItemAsync(); // Continue processing the next item in the queue
                                 }
                             },
-                            CancellationToken);
+                            CancellationToken.None);
                     }
                 }
                 finally

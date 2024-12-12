@@ -1,3 +1,4 @@
+using Easy.Platform.Common.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -146,7 +147,7 @@ public abstract class PlatformHostingBackgroundService : IHostedService, IDispos
         }
         finally
         {
-            AsyncStopProcessLock.Release();
+            AsyncStopProcessLock.TryRelease();
         }
     }
 

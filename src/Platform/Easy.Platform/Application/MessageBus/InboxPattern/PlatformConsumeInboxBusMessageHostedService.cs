@@ -150,7 +150,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                 }
                 finally
                 {
-                    maxIntervalProcessTriggeredLock.Release();
+                    maxIntervalProcessTriggeredLock.TryRelease();
                 }
             },
             cancellationToken: cancellationToken);
@@ -264,7 +264,7 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
         }
         finally
         {
-            processMessageParallelLimitLock.Release();
+            processMessageParallelLimitLock.TryRelease();
         }
     }
 

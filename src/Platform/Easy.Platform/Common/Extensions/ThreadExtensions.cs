@@ -103,7 +103,9 @@ public static class ThreadExtensions
         {
             await lockObj.WaitAsync(cancellationToken);
 
-            return await action();
+            var result = await action();
+
+            return result;
         }
         finally
         {

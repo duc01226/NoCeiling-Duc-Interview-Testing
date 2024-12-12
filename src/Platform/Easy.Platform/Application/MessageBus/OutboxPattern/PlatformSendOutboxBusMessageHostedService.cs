@@ -127,7 +127,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                 }
                 finally
                 {
-                    maxIntervalProcessTriggeredLock.Release();
+                    maxIntervalProcessTriggeredLock.TryRelease();
                 }
             },
             cancellationToken: cancellationToken);
@@ -225,7 +225,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
             }
             finally
             {
-                processMessageParallelLimitLock.Release();
+                processMessageParallelLimitLock.TryRelease();
             }
         }
     }

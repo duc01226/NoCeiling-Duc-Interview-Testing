@@ -293,7 +293,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
             DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(entity);
 
-            return await PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TEntity>(
+            var result = await PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TEntity>(
                 RootServiceProvider,
                 MappedUnitOfWork,
                 entity,
@@ -308,6 +308,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 () => RequestContextAccessor.Current.GetAllKeyValues(),
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
+
+            return result;
         }
         finally
         {
