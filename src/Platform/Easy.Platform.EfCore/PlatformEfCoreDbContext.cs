@@ -3,6 +3,7 @@ using Easy.Platform.Application;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
+using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.Exceptions;
@@ -639,6 +640,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             await ContextThreadSafeLock.WaitAsync(cancellationToken);
 
             var isEntityRowVersionEntityMissingConcurrencyUpdateToken = entity is IRowVersionEntity { ConcurrencyUpdateToken: null };
+            existingEntity ??= MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString());
 
             if (existingEntity == null &&
                 !onlySetData &&
@@ -646,15 +648,14 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 PlatformCqrsEntityEvent.IsAnyEntityEventHandlerRegisteredForEntity<TEntity>(RootServiceProvider) &&
                 entity.HasTrackValueUpdatedDomainEventAttribute())
             {
-                existingEntity = MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
-                                 await GetQuery<TEntity>()
-                                     .AsNoTracking()
-                                     .Where(BuildExistingEntityPredicate())
-                                     .FirstOrDefaultAsync(cancellationToken)
-                                     .EnsureFound($"Entity {typeof(TEntity).Name} with [Id:{entity.Id}] not found to update")
-                                     .ThenActionIf(
-                                         p => p != null,
-                                         p => MappedUnitOfWork?.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p));
+                existingEntity = await GetQuery<TEntity>()
+                    .AsNoTracking()
+                    .Where(BuildExistingEntityPredicate())
+                    .FirstOrDefaultAsync(cancellationToken)
+                    .EnsureFound($"Entity {typeof(TEntity).Name} with [Id:{entity.Id}] not found to update")
+                    .ThenActionIf(
+                        p => p != null,
+                        p => MappedUnitOfWork?.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p));
 
                 if (!existingEntity.Id.Equals(entity.Id)) entity.Id = existingEntity.Id;
             }
@@ -667,7 +668,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                         .AsNoTracking()
                         .Where(BuildExistingEntityPredicate())
                         .Select(p => ((IRowVersionEntity)p).ConcurrencyUpdateToken)
-                        .FirstOrDefaultAsync<string>(cancellationToken);
+                        .FirstOrDefaultAsync(cancellationToken);
             }
 
             // Run DetachLocalIfAny to prevent
@@ -693,7 +694,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 existingEntity ?? MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()),
                 entity =>
                 {
-                    var updatedEntity = !isEntityTracked
+                    var updatedEntity = !isEntityTracked || existingEntity == null
                         ? GetTable<TEntity>()
                             .Update(entity)
                             .Entity
@@ -708,6 +709,17 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                                 p => p.As<IRowVersionEntity>()
                                     .With(rowVersionEntity => rowVersionEntity.ConcurrencyUpdateToken = Ulid.NewUlid().ToString())
                                     .As<TEntity>());
+
+                    // Explicitly check props changes to mark it's updated to support mutate json prop like array, object, etc
+                    if (isEntityTracked && existingEntity != null)
+                    {
+                        entity.GetChangedFields(existingEntity, p => p.PropertyType.IsMutableType())
+                            ?.ForEach(
+                                p =>
+                                {
+                                    Entry(entity).Property(p.Key).IsModified = true;
+                                });
+                    }
 
                     ContextThreadSafeLock.TryRelease();
 

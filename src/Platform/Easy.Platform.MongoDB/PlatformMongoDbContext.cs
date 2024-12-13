@@ -359,51 +359,66 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                             .FirstOrDefaultAsync(cancellationToken);
                 }
 
-                if (existingEntity != null && !ReferenceEquals(entity, existingEntity) && entity.IsValuesEqual(existingEntity))
-                    return (toBeUpdatedEntity: entity, bulkUpdateOp: null, existingEntity, currentInMemoryConcurrencyUpdateToken: null);
+                var changedFields = entity.GetChangedFields(existingEntity);
+
+                if (existingEntity != null && !ReferenceEquals(entity, existingEntity) && changedFields?.Count == 0)
+                    return (toBeUpdatedEntity: entity, bulkWriteOp: null, existingEntity, currentInMemoryConcurrencyUpdateToken: null);
 
                 var toBeUpdatedEntity = entity
                     .PipeIf(
                         entity is IDateAuditedEntity,
-                        p => p.As<IDateAuditedEntity>().With(auditedEntity => auditedEntity.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
+                        p => p.As<IDateAuditedEntity>()
+                            .With(auditedEntity => auditedEntity.LastUpdatedDate = DateTime.UtcNow)
+                            .PipeAction(p => changedFields?.Upsert(nameof(IDateAuditedEntity.LastUpdatedDate), p.LastUpdatedDate))
+                            .As<TEntity>())
                     .PipeIf(
                         entity.IsAuditedUserEntity(),
                         p => p.As<IUserAuditedEntity>()
                             .SetLastUpdatedBy(RequestContextAccessor.Current.UserId(entity.GetAuditedUserIdType()))
+                            .PipeAction(p => changedFields?.Upsert(nameof(IUserAuditedEntity<object>.LastUpdatedBy), p.GetLastUpdatedBy()))
                             .As<TEntity>());
-                string? currentInMemoryConcurrencyUpdateToken = null;
 
+                string? currentInMemoryConcurrencyUpdateToken = null;
                 if (toBeUpdatedEntity is IRowVersionEntity toBeUpdatedRowVersionEntity)
                 {
                     currentInMemoryConcurrencyUpdateToken = toBeUpdatedRowVersionEntity.ConcurrencyUpdateToken;
                     var newUpdateConcurrencyUpdateToken = Ulid.NewUlid().ToString();
 
                     toBeUpdatedRowVersionEntity.ConcurrencyUpdateToken = newUpdateConcurrencyUpdateToken;
+                    changedFields?.Upsert(nameof(IRowVersionEntity.ConcurrencyUpdateToken), toBeUpdatedRowVersionEntity.ConcurrencyUpdateToken);
                 }
 
-                var bulkUpdateOp = new ReplaceOneModel<TEntity>(
-                    Builders<TEntity>.Filter.Pipe(
-                        filterBuilder => currentInMemoryConcurrencyUpdateToken != null
-                            ? filterBuilder.Where(
-                                p => p.Id.Equals(toBeUpdatedEntity.Id) &&
-                                     (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
-                                      ((IRowVersionEntity)p).ConcurrencyUpdateToken == "" ||
-                                      ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken))
-                            : filterBuilder.Where(p => p.Id.Equals(toBeUpdatedEntity.Id))),
-                    toBeUpdatedEntity)
-                {
-                    IsUpsert = false
-                };
 
-                return (toBeUpdatedEntity, bulkUpdateOp, existingEntity, currentInMemoryConcurrencyUpdateToken);
+                var updateDefinition = changedFields?.Select(
+                        field => Builders<TEntity>.Update.Set(field.Key, field.Value))
+                    .Pipe(updateDefinitions => Builders<TEntity>.Update.Combine(updateDefinitions));
+                Expression<Func<TEntity, bool>> toBeUpdatedEntityFilter = toBeUpdatedEntity is IRowVersionEntity
+                    ? p => p.Id.Equals(toBeUpdatedEntity.Id) &&
+                           (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
+                            ((IRowVersionEntity)p).ConcurrencyUpdateToken == "" ||
+                            ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken)
+                    : p => p.Id.Equals(toBeUpdatedEntity.Id);
+
+                var bulkWriteOp = updateDefinition != null
+                    ? (WriteModel<TEntity>)new UpdateOneModel<TEntity>(
+                        Builders<TEntity>.Filter.Where(toBeUpdatedEntityFilter),
+                        updateDefinition)
+                    : new ReplaceOneModel<TEntity>(
+                        Builders<TEntity>.Filter.Where(toBeUpdatedEntityFilter),
+                        toBeUpdatedEntity)
+                    {
+                        IsUpsert = false
+                    };
+
+                return (toBeUpdatedEntity, bulkWriteOp, existingEntity, currentInMemoryConcurrencyUpdateToken);
             });
 
-        var hasDataChangedToBeUpdatedItems = toBeUpdatedItems.Where(p => p.bulkUpdateOp != null).ToList();
+        var hasDataChangedToBeUpdatedItems = toBeUpdatedItems.Where(p => p.bulkWriteOp != null).ToList();
 
         if (hasDataChangedToBeUpdatedItems.Any())
         {
             await GetTable<TEntity>()
-                .BulkWriteAsync(hasDataChangedToBeUpdatedItems.SelectList(p => p.bulkUpdateOp), new BulkWriteOptions { IsOrdered = false }, cancellationToken)
+                .BulkWriteAsync(hasDataChangedToBeUpdatedItems.SelectList(p => p.bulkWriteOp), new BulkWriteOptions { IsOrdered = false }, cancellationToken)
                 .ThenActionAsync(
                     async result =>
                     {
@@ -799,6 +814,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var isEntityRowVersionEntityMissingConcurrencyUpdateToken = entity is IRowVersionEntity { ConcurrencyUpdateToken: null };
+        existingEntity ??= MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString());
 
         if (existingEntity == null &&
             !onlySetData &&
@@ -806,14 +822,13 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             PlatformCqrsEntityEvent.IsAnyEntityEventHandlerRegisteredForEntity<TEntity>(RootServiceProvider) &&
             entity.HasTrackValueUpdatedDomainEventAttribute())
         {
-            existingEntity = MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()) ??
-                             await GetQuery<TEntity>()
-                                 .Where(BuildExistingEntityPredicate())
-                                 .FirstOrDefaultAsync(cancellationToken)
-                                 .EnsureFound($"Entity {typeof(TEntity).Name} with [Id:{entity.Id}] not found to update")
-                                 .ThenActionIf(
-                                     p => p != null,
-                                     p => MappedUnitOfWork?.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p));
+            existingEntity = await GetQuery<TEntity>()
+                .Where(BuildExistingEntityPredicate())
+                .FirstOrDefaultAsync(cancellationToken)
+                .EnsureFound($"Entity {typeof(TEntity).Name} with [Id:{entity.Id}] not found to update")
+                .ThenActionIf(
+                    p => p != null,
+                    p => MappedUnitOfWork?.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p));
 
             if (!existingEntity.Id.Equals(entity.Id)) entity.Id = existingEntity.Id;
         }
@@ -828,17 +843,23 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                     .FirstOrDefaultAsync(cancellationToken);
         }
 
-        if (existingEntity != null && !ReferenceEquals(entity, existingEntity) && entity.IsValuesEqual(existingEntity))
+        var changedFields = entity.GetChangedFields(existingEntity);
+
+        if (existingEntity != null && !ReferenceEquals(entity, existingEntity) && changedFields?.Count == 0)
             return entity;
 
         var toBeUpdatedEntity = entity
             .PipeIf(
                 entity is IDateAuditedEntity && !onlySetData,
-                p => p.As<IDateAuditedEntity>().With(auditedEntity => auditedEntity.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
+                p => p.As<IDateAuditedEntity>()
+                    .With(auditedEntity => auditedEntity.LastUpdatedDate = DateTime.UtcNow)
+                    .PipeAction(p => changedFields?.Upsert(nameof(IDateAuditedEntity.LastUpdatedDate), p.LastUpdatedDate))
+                    .As<TEntity>())
             .PipeIf(
                 entity.IsAuditedUserEntity() && !onlySetData,
                 p => p.As<IUserAuditedEntity>()
                     .SetLastUpdatedBy(RequestContextAccessor.Current.UserId(entity.GetAuditedUserIdType()))
+                    .PipeAction(p => changedFields?.Upsert(nameof(IUserAuditedEntity<object>.LastUpdatedBy), p.GetLastUpdatedBy()))
                     .As<TEntity>());
 
         if (toBeUpdatedEntity is IRowVersionEntity toBeUpdatedRowVersionEntity && !onlySetData)
@@ -847,29 +868,47 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
             var newUpdateConcurrencyUpdateToken = Ulid.NewUlid().ToString();
 
             toBeUpdatedRowVersionEntity.ConcurrencyUpdateToken = newUpdateConcurrencyUpdateToken;
+            changedFields?.Upsert(nameof(IRowVersionEntity.ConcurrencyUpdateToken), toBeUpdatedRowVersionEntity.ConcurrencyUpdateToken);
 
-            var result = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, ReplaceOneResult>(
+            var resultMatchedCount = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, long>(
                 RootServiceProvider,
                 MappedUnitOfWork,
                 toBeUpdatedEntity,
                 existingEntity ?? MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()),
-                entity => GetTable<TEntity>()
-                    .ReplaceOneAsync(
-                        p => p.Id.Equals(entity.Id) &&
-                             (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
-                              ((IRowVersionEntity)p).ConcurrencyUpdateToken == "" ||
-                              ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken),
-                        entity,
-                        new ReplaceOptions { IsUpsert = false },
-                        cancellationToken)
-                    .Then(p => (p, true)),
+                entity =>
+                {
+                    var updateDefinition = changedFields?.Select(
+                            field => Builders<TEntity>.Update.Set(field.Key, field.Value))
+                        .Pipe(updateDefinitions => Builders<TEntity>.Update.Combine(updateDefinitions));
+
+                    return updateDefinition != null
+                        ? GetTable<TEntity>()
+                            .UpdateOneAsync(
+                                p => p.Id.Equals(entity.Id) &&
+                                     (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
+                                      ((IRowVersionEntity)p).ConcurrencyUpdateToken == "" ||
+                                      ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken),
+                                updateDefinition,
+                                cancellationToken: cancellationToken)
+                            .Then(p => (p.MatchedCount, true))
+                        : GetTable<TEntity>()
+                            .ReplaceOneAsync(
+                                p => p.Id.Equals(entity.Id) &&
+                                     (((IRowVersionEntity)p).ConcurrencyUpdateToken == null ||
+                                      ((IRowVersionEntity)p).ConcurrencyUpdateToken == "" ||
+                                      ((IRowVersionEntity)p).ConcurrencyUpdateToken == currentInMemoryConcurrencyUpdateToken),
+                                entity,
+                                new ReplaceOptions { IsUpsert = false },
+                                cancellationToken)
+                            .Then(p => (p.MatchedCount, true));
+                },
                 dismissSendEvent,
                 eventCustomConfig,
                 () => RequestContextAccessor.Current.GetAllKeyValues(),
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
-            if (result.MatchedCount <= 0)
+            if (resultMatchedCount <= 0)
             {
                 if (await GetTable<TEntity>().AsQueryable().AnyAsync(p => p.Id.Equals(toBeUpdatedEntity.Id), cancellationToken))
                 {
@@ -884,25 +923,39 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         }
         else
         {
-            var result = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, ReplaceOneResult>(
+            var resultMatchedCount = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, long>(
                 RootServiceProvider,
                 MappedUnitOfWork,
                 toBeUpdatedEntity,
                 existingEntity ?? MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()),
-                _ => GetTable<TEntity>()
-                    .ReplaceOneAsync(
-                        p => p.Id.Equals(toBeUpdatedEntity.Id),
-                        toBeUpdatedEntity,
-                        new ReplaceOptions { IsUpsert = false },
-                        cancellationToken)
-                    .Then(p => (p, true)),
+                _ =>
+                {
+                    var updateDefinition = changedFields?.Select(
+                            field => Builders<TEntity>.Update.Set(field.Key, field.Value))
+                        .Pipe(updateDefinitions => Builders<TEntity>.Update.Combine(updateDefinitions));
+
+                    return updateDefinition != null
+                        ? GetTable<TEntity>()
+                            .UpdateOneAsync(
+                                p => p.Id.Equals(toBeUpdatedEntity.Id),
+                                updateDefinition,
+                                cancellationToken: cancellationToken)
+                            .Then(p => (p.MatchedCount, true))
+                        : GetTable<TEntity>()
+                            .ReplaceOneAsync(
+                                p => p.Id.Equals(toBeUpdatedEntity.Id),
+                                toBeUpdatedEntity,
+                                new ReplaceOptions { IsUpsert = false },
+                                cancellationToken)
+                            .Then(p => (p.MatchedCount, true));
+                },
                 dismissSendEvent,
                 eventCustomConfig,
                 () => RequestContextAccessor.Current.GetAllKeyValues(),
                 PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, dismissSendEvent),
                 cancellationToken);
 
-            if (result.MatchedCount <= 0)
+            if (resultMatchedCount <= 0)
                 throw new PlatformDomainEntityNotFoundException<TEntity>(toBeUpdatedEntity.Id.ToString());
         }
 

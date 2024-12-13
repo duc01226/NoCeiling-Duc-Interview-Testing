@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Security.Cryptography;
@@ -7,7 +8,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Easy.Platform.Common.JsonSerialization;
-using Force.DeepCloner;
 
 namespace Easy.Platform.Common.Extensions;
 
@@ -15,6 +15,7 @@ public static class ObjectGeneralExtension
 {
     private static readonly ConcurrentDictionary<Type, List<PropertyInfo>> CachedIsValuesDifferentTypeToPropsDict = new();
     private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<Type, bool>> CachedCheckTypeIsAssignableFromDict = new();
+    private static readonly ConcurrentDictionary<string, List<PropertyInfo>> CachedGetChangedFieldsTypeToPropsDict = new();
 
     /// <summary>
     /// Checks if the values of two objects are different.
@@ -124,11 +125,7 @@ public static class ObjectGeneralExtension
             {
                 var propInfos = CachedIsValuesDifferentTypeToPropsDict.GetOrAdd(
                     obj1Type,
-                    type => type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                        .Where(
-                            propInfo => propInfo.GetCustomAttribute<JsonIgnoreAttribute>() == null &&
-                                        propInfo.GetCustomAttribute<PlatformIgnoreCheckValueDiffAttribute>() == null)
-                        .ToList());
+                    type => CachedIsValuesDifferentTypeToPropsDictFactory(type));
 
                 // Deep clone each field
                 foreach (var propInfo in propInfos)
@@ -145,8 +142,8 @@ public static class ObjectGeneralExtension
                                 return true;
                         }
                         else if (InternalIsValuesDifferent(
-                            propInfo.GetValue(obj1),
-                            propInfo.GetValue(obj2),
+                            value1,
+                            value2,
                             propInfo.PropertyType,
                             propInfo.PropertyType)) // Call with the correct types
                             return true;
@@ -160,6 +157,15 @@ public static class ObjectGeneralExtension
 
             return PlatformJsonSerializer.Serialize(obj1) != PlatformJsonSerializer.Serialize(obj2);
         }
+    }
+
+    private static List<PropertyInfo> CachedIsValuesDifferentTypeToPropsDictFactory(Type type)
+    {
+        return type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(
+                propInfo => propInfo.GetCustomAttribute<JsonIgnoreAttribute>() == null &&
+                            propInfo.GetCustomAttribute<PlatformIgnoreCheckValueDiffAttribute>() == null)
+            .ToList();
     }
 
     private static bool IsAssignableFromIDictionary(Type objType)
@@ -202,6 +208,42 @@ public static class ObjectGeneralExtension
     {
         return !IsValuesDifferent(obj1, obj2);
     }
+
+    /// <summary>
+    /// Gets a dictionary of changed fields between two objects of the same type.
+    /// </summary>
+    /// <typeparam name="T">The type of the objects to compare.</typeparam>
+    /// <param name="updatedObject">The updated object.</param>
+    /// <param name="originalObject">The originalObject to compare against.</param>
+    /// <returns>A dictionary with property names as keys and updated values as values.</returns>
+    public static Dictionary<string, object> GetChangedFields<T>(this T updatedObject, T originalObject, Expression<Func<PropertyInfo, bool>> propFilterPredicate = null)
+    {
+        if (originalObject is null || updatedObject is null || ReferenceEquals(updatedObject, originalObject))
+            return null;
+
+        var properties = CachedGetChangedFieldsTypeToPropsDict.GetOrAdd(
+            $"{typeof(T).FullName ?? typeof(T).Name}{propFilterPredicate}",
+            _ => CachedIsValuesDifferentTypeToPropsDictFactory(typeof(T))
+                .Where(prop => prop.GetSetMethod(true) != null)
+                .WhereIf(propFilterPredicate != null, propFilterPredicate!)
+                .ToList());
+        if (properties.Count == 0) return null;
+
+        var changedFields = properties
+            .Select(
+                prop =>
+                {
+                    var updatedObjectValue = prop.GetValue(updatedObject);
+                    var originalObjectValue = prop.GetValue(originalObject);
+
+                    return (propName: prop.Name, updatedObjectValue, isValuesDifferent: IsValuesDifferent(updatedObjectValue, originalObjectValue));
+                })
+            .Where(p => p.isValuesDifferent)
+            .Select(p => new KeyValuePair<string, object>(p.propName, p.updatedObjectValue));
+
+        return new Dictionary<string, object>(changedFields);
+    }
+
 
     /// <summary>
     /// Casts the given object to the specified type.
@@ -366,7 +408,7 @@ public static class ObjectGeneralExtension
         // ReSharper disable once ExpressionIsAlwaysNull
         return obj is null
             ? obj
-            : DeepClonerExtensions.DeepClone(obj);
+            : PlatformJsonSerializer.Deserialize<TObject>(PlatformJsonSerializer.Serialize(obj));
     }
 
     public static object DeepClone(this object obj, Type objType)

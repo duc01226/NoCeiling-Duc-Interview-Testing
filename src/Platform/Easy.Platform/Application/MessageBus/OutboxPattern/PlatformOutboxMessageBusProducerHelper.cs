@@ -420,22 +420,31 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                 await serviceProvider.ExecuteInjectScopedAsync(
                     async (IPlatformOutboxBusMessageRepository outboxBusMessageRepository) =>
                     {
-                        try
-                        {
-                            toUpdateOutboxMessage.LastSendDate = DateTime.UtcNow;
-                            toUpdateOutboxMessage.LastProcessingPingDate = DateTime.UtcNow;
-                            toUpdateOutboxMessage.SendStatus = PlatformOutboxBusMessage.SendStatuses.Processed;
+                        await outboxBusMessageRepository.UowManager()
+                            .ExecuteUowTask(
+                                async () =>
+                                {
+                                    outboxBusMessageRepository.UowManager()
+                                        .CurrentActiveUow()
+                                        .SetCachedExistingOriginalEntity<PlatformOutboxBusMessage, string>(toUpdateOutboxMessage);
 
-                            await outboxBusMessageRepository.SetAsync(toUpdateOutboxMessage, cancellationToken);
-                        }
-                        catch (PlatformDomainRowVersionConflictException)
-                        {
-                            // If a concurrency conflict occurs, retrieve the latest version of the message and retry.
-                            toUpdateOutboxMessage = await serviceProvider.ExecuteInjectScopedAsync<PlatformOutboxBusMessage>(
-                                (IPlatformOutboxBusMessageRepository outboxBusMessageRepository) =>
-                                    outboxBusMessageRepository.GetByIdAsync(toUpdateOutboxMessage.Id, cancellationToken));
-                            throw;
-                        }
+                                    try
+                                    {
+                                        toUpdateOutboxMessage.LastSendDate = DateTime.UtcNow;
+                                        toUpdateOutboxMessage.LastProcessingPingDate = DateTime.UtcNow;
+                                        toUpdateOutboxMessage.SendStatus = PlatformOutboxBusMessage.SendStatuses.Processed;
+
+                                        await outboxBusMessageRepository.SetAsync(toUpdateOutboxMessage, cancellationToken);
+                                    }
+                                    catch (PlatformDomainRowVersionConflictException)
+                                    {
+                                        // If a concurrency conflict occurs, retrieve the latest version of the message and retry.
+                                        toUpdateOutboxMessage = await serviceProvider.ExecuteInjectScopedAsync<PlatformOutboxBusMessage>(
+                                            (IPlatformOutboxBusMessageRepository outboxBusMessageRepository) =>
+                                                outboxBusMessageRepository.GetByIdAsync(toUpdateOutboxMessage.Id, cancellationToken));
+                                        throw;
+                                    }
+                                });
                     });
             },
             sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelaySeconds.Seconds(),

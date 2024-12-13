@@ -828,22 +828,31 @@ public static class PlatformInboxMessageBusConsumerHelper
                 await serviceProvider.ExecuteInjectScopedAsync(
                     async (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
                     {
-                        try
-                        {
-                            toUpdateInboxMessage.LastConsumeDate = Clock.UtcNow;
-                            toUpdateInboxMessage.LastProcessingPingDate = Clock.UtcNow;
-                            toUpdateInboxMessage.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Processed;
+                        await inboxBusMessageRepo.UowManager()
+                            .ExecuteUowTask(
+                                async () =>
+                                {
+                                    inboxBusMessageRepo.UowManager()
+                                        .CurrentActiveUow()
+                                        .SetCachedExistingOriginalEntity<PlatformInboxBusMessage, string>(toUpdateInboxMessage);
 
-                            await inboxBusMessageRepo.SetAsync(toUpdateInboxMessage, cancellationToken);
-                        }
-                        catch (PlatformDomainRowVersionConflictException)
-                        {
-                            // If a concurrency conflict occurs, retrieve the latest version of the message and retry.
-                            toUpdateInboxMessage = await serviceProvider.ExecuteInjectScopedAsync<PlatformInboxBusMessage>(
-                                (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
-                                    inboxBusMessageRepo.GetByIdAsync(toUpdateInboxMessage.Id, cancellationToken));
-                            throw;
-                        }
+                                    try
+                                    {
+                                        toUpdateInboxMessage.LastConsumeDate = Clock.UtcNow;
+                                        toUpdateInboxMessage.LastProcessingPingDate = Clock.UtcNow;
+                                        toUpdateInboxMessage.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Processed;
+
+                                        await inboxBusMessageRepo.SetAsync(toUpdateInboxMessage, cancellationToken);
+                                    }
+                                    catch (PlatformDomainRowVersionConflictException)
+                                    {
+                                        // If a concurrency conflict occurs, retrieve the latest version of the message and retry.
+                                        toUpdateInboxMessage = await serviceProvider.ExecuteInjectScopedAsync<PlatformInboxBusMessage>(
+                                            (IPlatformInboxBusMessageRepository inboxBusMessageRepo) =>
+                                                inboxBusMessageRepo.GetByIdAsync(toUpdateInboxMessage.Id, cancellationToken));
+                                        throw;
+                                    }
+                                });
                     });
             },
             sleepDurationProvider: retryAttempt => DefaultResilientRetiredDelaySeconds.Seconds(),

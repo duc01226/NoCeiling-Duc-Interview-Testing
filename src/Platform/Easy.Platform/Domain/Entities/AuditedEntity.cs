@@ -14,6 +14,9 @@ public interface IUserAuditedEntity
 {
     public IUserAuditedEntity SetCreatedBy(object value);
     public IUserAuditedEntity SetLastUpdatedBy(object value);
+
+    public object GetCreatedBy();
+    public object GetLastUpdatedBy();
 }
 
 public interface IUserAuditedEntity<TUserId> : IUserAuditedEntity
@@ -82,6 +85,16 @@ public abstract class AuditedEntity<TEntity, TPrimaryKey, TUserId> : Entity<TEnt
 
         return this;
     }
+
+    public object GetCreatedBy()
+    {
+        return CreatedBy;
+    }
+
+    public object GetLastUpdatedBy()
+    {
+        return LastUpdatedBy;
+    }
 }
 
 public abstract class RootAuditedEntity<TEntity, TPrimaryKey, TUserId> : RootEntity<TEntity, TPrimaryKey>, IFullAuditedEntity<TUserId>
@@ -139,5 +152,15 @@ public abstract class RootAuditedEntity<TEntity, TPrimaryKey, TUserId> : RootEnt
             LastUpdatedBy = (TUserId)value;
 
         return this;
+    }
+
+    public object GetCreatedBy()
+    {
+        return CreatedBy;
+    }
+
+    public object GetLastUpdatedBy()
+    {
+        return lastUpdatedBy;
     }
 }

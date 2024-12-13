@@ -184,4 +184,14 @@ public static class TypeExtension
             .GetConstructors()
             .Any(p => p.IsPublic && p.GetParameters().Any(p => p.ParameterType.IsAssignableTo(typeof(T))));
     }
+
+    public static bool IsMutableType(this Type type)
+    {
+        // Exclude primitives, value types, and commonly immutable types
+        if (type.IsPrimitive || type.IsValueType || type == typeof(string) || type == typeof(DateTime))
+            return false;
+
+        // Include classes, collections, and dictionaries
+        return true;
+    }
 }
