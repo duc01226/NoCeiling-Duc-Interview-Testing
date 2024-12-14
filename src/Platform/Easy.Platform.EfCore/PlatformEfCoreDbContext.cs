@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using System.Reflection;
 using Easy.Platform.Application;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Application.RequestContext;
@@ -14,6 +15,7 @@ using Easy.Platform.Persistence.DataMigration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Logging;
+using Polly;
 
 namespace Easy.Platform.EfCore;
 
@@ -713,7 +715,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                     // Explicitly check props changes to mark it's updated to support mutate json prop like array, object, etc
                     if (isEntityTracked && existingEntity != null)
                     {
-                        entity.GetChangedFields(existingEntity, p => p.PropertyType.IsMutableType())
+                        entity.GetChangedFields(existingEntity, p => p.PropertyType.IsMutableType() && IsValidScalarProperty(p.Name, typeof(TEntity)))
                             ?.ForEach(
                                 p =>
                                 {
@@ -745,6 +747,22 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 ? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!
                 : p => p.Id.Equals(entity.Id);
         }
+    }
+
+    private bool IsValidScalarProperty(string propertyInfoName, Type entityType)
+    {
+        // Get the entity type metadata
+        var efCoreEntityTypeMap = Model.FindEntityType(entityType);
+        if (efCoreEntityTypeMap == null)
+            return false;
+
+        // Check if the property is a scalar (non-navigation)
+        var property = efCoreEntityTypeMap.FindProperty(propertyInfoName);
+        if (property == null)
+            return false;
+
+        // Ensure the property is not a navigation or ownership
+        return !property.IsShadowProperty();
     }
 
     protected (TEntity entity, bool isEntityTracked, bool isEntityNotTrackedOrTrackedModified) DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(
