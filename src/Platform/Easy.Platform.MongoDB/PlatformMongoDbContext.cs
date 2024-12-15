@@ -874,7 +874,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 RootServiceProvider,
                 MappedUnitOfWork,
                 toBeUpdatedEntity,
-                existingEntity ?? MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()),
+                existingEntity,
                 entity =>
                 {
                     var updateDefinition = changedFields?.Select(

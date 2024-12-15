@@ -85,7 +85,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             // Run DetachLocalIfAny to prevent
             // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
             var toBeUpdatedEntity = entity
-                .Pipe(entity => DetachLocalIfAnyDifferentTrackedEntity(entity, p => p.Name == entity.Name).entity);
+                .Pipe(entity => DetachLocalIfAnyDifferentTrackedEntity(entity, p => p.Name == entity.Name, existingEntity).entity);
 
             DataMigrationHistoryDbSet()
                 .Update(toBeUpdatedEntity)
@@ -294,7 +294,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         {
             await ContextThreadSafeLock.WaitAsync(cancellationToken);
 
-            DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(entity);
+            DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(entity, null);
 
             var result = await PlatformCqrsEntityEvent.ExecuteWithSendingDeleteEntityEvent<TEntity, TPrimaryKey, TEntity>(
                 RootServiceProvider,
@@ -440,7 +440,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             await ContextThreadSafeLock.WaitAsync(cancellationToken);
 
             var toBeCreatedEntity = entity
-                .Pipe(entity => DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(entity).entity)
+                .Pipe(entity => DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(entity, null).entity)
                 .PipeIf(
                     entity.IsAuditedUserEntity(),
                     p => p.As<IUserAuditedEntity>()
@@ -676,7 +676,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             // Run DetachLocalIfAny to prevent
             // The instance of entity type cannot be tracked because another instance of this type with the same key is already being tracked
             var (toBeUpdatedEntity, isEntityTracked, isEntityNotTrackedOrTrackedModified) = entity
-                .Pipe(DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>)
+                .Pipe(p => DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(p, existingEntity))
                 .WithIf(
                     p => p.isEntityNotTrackedOrTrackedModified && entity is IDateAuditedEntity && !onlySetData,
                     p => p.entity.As<IDateAuditedEntity>().With(auditedEntity => auditedEntity.LastUpdatedDate = DateTime.UtcNow).As<TEntity>())
@@ -686,6 +686,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                         .SetLastUpdatedBy(RequestContextAccessor.Current.UserId(entity.GetAuditedUserIdType()))
                         .As<TEntity>());
 
+            // is entity tracked as not modified any things then return
             if (!isEntityNotTrackedOrTrackedModified)
                 return entity;
 
@@ -693,7 +694,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 RootServiceProvider,
                 MappedUnitOfWork,
                 toBeUpdatedEntity,
-                existingEntity ?? MappedUnitOfWork?.GetCachedExistingOriginalEntity<TEntity>(entity.Id.ToString()),
+                existingEntity,
                 entity =>
                 {
                     var updatedEntity = !isEntityTracked || existingEntity == null
@@ -711,17 +712,6 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                                 p => p.As<IRowVersionEntity>()
                                     .With(rowVersionEntity => rowVersionEntity.ConcurrencyUpdateToken = Ulid.NewUlid().ToString())
                                     .As<TEntity>());
-
-                    // Explicitly check props changes to mark it's updated to support mutate json prop like array, object, etc
-                    if (isEntityTracked && existingEntity != null)
-                    {
-                        entity.GetChangedFields(existingEntity, p => p.PropertyType.IsMutableType() && IsValidScalarProperty(p.Name, typeof(TEntity)))
-                            ?.ForEach(
-                                p =>
-                                {
-                                    Entry(entity).Property(p.Key).IsModified = true;
-                                });
-                    }
 
                     ContextThreadSafeLock.TryRelease();
 
@@ -766,15 +756,17 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     }
 
     protected (TEntity entity, bool isEntityTracked, bool isEntityNotTrackedOrTrackedModified) DetachLocalIfAnyDifferentTrackedEntity<TEntity, TPrimaryKey>(
-        TEntity entity)
+        TEntity entity,
+        TEntity checkEntityModifiedByExistingEntity)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return DetachLocalIfAnyDifferentTrackedEntity(entity, entry => entry.Id.Equals(entity.Id));
+        return DetachLocalIfAnyDifferentTrackedEntity(entity, entry => entry.Id.Equals(entity.Id), checkEntityModifiedByExistingEntity);
     }
 
     protected (TEntity entity, bool isEntityTracked, bool isEntityNotTrackedOrTrackedModified) DetachLocalIfAnyDifferentTrackedEntity<TEntity>(
         TEntity entity,
-        Func<TEntity, bool> findExistingEntityPredicate)
+        Func<TEntity, bool> findExistingEntityPredicate,
+        TEntity checkEntityModifiedByExistingEntity)
         where TEntity : class, IEntity, new()
     {
         var local = GetTable<TEntity>().Local.FirstOrDefault(findExistingEntityPredicate);
@@ -782,7 +774,21 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         if (local != null && !ReferenceEquals(local, entity))
             GetTable<TEntity>().Entry(local).State = EntityState.Detached;
 
-        return (entity, local == entity, !ReferenceEquals(local, entity) || GetTable<TEntity>().Entry(entity!).State == EntityState.Modified);
+        var isEntityTracked = local == entity;
+        var isEntityTrackedModified = GetTable<TEntity>().Entry(entity!).State == EntityState.Modified;
+
+        // Explicitly check props changes to mark it's updated to support mutate json prop like array, object, etc
+        if (isEntityTracked && checkEntityModifiedByExistingEntity != null)
+        {
+            var changedMutableFields = entity.GetChangedFields(
+                checkEntityModifiedByExistingEntity,
+                p => p.PropertyType.IsMutableType() && IsValidScalarProperty(p.Name, typeof(TEntity)));
+
+            changedMutableFields?.ForEach(p => Entry(entity!).Property(p.Key).IsModified = true);
+            if (isEntityTrackedModified == false) isEntityTrackedModified = changedMutableFields?.Any() == true;
+        }
+
+        return (entity, isEntityTracked, !ReferenceEquals(local, entity) || isEntityTrackedModified);
     }
 
     public DbSet<TEntity> GetTable<TEntity>() where TEntity : class, IEntity, new()
