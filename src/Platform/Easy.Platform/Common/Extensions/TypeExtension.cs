@@ -194,4 +194,12 @@ public static class TypeExtension
         // Include classes, collections, and dictionaries
         return true;
     }
+
+    public static bool IsAnonymousType(this Type type)
+    {
+        return type.IsGenericType
+               && type.Name.StartsWith("<>")
+               && type.Attributes.HasFlag(TypeAttributes.NotPublic)
+               && type.Namespace == null; // Anonymous types don't have a namespace
+    }
 }

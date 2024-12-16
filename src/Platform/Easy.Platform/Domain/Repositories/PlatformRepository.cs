@@ -138,12 +138,19 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
-    public void SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate<TResult>(TResult result, IPlatformUnitOfWork uow)
+    public void SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate<TResult>(TResult? result, IPlatformUnitOfWork uow)
     {
         if (result is TEntity resultSingleEntity)
             uow.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(resultSingleEntity);
         else if (result is ICollection<TEntity> resultMultipleEntities && resultMultipleEntities.Any())
             resultMultipleEntities.ForEach(p => uow.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p));
+        else if (result is ICollection<KeyValuePair<TPrimaryKey, TEntity>> resultMultipleEntitiesDict && resultMultipleEntitiesDict.Any())
+            resultMultipleEntitiesDict.ForEach(p => uow.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p.Value));
+        else if (result?.GetType().IsAnonymousType() == true)
+        {
+            foreach (var property in result.GetType().GetProperties())
+                SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate(property.GetValue(result), uow);
+        }
     }
 
     public Task<List<TEntity>> GetAllAsync(

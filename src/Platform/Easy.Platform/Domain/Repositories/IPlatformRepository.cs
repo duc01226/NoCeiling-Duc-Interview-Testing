@@ -104,7 +104,7 @@ public interface IPlatformRepository<TEntity, TPrimaryKey> : IPlatformRepository
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
-    public void SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate<TResult>(TResult result, IPlatformUnitOfWork uow);
+    public void SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate<TResult>(TResult? result, IPlatformUnitOfWork uow);
 }
 
 public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformRepository<TEntity, TPrimaryKey>
@@ -936,6 +936,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
         if (dismissSendEvent || !PlatformCqrsEntityEvent.IsAnyKindsOfEventHandlerRegisteredForEntity<TEntity, TPrimaryKey>(GetRootServiceProvider()))
             await DeleteManyAsync(predicate, dismissSendEvent, eventCustomConfig, cancellationToken);
         else
+        {
             await Util.Pager.ExecuteScrollingPagingAsync(
                 async () =>
                 {
@@ -955,6 +956,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                 await CountAsync(predicate, cancellationToken)
                     .Then(totalItemsCount => totalItemsCount / pageSize.Value),
                 cancellationToken: cancellationToken);
+        }
     }
 
     /// <summary>

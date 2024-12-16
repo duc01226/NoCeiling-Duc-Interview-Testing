@@ -146,10 +146,14 @@ public static class ObjectGeneralExtension
                             value2,
                             propInfo.PropertyType,
                             propInfo.PropertyType)) // Call with the correct types
+                        {
                             return true;
+                        }
                     }
                     else if (value1 != value2) // Handle null comparison
+                    {
                         return true;
+                    }
                 }
 
                 return false;
@@ -215,15 +219,21 @@ public static class ObjectGeneralExtension
     /// <typeparam name="T">The type of the objects to compare.</typeparam>
     /// <param name="updatedObject">The updated object.</param>
     /// <param name="originalObject">The originalObject to compare against.</param>
+    /// <param name="propFilterPredicate">propFilterPredicate</param>
     /// <returns>A dictionary with property names as keys and updated values as values.</returns>
     public static Dictionary<string, object> GetChangedFields<T>(this T updatedObject, T originalObject, Expression<Func<PropertyInfo, bool>> propFilterPredicate = null)
     {
         if (originalObject is null || updatedObject is null || ReferenceEquals(updatedObject, originalObject))
             return null;
 
+        var useType = updatedObject.GetType() == originalObject.GetType() &&
+                      updatedObject.GetType().IsAssignableTo(typeof(T))
+            ? updatedObject.GetType()
+            : typeof(T);
+
         var properties = CachedGetChangedFieldsTypeToPropsDict.GetOrAdd(
-            $"{typeof(T).FullName ?? typeof(T).Name}{propFilterPredicate}",
-            _ => CachedIsValuesDifferentTypeToPropsDictFactory(typeof(T))
+            $"{useType.FullName ?? useType.Name}{propFilterPredicate}",
+            _ => CachedIsValuesDifferentTypeToPropsDictFactory(useType)
                 .Where(prop => prop.GetSetMethod(true) != null)
                 .WhereIf(propFilterPredicate != null, propFilterPredicate!)
                 .ToList());
