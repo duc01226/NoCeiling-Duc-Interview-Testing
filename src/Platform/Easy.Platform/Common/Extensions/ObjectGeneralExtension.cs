@@ -146,14 +146,10 @@ public static class ObjectGeneralExtension
                             value2,
                             propInfo.PropertyType,
                             propInfo.PropertyType)) // Call with the correct types
-                        {
                             return true;
-                        }
                     }
                     else if (value1 != value2) // Handle null comparison
-                    {
                         return true;
-                    }
                 }
 
                 return false;
@@ -226,9 +222,12 @@ public static class ObjectGeneralExtension
         if (originalObject is null || updatedObject is null || ReferenceEquals(updatedObject, originalObject))
             return null;
 
-        var useType = updatedObject.GetType() == originalObject.GetType() &&
-                      updatedObject.GetType().IsAssignableTo(typeof(T))
-            ? updatedObject.GetType()
+        var updatedObjectType = updatedObject.GetType();
+
+        var useType = updatedObjectType != typeof(T) &&
+                      updatedObjectType == originalObject.GetType() &&
+                      updatedObjectType.IsAssignableTo(typeof(T))
+            ? updatedObjectType
             : typeof(T);
 
         var properties = CachedGetChangedFieldsTypeToPropsDict.GetOrAdd(
