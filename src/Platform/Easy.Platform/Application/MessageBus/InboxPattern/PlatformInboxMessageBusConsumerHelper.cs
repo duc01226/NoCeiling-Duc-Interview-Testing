@@ -834,7 +834,7 @@ public static class PlatformInboxMessageBusConsumerHelper
                                 {
                                     inboxBusMessageRepo.UowManager()
                                         .CurrentActiveUow()
-                                        .SetCachedExistingOriginalEntity<PlatformInboxBusMessage, string>(toUpdateInboxMessage);
+                                        .SetCachedExistingOriginalEntity<PlatformInboxBusMessage, string>(toUpdateInboxMessage, null, true);
 
                                     try
                                     {

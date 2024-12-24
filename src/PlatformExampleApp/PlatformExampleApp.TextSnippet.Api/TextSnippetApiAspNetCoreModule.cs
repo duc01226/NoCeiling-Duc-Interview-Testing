@@ -50,7 +50,7 @@ public class TextSnippetApiAspNetCoreModule : PlatformAspNetCoreModule
 
     protected override string[] GetAllowCorsOrigins(IConfiguration configuration)
     {
-        return Configuration["AllowCorsOrigins"].Split(";");
+        return Configuration["AllowCorsOrigins"]!.Split(";");
     }
 
     protected override Type RequestContextKeyToClaimTypeMapperType()

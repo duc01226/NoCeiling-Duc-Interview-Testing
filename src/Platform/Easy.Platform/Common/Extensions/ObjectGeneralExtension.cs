@@ -1,8 +1,8 @@
 using System.Collections;
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -164,7 +164,8 @@ public static class ObjectGeneralExtension
         return type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(
                 propInfo => propInfo.GetCustomAttribute<JsonIgnoreAttribute>() == null &&
-                            propInfo.GetCustomAttribute<PlatformIgnoreCheckValueDiffAttribute>() == null)
+                            propInfo.GetCustomAttribute<PlatformIgnoreCheckValueDiffAttribute>() == null &&
+                            propInfo.GetCustomAttribute<IgnoreDataMemberAttribute>() == null)
             .ToList();
     }
 
@@ -225,8 +226,7 @@ public static class ObjectGeneralExtension
         var updatedObjectType = updatedObject.GetType();
 
         var useType = updatedObjectType != typeof(T) &&
-                      updatedObjectType == originalObject.GetType() &&
-                      updatedObjectType.IsAssignableTo(typeof(T))
+                      updatedObjectType == originalObject.GetType()
             ? updatedObjectType
             : typeof(T);
 
@@ -412,20 +412,22 @@ public static class ObjectGeneralExtension
         return obj;
     }
 
-    public static TObject DeepClone<TObject>(this TObject obj)
+    public static TObject DeepClone<TObject>(this TObject obj, Expression<Func<PropertyInfo, bool>> clonePropPredicate = null)
     {
         // ReSharper disable once ExpressionIsAlwaysNull
-        return obj is null
+        return obj is null || !obj.GetType().IsMutableType()
             ? obj
-            : PlatformJsonSerializer.Deserialize<TObject>(PlatformJsonSerializer.Serialize(obj));
+            : PlatformJsonSerializer.Deserialize<TObject>(PlatformJsonSerializer.Serialize(obj, customSerializerOptions: null, propPredicate: clonePropPredicate));
     }
 
-    public static object DeepClone(this object obj, Type objType)
+    public static object DeepClone(this object obj, Type objType, Expression<Func<PropertyInfo, bool>> clonePropPredicate = null)
     {
         // ReSharper disable once ExpressionIsAlwaysNull
-        return obj is null
+        return obj is null || !obj.GetType().IsMutableType()
             ? obj
-            : PlatformJsonSerializer.Deserialize(PlatformJsonSerializer.Serialize(obj), objType);
+            : PlatformJsonSerializer.Deserialize(
+                PlatformJsonSerializer.Serialize(obj, customSerializerOptions: null, propPredicate: clonePropPredicate, objType: objType),
+                objType);
     }
 
     public static bool Is<TObject>(this TObject obj, Expression<Func<TObject, bool>> expr)

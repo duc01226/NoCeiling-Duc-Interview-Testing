@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
-using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text.Json;
 using IdentityModel;
@@ -27,7 +26,7 @@ public class TestUsers
 
             return
             [
-                new()
+                new TestUser
                 {
                     SubjectId = "818727",
                     Username = "alice",
@@ -46,7 +45,7 @@ public class TestUsers
                             IdentityServerConstants.ClaimValueTypes.Json)
                     }
                 },
-                new()
+                new TestUser
                 {
                     SubjectId = "88421113",
                     Username = "bob",

@@ -1,10 +1,11 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Linq.Expressions;
+using System.Reflection;
 using Easy.Platform.Common;
 using Easy.Platform.Common.Extensions;
 using Easy.Platform.Common.Utils;
 using Easy.Platform.Domain.Entities;
-using Easy.Platform.Domain.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -133,20 +134,25 @@ public interface IPlatformUnitOfWork : IDisposable
     /// </summary>
     /// <typeparam name="TEntity">The type of the entity.</typeparam>
     /// <param name="existingEntity">The existing entity to cache.</param>
-    /// <param name="needDeepCloneEntity">needDeepCloneEntity</param>
-    /// <param name="runtimeEntityType">The runtime type of the entity, if different from the compile-time type.</param>
+    /// <param name="clonePropPredicate">If not null, only clone props that match the predicate return true on set cached cloned entity</param>
+    /// <param name="useExactGenericTypeNotRuntimeType">useExactGenericTypeNotRuntimeType</param>
     /// <returns>The cached existing original entity.</returns>
     /// <remarks>
     /// This method is used to cache an entity, so it can be retrieved later without querying the database again.
     /// It helps in improving performance by reducing the number of database calls.
     /// </remarks>
-    public TEntity SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(TEntity existingEntity, Type runtimeEntityType = null)
+    public TEntity SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(
+        TEntity existingEntity,
+        Expression<Func<PropertyInfo, bool>> clonePropPredicate = null,
+        bool useExactGenericTypeNotRuntimeType = false)
         where TEntity : class, IEntity<TPrimaryKey>, new();
 
-    public IList<TEntity> SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(IList<TEntity> existingEntities, Type runtimeEntityType = null)
+    public IList<TEntity> SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(
+        IList<TEntity> existingEntities,
+        Expression<Func<PropertyInfo, bool>> clonePropPredicate = null)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return existingEntities.SelectList(p => SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p, runtimeEntityType));
+        return existingEntities.SelectList(p => SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p));
     }
 
     public void RemoveCachedExistingOriginalEntity(string existingEntityId);
@@ -314,19 +320,24 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
         return cachedExistingOriginalEntity.As<TEntity>();
     }
 
-    public virtual TEntity SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(TEntity existingEntity, Type runtimeEntityType = null)
+    public virtual TEntity SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(
+        TEntity existingEntity,
+        Expression<Func<PropertyInfo, bool>> clonePropPredicate = null,
+        bool useExactGenericTypeNotRuntimeType = false)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         if (CachedExistingOriginalEntities != null)
         {
-            var useRunTimeType = runtimeEntityType != null && runtimeEntityType != typeof(TEntity);
+            var runtimeType = existingEntity.GetType();
 
-            var castedRuntimeTypeExistingEntity = useRunTimeType ? Convert.ChangeType(existingEntity, runtimeEntityType).DeepClone() : existingEntity.DeepClone();
+            var clonedExistingEntity = runtimeType != typeof(TEntity) && useExactGenericTypeNotRuntimeType == false
+                ? existingEntity.DeepClone(runtimeType, clonePropPredicate)
+                : existingEntity.DeepClone(clonePropPredicate);
 
             CachedExistingOriginalEntities.AddOrUpdate(
                 existingEntity.GetId().ToString(),
-                castedRuntimeTypeExistingEntity,
-                (key, oldItem) => castedRuntimeTypeExistingEntity);
+                clonedExistingEntity,
+                (key, oldItem) => clonedExistingEntity);
         }
 
         return existingEntity;

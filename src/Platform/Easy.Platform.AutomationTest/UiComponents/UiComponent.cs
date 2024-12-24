@@ -187,7 +187,7 @@ public abstract class UiComponent<TComponent> : IUiComponent<TComponent>
     public virtual string GetAttribute(string attributeName)
     {
         return Util.TaskRunner.WaitRetryThrowFinalException(
-            executeFunc: () => RootElement?.GetAttribute(attributeName) ?? "",
+            executeFunc: () => RootElement?.GetDomAttribute(attributeName) ?? "",
             retryCount: DefaultGetElementRetry);
     }
 

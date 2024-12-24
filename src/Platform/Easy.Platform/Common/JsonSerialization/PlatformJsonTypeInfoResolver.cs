@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
@@ -9,6 +10,9 @@ namespace Easy.Platform.Common.JsonSerialization;
 /// </summary>
 public class PlatformJsonTypeInfoResolver : DefaultJsonTypeInfoResolver
 {
+    private static readonly ConcurrentDictionary<string, bool> IsTypeNoPublicConstructorCache = new();
+    private static readonly ConcurrentDictionary<string, Func<object>> CreateObjectForeNoPublicConstructorCache = new();
+
     /// <summary>
     /// Gets the JSON type information for the specified type and JSON serialization options.
     /// </summary>
@@ -18,13 +22,21 @@ public class PlatformJsonTypeInfoResolver : DefaultJsonTypeInfoResolver
     public override JsonTypeInfo GetTypeInfo(Type type, JsonSerializerOptions options)
     {
         var jsonTypeInfo = base.GetTypeInfo(type, options);
+        var jsonTypeInfoType = jsonTypeInfo.Type;
+        var jsonTypeInfoTypeName = jsonTypeInfo.Type.FullName ?? jsonTypeInfo.Type.Name;
 
         // If the type is an object, it has no public constructors, and the CreateObject delegate is not set
         if (jsonTypeInfo.Kind == JsonTypeInfoKind.Object &&
             jsonTypeInfo.CreateObject is null &&
-            jsonTypeInfo.Type.GetConstructors(BindingFlags.Public | BindingFlags.Instance).Length == 0)
+            IsTypeNoPublicConstructorCache.GetOrAdd(
+                jsonTypeInfoTypeName,
+                p => !jsonTypeInfoType.IsInterface && jsonTypeInfoType.GetConstructors(BindingFlags.Public | BindingFlags.Instance).Length == 0))
+        {
             // Set the CreateObject delegate to use the private parameterless constructor
-            jsonTypeInfo.CreateObject = () => Activator.CreateInstance(jsonTypeInfo.Type, nonPublic: true);
+            jsonTypeInfo.CreateObject = CreateObjectForeNoPublicConstructorCache.GetOrAdd(
+                jsonTypeInfoTypeName,
+                p => () => Activator.CreateInstance(jsonTypeInfoType, nonPublic: true));
+        }
 
         return jsonTypeInfo;
     }

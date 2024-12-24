@@ -1,5 +1,3 @@
-using Easy.Platform.Persistence;
-
 namespace Easy.Platform.MongoDB;
 
 public class PlatformMongoOptions

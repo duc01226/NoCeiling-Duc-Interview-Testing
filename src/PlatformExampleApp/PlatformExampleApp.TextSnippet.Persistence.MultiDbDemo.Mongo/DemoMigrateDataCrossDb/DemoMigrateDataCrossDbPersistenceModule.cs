@@ -1,5 +1,4 @@
 using Easy.Platform.MongoDB;
-using Easy.Platform.Persistence;
 using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
 

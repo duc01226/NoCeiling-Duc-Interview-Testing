@@ -1,5 +1,4 @@
 using Easy.Platform.Domain.Entities;
-using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.MongoDB.Domain.Repositories;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
 

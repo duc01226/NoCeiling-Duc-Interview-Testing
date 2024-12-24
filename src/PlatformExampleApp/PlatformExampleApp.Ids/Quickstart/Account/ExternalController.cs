@@ -135,7 +135,7 @@ public class ExternalController : Controller
     private (TestUser user, string provider, string providerUserId, IEnumerable<Claim> claims)
         FindUserFromExternalProvider(AuthenticateResult result)
     {
-        var externalUser = result.Principal;
+        var externalUser = result.Principal!;
 
         // try to determine the unique id of the external user (issued by the provider)
         // the most common claim type for that are the sub claim and the NameIdentifier
@@ -148,7 +148,7 @@ public class ExternalController : Controller
         var claims = externalUser.Claims.ToList();
         claims.Remove(userIdClaim);
 
-        var provider = result.Properties.Items["scheme"];
+        var provider = result.Properties!.Items["scheme"];
         var providerUserId = userIdClaim.Value;
 
         // find external user

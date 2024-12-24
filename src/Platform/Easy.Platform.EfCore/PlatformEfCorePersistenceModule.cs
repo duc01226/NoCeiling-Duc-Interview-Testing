@@ -2,9 +2,11 @@ using System.Diagnostics;
 using Easy.Platform.Application.MessageBus.InboxPattern;
 using Easy.Platform.Application.MessageBus.OutboxPattern;
 using Easy.Platform.Common.DependencyInjection;
+using Easy.Platform.Common.JsonSerialization;
 using Easy.Platform.Domain.UnitOfWork;
 using Easy.Platform.EfCore.Domain.Repositories;
 using Easy.Platform.EfCore.Domain.UnitOfWork;
+using Easy.Platform.EfCore.JsonSerialization;
 using Easy.Platform.EfCore.Services;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.Services;
@@ -60,6 +62,9 @@ public abstract class PlatformEfCorePersistenceModule<TDbContext> : PlatformPers
                                 EntityFrameworkCoreLogFilterCategoryPrefix),
                             $"FilterCategory must start with {EntityFrameworkCoreLogFilterCategoryPrefix}"),
                         p.Value)));
+
+        PlatformJsonSerializer.AdditionalDefaultConverters.TryAdd(typeof(PlatformILazyLoadingJsonConverter).FullName, new PlatformILazyLoadingJsonConverter());
+        PlatformJsonSerializer.AdditionalDefaultConverters.TryAdd(typeof(PlatformLazyLoadingJsonConverter).FullName, new PlatformLazyLoadingJsonConverter());
     }
 
     protected override void RegisterDbContextPool(IServiceCollection serviceCollection)

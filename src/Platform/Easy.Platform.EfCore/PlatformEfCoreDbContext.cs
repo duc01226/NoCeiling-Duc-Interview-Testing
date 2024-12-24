@@ -1,10 +1,8 @@
 using System.Linq.Expressions;
 using System.Reflection;
-using Easy.Platform.Application;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
-using Easy.Platform.Common.Extensions;
 using Easy.Platform.Domain.Entities;
 using Easy.Platform.Domain.Events;
 using Easy.Platform.Domain.Exceptions;
@@ -15,7 +13,6 @@ using Easy.Platform.Persistence.DataMigration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Logging;
-using Polly;
 
 namespace Easy.Platform.EfCore;
 
@@ -23,6 +20,9 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     where TDbContext : PlatformEfCoreDbContext<TDbContext>, IPlatformDbContext<TDbContext>
 {
     public const int ContextMaxConcurrentThreadLock = 1;
+
+    // ReSharper disable once StaticMemberInGenericType
+    private static readonly Expression<Func<PropertyInfo, bool>> IgnoreLazyLoadingPropTypePredicate = p => !p.PropertyType.IsAssignableTo(typeof(ILazyLoader));
 
     private readonly Lazy<ILogger> lazyLogger;
     private readonly Lazy<PlatformPersistenceConfiguration<TDbContext>> lazyPersistenceConfiguration;
@@ -45,7 +45,11 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         // need to get logger factory here first
         var loggerFactory = Util.TaskRunner.CatchException<Exception, ILoggerFactory>(() => this.GetService<ILoggerFactory>(), fallbackValue: null);
         lazyLogger = new Lazy<ILogger>(() => CreateLogger(loggerFactory));
+
+        IsUsingLazyLoadingProxy = options.IsUsingLazyLoadingProxy();
     }
+
+    public bool IsUsingLazyLoadingProxy { get; set; }
 
     public DbSet<PlatformDataMigrationHistory> DataMigrationHistoryDbSet()
     {
@@ -137,6 +141,8 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         Database.ExecuteSqlRaw(command);
     }
 
+    public virtual bool DisableDbSchemaMigrateOnInitialize => false;
+
     public virtual async Task Initialize(IServiceProvider serviceProvider)
     {
         // Store stack trace before call Database.MigrateAsync() to keep the original stack trace to log
@@ -145,7 +151,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
 
         try
         {
-            await Database.With(p => p.SetCommandTimeout(3600)).MigrateAsync();
+            if (!DisableDbSchemaMigrateOnInitialize) await Database.With(p => p.SetCommandTimeout(1.Days())).MigrateAsync();
             await InsertDbInitializedApplicationDataMigrationHistory();
             await SaveChangesAsync();
         }
@@ -506,7 +512,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                                .FirstOrDefaultAsync(cancellationToken)
                                .ThenActionIf(
                                    p => p != null,
-                                   p => MappedUnitOfWork?.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p));
+                                   p => SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p));
 
         if (existingEntity != null)
         {
@@ -552,7 +558,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 var existingEntityIds = await existingEntitiesQuery.ToListAsync(cancellationToken)
                     .Then(
                         items => items
-                            .PipeAction(items => items.ForEach(p => MappedUnitOfWork?.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p)))
+                            .PipeAction(items => items.ForEach(p => SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p)))
                             .Pipe(existingEntities => existingEntities.Select(p => p.Id).ToHashSet()));
                 var (toUpdateEntities, newEntities) = entities.WhereSplitResult(p => existingEntityIds.Contains(p.Id));
 
@@ -573,7 +579,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 var existingEntities = await existingEntitiesQuery.ToListAsync(cancellationToken)
                     .Then(
                         items => items
-                            .PipeAction(items => items.ForEach(p => MappedUnitOfWork?.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p))));
+                            .PipeAction(items => items.ForEach(p => SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p))));
 
                 var toUpsertEntityToExistingEntityPairs = entities.Select(
                     toUpsertEntity =>
@@ -657,7 +663,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                     .EnsureFound($"Entity {typeof(TEntity).Name} with [Id:{entity.Id}] not found to update")
                     .ThenActionIf(
                         p => p != null,
-                        p => MappedUnitOfWork?.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p));
+                        p => SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p));
 
                 if (!existingEntity.Id.Equals(entity.Id)) entity.Id = existingEntity.Id;
             }
@@ -737,6 +743,19 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 ? entity.As<IUniqueCompositeIdSupport<TEntity>>().FindByUniqueCompositeIdExpr()!
                 : p => p.Id.Equals(entity.Id);
         }
+    }
+
+    public TEntity SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(TEntity p) where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        return MappedUnitOfWork?.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(
+            p,
+            clonePropPredicate: GetCachedExistingOriginalEntityClonePropPredicate<TEntity, TPrimaryKey>());
+    }
+
+    public Expression<Func<PropertyInfo, bool>> GetCachedExistingOriginalEntityClonePropPredicate<TEntity, TPrimaryKey>()
+        where TEntity : class, IEntity<TPrimaryKey>, new()
+    {
+        return IsUsingLazyLoadingProxy ? IgnoreLazyLoadingPropTypePredicate : null;
     }
 
     private bool IsValidScalarProperty(string propertyInfoName, Type entityType)

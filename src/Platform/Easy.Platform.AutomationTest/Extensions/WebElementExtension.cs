@@ -177,7 +177,7 @@ public static class WebElementExtension
     {
         try
         {
-            var attribute = element.GetAttribute("value");
+            var attribute = element.GetDomAttribute("value");
             return attribute != null && attribute.Contains(value);
         }
         catch (StaleElementReferenceException)

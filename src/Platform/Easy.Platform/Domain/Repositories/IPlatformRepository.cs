@@ -67,12 +67,12 @@ public interface IPlatformRepository<TEntity, TPrimaryKey> : IPlatformRepository
     where TEntity : class, IEntity<TPrimaryKey>, new()
 {
     public Task<TEntity> GetByIdAsync(
-        TPrimaryKey id,
+        TPrimaryKey? id,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 
     public Task<List<TEntity>> GetByIdsAsync(
-        List<TPrimaryKey> ids,
+        List<TPrimaryKey?> ids,
         CancellationToken cancellationToken = default,
         params Expression<Func<TEntity, object?>>[] loadRelatedEntities);
 

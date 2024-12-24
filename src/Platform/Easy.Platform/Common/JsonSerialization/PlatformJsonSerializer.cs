@@ -1,3 +1,6 @@
+using System.Collections.Concurrent;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Easy.Platform.Common.Extensions;
@@ -10,15 +13,17 @@ namespace Easy.Platform.Common.JsonSerialization;
 /// </summary>
 public static class PlatformJsonSerializer
 {
+    public static readonly ConcurrentDictionary<string, JsonConverter> AdditionalDefaultConverters = new();
+
     /// <summary>
     /// Gets the default JSON serialization options.
     /// </summary>
-    public static readonly JsonSerializerOptions DefaultOptions = BuildDefaultOptions();
+    public static readonly Lazy<JsonSerializerOptions> DefaultOptions = new(() => BuildDefaultOptions());
 
     /// <summary>
     /// Lazy-initialized current JSON serialization options for thread safety.
     /// </summary>
-    public static Lazy<JsonSerializerOptions> CurrentOptions { get; private set; } = new(() => DefaultOptions);
+    public static Lazy<JsonSerializerOptions> CurrentOptions { get; private set; } = new(() => DefaultOptions.Value);
 
     /// <summary>
     /// Sets the current JSON serialization options.
@@ -60,6 +65,8 @@ public static class PlatformJsonSerializer
          * The first converter that can handle the type being serialized or deserialized will be used.
          */
         options.Converters.Clear();
+
+        AdditionalDefaultConverters.ForEach(p => options.Converters.Add(p.Value));
 
         if (useJsonStringEnumConverter)
             options.Converters.Add(new JsonStringEnumConverter());
@@ -124,6 +131,8 @@ public static class PlatformJsonSerializer
         return Serialize(value, customSerializerOptions: null);
     }
 
+    public static readonly ConcurrentDictionary<string, List<PropertyInfo>> SerializeFilterPropsCache = new();
+
     /// <summary>
     /// Serializes the specified value to a JSON string using the provided options or the current default options.
     /// </summary>
@@ -131,22 +140,53 @@ public static class PlatformJsonSerializer
     /// <param name="value">The value to serialize.</param>
     /// <param name="customSerializerOptions">Custom JSON serialization options.</param>
     /// <param name="forceUseRuntimeType">Whether to force the use of the runtime type for abstract types.</param>
+    /// <param name="propPredicate">propPredicate</param>
+    /// <param name="objType">use objType instead of generic type</param>
     /// <returns>The JSON string representation of the serialized value.</returns>
-    public static string Serialize<TValue>(TValue value, JsonSerializerOptions customSerializerOptions, bool forceUseRuntimeType = false)
+    public static string Serialize<TValue>(
+        TValue value,
+        JsonSerializerOptions customSerializerOptions,
+        bool forceUseRuntimeType = false,
+        Expression<Func<PropertyInfo, bool>> propPredicate = null,
+        Type objType = null)
     {
-        if (typeof(TValue).IsAbstract || forceUseRuntimeType)
-            try
+        var givenObjectType = objType ?? typeof(TValue);
+
+        var givenOrRuntimeObjType = givenObjectType.IsAbstract || forceUseRuntimeType ? value.GetType() : givenObjectType;
+
+        if (propPredicate != null)
+        {
+            var filteredProps = SerializeFilterPropsCache.GetOrAdd(
+                $"{givenOrRuntimeObjType.FullName ?? givenOrRuntimeObjType.Name}{propPredicate}",
+                key => givenOrRuntimeObjType
+                    .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .Where(propInfo => propInfo.GetCustomAttribute<JsonIgnoreAttribute>() == null)
+                    .Where(propPredicate.Compile())
+                    .ToList());
+
+            return Serialize(
+                new Dictionary<string, object>(filteredProps.Select(prop => new KeyValuePair<string, object>(prop.Name, prop.GetValue(value)))),
+                customSerializerOptions,
+                forceUseRuntimeType);
+        }
+        else
+        {
+            if (givenObjectType.IsAbstract || forceUseRuntimeType)
             {
-                // Try to use the real runtime type to support TValue as an abstract base type.
-                // Serialize exactly the type. If not successful, fallback to the original type.
-                return JsonSerializer.Serialize(value, value.GetType(), customSerializerOptions ?? CurrentOptions.Value);
-            }
-            catch
-            {
-                return JsonSerializer.Serialize(value, typeof(TValue), customSerializerOptions ?? CurrentOptions.Value);
+                try
+                {
+                    // Try to use the real runtime type to support TValue as an abstract base type.
+                    // Serialize exactly the type. If not successful, fallback to the original type.
+                    return JsonSerializer.Serialize(value, givenOrRuntimeObjType, customSerializerOptions ?? CurrentOptions.Value);
+                }
+                catch
+                {
+                    return JsonSerializer.Serialize(value, givenObjectType, customSerializerOptions ?? CurrentOptions.Value);
+                }
             }
 
-        return JsonSerializer.Serialize(value, typeof(TValue), customSerializerOptions ?? CurrentOptions.Value);
+            return JsonSerializer.Serialize(value, givenOrRuntimeObjType, customSerializerOptions ?? CurrentOptions.Value);
+        }
     }
 
     public static string Serialize<TValue>(TValue value, Action<JsonSerializerOptions> customSerializerOptionsConfig)
@@ -196,6 +236,7 @@ public static class PlatformJsonSerializer
         bool forceUseRuntimeType = false)
     {
         if (typeof(TValue).IsAbstract || forceUseRuntimeType)
+        {
             try
             {
                 // Try to use real runtime type to support TValue is abstract base type. Serialize exactly the type.
@@ -206,6 +247,7 @@ public static class PlatformJsonSerializer
             {
                 return JsonSerializer.SerializeToUtf8Bytes(value, typeof(TValue), customSerializerOptions ?? CurrentOptions.Value);
             }
+        }
 
         return JsonSerializer.SerializeToUtf8Bytes(value, typeof(TValue), customSerializerOptions ?? CurrentOptions.Value);
     }

@@ -8,6 +8,8 @@ using PlatformExampleApp.TextSnippet.Application.Dtos.EntityDtos;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
+// ReSharper disable UnusedVariable
+
 namespace PlatformExampleApp.TextSnippet.Application.UseCaseQueries;
 
 /// <summary>

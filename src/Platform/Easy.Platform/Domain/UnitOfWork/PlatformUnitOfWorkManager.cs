@@ -175,7 +175,7 @@ public interface IPlatformUnitOfWorkManager : IDisposable
 
     IPlatformRootServiceProvider GetRootServiceProvider();
 
-    /// <inheritdoc cref="DependencyInjectionExtension.ExecuteInjectScopedScrollingPagingAsync{TItem}(System.IServiceProvider,int,System.Delegate,object[])" />
+    /// <inheritdoc cref="DependencyInjectionExtension.ExecuteInjectScopedScrollingPagingAsync{TItem}(IServiceProvider,int,Delegate,object[])" />
     public async Task ExecuteInjectScopedScrollingPagingAsync<TItem>(
         Delegate method,
         int maxExecutionCount,
@@ -204,7 +204,7 @@ public interface IPlatformUnitOfWorkManager : IDisposable
                 });
     }
 
-    /// <inheritdoc cref="DependencyInjectionExtension.ExecuteInjectScopedPagingAsync(System.IServiceProvider,long,int,System.Delegate,object[])" />
+    /// <inheritdoc cref="DependencyInjectionExtension.ExecuteInjectScopedPagingAsync(IServiceProvider,long,int,Delegate,object[])" />
     public async Task ExecuteInjectScopedPagingAsync(
         long maxItemCount,
         int pageSize,

@@ -14,6 +14,7 @@ public class PlatformIgnoreMethodBaseJsonConverter : JsonConverter<MethodBase>
         Type typeToConvert,
         JsonSerializerOptions options)
     {
+        reader.Skip();
         return null;
     }
 

@@ -1,3 +1,5 @@
+using System.Linq.Expressions;
+using System.Reflection;
 using Easy.Platform.Common;
 using Easy.Platform.Persistence;
 using Easy.Platform.Persistence.Domain;
@@ -44,6 +46,17 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
     public override bool MustKeepUowForQuery()
     {
         return DbContextOptions.IsUsingLazyLoadingProxy();
+    }
+
+    public override TEntity SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(
+        TEntity existingEntity,
+        Expression<Func<PropertyInfo, bool>> clonePropPredicate = null,
+        bool useExactGenericTypeNotRuntimeType = false)
+    {
+        return base.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(
+            existingEntity,
+            clonePropPredicate ?? DbContext.GetCachedExistingOriginalEntityClonePropPredicate<TEntity, TPrimaryKey>(),
+            useExactGenericTypeNotRuntimeType);
     }
 
     protected override TDbContext DbContextFactory(IServiceProvider serviceProvider)

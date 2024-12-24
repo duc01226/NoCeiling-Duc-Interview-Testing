@@ -2,7 +2,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using Easy.Platform.Common.Extensions;
-using Easy.Platform.Domain.Exceptions;
 
 namespace Easy.Platform.Domain.Entities;
 
@@ -51,14 +50,11 @@ public static class PlatformEntityExtensions
     public static T? FindById<T, TId>(this IEnumerable<T> entities, TId id) where T : IEntity<TId>
     {
 #pragma warning disable S2955
+        if (entities is IQueryable<T> entitiesQuery)
+            return entitiesQuery.FirstOrDefault(p => p.Id != null && p.Id.Equals(id));
+
         return entities.FirstOrDefault(p => p.Id != null && p.Id.Equals(id));
 #pragma warning restore S2955
-    }
-
-    public static T GetById<T, TId>(this IEnumerable<T> entities, TId id, Func<Exception>? notFoundException = null) where T : IEntity<TId>
-    {
-        return entities.FindById(id) ??
-               (notFoundException != null ? throw notFoundException() : throw new PlatformDomainEntityNotFoundException<T>(id?.ToString()));
     }
 
     public static bool IsAuditedUserEntity<TEntity>(this TEntity entity) where TEntity : IEntity

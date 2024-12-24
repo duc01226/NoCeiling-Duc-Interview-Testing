@@ -350,6 +350,11 @@ public static class ListExtension
         }
     }
 
+    public static void ForEach<T>(this IEnumerable<T> items, Action action)
+    {
+        foreach (var _ in items) action();
+    }
+
     /// <summary>
     /// Executes a specified action on each item in the provided list, along with the index of the item in the list.
     /// </summary>
@@ -403,6 +408,11 @@ public static class ListExtension
 
             for (var i = 0; i < itemsIList.Count; i++) await action(itemsIList[i], i);
         }
+    }
+
+    public static async Task ForEachAsync<T>(this IEnumerable<T> items, Func<Task> action)
+    {
+        foreach (var _ in items) await action();
     }
 
     /// <summary>
@@ -826,7 +836,7 @@ public static class ListExtension
     /// <returns>A string that consists of the elements in the IEnumerable delimited by the separator string. If the IEnumerable is null or contains no elements, the method returns String.Empty.</returns>
     public static string JoinToString<T>(this IEnumerable<T>? items, string separator = "") where T : notnull
     {
-        return items != null ? string.Join(separator, items.Select(p => p.ToString())) : string.Empty;
+        return items != null ? string.Join(separator, items.Select(p => p?.ToString() ?? string.Empty)) : string.Empty;
     }
 
     /// <summary>

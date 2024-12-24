@@ -77,9 +77,11 @@ public class PlatformObjectJsonConverter : JsonConverter<object>
 
                 var dynamicObjectPropEnumerator = dynamicObjectAsJsonElement.EnumerateObject();
                 while (dynamicObjectPropEnumerator.MoveNext())
+                {
                     keyValueObject.Add(
                         dynamicObjectPropEnumerator.Current.Name,
                         TryGetReflectionDynamic(dynamicObjectPropEnumerator.Current.Value));
+                }
 
                 return keyValueObject;
             }

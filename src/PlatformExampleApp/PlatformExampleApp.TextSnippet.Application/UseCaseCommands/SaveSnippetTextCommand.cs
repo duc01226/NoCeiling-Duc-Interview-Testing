@@ -13,6 +13,8 @@ using PlatformExampleApp.TextSnippet.Application.Infrastructures;
 using PlatformExampleApp.TextSnippet.Domain.Entities;
 using PlatformExampleApp.TextSnippet.Domain.Repositories;
 
+// ReSharper disable UnusedVariable
+
 // ReSharper disable ConvertToLocalFunction
 
 namespace PlatformExampleApp.TextSnippet.Application.UseCaseCommands;

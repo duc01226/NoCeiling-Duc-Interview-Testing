@@ -230,6 +230,7 @@ public static class Validation
 }
 
 public readonly struct Validation<T>
+    : IEquatable<Validation<T>>
 {
     public List<Error> Errors { get; }
     public T Value { get; }
@@ -337,5 +338,10 @@ public readonly struct Validation<T>
     public T EnsureValid()
     {
         return IsValid ? Value : throw new Validation.ValidationException(Errors);
+    }
+
+    public bool Equals(Validation<T> other)
+    {
+        return Equals(Errors, other.Errors) && EqualityComparer<T>.Default.Equals(Value, other.Value) && IsValid == other.IsValid;
     }
 }
