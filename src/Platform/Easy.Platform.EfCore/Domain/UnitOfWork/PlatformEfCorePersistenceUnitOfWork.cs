@@ -50,13 +50,13 @@ public class PlatformEfCorePersistenceUnitOfWork<TDbContext>
 
     public override TEntity SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(
         TEntity existingEntity,
-        Expression<Func<PropertyInfo, bool>> clonePropPredicate = null,
-        bool useExactGenericTypeNotRuntimeType = false)
+        bool useExactGenericTypeNotRuntimeType = false,
+        Func<TEntity, Type>? customGetRuntimeTypeFn = null)
     {
         return base.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(
             existingEntity,
-            clonePropPredicate ?? DbContext.GetCachedExistingOriginalEntityClonePropPredicate<TEntity, TPrimaryKey>(),
-            useExactGenericTypeNotRuntimeType);
+            useExactGenericTypeNotRuntimeType,
+            customGetRuntimeTypeFn ?? (p => DbContext.GetCachedExistingOriginalEntityCustomGetRuntimeTypeFn(p)));
     }
 
     protected override TDbContext DbContextFactory(IServiceProvider serviceProvider)

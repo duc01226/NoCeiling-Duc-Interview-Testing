@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
 using Easy.Platform.Application.Persistence;
@@ -22,7 +23,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     public const int ContextMaxConcurrentThreadLock = 1;
 
     // ReSharper disable once StaticMemberInGenericType
-    private static readonly Expression<Func<PropertyInfo, bool>> IgnoreLazyLoadingPropTypePredicate = p => !p.PropertyType.IsAssignableTo(typeof(ILazyLoader));
+    private static readonly ConcurrentDictionary<string, Type> GetCachedExistingOriginalEntityCustomGetRuntimeTypeFnCachedResultDict = new();
 
     private readonly Lazy<ILogger> lazyLogger;
     private readonly Lazy<PlatformPersistenceConfiguration<TDbContext>> lazyPersistenceConfiguration;
@@ -749,13 +750,25 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     {
         return MappedUnitOfWork?.SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(
             p,
-            clonePropPredicate: GetCachedExistingOriginalEntityClonePropPredicate<TEntity, TPrimaryKey>());
+            false,
+            p => GetCachedExistingOriginalEntityCustomGetRuntimeTypeFn(p));
     }
 
-    public Expression<Func<PropertyInfo, bool>> GetCachedExistingOriginalEntityClonePropPredicate<TEntity, TPrimaryKey>()
-        where TEntity : class, IEntity<TPrimaryKey>, new()
+    public Type GetCachedExistingOriginalEntityCustomGetRuntimeTypeFn<TEntity>(TEntity entity)
+        where TEntity : class, IEntity, new()
     {
-        return IsUsingLazyLoadingProxy ? IgnoreLazyLoadingPropTypePredicate : null;
+        var entityType = entity.GetType();
+
+        return GetCachedExistingOriginalEntityCustomGetRuntimeTypeFnCachedResultDict.GetOrAdd(
+            $"{entityType.Name}_{typeof(TEntity)}",
+            p =>
+            {
+                return IsUsingLazyLoadingProxy &&
+                       entityType != typeof(TEntity) &&
+                       entityType.GetProperties().Any(p => p.PropertyType.IsAssignableTo(typeof(ILazyLoader)))
+                    ? entityType.BaseType?.IsAssignableTo(typeof(TEntity)) == true ? entityType.BaseType : typeof(TEntity)
+                    : entityType;
+            });
     }
 
     private bool IsValidScalarProperty(string propertyInfoName, Type entityType)

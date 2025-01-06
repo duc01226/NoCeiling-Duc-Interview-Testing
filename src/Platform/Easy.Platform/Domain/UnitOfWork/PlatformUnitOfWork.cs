@@ -134,8 +134,8 @@ public interface IPlatformUnitOfWork : IDisposable
     /// </summary>
     /// <typeparam name="TEntity">The type of the entity.</typeparam>
     /// <param name="existingEntity">The existing entity to cache.</param>
-    /// <param name="clonePropPredicate">If not null, only clone props that match the predicate return true on set cached cloned entity</param>
     /// <param name="useExactGenericTypeNotRuntimeType">useExactGenericTypeNotRuntimeType</param>
+    /// <param name="customGetRuntimeTypeFn">customGetRuntimeTypeFn of existingEntity</param>
     /// <returns>The cached existing original entity.</returns>
     /// <remarks>
     /// This method is used to cache an entity, so it can be retrieved later without querying the database again.
@@ -143,16 +143,16 @@ public interface IPlatformUnitOfWork : IDisposable
     /// </remarks>
     public TEntity SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(
         TEntity existingEntity,
-        Expression<Func<PropertyInfo, bool>> clonePropPredicate = null,
-        bool useExactGenericTypeNotRuntimeType = false)
+        bool useExactGenericTypeNotRuntimeType = false,
+        Func<TEntity, Type>? customGetRuntimeTypeFn = null)
         where TEntity : class, IEntity<TPrimaryKey>, new();
 
     public IList<TEntity> SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(
         IList<TEntity> existingEntities,
-        Expression<Func<PropertyInfo, bool>> clonePropPredicate = null)
+        Func<TEntity, Type>? customGetRuntimeTypeFn = null)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return existingEntities.SelectList(p => SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p));
+        return existingEntities.SelectList(p => SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(p, false, customGetRuntimeTypeFn));
     }
 
     public void RemoveCachedExistingOriginalEntity(string existingEntityId);
@@ -322,17 +322,17 @@ public abstract class PlatformUnitOfWork : IPlatformUnitOfWork
 
     public virtual TEntity SetCachedExistingOriginalEntity<TEntity, TPrimaryKey>(
         TEntity existingEntity,
-        Expression<Func<PropertyInfo, bool>> clonePropPredicate = null,
-        bool useExactGenericTypeNotRuntimeType = false)
+        bool useExactGenericTypeNotRuntimeType = false,
+        Func<TEntity, Type>? customGetRuntimeTypeFn = null)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         if (CachedExistingOriginalEntities != null)
         {
-            var runtimeType = existingEntity.GetType();
+            var runtimeType = customGetRuntimeTypeFn != null ? customGetRuntimeTypeFn(existingEntity) : existingEntity.GetType();
 
             var clonedExistingEntity = runtimeType != typeof(TEntity) && useExactGenericTypeNotRuntimeType == false
-                ? existingEntity.DeepClone(runtimeType, clonePropPredicate)
-                : existingEntity.DeepClone(clonePropPredicate);
+                ? existingEntity.DeepClone(runtimeType)
+                : existingEntity.DeepClone();
 
             CachedExistingOriginalEntities.AddOrUpdate(
                 existingEntity.GetId().ToString(),

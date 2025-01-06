@@ -360,8 +360,12 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 }
 
                 var changedFields = entity.GetChangedFields(existingEntity);
+                var entityUpdatedDateAuditField = LastUpdatedDateAuditFieldAttribute.GetUpdatedDateAuditField(typeof(TEntity));
 
-                if (existingEntity != null && !ReferenceEquals(entity, existingEntity) && changedFields?.Count == 0)
+                if (existingEntity != null &&
+                    !ReferenceEquals(entity, existingEntity) &&
+                    (changedFields?.Count == 0 ||
+                     (changedFields?.Count == 1 && entityUpdatedDateAuditField != null && entityUpdatedDateAuditField.Name == changedFields.First().Key)))
                     return (toBeUpdatedEntity: entity, bulkWriteOp: null, existingEntity, currentInMemoryConcurrencyUpdateToken: null);
 
                 var toBeUpdatedEntity = entity
@@ -844,8 +848,12 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         }
 
         var changedFields = entity.GetChangedFields(existingEntity);
+        var entityUpdatedDateAuditField = LastUpdatedDateAuditFieldAttribute.GetUpdatedDateAuditField(typeof(TEntity));
 
-        if (existingEntity != null && !ReferenceEquals(entity, existingEntity) && changedFields?.Count == 0)
+        if (existingEntity != null &&
+            !ReferenceEquals(entity, existingEntity) &&
+            (changedFields?.Count == 0 ||
+             (changedFields?.Count == 1 && entityUpdatedDateAuditField != null && entityUpdatedDateAuditField.Name == changedFields.First().Key)))
             return entity;
 
         var toBeUpdatedEntity = entity

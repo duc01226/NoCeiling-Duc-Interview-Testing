@@ -426,7 +426,7 @@ public class PlatformOutboxMessageBusProducerHelper : IPlatformHelper
                                 {
                                     outboxBusMessageRepository.UowManager()
                                         .CurrentActiveUow()
-                                        .SetCachedExistingOriginalEntity<PlatformOutboxBusMessage, string>(toUpdateOutboxMessage, null, true);
+                                        .SetCachedExistingOriginalEntity<PlatformOutboxBusMessage, string>(toUpdateOutboxMessage, true);
 
                                     try
                                     {
