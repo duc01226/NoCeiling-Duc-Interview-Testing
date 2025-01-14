@@ -22,7 +22,7 @@ import {
     PlatformEventManager,
     PlatformEventManagerSubscriptionsMap
 } from './events';
-import { PlatformHighlightSearchTextPipe, PlatformPipe } from './pipes';
+import { PlatformPipe } from './pipes';
 import { PLATFORM_CORE_GLOBAL_ENV } from './platform-core-global-environment';
 import { PlatformCoreModuleConfig } from './platform-core.config';
 import { PlatformGlobalErrorHandler } from './platform-global-error-handler';
@@ -57,8 +57,8 @@ type ForChildModules = PlatformCoreModule;
  * @exports PlatformCoreModule
  */
 @NgModule({
-    declarations: [PlatformHighlightSearchTextPipe],
-    exports: [CommonModule, FormsModule, ReactiveFormsModule, PlatformHighlightSearchTextPipe]
+    declarations: [],
+    exports: [CommonModule, FormsModule, ReactiveFormsModule]
 })
 export class PlatformCoreModule {
     /**

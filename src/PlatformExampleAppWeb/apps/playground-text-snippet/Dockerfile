@@ -1,5 +1,5 @@
 # BUILDER START
-FROM node:14-alpine AS builder
+FROM node:16-alpine AS builder
 WORKDIR /usr/src
 
 RUN npm install -g @angular/cli@17.0.8
@@ -37,7 +37,7 @@ RUN node --max-old-space-size=4000 ./node_modules/@angular/cli/bin/ng build play
 # BUILDER END
 
 # Build static web app
-FROM nginx:1.19.9-alpine as app
+FROM nginx:1.19.9-alpine AS app
 EXPOSE 80
 RUN apk add --update nodejs npm moreutils
 RUN apk --update add bash

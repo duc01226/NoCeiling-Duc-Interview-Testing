@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { SearchTextSnippetQuery, TextSnippetApi, TextSnippetDataModel } from '@libs/apps-domains/text-snippet-domain';
 import { PlatformVm, PlatformVmStore, distinctUntilObjectValuesChanged } from '@libs/platform-core';
-import { Observable, filter, switchMap, throttleTime } from 'rxjs';
+import { Observable, filter, of, switchMap, throttleTime } from 'rxjs';
 
 export class AppVm extends PlatformVm {
     public static readonly textSnippetItemsPageSize = 10;
@@ -101,9 +101,11 @@ export class AppStore extends PlatformVmStore<AppVm> {
 
     protected cachedStateKeyName = () => 'AppStore';
 
-    public initOrReloadVm = (isReload: boolean) => {
+    protected beforeInitVm = () => {};
+
+    public override initOrReloadVm = (isReload: boolean): Observable<unknown> => {
         this.loadSnippetTextItems(this.currentState().currentSearchTextSnippetQuery(), isReload);
-        return null;
+        return of(null);
     };
 
     public loadSnippetTextItems = this.effect((query$: Observable<SearchTextSnippetQuery>, isReloading?: boolean) => {

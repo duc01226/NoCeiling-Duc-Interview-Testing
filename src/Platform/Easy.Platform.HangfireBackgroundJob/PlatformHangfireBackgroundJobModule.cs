@@ -39,6 +39,15 @@ public abstract class PlatformHangfireBackgroundJobModule : PlatformBackgroundJo
                 loggerFactory: provider.GetRequiredService<ILoggerFactory>()),
             ServiceLifeTime.Singleton,
             replaceStrategy: DependencyInjectionExtension.CheckRegisteredStrategy.ByService);
+
+        GlobalJobFilters.Filters.Add(
+            AutomaticRetryOnFailedOptionsBuilder()
+                .Pipe(
+                    options => new AutomaticRetryAttribute
+                    {
+                        Attempts = options.Attempts,
+                        DelayInSecondsByAttemptFunc = options.DelayInSecondsByAttemptFunc
+                    }));
     }
 
     protected override async Task InternalInit(IServiceScope serviceScope)

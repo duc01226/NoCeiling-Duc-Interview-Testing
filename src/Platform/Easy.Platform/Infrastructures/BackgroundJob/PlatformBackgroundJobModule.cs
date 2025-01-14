@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Easy.Platform.Common;
 using Easy.Platform.Common.DependencyInjection;
 using Easy.Platform.Common.Extensions;
@@ -33,6 +34,11 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
     public virtual PlatformBackgroundJobModule UseDashboardUi(IApplicationBuilder app, PlatformBackgroundJobUseDashboardUiOptions options = null)
     {
         return this;
+    }
+
+    public virtual PlatformBackgroundJobAutomaticRetryOnFailedOptions AutomaticRetryOnFailedOptionsBuilder()
+    {
+        return new PlatformBackgroundJobAutomaticRetryOnFailedOptions();
     }
 
     protected override void InternalRegister(IServiceCollection serviceCollection)
@@ -71,6 +77,7 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
             serviceScope.ServiceProvider.GetRequiredService<IPlatformBackgroundJobProcessingService>();
 
         if (!backgroundJobProcessingService.Started())
+        {
             await Util.TaskRunner.WaitRetryThrowFinalExceptionAsync(
                 async () =>
                 {
@@ -93,6 +100,7 @@ public abstract class PlatformBackgroundJobModule : PlatformInfrastructureModule
                             currentRetry,
                             DefaultStartBackgroundJobProcessingRetryCount);
                 });
+        }
     }
 
     public async Task ExecuteOnStartUpRecurringBackgroundJobImmediately()
@@ -170,4 +178,24 @@ public class PlatformBackgroundJobUseDashboardUiOptions
         public string UserName { get; set; }
         public string Password { get; set; }
     }
+}
+
+public class PlatformBackgroundJobAutomaticRetryOnFailedOptions
+{
+    public const int DefaultAttempts = int.MaxValue;
+    public const int DefaultRetryDelayInSeconds = 300;
+
+    /// <summary>
+    /// Gets or sets the maximum number of automatic retry attempts.
+    /// </summary>
+    /// <value>Any non-negative number.</value>
+    /// <exception cref="ArgumentOutOfRangeException">The value in a set operation is less than zero.</exception>
+    public int Attempts { get; set; } = DefaultAttempts;
+
+    /// <summary>
+    /// Gets or sets a function using to get a delay by an attempt number. Default is constant delay of
+    /// </summary>
+    /// <exception cref="ArgumentNullException">The value in a set operation is null.</exception>
+    [JsonIgnore]
+    public Func<long, int> DelayInSecondsByAttemptFunc { get; set; } = _ => DefaultRetryDelayInSeconds;
 }

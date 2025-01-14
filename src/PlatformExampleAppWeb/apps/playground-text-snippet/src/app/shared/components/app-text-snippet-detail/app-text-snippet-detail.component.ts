@@ -20,7 +20,6 @@ import { AppTextSnippetDetail } from './app-text-snippet-detail.view-model';
     styleUrls: ['./app-text-snippet-detail.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
     encapsulation: ViewEncapsulation.None,
-    standalone: true,
     imports: [
         CommonModule,
         FormsModule,
@@ -71,17 +70,19 @@ export class AppTextSnippetDetailComponent extends PlatformVmComponent<AppTextSn
                         })
                     )
                     .pipe(
-                        this.observerLoadingErrorState('loadSelectedTextSnippetItem', {
-                            onError: err =>
+                        this.observerLoadingErrorState('loadSelectedTextSnippetItem'),
+                        this.tapResponse(
+                            data => {
+                                this.updateVm({
+                                    toSaveTextSnippet: cloneDeep(data.items[0])
+                                });
+                            },
+                            err => {
                                 this.updateVm({
                                     error: PlatformApiServiceErrorResponse.getDefaultFormattedMessage(err)
-                                })
-                        }),
-                        this.tapResponse(data => {
-                            this.updateVm({
-                                toSaveTextSnippet: cloneDeep(data.items[0])
-                            });
-                        })
+                                });
+                            }
+                        )
                     );
             })
         );
@@ -130,6 +131,9 @@ export class AppTextSnippetDetailComponent extends PlatformVmComponent<AppTextSn
         );
     });
 
-    protected override initOrReloadVm = () =>
-        new AppTextSnippetDetail({ toSaveTextSnippetId: this.appStore.currentState().selectedSnippetTextId });
+    public override initOrReloadVm = (isReload: boolean): Observable<AppTextSnippetDetail> => {
+        return of(
+            new AppTextSnippetDetail({ toSaveTextSnippetId: this.appStore.currentState().selectedSnippetTextId })
+        );
+    };
 }

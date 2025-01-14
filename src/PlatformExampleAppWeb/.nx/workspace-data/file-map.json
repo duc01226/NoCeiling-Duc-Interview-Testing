@@ -1,0 +1,1247 @@
+{
+  "version": "6.0",
+  "nxVersion": "19.8.14",
+  "deps": {
+    "@angular/animations": "^19.0.6",
+    "@angular/cdk": "^19.0.5",
+    "@angular/common": "^19.0.6",
+    "@angular/compiler": "^19.0.6",
+    "@angular/core": "^19.0.6",
+    "@angular/forms": "^19.0.6",
+    "@angular/localize": "^19.0.6",
+    "@angular/material": "^19.0.5",
+    "@angular/material-moment-adapter": "^19.0.5",
+    "@angular/platform-browser": "^19.0.6",
+    "@angular/platform-browser-dynamic": "^19.0.6",
+    "@angular/pwa": "^19.0.7",
+    "@angular/router": "^19.0.6",
+    "@angular/service-worker": "^19.0.6",
+    "@ng-select/ng-select": "^14.2.0",
+    "@ngneat/input-mask": "^6.1.0",
+    "@ngneat/overview": "^6.0.0",
+    "@ngrx/component-store": "^19.0.0",
+    "@ngx-translate/core": "^14.0.0",
+    "@ngx-translate/http-loader": "^7.0.0",
+    "angular-oauth2-oidc": "^17.0.2",
+    "bootstrap": "^5.2.3",
+    "font-awesome": "4.7.0",
+    "highcharts": "^11.4.3",
+    "highcharts-angular": "^4.0.0",
+    "lodash-es": "4.17.21",
+    "moment": "2.29.4",
+    "moment-timezone": "^0.5.43",
+    "ngx-toastr": "^19.0.0",
+    "rxjs": "^7.8.1",
+    "tslib": "2.3.0",
+    "type-fest": "^4.15.0",
+    "@angular-devkit/build-angular": "^19.0.7",
+    "@angular-devkit/core": "^19.0.7",
+    "@angular-devkit/schematics": "^19.0.7",
+    "@angular-eslint/eslint-plugin": "^19.0.2",
+    "@angular-eslint/eslint-plugin-template": "^19.0.2",
+    "@angular-eslint/template-parser": "^19.0.2",
+    "@angular/cli": "^19.0.7",
+    "@angular/compiler-cli": "^19.0.6",
+    "@angular/language-service": "^19.0.6",
+    "@nx/angular": "^20.3.1",
+    "@nx/eslint": "^20.3.1",
+    "@nx/eslint-plugin": "^20.3.1",
+    "@nx/jest": "^20.3.1",
+    "@nx/workspace": "^20.3.1",
+    "@schematics/angular": "^18.0.0",
+    "@types/inputmask": "^5.0.7",
+    "@types/jest": "^29.5.12",
+    "@types/jquery": "^3.5.29",
+    "@types/lodash-es": "^4.17.6",
+    "@types/node": "^18.16.9",
+    "@typescript-eslint/eslint-plugin": "^7.3.0",
+    "@typescript-eslint/parser": "^7.3.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-cypress": "^2.15.1",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-prettier": "^5.1.1",
+    "eslint-plugin-sonar": "^0.12.0",
+    "eslint-plugin-sonarjs": "^0.23.0",
+    "eslint-plugin-unused-imports": "^4.1.4",
+    "jest": "^29.5.0",
+    "jest-environment-jsdom": "^29.5.0",
+    "jest-preset-angular": "^14.5.0",
+    "js-beautify": "^1.14.6",
+    "ng-packagr": "^19.0.1",
+    "nx": "^19.1.1",
+    "nx-cloud": "^19.1.0",
+    "postcss": "^8.4.35",
+    "postcss-import": "^14.1.0",
+    "postcss-preset-env": "^7.5.0",
+    "postcss-url": "^10.1.3",
+    "posthtml": "0.16.6",
+    "posthtml-attrs-sorter": "1.1.0",
+    "prettier": "~3.1.1",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.6.0"
+  },
+  "pathMappings": {
+    "@libs/platform-core": [
+      "libs/platform-core/src/index.ts"
+    ],
+    "@libs/apps-domains/text-snippet-domain": [
+      "libs/apps-domains/text-snippet-domain/src/index.ts"
+    ]
+  },
+  "nxJsonPlugins": [],
+  "fileMap": {
+    "nonProjectFiles": [
+      {
+        "file": "tools/tsconfig.tools.json",
+        "hash": "10213074763776753816"
+      },
+      {
+        "file": ".editorconfig",
+        "hash": "16867696359323487085"
+      },
+      {
+        "file": ".eslintrc.json",
+        "hash": "15524945960345333118"
+      },
+      {
+        "file": "package.json",
+        "hash": "369143347905764848"
+      },
+      {
+        "file": ".eslintignore",
+        "hash": "12734785424990051896"
+      },
+      {
+        "file": ".gitignore",
+        "hash": "4492031220443185397"
+      },
+      {
+        "file": "libs/platform-components/README.md",
+        "hash": "11589134962721097971"
+      },
+      {
+        "file": "yarn.lock",
+        "hash": "18287399714200136947"
+      },
+      {
+        "file": "jest.config.ts",
+        "hash": "15270011474032120766"
+      },
+      {
+        "file": "libs/apps-domains-components/README.md",
+        "hash": "16297562439859345659"
+      },
+      {
+        "file": "nginx.conf",
+        "hash": "14459389764147292849"
+      },
+      {
+        "file": "nx.json",
+        "hash": "15825904761156775401"
+      },
+      {
+        "file": "tools/generators/.gitkeep",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "libs/README.md",
+        "hash": "6266694389394330208"
+      },
+      {
+        "file": "typings/custom-global/index.d.ts",
+        "hash": "7232722072007843858"
+      },
+      {
+        "file": ".prettierignore",
+        "hash": "8179918974834983798"
+      },
+      {
+        "file": "jest.preset.js",
+        "hash": "7237366182116113807"
+      },
+      {
+        "file": ".dockerignore",
+        "hash": "11249216694983762679"
+      },
+      {
+        "file": "README.md",
+        "hash": "9284304544996988892"
+      },
+      {
+        "file": "nginx-dev.conf",
+        "hash": "11108297917070712763"
+      },
+      {
+        "file": ".vscode/extensions.json",
+        "hash": "8764373511351007584"
+      },
+      {
+        "file": "scripts/format-angular-template.js",
+        "hash": "16903991545777404109"
+      },
+      {
+        "file": ".vscode/settings.json",
+        "hash": "12422187332511141348"
+      },
+      {
+        "file": "libs/apps-domains/README.md",
+        "hash": "16372584852388796884"
+      },
+      {
+        "file": ".prettierrc",
+        "hash": "11440795030065362330"
+      },
+      {
+        "file": "decorate-angular-cli.js",
+        "hash": "8983175746783896472"
+      },
+      {
+        "file": "tsconfig.base.json",
+        "hash": "4006369612516725324"
+      },
+      {
+        "file": "libs/apps-shared-components/README.md",
+        "hash": "7123536058400469558"
+      },
+      {
+        "file": "package-lock.json",
+        "hash": "11686912371657335729"
+      }
+    ],
+    "projectFileMap": {
+      "apps-domains-text-snippet-domain": [
+        {
+          "file": "libs/apps-domains/text-snippet-domain/.eslintrc.json",
+          "hash": "6894848449494626961"
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/README.md",
+          "hash": "3333192316351633817"
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/jest.config.ts",
+          "hash": "17453192800025524862"
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/ng-package.json",
+          "hash": "6238144582650801684"
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/package.json",
+          "hash": "12506589479981704611",
+          "deps": [
+            "npm:font-awesome",
+            "npm:tslib"
+          ]
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/project.json",
+          "hash": "17662996208345275287"
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/src/index.ts",
+          "hash": "15968023470311959829"
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/src/lib/apis/index.ts",
+          "hash": "1133968413092510347"
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/src/lib/apis/text-snippet.api.ts",
+          "hash": "8013836851066251689",
+          "deps": [
+            "npm:rxjs",
+            "platform-core"
+          ]
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/src/lib/apps-text-snippet-domain.config.ts",
+          "hash": "7523322251223296965"
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/src/lib/apps-text-snippet-domain.module.ts",
+          "hash": "18350195312797551507",
+          "deps": [
+            "platform-core"
+          ]
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/src/lib/apps-text-snippet.repository-context.ts",
+          "hash": "10630342832402584159",
+          "deps": [
+            "npm:rxjs",
+            "platform-core"
+          ]
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/src/lib/data-models/index.ts",
+          "hash": "3167737951886426589"
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/src/lib/data-models/text-snippet.data-model.ts",
+          "hash": "780166599396584894",
+          "deps": [
+            "platform-core"
+          ]
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/src/lib/index.ts",
+          "hash": "6139871889698037721"
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/src/lib/repositories/index.ts",
+          "hash": "5767894955082773904"
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/src/lib/repositories/text-snippet.repository.ts",
+          "hash": "18241010589994651305",
+          "deps": [
+            "npm:rxjs",
+            "platform-core"
+          ]
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/src/lib/shared-dtos/demo-shared.dto.ts",
+          "hash": "10419696062464424176",
+          "deps": [
+            "platform-core"
+          ]
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/src/lib/shared-dtos/index.ts",
+          "hash": "9911567282820350494"
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/src/test-setup.ts",
+          "hash": "9531801021999427605",
+          "deps": [
+            "npm:jest-preset-angular"
+          ]
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/tsconfig.json",
+          "hash": "18019647302572602165"
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/tsconfig.lib.json",
+          "hash": "12606059801227598172"
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/tsconfig.lib.prod.json",
+          "hash": "15708124224138188842"
+        },
+        {
+          "file": "libs/apps-domains/text-snippet-domain/tsconfig.spec.json",
+          "hash": "16454003168037758975"
+        }
+      ],
+      "playground-text-snippet": [
+        {
+          "file": "apps/playground-text-snippet/.eslintrc.json",
+          "hash": "17873419446314780008"
+        },
+        {
+          "file": "apps/playground-text-snippet/Dockerfile",
+          "hash": "2527782605577216174"
+        },
+        {
+          "file": "apps/playground-text-snippet/docker-entrypoint.sh",
+          "hash": "14023633388553920407"
+        },
+        {
+          "file": "apps/playground-text-snippet/jest.config.ts",
+          "hash": "3386325428496121616"
+        },
+        {
+          "file": "apps/playground-text-snippet/ngsw-config.json",
+          "hash": "8551786511446506368"
+        },
+        {
+          "file": "apps/playground-text-snippet/project.json",
+          "hash": "15174786226462916094"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/app/app.component.html",
+          "hash": "8475119703424468724"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/app/app.component.scss",
+          "hash": "13144121367262674033"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/app/app.component.ts",
+          "hash": "5328828412908836203",
+          "deps": [
+            "npm:@angular/core",
+            "platform-core",
+            "npm:@angular/common",
+            "npm:@angular/forms",
+            "npm:@angular/material",
+            "npm:@ngx-translate/core"
+          ]
+        },
+        {
+          "file": "apps/playground-text-snippet/src/app/app.config.ts",
+          "hash": "6297021980402749502",
+          "deps": [
+            "platform-core",
+            "npm:@ngx-translate/core",
+            "npm:@ngx-translate/http-loader",
+            "apps-domains-text-snippet-domain"
+          ]
+        },
+        {
+          "file": "apps/playground-text-snippet/src/app/app.routes.ts",
+          "hash": "12690257393750904817",
+          "deps": [
+            "npm:@angular/router"
+          ]
+        },
+        {
+          "file": "apps/playground-text-snippet/src/app/app.store.ts",
+          "hash": "15663054401297213786",
+          "deps": [
+            "npm:@angular/core",
+            "apps-domains-text-snippet-domain",
+            "platform-core",
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "apps/playground-text-snippet/src/app/events/app.api-error-event-handler.ts",
+          "hash": "5347295370621773067",
+          "deps": [
+            "platform-core"
+          ]
+        },
+        {
+          "file": "apps/playground-text-snippet/src/app/shared/components/app-text-snippet-detail/app-text-snippet-detail.component.html",
+          "hash": "18303987576696622422"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/app/shared/components/app-text-snippet-detail/app-text-snippet-detail.component.scss",
+          "hash": "9046850994039850157"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/app/shared/components/app-text-snippet-detail/app-text-snippet-detail.component.ts",
+          "hash": "7047113256144481958",
+          "deps": [
+            "npm:@angular/core",
+            "npm:rxjs",
+            "apps-domains-text-snippet-domain",
+            "platform-core",
+            "npm:@angular/common",
+            "npm:@angular/forms",
+            "npm:@angular/material",
+            "npm:@ngx-translate/core"
+          ]
+        },
+        {
+          "file": "apps/playground-text-snippet/src/app/shared/components/app-text-snippet-detail/app-text-snippet-detail.view-model.ts",
+          "hash": "5647323629287104422",
+          "deps": [
+            "apps-domains-text-snippet-domain",
+            "platform-core"
+          ]
+        },
+        {
+          "file": "apps/playground-text-snippet/src/app/shared/components/app-text-snippet-detail/index.ts",
+          "hash": "8369964795200986480"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/assets/.gitkeep",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/assets/i18n/en.json",
+          "hash": "794485311130467496"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/assets/i18n/vi.json",
+          "hash": "6796089843174805473"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/environments/environment.docker-dev.ts",
+          "hash": "8764383115130790861"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/environments/environment.prod.ts",
+          "hash": "11037796171453194501"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/environments/environment.ts",
+          "hash": "2435889625138416636"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/favicon.ico",
+          "hash": "9303420814833116677"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/index.html",
+          "hash": "7862752239677140414"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/main.ts",
+          "hash": "3427605480091066925",
+          "deps": [
+            "npm:@angular/core",
+            "npm:@angular/platform-browser"
+          ]
+        },
+        {
+          "file": "apps/playground-text-snippet/src/polyfills.ts",
+          "hash": "5553555186396568565"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/styles.scss",
+          "hash": "10335715687988515637"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/styles/_functions.scss",
+          "hash": "10479359388292210161"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/styles/_index.scss",
+          "hash": "8554558677671716037"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/styles/_material-core.scss",
+          "hash": "4257364302809508611"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/styles/_mixins.scss",
+          "hash": "11866242154180479611"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/styles/_placeholders.scss",
+          "hash": "4986226024184145335"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/styles/_variables.scss",
+          "hash": "2439160123116793208"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/styles/components/_index.scss",
+          "hash": "17904650884000958757"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/styles/components/mat-spinner.scss",
+          "hash": "11618999891283566299"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/styles/themes/deeppurple-amber-theme.scss",
+          "hash": "5324913931699180436"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/styles/themes/default-theme.scss",
+          "hash": "711981490219198794"
+        },
+        {
+          "file": "apps/playground-text-snippet/src/test-setup.ts",
+          "hash": "9531801021999427605",
+          "deps": [
+            "npm:jest-preset-angular"
+          ]
+        },
+        {
+          "file": "apps/playground-text-snippet/tsconfig.app.json",
+          "hash": "6877197203865868849"
+        },
+        {
+          "file": "apps/playground-text-snippet/tsconfig.editor.json",
+          "hash": "2358857044732924120"
+        },
+        {
+          "file": "apps/playground-text-snippet/tsconfig.json",
+          "hash": "4997110578110264509"
+        },
+        {
+          "file": "apps/playground-text-snippet/tsconfig.spec.json",
+          "hash": "10554208324333917766"
+        }
+      ],
+      "platform-core": [
+        {
+          "file": "libs/platform-core/.eslintrc.json",
+          "hash": "6342017395794757772"
+        },
+        {
+          "file": "libs/platform-core/README.md",
+          "hash": "11396713852081462580"
+        },
+        {
+          "file": "libs/platform-core/ng-package.json",
+          "hash": "4155753262863604277"
+        },
+        {
+          "file": "libs/platform-core/package.json",
+          "hash": "16938148678501120904",
+          "deps": [
+            "npm:lodash-es",
+            "npm:moment",
+            "npm:tslib"
+          ]
+        },
+        {
+          "file": "libs/platform-core/project.json",
+          "hash": "3389547066563063478"
+        },
+        {
+          "file": "libs/platform-core/src/index.ts",
+          "hash": "15968023470311959829"
+        },
+        {
+          "file": "libs/platform-core/src/lib/api-services/abstracts/platform.api-error.ts",
+          "hash": "16552727851047975487",
+          "deps": [
+            "npm:@angular/common"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/api-services/abstracts/platform.api-service.ts",
+          "hash": "17675361510761672608",
+          "deps": [
+            "npm:@angular/common",
+            "npm:@angular/core",
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/api-services/abstracts/platform.http-options-config-service.ts",
+          "hash": "14440739542479440846"
+        },
+        {
+          "file": "libs/platform-core/src/lib/api-services/events/api-error.event-handler.ts",
+          "hash": "1121347735197649335"
+        },
+        {
+          "file": "libs/platform-core/src/lib/api-services/events/api-error.event.ts",
+          "hash": "4248404875865760197"
+        },
+        {
+          "file": "libs/platform-core/src/lib/api-services/index.ts",
+          "hash": "8103607622875759285"
+        },
+        {
+          "file": "libs/platform-core/src/lib/app-ui-state/index.ts",
+          "hash": "9444174498483048286"
+        },
+        {
+          "file": "libs/platform-core/src/lib/app-ui-state/platform.translate.state-store.ts",
+          "hash": "11370113429647331878",
+          "deps": [
+            "npm:@angular/core",
+            "npm:@ngrx/component-store",
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/caching/index.ts",
+          "hash": "6464752472655284987"
+        },
+        {
+          "file": "libs/platform-core/src/lib/caching/platform.cache-storage-caching-service.ts",
+          "hash": "3769572921328987709"
+        },
+        {
+          "file": "libs/platform-core/src/lib/caching/platform.caching-service.ts",
+          "hash": "4274939664655316697",
+          "deps": [
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/caching/platform.local-storage-cache-caching-service.ts",
+          "hash": "3959862858778821623"
+        },
+        {
+          "file": "libs/platform-core/src/lib/common-types/index.ts",
+          "hash": "6633406391907210402"
+        },
+        {
+          "file": "libs/platform-core/src/lib/common-types/time.ts",
+          "hash": "3628254246495124823"
+        },
+        {
+          "file": "libs/platform-core/src/lib/common-values/index.ts",
+          "hash": "2398819226190854873"
+        },
+        {
+          "file": "libs/platform-core/src/lib/common-values/order-direction.enum.ts",
+          "hash": "16609927367433680266"
+        },
+        {
+          "file": "libs/platform-core/src/lib/common-values/weekdays.const.ts",
+          "hash": "10665404771665845078"
+        },
+        {
+          "file": "libs/platform-core/src/lib/components/abstracts/index.ts",
+          "hash": "13939391889637347726"
+        },
+        {
+          "file": "libs/platform-core/src/lib/components/abstracts/platform.component.ts",
+          "hash": "558946709268909137",
+          "deps": [
+            "npm:@angular/core",
+            "npm:ngx-toastr",
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/components/abstracts/platform.form-component.ts",
+          "hash": "553631228716232346",
+          "deps": [
+            "npm:@angular/core",
+            "npm:@angular/forms",
+            "npm:rxjs",
+            "npm:lodash-es",
+            "npm:type-fest"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/components/abstracts/platform.vm-component.ts",
+          "hash": "13380723053773521773",
+          "deps": [
+            "npm:@angular/core",
+            "npm:lodash-es",
+            "npm:rxjs",
+            "npm:type-fest"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/components/abstracts/platform.vm-store-component.ts",
+          "hash": "2465894183643108431",
+          "deps": [
+            "npm:@angular/core",
+            "npm:rxjs",
+            "npm:type-fest"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/components/component-watch.ts",
+          "hash": "12565589461451836209"
+        },
+        {
+          "file": "libs/platform-core/src/lib/components/index.ts",
+          "hash": "9647283284627316361"
+        },
+        {
+          "file": "libs/platform-core/src/lib/components/simple-changes.ts",
+          "hash": "13751888534703668715"
+        },
+        {
+          "file": "libs/platform-core/src/lib/decorators/index.ts",
+          "hash": "6244493726042470724"
+        },
+        {
+          "file": "libs/platform-core/src/lib/decorators/watch.ts",
+          "hash": "12775926006140426164"
+        },
+        {
+          "file": "libs/platform-core/src/lib/directives/abstracts/platform.directive.ts",
+          "hash": "7164445224200661789",
+          "deps": [
+            "npm:@angular/core"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/directives/disabled-control.directive.ts",
+          "hash": "5421108282953054955",
+          "deps": [
+            "npm:@angular/core",
+            "npm:@angular/forms"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/directives/index.ts",
+          "hash": "5438483938573985743"
+        },
+        {
+          "file": "libs/platform-core/src/lib/directives/swipe-to-scroll.directive.ts",
+          "hash": "1974671080119954204",
+          "deps": [
+            "npm:@angular/core"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/domain/data-model/platform.data-model.ts",
+          "hash": "14270004136753141954"
+        },
+        {
+          "file": "libs/platform-core/src/lib/domain/events/abstracts/repository-error.event-handler.ts",
+          "hash": "17523008206965519083"
+        },
+        {
+          "file": "libs/platform-core/src/lib/domain/events/repository-error.event.ts",
+          "hash": "6715486998098775526"
+        },
+        {
+          "file": "libs/platform-core/src/lib/domain/index.ts",
+          "hash": "14459110622478460430"
+        },
+        {
+          "file": "libs/platform-core/src/lib/domain/platform.repository-context.ts",
+          "hash": "11648709603132337432"
+        },
+        {
+          "file": "libs/platform-core/src/lib/domain/repository/platform.repository.ts",
+          "hash": "8088197480582532927",
+          "deps": [
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/dtos/index.ts",
+          "hash": "9087175556200107622"
+        },
+        {
+          "file": "libs/platform-core/src/lib/dtos/platform.command-dto.ts",
+          "hash": "11418808836839081509"
+        },
+        {
+          "file": "libs/platform-core/src/lib/dtos/platform.query-dto.ts",
+          "hash": "4803006657433422895"
+        },
+        {
+          "file": "libs/platform-core/src/lib/dtos/platform.result-dto.ts",
+          "hash": "16183245692914837494"
+        },
+        {
+          "file": "libs/platform-core/src/lib/events/abstracts/index.ts",
+          "hash": "15050862031754909429"
+        },
+        {
+          "file": "libs/platform-core/src/lib/events/index.ts",
+          "hash": "8770656075986697021"
+        },
+        {
+          "file": "libs/platform-core/src/lib/events/platform.event-manager.ts",
+          "hash": "7478960259081075227",
+          "deps": [
+            "npm:@angular/core"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/form-validators/async-validator.ts",
+          "hash": "13096342407791755040",
+          "deps": [
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/form-validators/if-validator.ts",
+          "hash": "8110271136803756186",
+          "deps": [
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/form-validators/index.ts",
+          "hash": "11357400928104745445"
+        },
+        {
+          "file": "libs/platform-core/src/lib/form-validators/models/index.ts",
+          "hash": "14150112266892011437"
+        },
+        {
+          "file": "libs/platform-core/src/lib/form-validators/models/validation-error.ts",
+          "hash": "7844957498619069331",
+          "deps": [
+            "npm:@angular/forms"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/form-validators/start-end-validator.ts",
+          "hash": "2621419792715774612",
+          "deps": [
+            "npm:@angular/forms"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/form-validators/validator.ts",
+          "hash": "14235396456025571230",
+          "deps": [
+            "npm:@angular/forms"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/form-validators/white-space-validator.ts",
+          "hash": "16653114602660350015",
+          "deps": [
+            "npm:@angular/forms"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/helpers/form.helper.ts",
+          "hash": "15362565401602844506",
+          "deps": [
+            "npm:@angular/forms"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/helpers/index.ts",
+          "hash": "10224049672203639147"
+        },
+        {
+          "file": "libs/platform-core/src/lib/helpers/life-cycle.helper.ts",
+          "hash": "14875938478448292341",
+          "deps": [
+            "npm:lodash-es"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/http-services/abstracts/platform.http-client-options.ts",
+          "hash": "15980084024015923307",
+          "deps": [
+            "npm:@angular/common"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/http-services/abstracts/platform.http-service.ts",
+          "hash": "17979534092662628802",
+          "deps": [
+            "npm:@angular/common",
+            "npm:@angular/core",
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/http-services/index.ts",
+          "hash": "10240262292894053704"
+        },
+        {
+          "file": "libs/platform-core/src/lib/index.ts",
+          "hash": "14768790054494557259"
+        },
+        {
+          "file": "libs/platform-core/src/lib/pipes/abstracts/platform.pipe.ts",
+          "hash": "16513803146672588590",
+          "deps": [
+            "npm:@angular/core"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/pipes/index.ts",
+          "hash": "2272254477181728621"
+        },
+        {
+          "file": "libs/platform-core/src/lib/pipes/log-times-display.pipe.ts",
+          "hash": "14362392693532458785",
+          "deps": [
+            "npm:@angular/core"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/pipes/platform-highlight-search-text.pipe.ts",
+          "hash": "12638629068297590608",
+          "deps": [
+            "npm:@angular/core",
+            "npm:@angular/platform-browser"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/platform-core-global-environment.ts",
+          "hash": "372041370608482490"
+        },
+        {
+          "file": "libs/platform-core/src/lib/platform-core.config.ts",
+          "hash": "5927590900100248046"
+        },
+        {
+          "file": "libs/platform-core/src/lib/platform-core.module.ts",
+          "hash": "16329072382135691500",
+          "deps": [
+            "npm:@angular/common",
+            "npm:@angular/core",
+            "npm:@angular/forms",
+            "npm:@angular/platform-browser",
+            "npm:@angular/router",
+            "npm:@ngx-translate/core",
+            "npm:ngx-toastr"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/platform-domain.module.ts",
+          "hash": "11154859220506624164",
+          "deps": [
+            "npm:@angular/common",
+            "npm:@angular/core",
+            "npm:@angular/forms"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/platform-global-error-handler.ts",
+          "hash": "5970549500050742173",
+          "deps": [
+            "npm:@angular/core"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/platform-service-worker.ts",
+          "hash": "5856767308389681280",
+          "deps": [
+            "npm:rxjs",
+            "npm:@ngx-translate/core"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/rxjs/index.ts",
+          "hash": "11461703762037528212"
+        },
+        {
+          "file": "libs/platform-core/src/lib/rxjs/rxjs-apply-if.ts",
+          "hash": "5042093115944220701",
+          "deps": [
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/rxjs/rxjs-distinct-until-object-values-changed.ts",
+          "hash": "18399523035354239163",
+          "deps": [
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/rxjs/rxjs-on-cancel.ts",
+          "hash": "9404010878163505518",
+          "deps": [
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/rxjs/rxjs-skip-duplicates.ts",
+          "hash": "10104350216087321897",
+          "deps": [
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/rxjs/rxjs-skip-time.ts",
+          "hash": "10507364665113389491",
+          "deps": [
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/rxjs/rxjs-subscribe.ts",
+          "hash": "577273640326820673",
+          "deps": [
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/rxjs/rxjs-tap-limit.ts",
+          "hash": "55316062256552694",
+          "deps": [
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/rxjs/rxjs-tap-once.ts",
+          "hash": "4019850675196731416",
+          "deps": [
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/rxjs/rxjs-tap-skip-first.ts",
+          "hash": "5906473184072003280",
+          "deps": [
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/translations/index.ts",
+          "hash": "9161680412297724660"
+        },
+        {
+          "file": "libs/platform-core/src/lib/translations/platform-translate.service.ts",
+          "hash": "16574858770086250241",
+          "deps": [
+            "npm:@angular/core",
+            "npm:@ngx-translate/core",
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/ui-services/global-spinner.service.ts",
+          "hash": "15809126726705704324",
+          "deps": [
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/ui-services/host.sevice.ts",
+          "hash": "10653445467261388521",
+          "deps": [
+            "npm:@angular/common",
+            "npm:@angular/core"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/ui-services/index.ts",
+          "hash": "11587421608097317930"
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/_README.md",
+          "hash": "13905615684603426465"
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/_common-functions.ts",
+          "hash": "13166422444786484966"
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/index.ts",
+          "hash": "434895358383814765"
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/utils.date.ts",
+          "hash": "9823100216115223415",
+          "deps": [
+            "npm:moment"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/utils.dictionary.ts",
+          "hash": "3541516534154263648",
+          "deps": [
+            "npm:lodash-es"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/utils.dom.ts",
+          "hash": "1089652070507999039"
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/utils.enum.ts",
+          "hash": "13666868716468420449"
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/utils.file.ts",
+          "hash": "8269565119923260390"
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/utils.guid.ts",
+          "hash": "6507483246011069162"
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/utils.hierarchy-selector.ts",
+          "hash": "3418850686228928891"
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/utils.http-response.ts",
+          "hash": "14866259027034459536",
+          "deps": [
+            "npm:@angular/common"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/utils.list.ts",
+          "hash": "9735228346619286784",
+          "deps": [
+            "npm:lodash-es"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/utils.number.ts",
+          "hash": "6908849668414642179"
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/utils.object.ts",
+          "hash": "12389633183863920387",
+          "deps": [
+            "npm:lodash-es",
+            "npm:type-fest"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/utils.record.ts",
+          "hash": "6071637476204973314"
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/utils.string.ts",
+          "hash": "10342510361442361419"
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/utils.task.ts",
+          "hash": "14039483443569018531",
+          "deps": [
+            "npm:rxjs"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/utils/utils.timezone.ts",
+          "hash": "13285510482581559674",
+          "deps": [
+            "npm:moment-timezone"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/lib/validation/index.ts",
+          "hash": "14898832325345222328"
+        },
+        {
+          "file": "libs/platform-core/src/lib/validation/validation.ts",
+          "hash": "2755206207290665457"
+        },
+        {
+          "file": "libs/platform-core/src/lib/view-models/form.view-model.ts",
+          "hash": "13134966976622896597"
+        },
+        {
+          "file": "libs/platform-core/src/lib/view-models/generic.view-model.ts",
+          "hash": "14889864646556648322"
+        },
+        {
+          "file": "libs/platform-core/src/lib/view-models/index.ts",
+          "hash": "8218061247366774577"
+        },
+        {
+          "file": "libs/platform-core/src/lib/view-models/view-model.store.ts",
+          "hash": "9262886988353287216",
+          "deps": [
+            "npm:@angular/core",
+            "npm:rxjs",
+            "npm:type-fest",
+            "npm:@ngrx/component-store"
+          ]
+        },
+        {
+          "file": "libs/platform-core/src/styles/_platform-functions.scss",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "libs/platform-core/src/styles/_platform-mixins.scss",
+          "hash": "11303645209353517021"
+        },
+        {
+          "file": "libs/platform-core/src/styles/_platform-placeholders.scss",
+          "hash": "3244421341483603138"
+        },
+        {
+          "file": "libs/platform-core/src/styles/_platform-spacing.less",
+          "hash": "5618020020712470647"
+        },
+        {
+          "file": "libs/platform-core/src/styles/_platform-variables.scss",
+          "hash": "13507771050233238638"
+        },
+        {
+          "file": "libs/platform-core/tsconfig.json",
+          "hash": "9103479916303978427"
+        },
+        {
+          "file": "libs/platform-core/tsconfig.lib.json",
+          "hash": "2727568116197780129"
+        },
+        {
+          "file": "libs/platform-core/tsconfig.lib.prod.json",
+          "hash": "15703248720815313301"
+        }
+      ]
+    }
+  }
+}

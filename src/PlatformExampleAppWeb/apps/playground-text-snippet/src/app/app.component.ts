@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, ViewEncapsulation } from '@angular/core';
 
-import { PlatformCoreModule, PlatformVmStoreComponent } from '@libs/platform-core';
+import { PlatformCoreModule, PlatformHighlightSearchTextPipe, PlatformVmStoreComponent } from '@libs/platform-core';
 
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -22,7 +22,6 @@ import { AppTextSnippetDetailComponent } from './shared/components/app-text-snip
     styleUrls: ['./app.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
     encapsulation: ViewEncapsulation.None,
-    standalone: true,
     imports: [
         CommonModule,
         FormsModule,
@@ -39,7 +38,8 @@ import { AppTextSnippetDetailComponent } from './shared/components/app-text-snip
         MatIconModule,
         MatDialogModule,
 
-        AppTextSnippetDetailComponent
+        AppTextSnippetDetailComponent,
+        PlatformHighlightSearchTextPipe
     ],
     providers: []
 })

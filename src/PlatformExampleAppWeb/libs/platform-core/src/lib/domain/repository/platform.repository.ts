@@ -110,7 +110,7 @@ export abstract class PlatformRepository<TContext extends PlatformRepositoryCont
                 return resultObs.pipe(
                     finalize(() => {
                         stopRefreshNotifier$.next(null);
-                        this.context.loadedRequestSubscriberCountDic[requestId] -= 1;
+                        this.context.loadedRequestSubscriberCountDic[requestId]! -= 1;
                         this.clearLoadedRequestDataCacheItem(requestName);
                     })
                 );
