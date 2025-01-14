@@ -204,6 +204,16 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
             forceOpenUowUsingOnce: true);
     }
 
+    public override Task<bool> AnyAsync<TQueryItemResult>(
+        Func<IQueryable<TEntity>, IQueryable<TQueryItemResult>> queryBuilder,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAutoOpenUowUsingOnceTimeForRead(
+            (uow, query) => GetUowDbContext(uow).AnyAsync(queryBuilder(query), cancellationToken),
+            [],
+            forceOpenUowUsingOnce: true);
+    }
+
     public override Task<int> CountAsync<TQueryItemResult>(
         Func<IQueryable<TEntity>, IQueryable<TQueryItemResult>> queryBuilder,
         CancellationToken cancellationToken = default)

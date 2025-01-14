@@ -99,6 +99,10 @@ public interface IPlatformRepository<TEntity, TPrimaryKey> : IPlatformRepository
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default);
 
+    public Task<bool> AnyAsync<TQueryItemResult>(
+        Func<IQueryable<TEntity>, IQueryable<TQueryItemResult>> queryBuilder,
+        CancellationToken cancellationToken = default);
+
     public IEnumerable<TEntity> GetAllEnumerable(
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default,

@@ -133,6 +133,10 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default);
 
+    public abstract Task<bool> AnyAsync<TQueryItemResult>(
+        Func<IQueryable<TEntity>, IQueryable<TQueryItemResult>> queryBuilder,
+        CancellationToken cancellationToken = default);
+
     public abstract IEnumerable<TEntity> GetAllEnumerable(
         Expression<Func<TEntity, bool>> predicate = null,
         CancellationToken cancellationToken = default,
