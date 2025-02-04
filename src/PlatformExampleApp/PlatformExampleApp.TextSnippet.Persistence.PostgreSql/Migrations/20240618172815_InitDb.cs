@@ -11,6 +11,8 @@ namespace PlatformExampleApp.TextSnippet.Persistence.PostgreSql.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql("CREATE EXTENSION IF NOT EXISTS pg_trgm", true);
+
             migrationBuilder.CreateTable(
                 name: "ApplicationDataMigrationHistoryDbSet",
                 columns: table => new

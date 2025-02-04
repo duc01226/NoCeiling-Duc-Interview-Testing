@@ -10,11 +10,12 @@ import {
     Output,
     QueryList,
     signal,
-    Signal
+    Signal,
+    WritableSignal
 } from '@angular/core';
-import { AbstractControl, FormArray, FormControl, FormGroup, ValidatorFn } from '@angular/forms';
+import { AbstractControl, FormArray, FormControl, FormControlStatus, FormGroup, ValidatorFn } from '@angular/forms';
 
-import { asyncScheduler, delay, distinctUntilChanged, filter, map, merge, Observable, throttleTime } from 'rxjs';
+import { asyncScheduler, delay, filter, map, merge, Observable, throttleTime } from 'rxjs';
 
 import { clone } from 'lodash-es';
 import { PartialDeep } from 'type-fest';
@@ -97,6 +98,8 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
         super();
     }
 
+    public formStatus$: WritableSignal<FormControlStatus> = signal('VALID');
+
     protected _mode: PlatformFormMode = 'create';
     public get mode(): PlatformFormMode {
         return this._mode;
@@ -149,8 +152,11 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     }
 
     public isFormGivenFromInput = false;
-    public isFormPending = signal(false);
-    public isFormLoading = computed(() => this.isFormPending() || this.status$() == ComponentStateStatus.Loading);
+    public isFormLoading = computed(
+        () =>
+            (this.formStatus$() == 'PENDING' && this.form?.status == 'PENDING') ||
+            this.status$() == ComponentStateStatus.Loading
+    );
 
     protected cachedFormLoading$: Dictionary<Signal<boolean | null>> = {};
 
@@ -259,8 +265,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
     public setUpInputForm() {
         // Register on case child form given from parent but not self init
         // need to register activate change detection to show form info correctly on html
-        this.registerFormStatusEventsChangeDetection();
-        this.setUpIsFormPending();
+        this.registerFormEventsSignalAndChangeDetection();
         this.isFormGivenFromInput = true;
 
         if (!this.isViewMode) {
@@ -270,32 +275,18 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
         }
     }
 
-    protected setUpIsFormPending() {
-        this.isFormPending.set(this.form.pending);
-        this.cancelStoredSubscription('setUpIsFormPending');
-
-        this.storeSubscription(
-            'setUpIsFormPending',
-            this.form.statusChanges
-                .pipe(
-                    map(v => v == 'PENDING'),
-                    distinctUntilChanged()
-                )
-                .subscribe(v => {
-                    this.isFormPending.set(v);
-                })
-        );
-    }
-
-    public registerFormStatusEventsChangeDetection() {
+    public registerFormEventsSignalAndChangeDetection() {
         this.cancelStoredSubscription('registerFormEventsChangeDetection');
 
-        if (this.form != undefined)
+        if (this.form != undefined) {
+            this.formStatus$.set(this.form.status);
+
             this.storeSubscription(
                 'registerFormEventsChangeDetection',
                 merge(
                     ...[
                         this.form.statusChanges,
+                        this.form.valueChanges,
                         ...Object.keys(this.form.controls).map(ctrKey => this.form.get(ctrKey)!.statusChanges),
                         ...Object.keys(this.form.controls).map(ctrKey => this.form.get(ctrKey)!.valueChanges)
                     ]
@@ -305,14 +296,15 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
                         throttleTime(PlatformComponent.defaultDetectChangesThrottleTime, asyncScheduler, {
                             leading: true,
                             trailing: true
-                        }),
-                        distinctUntilObjectValuesChanged()
+                        })
                     )
                     .subscribe(v => {
+                        this.formStatus$.set(this.form.status);
                         this.formChangeEvent.emit(this.form);
                         this.detectChanges();
                     })
             );
+        }
     }
 
     /**
@@ -376,8 +368,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
         this.formConfig = initialFormConfig;
         this._form = <FormGroup<PlatformFormGroupControls<TViewModel>>>this.buildForm(this.formConfig);
 
-        this.registerFormStatusEventsChangeDetection();
-        this.setUpIsFormPending();
+        this.registerFormEventsSignalAndChangeDetection();
 
         if (forceReinit) {
             keys(this.form.controls).forEach(formControlKey => {
@@ -434,6 +425,10 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 
         if (this.formConfig.afterInit != null && this.form != undefined) this.formConfig.afterInit();
 
+        // setTimeout to ensure revalidate form after form directive view rendered
+        // validate form to trigger form-status change check and emit
+        if (this.canSubmitPristineForm && !forceReinit) setTimeout(() => this.validateForm());
+
         function buildControlValueChangesSubscriptionKey(formControlKey: string): string {
             return `initForm_${formControlKey}_valueChanges`;
         }
@@ -458,6 +453,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
             if (onVmChanged != undefined) onVmChanged(this._vm);
 
             this.detectChanges();
+
             return true;
         }
 

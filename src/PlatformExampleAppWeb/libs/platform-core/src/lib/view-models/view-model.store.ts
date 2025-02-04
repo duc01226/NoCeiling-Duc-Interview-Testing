@@ -246,11 +246,19 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
         if (this._innerStore == undefined || forceReinit) {
             const cachedData = this.getCachedState();
 
+            // Reset state to Pending if lastime caching it's loading state
+            if (cachedData?.isStateReloading || cachedData?.isStateLoading) {
+                cachedData.status = 'Pending';
+                cachedData.reloadingMap = {};
+                cachedData.loadingMap = {};
+            }
+
             if (cachedData?.isStateSuccess || cachedData?.isStatePending) {
                 this._innerStore = new ComponentStore(cachedData);
                 this.setClonedDeepStateToCheckDataMutation(cachedData);
 
                 if (cachedData.isStateSuccess) this.vmStateDataLoaded = true;
+
                 // Clear defaultState to free memory
                 this.defaultState = undefined;
             } else {
@@ -1112,22 +1120,9 @@ export abstract class PlatformVmStore<TViewModel extends PlatformVm> implements 
 
         if (this.enableCache)
             this.storeAnonymousSubscription(
-                this.vm$
-                    .pipe(
-                        throttleTime(1000, asyncScheduler, { leading: true, trailing: true }),
-                        filter(
-                            x =>
-                                !x.isStateLoading &&
-                                !x.isStateReloading &&
-                                !x.isAnyLoadingRequest() &&
-                                !x.isAnyReloadingRequest()
-                        )
-                    )
-                    .subscribe(vm => {
-                        setTimeout(() => {
-                            this.cacheService.set(this.getCachedStateKey(), vm);
-                        }, 0);
-                    })
+                this.vm$.pipe(throttleTime(1000, asyncScheduler, { leading: true, trailing: true })).subscribe(vm => {
+                    if (!vm.isStateLoading && !vm.isStateReloading) this.cacheService.set(this.getCachedStateKey(), vm);
+                })
             );
     }
 
