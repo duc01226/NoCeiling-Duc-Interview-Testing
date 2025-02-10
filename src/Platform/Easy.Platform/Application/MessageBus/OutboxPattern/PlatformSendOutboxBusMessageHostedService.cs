@@ -372,6 +372,7 @@ public class PlatformSendOutboxBusMessageHostedService : PlatformIntervalHosting
                                 await outboxEventBusMessageRepo.UpdateManyAsync(
                                     toHandleMessages,
                                     dismissSendEvent: true,
+                                    checkDiff: false,
                                     eventCustomConfig: null,
                                     cancellationToken);
 

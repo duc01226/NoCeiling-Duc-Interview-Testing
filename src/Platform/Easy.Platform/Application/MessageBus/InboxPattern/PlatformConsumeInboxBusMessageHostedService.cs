@@ -430,12 +430,12 @@ public class PlatformConsumeInboxBusMessageHostedService : PlatformIntervalHosti
                                     });
 
                                 // Update the messages in the database.
-                                await inboxEventBusMessageRepo
-                                    .UpdateManyAsync(
-                                        toHandleMessages,
-                                        dismissSendEvent: true,
-                                        eventCustomConfig: null,
-                                        cancellationToken);
+                                await inboxEventBusMessageRepo.UpdateManyAsync(
+                                    toHandleMessages,
+                                    dismissSendEvent: true,
+                                    checkDiff: false,
+                                    eventCustomConfig: null,
+                                    cancellationToken);
 
                                 return toHandleMessages;
                             });

@@ -271,13 +271,14 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         Expression<Func<TEntity, bool>> predicate,
         Action<TEntity> updateAction,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
         var updateItems = await GetAllAsync(predicate, cancellationToken)
             .ThenAction(items => items.ForEach(updateAction));
 
-        return await UpdateManyAsync(updateItems, dismissSendEvent, eventCustomConfig, cancellationToken);
+        return await UpdateManyAsync(updateItems, dismissSendEvent, checkDiff, eventCustomConfig, cancellationToken);
     }
 
     public IPlatformUnitOfWork TryGetCurrentActiveUow()
@@ -301,6 +302,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     public abstract Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
@@ -308,6 +310,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         IPlatformUnitOfWork uow,
         TEntity entity,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
@@ -316,12 +319,14 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         TEntity entity,
         TEntity? existingEntity,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
     public abstract Task<List<TEntity>> CreateOrUpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
@@ -330,6 +335,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         IPlatformUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
@@ -337,6 +343,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     public abstract Task<TEntity> UpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
@@ -353,6 +360,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         IPlatformUnitOfWork uow,
         TEntity entity,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
@@ -391,6 +399,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
     public abstract Task<List<TEntity>> UpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
@@ -398,6 +407,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         IPlatformUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
@@ -450,6 +460,7 @@ public abstract class PlatformRepository<TEntity, TPrimaryKey, TUow> : IPlatform
         TEntity entity,
         Expression<Func<TEntity, bool>> customCheckExistingPredicate,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 

@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
-using System.Reflection;
 using Easy.Platform.Application.Persistence;
 using Easy.Platform.Application.RequestContext;
 using Easy.Platform.Common;
@@ -250,29 +249,31 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
     public async Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return await UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken);
+        return await UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, checkDiff, eventCustomConfig, cancellationToken);
     }
 
     public async Task<TEntity> SetAsync<TEntity, TPrimaryKey>(TEntity entity, CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return await InternalUpdateOrSetAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent: true, null, onlySetData: true, cancellationToken);
+        return await InternalUpdateOrSetAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent: true, checkDiff: false, null, onlySetData: true, cancellationToken);
     }
 
     public async Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         return await entities
             .SelectAsync(
-                entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken))
+                entity => UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, checkDiff, eventCustomConfig, cancellationToken))
             .ThenActionIfAsync(
                 !dismissSendEvent,
                 entities => SendBulkEntitiesEvent<TEntity, TPrimaryKey>(entities, PlatformCqrsEntityEventCrudAction.Updated, eventCustomConfig, cancellationToken));
@@ -487,10 +488,18 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         TEntity entity,
         Expression<Func<TEntity, bool>> customCheckExistingPredicate = null,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return await CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, customCheckExistingPredicate, dismissSendEvent, eventCustomConfig, cancellationToken);
+        return await CreateOrUpdateAsync<TEntity, TPrimaryKey>(
+            entity,
+            null,
+            customCheckExistingPredicate,
+            dismissSendEvent,
+            checkDiff,
+            eventCustomConfig,
+            cancellationToken);
     }
 
     public async Task<TEntity> CreateOrUpdateAsync<TEntity, TPrimaryKey>(
@@ -498,6 +507,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         TEntity? existingEntity,
         Expression<Func<TEntity, bool>>? customCheckExistingPredicate = null,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
@@ -521,6 +531,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 entity.WithIf(!entity.Id.Equals(existingEntity.Id), entity => entity.Id = existingEntity.Id),
                 existingEntity,
                 dismissSendEvent,
+                checkDiff,
                 eventCustomConfig,
                 cancellationToken);
         }
@@ -532,6 +543,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         List<TEntity> entities,
         Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
@@ -572,6 +584,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 await UpdateManyAsync<TEntity, TPrimaryKey>(
                     toUpdateEntities,
                     dismissSendEvent,
+                    checkDiff,
                     eventCustomConfig,
                     cancellationToken);
             }
@@ -606,6 +619,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                 await UpdateManyAsync<TEntity, TPrimaryKey>(
                     existingToUpdateEntities.Select(p => p.toUpsertEntity).ToList(),
                     dismissSendEvent,
+                    checkDiff,
                     eventCustomConfig,
                     cancellationToken);
             }
@@ -623,6 +637,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         TEntity entity,
         TEntity? existingEntity,
         bool dismissSendEvent,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
@@ -631,6 +646,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
             entity,
             existingEntity,
             dismissSendEvent,
+            checkDiff,
             eventCustomConfig,
             onlySetData: false,
             cancellationToken);
@@ -640,6 +656,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
         TEntity entity,
         TEntity existingEntity,
         bool dismissSendEvent,
+        bool checkDiff,
         Action<PlatformCqrsEntityEvent> eventCustomConfig,
         bool onlySetData,
         CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>, new()
@@ -694,7 +711,7 @@ public abstract class PlatformEfCoreDbContext<TDbContext> : DbContext, IPlatform
                         .As<TEntity>());
 
             // is entity tracked as not modified any things then return
-            if (!isEntityNotTrackedOrTrackedModified)
+            if (!isEntityNotTrackedOrTrackedModified && checkDiff)
                 return entity;
 
             var result = await PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, TEntity>(

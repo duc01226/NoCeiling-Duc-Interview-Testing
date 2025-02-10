@@ -160,6 +160,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
     public async Task<TEntity> CreateOrUpdateImmediatelyAsync(
         TEntity entity,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
@@ -172,6 +173,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
                         immediatelyUow,
                         entity,
                         dismissSendEvent,
+                        checkDiff,
                         eventCustomConfig,
                         cancellationToken);
 
@@ -215,6 +217,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
     public Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
@@ -225,6 +228,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         IPlatformUnitOfWork uow,
         TEntity entity,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
@@ -240,6 +244,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
     public Task<List<TEntity>> CreateOrUpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
@@ -258,6 +263,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         IPlatformUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
@@ -268,6 +274,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
     public Task<TEntity> UpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
@@ -295,6 +302,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         IPlatformUnitOfWork uow,
         TEntity entity,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
@@ -304,6 +312,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
     public async Task<TEntity> UpdateImmediatelyAsync(
         TEntity entity,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
@@ -313,6 +322,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
                 immediatelyUow,
                 entity,
                 dismissSendEvent,
+                checkDiff,
                 eventCustomConfig,
                 cancellationToken);
 
@@ -482,6 +492,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
     public Task<List<TEntity>> UpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
@@ -492,6 +503,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         IPlatformUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
@@ -501,6 +513,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
     public async Task<List<TEntity>> UpdateManyImmediatelyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
@@ -510,6 +523,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
                 immediatelyUow,
                 entities,
                 dismissSendEvent,
+                checkDiff,
                 eventCustomConfig,
                 cancellationToken);
 
@@ -523,6 +537,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         Expression<Func<TEntity, bool>> predicate,
         Action<TEntity> updateAction,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
@@ -597,6 +612,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
     /// <param name="entity">The entity to be created or updated.</param>
     /// <param name="customCheckExistingPredicate">A predicate to check if the entity already exists.</param>
     /// <param name="dismissSendEvent">Optional parameter. If set to true, the event associated with the entity creation or update is not sent. Default is false.</param>
+    /// <param name="checkDiff">Whether check is entity values diff compared to original before update. Default is true</param>
     /// <param name="eventCustomConfig">Optional parameter. An action to configure the event associated with the entity creation or update.</param>
     /// <param name="cancellationToken">Optional parameter. A token to observe while waiting for the task to complete.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the created or updated entity.</returns>
@@ -604,6 +620,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         TEntity entity,
         Expression<Func<TEntity, bool>> customCheckExistingPredicate,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default);
 
@@ -648,6 +665,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         Expression<Func<TEntity, bool>> replaceExistingEntitiesPredicate,
         List<TEntity> replaceNewEntities,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
@@ -668,6 +686,7 @@ public interface IPlatformRootRepository<TEntity, TPrimaryKey> : IPlatformReposi
         await UpdateManyAsync(
             toUpdateEntities.SelectList(p => p.With(p => p.Id = existingEntities.GetValueOrDefault(p.GetUniqueId()).Id)),
             dismissSendEvent,
+            checkDiff,
             eventCustomConfig,
             cancellationToken);
         await CreateManyAsync(toInsertEntities, dismissSendEvent, eventCustomConfig, cancellationToken);
@@ -978,6 +997,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
         Action<TEntity> updateAction,
         int? pageSize,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
@@ -996,7 +1016,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                     if (!dismissSendEvent)
                         SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate(pagingUpdateItems, uow);
 
-                    await UpdateManyAsync(uow, pagingUpdateItems, dismissSendEvent, eventCustomConfig, cancellationToken);
+                    await UpdateManyAsync(uow, pagingUpdateItems, dismissSendEvent, checkDiff, eventCustomConfig, cancellationToken);
 
                     await uow.CompleteAsync(cancellationToken);
                 }
@@ -1021,6 +1041,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
         Action<TEntity> updateAction,
         int? pageSize,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
@@ -1039,7 +1060,7 @@ public interface IPlatformQueryableRootRepository<TEntity, TPrimaryKey>
                     if (!dismissSendEvent)
                         SetCachedOriginalEntitiesInUowForTrackingCompareAfterUpdate(pagingUpdateItems, uow);
 
-                    var updatedItems = await UpdateManyAsync(uow, pagingUpdateItems, dismissSendEvent, eventCustomConfig, cancellationToken);
+                    var updatedItems = await UpdateManyAsync(uow, pagingUpdateItems, dismissSendEvent, checkDiff, eventCustomConfig, cancellationToken);
 
                     return updatedItems;
                 }

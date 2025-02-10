@@ -311,20 +311,22 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override async Task<TEntity> CreateOrUpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        return await CreateOrUpdateAsync(null, entity, dismissSendEvent, eventCustomConfig, cancellationToken);
+        return await CreateOrUpdateAsync(null, entity, dismissSendEvent, checkDiff, eventCustomConfig, cancellationToken);
     }
 
     public override async Task<TEntity> CreateOrUpdateAsync(
         IPlatformUnitOfWork uow,
         TEntity entity,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        return await CreateOrUpdateAsync(uow, entity, existingEntity: null, dismissSendEvent, eventCustomConfig, cancellationToken);
+        return await CreateOrUpdateAsync(uow, entity, existingEntity: null, dismissSendEvent, checkDiff, eventCustomConfig, cancellationToken);
     }
 
     public override async Task<TEntity> CreateOrUpdateAsync(
@@ -332,6 +334,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         TEntity entity,
         TEntity? existingEntity,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
@@ -347,14 +350,21 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
 
                         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                             uow => GetUowDbContext(uow)
-                                .CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, existingEntity, null, dismissSendEvent, eventCustomConfig, cancellationToken),
+                                .CreateOrUpdateAsync<TEntity, TPrimaryKey>(
+                                    entity,
+                                    existingEntity,
+                                    null,
+                                    dismissSendEvent,
+                                    checkDiff,
+                                    eventCustomConfig,
+                                    cancellationToken),
                             uow);
                     }
                 }
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow)
-                        .CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, existingEntity, null, dismissSendEvent, eventCustomConfig, cancellationToken),
+                        .CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, existingEntity, null, dismissSendEvent, checkDiff, eventCustomConfig, cancellationToken),
                     uow);
             },
             cancellationToken: cancellationToken);
@@ -364,6 +374,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         TEntity entity,
         Expression<Func<TEntity, bool>> customCheckExistingPredicate,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
@@ -379,13 +390,25 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
 
                         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                             uow => GetUowDbContext(uow)
-                                .CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, customCheckExistingPredicate, dismissSendEvent, eventCustomConfig, cancellationToken));
+                                .CreateOrUpdateAsync<TEntity, TPrimaryKey>(
+                                    entity,
+                                    customCheckExistingPredicate,
+                                    dismissSendEvent,
+                                    checkDiff,
+                                    eventCustomConfig,
+                                    cancellationToken));
                     }
                 }
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
                     uow => GetUowDbContext(uow)
-                        .CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, customCheckExistingPredicate, dismissSendEvent, eventCustomConfig, cancellationToken));
+                        .CreateOrUpdateAsync<TEntity, TPrimaryKey>(
+                            entity,
+                            customCheckExistingPredicate,
+                            dismissSendEvent,
+                            checkDiff,
+                            eventCustomConfig,
+                            cancellationToken));
             },
             cancellationToken: cancellationToken);
     }
@@ -393,17 +416,19 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override async Task<List<TEntity>> CreateOrUpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        return await CreateOrUpdateManyAsync(null, entities, dismissSendEvent, customCheckExistingPredicateBuilder, eventCustomConfig, cancellationToken);
+        return await CreateOrUpdateManyAsync(null, entities, dismissSendEvent, checkDiff, customCheckExistingPredicateBuilder, eventCustomConfig, cancellationToken);
     }
 
     public override async Task<List<TEntity>> CreateOrUpdateManyAsync(
         IPlatformUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
@@ -426,6 +451,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                                     entities,
                                     customCheckExistingPredicateBuilder,
                                     dismissSendEvent,
+                                    checkDiff,
                                     eventCustomConfig,
                                     cancellationToken),
                             uow);
@@ -438,6 +464,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                             entities,
                             customCheckExistingPredicateBuilder,
                             dismissSendEvent,
+                            checkDiff,
                             eventCustomConfig,
                             cancellationToken),
                     uow);
@@ -448,10 +475,11 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override Task<TEntity> UpdateAsync(
         TEntity entity,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
-        return UpdateAsync(null, entity, dismissSendEvent, eventCustomConfig, cancellationToken);
+        return UpdateAsync(null, entity, dismissSendEvent, checkDiff, eventCustomConfig, cancellationToken);
     }
 
     public override async Task<TEntity> SetAsync(
@@ -488,6 +516,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
         IPlatformUnitOfWork uow,
         TEntity entity,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
@@ -499,13 +528,13 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                 activity?.AddTag("Entity", entity.ToFormattedJson());
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-                    async uow => await GetUowDbContext(uow).UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
+                    async uow => await GetUowDbContext(uow).UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, checkDiff, eventCustomConfig, cancellationToken),
                     uow);
             }
         }
 
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            async uow => await GetUowDbContext(uow).UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, eventCustomConfig, cancellationToken),
+            async uow => await GetUowDbContext(uow).UpdateAsync<TEntity, TPrimaryKey>(entity, dismissSendEvent, checkDiff, eventCustomConfig, cancellationToken),
             uow);
     }
 
@@ -619,6 +648,7 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
     public override async Task<List<TEntity>> UpdateManyAsync(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
@@ -632,18 +662,19 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                 activity?.AddTag("Entity", entities.ToFormattedJson());
 
                 return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-                    uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));
+                    uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, checkDiff, eventCustomConfig, cancellationToken));
             }
         }
 
         return await ExecuteAutoOpenUowUsingOnceTimeForWrite(
-            uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken));
+            uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, checkDiff, eventCustomConfig, cancellationToken));
     }
 
     public override async Task<List<TEntity>> UpdateManyAsync(
         IPlatformUnitOfWork uow,
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
     {
@@ -657,13 +688,13 @@ public abstract class PlatformPersistenceRepository<TEntity, TPrimaryKey, TUow, 
                 activity?.AddTag("Entity", entities.ToFormattedJson());
 
                 return await ExecuteWithBadQueryWarningForWriteHandling(
-                    uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken),
+                    uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, checkDiff, eventCustomConfig, cancellationToken),
                     uow);
             }
         }
 
         return await ExecuteWithBadQueryWarningForWriteHandling(
-            uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, eventCustomConfig, cancellationToken),
+            uow => GetUowDbContext(uow).UpdateManyAsync<TEntity, TPrimaryKey>(entities, dismissSendEvent, checkDiff, eventCustomConfig, cancellationToken),
             uow);
     }
 

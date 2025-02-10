@@ -425,6 +425,7 @@ public interface IPlatformDbContext : IDisposable
     public Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
@@ -435,6 +436,7 @@ public interface IPlatformDbContext : IDisposable
     public Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
@@ -442,13 +444,14 @@ public interface IPlatformDbContext : IDisposable
         Expression<Func<TEntity, bool>> predicate,
         Action<TEntity> updateAction,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
         var toUpdateEntities = await GetAllAsync<TEntity, TEntity>(query => query.Where(predicate), cancellationToken)
             .ThenAction(items => items.ForEach(updateAction));
 
-        return await UpdateManyAsync<TEntity, TPrimaryKey>(toUpdateEntities, dismissSendEvent, eventCustomConfig, cancellationToken);
+        return await UpdateManyAsync<TEntity, TPrimaryKey>(toUpdateEntities, dismissSendEvent, checkDiff, eventCustomConfig, cancellationToken);
     }
 
     public Task<TEntity> DeleteAsync<TEntity, TPrimaryKey>(
@@ -497,6 +500,7 @@ public interface IPlatformDbContext : IDisposable
         TEntity entity,
         Expression<Func<TEntity, bool>>? customCheckExistingPredicate = null,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
@@ -505,6 +509,7 @@ public interface IPlatformDbContext : IDisposable
         TEntity? existingEntity,
         Expression<Func<TEntity, bool>>? customCheckExistingPredicate = null,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 
@@ -516,6 +521,7 @@ public interface IPlatformDbContext : IDisposable
         List<TEntity> entities,
         Func<TEntity, Expression<Func<TEntity, bool>>>? customCheckExistingPredicateBuilder = null,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new();
 

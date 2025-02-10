@@ -268,11 +268,13 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
         this.registerFormEventsSignalAndChangeDetection();
         this.isFormGivenFromInput = true;
 
-        if (!this.isViewMode) {
-            // First time try validate form just to show errors but still want to imark form as pristine like it's never touched
-            this.validateForm();
-            this.form.markAsPristine();
-        }
+        this.selfValidateForm();
+        // First time try validate form just to show errors but still want to imark form as pristine like it's never touched
+        this.form.markAsPristine();
+    }
+
+    public selfValidateForm(markAsTouchedAndDirty: boolean = true) {
+        if (!this.isViewMode) this.validateForm(markAsTouchedAndDirty);
     }
 
     public registerFormEventsSignalAndChangeDetection() {
@@ -427,7 +429,7 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
 
         // setTimeout to ensure revalidate form after form directive view rendered
         // validate form to trigger form-status change check and emit
-        if (this.canSubmitPristineForm && !forceReinit) setTimeout(() => this.validateForm());
+        setTimeout(() => this.selfValidateForm(false));
 
         function buildControlValueChangesSubscriptionKey(formControlKey: string): string {
             return `initForm_${formControlKey}_valueChanges`;
@@ -489,8 +491,8 @@ export abstract class PlatformFormComponent<TViewModel extends IPlatformVm>
         return invalidChildFormsGroup == undefined;
     }
 
-    public validateForm(): boolean {
-        FormHelpers.validateAllFormControls(this.form);
+    public validateForm(markAsTouchedAndDirty: boolean = true): boolean {
+        FormHelpers.validateAllFormControls(this.form, markAsTouchedAndDirty);
 
         return this.isFormValid();
     }

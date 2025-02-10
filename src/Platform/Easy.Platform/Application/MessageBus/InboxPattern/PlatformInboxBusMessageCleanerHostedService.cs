@@ -196,6 +196,7 @@ public class PlatformInboxBusMessageCleanerHostedService : PlatformIntervalHosti
                                 await inboxEventBusMessageRepo.UpdateManyAsync(
                                     expiredMessages.SelectList(p => p.With(x => x.ConsumeStatus = PlatformInboxBusMessage.ConsumeStatuses.Ignored)),
                                     dismissSendEvent: true,
+                                    checkDiff: false,
                                     eventCustomConfig: null,
                                     cancellationToken);
 

@@ -306,22 +306,24 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
     public Task<TEntity> UpdateAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         bool dismissSendEvent,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, eventCustomConfig, cancellationToken);
+        return UpdateAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent, checkDiff, eventCustomConfig, cancellationToken);
     }
 
     public async Task<TEntity> SetAsync<TEntity, TPrimaryKey>(TEntity entity, CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return await InternalUpdateOrSetAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent: true, null, onlySetData: true, cancellationToken);
+        return await InternalUpdateOrSetAsync<TEntity, TPrimaryKey>(entity, null, dismissSendEvent: true, checkDiff: false, null, onlySetData: true, cancellationToken);
     }
 
     public async Task<List<TEntity>> UpdateManyAsync<TEntity, TPrimaryKey>(
         List<TEntity> entities,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
@@ -365,7 +367,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 if (existingEntity != null &&
                     !ReferenceEquals(entity, existingEntity) &&
                     (changedFields?.Count == 0 ||
-                     (changedFields?.Count == 1 && entityUpdatedDateAuditField != null && entityUpdatedDateAuditField.Name == changedFields.First().Key)))
+                     (changedFields?.Count == 1 && entityUpdatedDateAuditField != null && entityUpdatedDateAuditField.Name == changedFields.First().Key)) &&
+                    checkDiff)
                     return (toBeUpdatedEntity: entity, bulkWriteOp: null, existingEntity, currentInMemoryConcurrencyUpdateToken: null);
 
                 var toBeUpdatedEntity = entity
@@ -470,9 +473,17 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         }
                     });
 
-            if (!dismissSendEvent && PlatformCqrsEntityEvent.IsAnyEntityEventHandlerRegisteredForEntity<TEntity>(RootServiceProvider))
+            hasDataChangedToBeUpdatedItems.ForEach(
+                p => MappedUnitOfWork?.RemoveCachedExistingOriginalEntity(p.toBeUpdatedEntity.Id.ToString()));
+        }
+
+        if (!dismissSendEvent && PlatformCqrsEntityEvent.IsAnyEntityEventHandlerRegisteredForEntity<TEntity>(RootServiceProvider))
+        {
+            var sendEventItems = checkDiff ? hasDataChangedToBeUpdatedItems : toBeUpdatedItems;
+
+            if (sendEventItems.Any())
             {
-                await hasDataChangedToBeUpdatedItems.ParallelAsync(
+                await sendEventItems.ParallelAsync(
                     toBeUpdatedItem => PlatformCqrsEntityEvent.ExecuteWithSendingUpdateEntityEvent<TEntity, TPrimaryKey, TEntity>(
                         RootServiceProvider,
                         MappedUnitOfWork,
@@ -486,14 +497,11 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                         PlatformCqrsEntityEvent.GetEntityEventStackTrace<TEntity>(RootServiceProvider, false),
                         cancellationToken));
                 await SendBulkEntitiesEvent<TEntity, TPrimaryKey>(
-                    hasDataChangedToBeUpdatedItems.SelectList(p => p.toBeUpdatedEntity),
+                    sendEventItems.SelectList(p => p.toBeUpdatedEntity),
                     PlatformCqrsEntityEventCrudAction.Updated,
                     eventCustomConfig,
                     cancellationToken);
             }
-
-            hasDataChangedToBeUpdatedItems.ForEach(
-                p => MappedUnitOfWork?.RemoveCachedExistingOriginalEntity(p.toBeUpdatedEntity.Id.ToString()));
         }
 
         return toBeUpdatedItems.SelectList(p => p.toBeUpdatedEntity);
@@ -668,10 +676,18 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         TEntity entity,
         Expression<Func<TEntity, bool>> customCheckExistingPredicate = null,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return await CreateOrUpdateAsync<TEntity, TPrimaryKey>(entity, null, customCheckExistingPredicate, dismissSendEvent, eventCustomConfig, cancellationToken);
+        return await CreateOrUpdateAsync<TEntity, TPrimaryKey>(
+            entity,
+            null,
+            customCheckExistingPredicate,
+            dismissSendEvent,
+            checkDiff,
+            eventCustomConfig,
+            cancellationToken);
     }
 
     public async Task<TEntity> CreateOrUpdateAsync<TEntity, TPrimaryKey>(
@@ -679,6 +695,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         TEntity? existingEntity,
         Expression<Func<TEntity, bool>>? customCheckExistingPredicate = null,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent>? eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
@@ -701,6 +718,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                 entity.WithIf(!entity.Id.Equals(existingEntity.Id), entity => entity.Id = existingEntity.Id),
                 existingEntity,
                 dismissSendEvent,
+                checkDiff,
                 eventCustomConfig,
                 cancellationToken);
         }
@@ -712,6 +730,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         List<TEntity> entities,
         Func<TEntity, Expression<Func<TEntity, bool>>> customCheckExistingPredicateBuilder = null,
         bool dismissSendEvent = false,
+        bool checkDiff = true,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>, new()
     {
@@ -751,6 +770,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                     UpdateManyAsync<TEntity, TPrimaryKey>(
                         toUpdateEntities,
                         dismissSendEvent,
+                        checkDiff,
                         eventCustomConfig,
                         cancellationToken));
             }
@@ -785,6 +805,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
                     UpdateManyAsync<TEntity, TPrimaryKey>(
                         existingToUpdateEntities.Select(p => p.toUpsertEntity).ToList(),
                         dismissSendEvent,
+                        checkDiff,
                         eventCustomConfig,
                         cancellationToken));
             }
@@ -802,17 +823,26 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         TEntity entity,
         TEntity? existingEntity,
         bool dismissSendEvent,
+        bool checkDiff,
         Action<PlatformCqrsEntityEvent> eventCustomConfig = null,
         CancellationToken cancellationToken = default)
         where TEntity : class, IEntity<TPrimaryKey>, new()
     {
-        return await InternalUpdateOrSetAsync<TEntity, TPrimaryKey>(entity, existingEntity, dismissSendEvent, eventCustomConfig, onlySetData: false, cancellationToken);
+        return await InternalUpdateOrSetAsync<TEntity, TPrimaryKey>(
+            entity,
+            existingEntity,
+            dismissSendEvent,
+            checkDiff,
+            eventCustomConfig,
+            onlySetData: false,
+            cancellationToken);
     }
 
     private async Task<TEntity> InternalUpdateOrSetAsync<TEntity, TPrimaryKey>(
         TEntity entity,
         TEntity? existingEntity,
         bool dismissSendEvent,
+        bool checkDiff,
         Action<PlatformCqrsEntityEvent> eventCustomConfig,
         bool onlySetData,
         CancellationToken cancellationToken) where TEntity : class, IEntity<TPrimaryKey>, new()
@@ -853,7 +883,8 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
         if (existingEntity != null &&
             !ReferenceEquals(entity, existingEntity) &&
             (changedFields?.Count == 0 ||
-             (changedFields?.Count == 1 && entityUpdatedDateAuditField != null && entityUpdatedDateAuditField.Name == changedFields.First().Key)))
+             (changedFields?.Count == 1 && entityUpdatedDateAuditField != null && entityUpdatedDateAuditField.Name == changedFields.First().Key)) &&
+            checkDiff)
             return entity;
 
         var toBeUpdatedEntity = entity

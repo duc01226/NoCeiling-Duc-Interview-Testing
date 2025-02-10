@@ -21,14 +21,16 @@ export class FormHelpers {
         return form.valid;
     }
 
-    public static validateAllFormControls(form: FormGroup): boolean {
+    public static validateAllFormControls(form: FormGroup, markAsTouchedAndDirty: boolean = true): boolean {
         if (form.controls == null) {
             return form.valid;
         }
 
         Object.values(form.controls).forEach((control: AbstractControl) => {
-            control.markAsDirty();
-            control.markAsTouched();
+            if (markAsTouchedAndDirty) {
+                control.markAsDirty();
+                control.markAsTouched();
+            }
             control.updateValueAndValidity({ onlySelf: false });
 
             if (control instanceof FormArray)
