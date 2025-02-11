@@ -35,7 +35,8 @@ export class FormHelpers {
 
             if (control instanceof FormArray)
                 control.controls.some(
-                    (form: AbstractControl) => !FormHelpers.validateAllFormControls(form as FormGroup)
+                    (form: AbstractControl) =>
+                        !FormHelpers.validateAllFormControls(form as FormGroup, markAsTouchedAndDirty)
                 );
         });
 
