@@ -1321,8 +1321,7 @@ public abstract class PlatformMongoDbContext<TDbContext> : IPlatformDbContext<TD
 
     protected Dictionary<Type, string> BuildEntityTypeToCollectionNameDictionary()
     {
-        var entityTypeToCollectionNameMaps = EntityTypeToCollectionNameMaps();
-        return entityTypeToCollectionNameMaps != null ? new Dictionary<Type, string>(entityTypeToCollectionNameMaps) : null;
+        return EntityTypeToCollectionNameMaps()?.ToDictionary(p => p.Key, p => p.Value);
     }
 
     protected static string GetPlatformEntityCollectionName<TEntity>()

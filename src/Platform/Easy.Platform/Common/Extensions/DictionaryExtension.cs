@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Concurrent;
+using Easy.Platform.Common.JsonSerialization;
 
 namespace Easy.Platform.Common.Extensions;
 
@@ -103,6 +104,7 @@ public static class DictionaryExtension
         var result = new Dictionary<string, object>(dictionary.Count);
 
         foreach (var key in dictionary.Keys)
+        {
             if (key is not null)
             {
                 var keyString = key.ToString();
@@ -110,6 +112,7 @@ public static class DictionaryExtension
 
                 if (keyString is not null) result.Add(keyString, value);
             }
+        }
 
         return result;
     }
@@ -165,5 +168,40 @@ public static class DictionaryExtension
     public static T GetValueOrFirst<T>(this IDictionary<T, T> dictionary, T key)
     {
         return dictionary.TryGetValue(key, out var value) ? value : dictionary.First().Value;
+    }
+
+    /// <summary>
+    /// Retrieves the value associated with the specified key from the provided dictionary.
+    /// If the key is not found, attempts to parse the value to the specified type.
+    /// </summary>
+    /// <typeparam name="T">The type to which the value should be parsed.</typeparam>
+    /// <param name="requestContext">The dictionary containing the key-value pairs.</param>
+    /// <param name="contextKey">The key whose value to retrieve and parse.</param>
+    /// <returns>
+    /// The value associated with the specified key if found and successfully parsed;
+    /// otherwise, the default value of type <typeparamref name="T"/>.
+    /// </returns>
+    /// <remarks>
+    /// This method first attempts to retrieve the value associated with the specified key.
+    /// If the value is found and is of the specified type, it is returned.
+    /// If the value is a string and can be deserialized to the specified type, the deserialized value is returned.
+    /// If the value cannot be parsed or an exception occurs, the default value of type <typeparamref name="T"/> is returned.
+    /// </remarks>
+    public static T GetParsedValueOrDefault<T>(this IDictionary<string, object> requestContext, string contextKey)
+    {
+        if (!requestContext.TryGetValue(contextKey, out var objValue)) return default;
+
+        if (objValue is T value) return value;
+        if (objValue is string objStringValue && typeof(T) != typeof(string) && PlatformJsonSerializer.TryDeserialize<T>(objStringValue, out var deserializedValue))
+            return deserializedValue;
+
+        try
+        {
+            return (T)objValue;
+        }
+        catch (Exception e)
+        {
+            return default;
+        }
     }
 }

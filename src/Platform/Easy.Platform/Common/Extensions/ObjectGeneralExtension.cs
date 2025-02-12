@@ -250,7 +250,7 @@ public static class ObjectGeneralExtension
             .Where(p => p.isValuesDifferent)
             .Select(p => new KeyValuePair<string, object>(p.propName, p.updatedObjectValue));
 
-        return new Dictionary<string, object>(changedFields);
+        return changedFields.ToDictionary(p => p.Key, p => p.Value);
     }
 
 
